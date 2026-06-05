@@ -1,0 +1,161 @@
+.est-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+/* Abas */
+.est-abas {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.est-aba {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 13.5px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.12s;
+}
+.est-aba:hover { color: var(--text-1); background: var(--bg-hover); }
+.est-aba.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+
+.est-aba-count {
+  background: var(--bg-3);
+  color: var(--text-3);
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* Filtros */
+.est-filters {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.est-badge-warn {
+  background: var(--yellow-bg);
+  color: var(--yellow);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-left: 4px;
+}
+.est-badge-red {
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-left: 4px;
+}
+
+/* Barra de estoque */
+.est-qtd-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 100px;
+}
+.est-bar-wrap {
+  height: 4px;
+  background: var(--bg-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.est-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s;
+  min-width: 4px;
+}
+.est-bar-ok     { background: var(--green); }
+.est-bar-baixo  { background: var(--yellow); }
+.est-bar-zerado { background: var(--red); }
+
+.est-qtd        { font-size: 13px; font-weight: 500; }
+.est-qtd-ok     { color: var(--text-1); }
+.est-qtd-baixo  { color: var(--yellow); }
+.est-qtd-zerado { color: var(--red); }
+
+/* Ações */
+.est-acoes {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+tr:hover .est-acoes { opacity: 1; }
+
+.est-btn-acao {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+/* Movimentos */
+.est-mov-qtd {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+}
+.est-mov-qtd.entrada { color: var(--green); }
+.est-mov-qtd.saida   { color: var(--red); }
+
+/* Modal */
+.est-modal-prod {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.est-modal-prod-nome {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-1);
+  margin-bottom: 6px;
+}
+.est-modal-prod-info {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.est-qtd-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.est-qtd-input-wrap input {
+  flex: 1;
+}
+.est-qtd-input-wrap .cx-qtd-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .est-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 500px) {
+  .est-stats { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,121 @@
+.rel-periodo-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rel-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.rel-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.rel-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rel-card { padding: 18px 20px; }
+
+.rel-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Linha de barra */
+.rel-bar-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.rel-bar-row:last-child { margin-bottom: 0; }
+
+.rel-rank {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-3);
+  width: 22px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.rel-bar-info { flex: 1; min-width: 0; }
+
+.rel-bar-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.rel-nome {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rel-valor {
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rel-lucro {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+
+/* Barras */
+.rel-bar-wrap {
+  height: 6px;
+  background: var(--bg-3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.rel-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  min-width: 4px;
+}
+.rel-bar-accent { background: var(--accent); opacity: 0.85; }
+.rel-bar-blue   { background: var(--blue);   opacity: 0.8;  }
+.rel-bar-green  { background: var(--green);  opacity: 0.8;  }
+
+/* Pagamento */
+.rel-pag-row {
+  margin-bottom: 14px;
+}
+.rel-pag-row:last-child { margin-bottom: 0; }
+.rel-pag-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-2);
+  margin-bottom: 2px;
+}
+
+@media (max-width: 1100px) {
+  .rel-stats { grid-template-columns: repeat(2, 1fr); }
+  .rel-grid  { grid-template-columns: 1fr; }
+}

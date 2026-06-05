@@ -1,0 +1,138 @@
+.cli-filters {
+  margin-bottom: 20px;
+}
+
+.cli-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.cli-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.cli-card:hover {
+  border-color: var(--border-2);
+  transform: translateY(-1px);
+}
+
+.cli-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.cli-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.cli-avatar-lg {
+  width: 48px;
+  height: 48px;
+  font-size: 15px;
+}
+
+.cli-card-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.cli-card:hover .cli-card-actions { opacity: 1; }
+
+.cli-nome {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 6px;
+}
+
+.cli-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 3px;
+}
+
+.cli-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 12px 0;
+}
+
+.cli-stats {
+  display: flex;
+  gap: 16px;
+}
+.cli-stat-val {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+.cli-stat-label {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.cli-ultima {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 8px;
+}
+
+/* Modal ver */
+.cli-modal-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.cli-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.cli-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.cli-detail-row svg { color: var(--text-3); flex-shrink: 0; }
+
+.cli-obs {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-2);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+@media (max-width: 600px) {
+  .cli-grid { grid-template-columns: 1fr; }
+}
