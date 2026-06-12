@@ -169,15 +169,25 @@ export function Estoque() {
                           <span className="badge badge-accent" style={{ fontSize: 11 }}>{p.categoria}</span>
                         </td>
                         <td>
-                          <div className="est-qtd-cell">
-                            <div className="est-bar-wrap">
-                              <div
-                                className={`est-bar est-bar-${status}`}
-                                style={{ width: `${Math.min(100, (p.estoque / Math.max(p.estoqueMinimo * 3, 1)) * 100)}%` }}
-                              />
+                          {(p as any).variacoes?.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              {(p as any).variacoes.map((v: any) => (
+                                <span key={v.id} style={{ fontSize: 11, color: v.estoque <= v.estoqueMinimo ? 'var(--red)' : 'var(--green)' }}>
+                                  {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque} un.
+                                </span>
+                              ))}
                             </div>
-                            <span className={`est-qtd est-qtd-${status}`}>{p.estoque} un.</span>
-                          </div>
+                          ) : (
+                            <div className="est-qtd-cell">
+                              <div className="est-bar-wrap">
+                                <div
+                                  className={`est-bar est-bar-${status}`}
+                                  style={{ width: `${Math.min(100, (p.estoque / Math.max(p.estoqueMinimo * 3, 1)) * 100)}%` }}
+                                />
+                              </div>
+                              <span className={`est-qtd est-qtd-${status}`}>{p.estoque} un.</span>
+                            </div>
+                          )}
                         </td>
                         <td style={{ color: 'var(--text-3)', fontSize: 13 }}>{p.estoqueMinimo} un.</td>
                         <td style={{ color: 'var(--text-2)', fontSize: 13 }}>{fmt(p.estoque * p.precoCusto)}</td>

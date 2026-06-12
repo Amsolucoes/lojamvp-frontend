@@ -207,9 +207,19 @@ export function Produtos() {
                     )}
                   </td>
                   <td>
-                    <span className={p.estoque <= p.estoqueMinimo ? 'estoque-baixo' : 'estoque-ok'}>
-                      {p.estoque} un.
-                    </span>
+                    {(p as any).variacoes?.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {(p as any).variacoes.map((v: any) => (
+                          <span key={v.id} style={{ fontSize: 11, color: v.estoque <= v.estoqueMinimo ? 'var(--red)' : 'var(--green)' }}>
+                            {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque} un.
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className={p.estoque <= p.estoqueMinimo ? 'estoque-baixo' : 'estoque-ok'}>
+                        {p.estoque} un.
+                      </span>
+                    )}
                   </td>
                   <td>
                     <span className={`badge ${p.ativo ? 'badge-green' : 'badge-red'}`}>
