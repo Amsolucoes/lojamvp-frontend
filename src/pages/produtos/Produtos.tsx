@@ -5,12 +5,15 @@ import { Produto, Categoria } from '../../types';
 import { api } from '../../services/api';
 import './Produtos.css';
 
-const CATEGORIAS: { value: Categoria; label: string }[] = [
-  { value: 'semi-joias',  label: 'Semi Joias'  },
-  { value: 'maquiagem',   label: 'Maquiagem'   },
-  { value: 'acessorios',  label: 'Acessórios'  },
-  { value: 'outro',       label: 'Outro'        },
-];
+interface Variacao {
+  id?: string;
+  tamanho?: string;
+  cor?: string;
+  outroCampo?: string;
+  estoque: number;
+  estoqueMinimo: number;
+  ativo?: boolean;
+}
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -31,6 +34,9 @@ export function Produtos() {
   const [form, setForm]       = useState<FormData>(EMPTY);
   const [confirmDel, setDel]  = useState<string | null>(null);
   const [cats, setCats] = useState<{id: string; nome: string}[]>([]);
+  const [variacoes, setVariacoes]   = useState<Variacao[]>([]);
+  const [camposExtras, setCamposExtras] = useState<any[]>([]);
+  const [temVariacoes, setTemVariacoes] = useState(false);
 
   useEffect(() => {
     api.get<any[]>('/api/perfis/loja/categorias').then(res => {
@@ -49,6 +55,12 @@ export function Produtos() {
         { id: '4', nome: 'Outro' },
       ]);
     });
+
+    api.get<any[]>('/api/perfis/loja/campos-extras').then(res => {
+      setCamposExtras(res);
+      const temTamanhoOuCor = res.some(c => c.chave === 'tamanho' || c.chave === 'cor');
+      setTemVariacoes(temTamanhoOuCor);
+    }).catch(() => {});
   }, []);
 
   const lista = produtos.filter(p => {
@@ -60,6 +72,7 @@ export function Produtos() {
 
   function abrirNovo() {
     setForm(EMPTY);
+    setVariacoes([]);
     setEditId(null);
     setModal('novo');
   }
@@ -68,15 +81,40 @@ export function Produtos() {
     setForm({ ...p });
     setEditId(p.id);
     setModal('editar');
+    // Carrega variações existentes
+    api.get<any[]>(`/api/produtos/${p.id}/variacoes`).then(res => {
+      setVariacoes(res.map((v: any) => ({
+        id: v.id, tamanho: v.tamanho, cor: v.cor,
+        outroCampo: v.outroCampo, estoque: v.estoque,
+        estoqueMinimo: v.estoqueMinimo, ativo: v.ativo,
+      })));
+    }).catch(() => setVariacoes([]));
   }
 
-  function salvar() {
+  async function salvar() {
     if (!form.nome.trim()) return;
+    
+    let produtoId: string;
+    
     if (modal === 'novo') {
-      addProduto(form);
+      const novo = await api.post<any>('/api/produtos', form);
+      produtoId = novo.id;
+      addProduto(form); // atualiza contexto local
     } else if (editId) {
+      await api.put(`/api/produtos/${editId}`, form);
       updateProduto(editId, form);
+      produtoId = editId;
+    } else return;
+
+    // Salva variações
+    for (const v of variacoes) {
+      if (v.id) {
+        await api.put(`/api/produtos/${produtoId}/variacoes/${v.id}`, v);
+      } else {
+        await api.post(`/api/produtos/${produtoId}/variacoes`, v);
+      }
     }
+
     setModal(null);
   }
 
@@ -157,7 +195,7 @@ export function Produtos() {
                   </td>
                   <td>
                     <span className="badge badge-accent">
-                      {CATEGORIAS.find(c => c.value === p.categoria)?.label}
+                      {cats.find(c => c.nome === p.categoria)?.nome ?? p.categoria}
                     </span>
                   </td>
                   <td style={{ color: 'var(--text-2)' }}>{fmt(p.precoCusto)}</td>
@@ -255,6 +293,69 @@ export function Produtos() {
                     <option value="false">Inativo</option>
                   </select>
                 </div>
+                {/* Variações */}
+                {temVariacoes && (
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <div style={{ 
+                      display: 'flex', justifyContent: 'space-between', 
+                      alignItems: 'center', marginBottom: 10,
+                      paddingTop: 14, borderTop: '1px solid var(--border)'
+                    }}>
+                      <label className="form-label" style={{ margin: 0 }}>
+                        Variações (Tamanho / Cor)
+                      </label>
+                      <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }}
+                        onClick={() => setVariacoes(prev => [...prev, { tamanho: '', cor: '', estoque: 0, estoqueMinimo: 1 }])}>
+                        + Adicionar
+                      </button>
+                    </div>
+
+                    {variacoes.length === 0 ? (
+                      <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>
+                        Nenhuma variação cadastrada. Clique em "+ Adicionar".
+                      </p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {/* Header */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 80px 32px', gap: 6 }}>
+                          {['Tamanho', 'Cor', 'Estoque', 'Mín.', ''].map(h => (
+                            <div key={h} style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
+                          ))}
+                        </div>
+                        {variacoes.map((v, i) => (
+                          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 80px 32px', gap: 6, alignItems: 'center' }}>
+                            {/* Tamanho */}
+                            {camposExtras.find(c => c.chave === 'tamanho')?.tipo === 'lista' ? (
+                              <select value={v.tamanho ?? ''} onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, tamanho: e.target.value } : x))}>
+                                <option value="">—</option>
+                                {camposExtras.find(c => c.chave === 'tamanho')?.opcoes?.split(',').map((op: string) => (
+                                  <option key={op.trim()} value={op.trim()}>{op.trim()}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input value={v.tamanho ?? ''} placeholder="Tamanho"
+                                onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, tamanho: e.target.value } : x))} />
+                            )}
+                            {/* Cor */}
+                            <input value={v.cor ?? ''} placeholder="Cor"
+                              onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, cor: e.target.value } : x))} />
+                            {/* Estoque */}
+                            <input type="number" min={0} value={v.estoque}
+                              onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, estoque: +e.target.value } : x))} />
+                            {/* Mínimo */}
+                            <input type="number" min={0} value={v.estoqueMinimo}
+                              onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, estoqueMinimo: +e.target.value } : x))} />
+                            {/* Remover */}
+                            <button className="btn-ghost" style={{ color: 'var(--red)', padding: '4px' }}
+                              onClick={() => setVariacoes(prev => prev.filter((_, j) => j !== i))}>
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {form.precoCusto > 0 && form.precoVenda > 0 && (
                   <div className="margem-preview">
                     Margem: <strong style={{ color: 'var(--green)' }}>
