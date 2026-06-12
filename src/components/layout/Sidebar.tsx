@@ -26,11 +26,13 @@ export function Sidebar() {
   const alertas = produtos.filter(p => p.ativo && p.estoque <= p.estoqueMinimo).length;
   const [nomeLoja, setNomeLoja] = useState('Minha Loja');
   const [corPrimaria, setCorPrimaria] = useState('#e8945a');
+  const [logoUrl, setLogoUrl] = useState('');
 
   useEffect(() => {
     api.get<any>('/api/cliente/config').then(res => {
       if (res?.nome) setNomeLoja(res.nome);
       if (res?.corPrimaria) setCorPrimaria(res.corPrimaria);
+      if (res?.logoUrl) setLogoUrl(res.logoUrl);
     }).catch(() => {});
   }, []);
 
@@ -45,7 +47,11 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">✦</div>
+        {logoUrl ? (
+          <img src={logoUrl} alt="Logo" style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', objectFit: 'contain' }} />
+        ) : (
+          <div className="sidebar-logo-icon">✦</div>
+        )}
         <div>
           <div className="sidebar-logo-name">{nomeLoja}</div>
           <div className="sidebar-logo-sub">Gestão</div>
