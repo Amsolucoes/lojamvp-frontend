@@ -10,6 +10,7 @@ export function Login() {
   const [mostraSenha, setMostra] = useState(false);
   const [erro, setErro]         = useState('');
   const [loading, setLoading]   = useState(false);
+  const [nomeLoja, setNomeLoja] = useState('AlSoluções');
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -35,7 +36,7 @@ export function Login() {
         <div className="login-logo">
           <div className="login-logo-icon">✦</div>
           <div>
-            <div className="login-logo-nome">Minha Loja</div>
+            <div className="login-logo-nome">{nomeLoja}</div>
             <div className="login-logo-sub">Sistema de Gestão</div>
           </div>
         </div>
@@ -98,21 +99,6 @@ export function Login() {
             )}
           </button>
         </form>
-
-        {/* Dica de credenciais (remover em produção) */}
-        <div className="login-hint">
-          <div className="login-hint-title">Credenciais de acesso</div>
-          <div className="login-hint-row">
-            <span>Admin</span>
-            <code>admin@loja.com</code>
-            <code>admin123</code>
-          </div>
-          <div className="login-hint-row">
-            <span>Caixa</span>
-            <code>caixa@loja.com</code>
-            <code>caixa123</code>
-          </div>
-        </div>
       </div>
     </div>
   );
