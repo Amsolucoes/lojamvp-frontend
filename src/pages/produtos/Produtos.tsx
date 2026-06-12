@@ -21,12 +21,12 @@ function fmt(n: number) {
 
 type FormData = Omit<Produto, 'id' | 'criadoEm'>;
 const EMPTY: FormData = {
-  nome: '', categoria: 'semi-joias', precoCusto: 0, precoVenda: 0,
+  nome: '', categoria: '', precoCusto: 0, precoVenda: 0,
   estoque: 0, estoqueMinimo: 3, codigoBarras: '', descricao: '', ativo: true,
 };
 
 export function Produtos() {
-  const { produtos, addProduto, updateProduto, deleteProduto } = useApp();
+  const { produtos, addProduto, updateProduto, deleteProduto, recarregar } = useApp();
   const [busca, setBusca]     = useState('');
   const [catFiltro, setCat]   = useState<string>('todas');
   const [modal, setModal]     = useState<'novo' | 'editar' | null>(null);
@@ -40,21 +40,17 @@ export function Produtos() {
 
   useEffect(() => {
     api.get<any[]>('/api/perfis/loja/categorias').then(res => {
-      if (res.length > 0) setCats(res);
-      else setCats([
-        { id: '1', nome: 'Semi Joias' },
-        { id: '2', nome: 'Maquiagem' },
-        { id: '3', nome: 'Acessórios' },
-        { id: '4', nome: 'Outro' },
-      ]);
-    }).catch(() => {
+      if (res.length > 0) {
+        setCats(res);
+        setForm(f => ({ ...f, categoria: f.categoria || res[0].nome }));
+      } else {
       setCats([
         { id: '1', nome: 'Semi Joias' },
         { id: '2', nome: 'Maquiagem' },
         { id: '3', nome: 'Acessórios' },
         { id: '4', nome: 'Outro' },
       ]);
-    });
+    }});
 
     api.get<any[]>('/api/perfis/loja/campos-extras').then(res => {
       setCamposExtras(res);
@@ -94,28 +90,33 @@ export function Produtos() {
   async function salvar() {
     if (!form.nome.trim()) return;
     
-    let produtoId: string;
-    
-    if (modal === 'novo') {
-      const novo = await api.post<any>('/api/produtos', form);
-      produtoId = novo.id;
-      addProduto(form); // atualiza contexto local
-    } else if (editId) {
-      await api.put(`/api/produtos/${editId}`, form);
-      updateProduto(editId, form);
-      produtoId = editId;
-    } else return;
+    try {
+      let produtoId: string;
+      
+      if (modal === 'novo') {
+        const novo = await api.post<any>('/api/produtos', form);
+        produtoId = novo.id;
+        // Recarrega produtos do contexto
+        await recarregar();
+      } else if (editId) {
+        await api.put(`/api/produtos/${editId}`, form);
+        produtoId = editId;
+        await recarregar();
+      } else return;
 
-    // Salva variações
-    for (const v of variacoes) {
-      if (v.id) {
-        await api.put(`/api/produtos/${produtoId}/variacoes/${v.id}`, v);
-      } else {
-        await api.post(`/api/produtos/${produtoId}/variacoes`, v);
+      // Salva variações
+      for (const v of variacoes) {
+        if (v.id) {
+          await api.put(`/api/produtos/${produtoId}/variacoes/${v.id}`, v);
+        } else {
+          await api.post(`/api/produtos/${produtoId}/variacoes`, v);
+        }
       }
-    }
 
-    setModal(null);
+      setModal(null);
+    } catch (e) {
+      alert('Erro ao salvar: ' + (e as Error).message);
+    }
   }
 
   function confirmarDelete(id: string) { setDel(id); }
@@ -251,7 +252,7 @@ export function Produtos() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value as Categoria }))}>
+                  <select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
                     {cats.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
                   </select>
                 </div>

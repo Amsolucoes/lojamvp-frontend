@@ -4,7 +4,7 @@ export type Categoria = 'semi-joias' | 'maquiagem' | 'acessorios' | 'outro';
 export interface Produto {
   id: string;
   nome: string;
-  categoria: Categoria;
+  categoria: string;
   precoCusto: number;
   precoVenda: number;
   estoque: number;
