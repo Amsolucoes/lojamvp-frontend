@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, Package, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Produto, Categoria } from '../../types';
+import { api } from '../../services/api';
 import './Produtos.css';
 
 const CATEGORIAS: { value: Categoria; label: string }[] = [
@@ -29,6 +30,26 @@ export function Produtos() {
   const [editId, setEditId]   = useState<string | null>(null);
   const [form, setForm]       = useState<FormData>(EMPTY);
   const [confirmDel, setDel]  = useState<string | null>(null);
+  const [cats, setCats] = useState<{id: string; nome: string}[]>([]);
+
+  useEffect(() => {
+    api.get<any[]>('/api/perfis/loja/categorias').then(res => {
+      if (res.length > 0) setCats(res);
+      else setCats([
+        { id: '1', nome: 'Semi Joias' },
+        { id: '2', nome: 'Maquiagem' },
+        { id: '3', nome: 'Acessórios' },
+        { id: '4', nome: 'Outro' },
+      ]);
+    }).catch(() => {
+      setCats([
+        { id: '1', nome: 'Semi Joias' },
+        { id: '2', nome: 'Maquiagem' },
+        { id: '3', nome: 'Acessórios' },
+        { id: '4', nome: 'Outro' },
+      ]);
+    });
+  }, []);
 
   const lista = produtos.filter(p => {
     const ok = p.nome.toLowerCase().includes(busca.toLowerCase()) ||
@@ -94,8 +115,10 @@ export function Produtos() {
         </div>
         <div className="cat-tabs">
           <button className={`cat-tab${catFiltro === 'todas' ? ' active' : ''}`} onClick={() => setCat('todas')}>Todas</button>
-          {CATEGORIAS.map(c => (
-            <button key={c.value} className={`cat-tab${catFiltro === c.value ? ' active' : ''}`} onClick={() => setCat(c.value)}>{c.label}</button>
+          {cats.map(c => (
+            <button key={c.id} className={`cat-tab${catFiltro === c.nome ? ' active' : ''}`} onClick={() => setCat(c.nome)}>
+              {c.nome}
+            </button>
           ))}
         </div>
       </div>
@@ -191,7 +214,7 @@ export function Produtos() {
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
                   <select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value as Categoria }))}>
-                    {CATEGORIAS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    {cats.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
