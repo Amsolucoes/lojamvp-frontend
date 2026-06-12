@@ -2,9 +2,21 @@ import { useState, useRef } from 'react';
 import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, User, ChevronDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ItemVenda, FormaPagamento } from '../../types';
+import { api } from '@/services/api';
 import './Caixa.css';
 
-type CarrinhoItem = ItemVenda & { estoqueDisp: number };
+interface VariacaoItem {
+  id: string;
+  tamanho?: string;
+  cor?: string;
+  estoque: number;
+}
+
+type CarrinhoItem = ItemVenda & { 
+  estoqueDisp: number;
+  variacaoId?: string;
+  variacaoLabel?: string;
+};
 
 const FORMAS: { value: FormaPagamento; label: string; icon: string }[] = [
   { value: 'dinheiro', label: 'Dinheiro',  icon: '💵' },
@@ -34,6 +46,8 @@ export function Caixa() {
   const [sucesso, setSucesso]         = useState(false);
   const [ultimaVenda, setUltimaVenda] = useState<string | null>(null);
   const buscaRef = useRef<HTMLInputElement>(null);
+  const [variacoesDisponiveis, setVariacoesDisponiveis] = useState<{prodId: string; vars: VariacaoItem[]}[]>([]);
+  const [modalVariacao, setModalVariacao] = useState<{prodId: string; nomeProd: string} | null>(null);
 
   const prodsFiltrados = produtos.filter(p =>
     p.ativo && p.estoque > 0 &&
@@ -58,29 +72,64 @@ export function Caixa() {
     ? Math.max(0, parseFloat(valorPago.replace(',', '.')) - total)
     : 0;
 
-  function addProduto(prodId: string) {
+  async function addProduto(prodId: string) {
     const prod = produtos.find(p => p.id === prodId);
     if (!prod) return;
+
+    // Busca variações
+    try {
+      const vars = await api.get<any[]>(`/api/produtos/${prodId}/variacoes`);
+      if (vars.length > 0) {
+        setVariacoesDisponiveis(prev => {
+          const existe = prev.find(v => v.prodId === prodId);
+          if (existe) return prev;
+          return [...prev, { prodId, vars: vars.filter(v => v.ativo && v.estoque > 0) }];
+        });
+        setModalVariacao({ prodId, nomeProd: prod.nome });
+        setBuscaProd('');
+        setShowProd(false);
+        return;
+      }
+    } catch {}
+
+    // Sem variações — adiciona direto
+    adicionarAoCarrinho(prodId, prod, null, null, null);
+  }
+
+  function adicionarAoCarrinho(
+  prodId: string, prod: any,
+  variacaoId: string | null,
+  tamanho: string | null,
+  cor: string | null
+  ) {
+    const estoqueDisp = variacaoId
+      ? (variacoesDisponiveis.find(v => v.prodId === prodId)?.vars.find(v => v.id === variacaoId)?.estoque ?? 0)
+      : prod.estoque;
+
+    const label = [tamanho, cor].filter(Boolean).join(' / ');
+
     setCarrinho(prev => {
-      const existe = prev.find(i => i.produtoId === prodId);
+      const chave = `${prodId}-${variacaoId ?? 'sem'}`;
+      const existe = prev.find(i => i.produtoId === prodId && i.variacaoId === variacaoId);
       if (existe) {
-        if (existe.quantidade >= existe.estoqueDisp) return prev;
-        return prev.map(i => i.produtoId === prodId
+        if (existe.quantidade >= estoqueDisp) return prev;
+        return prev.map(i => i.produtoId === prodId && i.variacaoId === variacaoId
           ? { ...i, quantidade: i.quantidade + 1, subtotal: (i.quantidade + 1) * i.precoUnitario }
           : i
         );
       }
       return [...prev, {
-        produtoId: prod.id,
-        nomeProduto: prod.nome,
+        produtoId: prodId,
+        nomeProduto: prod.nome + (label ? ` (${label})` : ''),
         quantidade: 1,
         precoUnitario: prod.precoVenda,
         subtotal: prod.precoVenda,
-        estoqueDisp: prod.estoque,
+        estoqueDisp,
+        variacaoId: variacaoId ?? undefined,
+        variacaoLabel: label || undefined,
       }];
     });
-    setBuscaProd('');
-    setShowProd(false);
+    setModalVariacao(null);
   }
 
   function alterarQtd(prodId: string, delta: number) {
@@ -111,7 +160,10 @@ export function Caixa() {
   function finalizarVenda() {
     if (carrinho.length === 0) return;
     const venda = {
-      itens: carrinho.map(({ estoqueDisp: _, ...rest }) => rest),
+      itens: carrinho.map(({ estoqueDisp: _, variacaoLabel: __, ...rest }) => ({
+        ...rest,
+        variacaoId: rest.variacaoId ?? null,
+      })),
       clienteId: clienteId || undefined,
       nomeCliente: clienteSel?.nome,
       total: subtotal,
@@ -390,6 +442,45 @@ export function Caixa() {
           Finalizar venda · {fmt(total)}
         </button>
       </div>
+
+      {/* Modal seleção de variação */}
+      {modalVariacao && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalVariacao(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Escolha a variação</h2>
+              <button className="btn-ghost" onClick={() => setModalVariacao(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 14 }}>
+                {modalVariacao.nomeProd}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {variacoesDisponiveis
+                  .find(v => v.prodId === modalVariacao.prodId)?.vars
+                  .map(v => (
+                    <button
+                      key={v.id}
+                      className="btn-secondary"
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px' }}
+                      onClick={() => {
+                        const prod = produtos.find(p => p.id === modalVariacao.prodId);
+                        if (prod) adicionarAoCarrinho(modalVariacao.prodId, prod, v.id, v.tamanho ?? null, v.cor ?? null);
+                      }}
+                    >
+                      <span style={{ fontWeight: 500 }}>
+                        {[v.tamanho, v.cor].filter(Boolean).join(' / ') || 'Padrão'}
+                      </span>
+                      <span className={`badge ${v.estoque > 0 ? 'badge-green' : 'badge-red'}`}>
+                        {v.estoque} un.
+                      </span>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal sucesso */}
       {sucesso && (
