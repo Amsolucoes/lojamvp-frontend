@@ -160,9 +160,13 @@ export function Caixa() {
   function finalizarVenda() {
     if (carrinho.length === 0) return;
     const venda = {
-      itens: carrinho.map(({ estoqueDisp: _, variacaoLabel: __, ...rest }) => ({
-        ...rest,
-        variacaoId: rest.variacaoId ?? null,
+      itens: carrinho.map(item => ({
+        produtoId: item.produtoId,
+        nomeProduto: item.nomeProduto,
+        quantidade: item.quantidade,
+        precoUnitario: item.precoUnitario,
+        subtotal: item.subtotal,
+        variacaoId: item.variacaoId ?? null,
       })),
       clienteId: clienteId || undefined,
       nomeCliente: clienteSel?.nome,
