@@ -147,6 +147,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         produtoId: i.produtoId,
         quantidade: i.quantidade,
         precoUnitario: i.precoUnitario,
+        variacaoId: (i as any).variacaoId ?? null,
       })),
       clienteId: v.clienteId ?? null,
       desconto: v.desconto,
@@ -157,6 +158,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const nova = await api.post<any>('/api/vendas', payload);
     setVendas(prev => [mapVenda(nova), ...prev]);
 
+    // Atualiza estoque local
     nova.itens.forEach((item: any) => {
       setProdutos(prev => prev.map(p =>
         p.id === item.produtoId
