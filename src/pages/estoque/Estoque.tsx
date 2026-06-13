@@ -3,12 +3,15 @@ import { Search, Plus, Minus, AlertTriangle, ArrowUp, ArrowDown, RefreshCw, X, B
 import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
 import './Estoque.css';
+import { api } from '@/services/api';
 
 type AbaEstoque = 'visao-geral' | 'movimentos';
 
 interface ModalAjuste {
   produto: Produto;
   tipo: 'entrada' | 'ajuste';
+  variacaoId?: string;
+  variacaoLabel?: string;
 }
 
 function fmt(n: number) {
@@ -16,14 +19,14 @@ function fmt(n: number) {
 }
 
 export function Estoque() {
-  const { produtos, movimentos, ajustarEstoque } = useApp();
-
+  const { produtos, movimentos, ajustarEstoque, recarregar } = useApp();
   const [aba, setAba]             = useState<AbaEstoque>('visao-geral');
   const [busca, setBusca]         = useState('');
   const [filtro, setFiltro]       = useState<'todos' | 'baixo' | 'zerado'>('todos');
   const [modal, setModal]         = useState<ModalAjuste | null>(null);
   const [qtdAjuste, setQtdAjuste] = useState('');
   const [obsAjuste, setObsAjuste] = useState('');
+  const [modalVariacaoEntrada, setModalVariacaoEntrada] = useState<{ produto: Produto } | null>(null);
 
   const prodsFiltrados = produtos.filter(p => {
     const buscaOk = p.nome.toLowerCase().includes(busca.toLowerCase());
@@ -38,9 +41,14 @@ export function Estoque() {
   const valorEstoque = produtos.filter(p => p.ativo).reduce((s, p) => s + p.estoque * p.precoCusto, 0);
 
   function abrirEntrada(p: Produto) {
-    setModal({ produto: p, tipo: 'entrada' });
-    setQtdAjuste('');
-    setObsAjuste('');
+    const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
+    if (vars?.length > 0) {
+      setModalVariacaoEntrada({ produto: p });
+    } else {
+      setModal({ produto: p, tipo: 'entrada' });
+      setQtdAjuste('');
+      setObsAjuste('');
+    }
   }
 
   function abrirAjuste(p: Produto) {
@@ -53,7 +61,19 @@ export function Estoque() {
     if (!modal || !qtdAjuste) return;
     const qtd = parseInt(qtdAjuste);
     if (isNaN(qtd) || qtd < 0) return;
-    ajustarEstoque(modal.produto.id, qtd, modal.tipo, obsAjuste || undefined);
+
+    if (modal.variacaoId) {
+      // Entrada por variação — chama API diretamente
+      api.post('/api/estoque/ajuste-variacao', {
+        produtoId: modal.produto.id,
+        variacaoId: modal.variacaoId,
+        quantidade: qtd,
+        tipo: modal.tipo,
+        observacao: obsAjuste || null,
+      }).then(() => recarregar());
+    } else {
+      ajustarEstoque(modal.produto.id, qtd, modal.tipo, obsAjuste || undefined);
+    }
     setModal(null);
   }
 
@@ -267,6 +287,52 @@ export function Estoque() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal seleção variação para entrada */}
+      {modalVariacaoEntrada && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalVariacaoEntrada(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>
+                <ArrowDown size={16} style={{ color: 'var(--green)', verticalAlign: -2 }} /> Registrar entrada
+              </h2>
+              <button className="btn-ghost" onClick={() => setModalVariacaoEntrada(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 14 }}>
+                <strong>{modalVariacaoEntrada.produto.nome}</strong> — Escolha a variação:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {(modalVariacaoEntrada.produto as any).variacoes
+                  ?.filter((v: any) => v.ativo)
+                  .map((v: any) => {
+                    const label = [v.tamanho, v.cor].filter(Boolean).join(' / ');
+                    return (
+                      <button key={v.id} className="btn-secondary"
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px' }}
+                        onClick={() => {
+                          setModal({
+                            produto: modalVariacaoEntrada.produto,
+                            tipo: 'entrada',
+                            variacaoId: v.id,
+                            variacaoLabel: label,
+                          });
+                          setQtdAjuste('');
+                          setObsAjuste('');
+                          setModalVariacaoEntrada(null);
+                        }}>
+                        <span style={{ fontWeight: 500 }}>{label}</span>
+                        <span className={`badge ${v.estoque <= v.estoqueMinimo ? 'badge-yellow' : 'badge-green'}`}>
+                          {v.estoque} un.
+                        </span>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
           </div>
         </div>
       )}
