@@ -281,3 +281,22 @@ tbody td {
 .stat-label { font-size: 12px; color: var(--text-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
 .stat-value { font-size: 26px; font-weight: 600; color: var(--text-1); margin-top: 4px; font-variant-numeric: tabular-nums; }
 .stat-sub   { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+/* ── Responsivo ──────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root { --sidebar-w: 0px; }
+  .layout { flex-direction: column; }
+  .page { padding: 16px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .page-header .btn-primary { width: 100%; justify-content: center; }
+  .dash-stats, .est-stats, .rel-stats { grid-template-columns: 1fr 1fr !important; gap: 10px; }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal { max-width: 100% !important; max-height: 92vh; overflow-y: auto; border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 600px; }
+  .form-grid { grid-template-columns: 1fr !important; }
+  .form-grid > * { grid-column: 1 !important; }
+}
+@media (max-width: 480px) {
+  .dash-stats, .est-stats, .rel-stats { grid-template-columns: 1fr !important; }
+}
