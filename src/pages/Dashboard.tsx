@@ -72,32 +72,57 @@ export function Dashboard() {
               <p>Nenhuma venda registrada ainda.</p>
             </div>
           ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th><th>Cliente</th><th>Total</th><th>Pagamento</th><th>Data</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...vendas].reverse().slice(0, 8).map(v => (
-                    <tr key={v.id}>
-                      <td><span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>#{v.id.slice(-6)}</span></td>
-                      <td>{v.nomeCliente || <span style={{ color: 'var(--text-3)' }}>—</span>}</td>
-                      <td style={{ color: 'var(--green)', fontWeight: 500 }}>{fmt(v.totalFinal)}</td>
-                      <td>
+            <>
+              {/* Tabela — desktop */}
+              <div className="table-wrap dash-table-desktop">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th><th>Cliente</th><th>Total</th><th>Pagamento</th><th>Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...vendas].reverse().slice(0, 8).map(v => (
+                      <tr key={v.id}>
+                        <td><span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>#{v.id.slice(-6)}</span></td>
+                        <td>{v.nomeCliente || <span style={{ color: 'var(--text-3)' }}>—</span>}</td>
+                        <td style={{ color: 'var(--green)', fontWeight: 500 }}>{fmt(v.totalFinal)}</td>
+                        <td>
+                          <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
+                            {v.formaPagamento}
+                          </span>
+                        </td>
+                        <td style={{ color: 'var(--text-3)' }}>
+                          {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Cards — mobile */}
+              <div className="dash-vendas-mobile">
+                {[...vendas].reverse().slice(0, 8).map(v => (
+                  <div key={v.id} className="dash-venda-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>#{v.id.slice(-6)}</span>
+                      <span style={{ color: 'var(--green)', fontWeight: 600 }}>{fmt(v.totalFinal)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                      <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{v.nomeCliente || '—'}</span>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
                           {v.formaPagamento}
                         </span>
-                      </td>
-                      <td style={{ color: 'var(--text-3)' }}>
-                        {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                          {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
@@ -118,12 +143,13 @@ export function Dashboard() {
               ))}
             </div>
           )}
-
           <div className="card">
             <div className="dash-card-header">
               <div className="dash-card-title"><TrendingUp size={15} /> Produtos mais vendidos</div>
             </div>
-            {top5.map((p: Produto, i: number) => {
+            {top5.length === 0 ? (
+              <div className="empty" style={{ padding: '20px 0' }}><p>Sem vendas ainda.</p></div>
+            ) : top5.map((p: Produto, i: number) => {
               const qtd = allItens.filter((it: ItemVenda) => it.produtoId === p.id).reduce((s: number, it: ItemVenda) => s + it.quantidade, 0);
               return (
                 <div key={p.id} className="top-row">

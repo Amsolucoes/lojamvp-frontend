@@ -52,6 +52,21 @@
 .top-nome { flex: 1; color: var(--text-1); }
 .top-qtd  { color: var(--text-3); font-size: 12px; }
 
+.dash-vendas-mobile { display: none; }
+
+.dash-venda-card {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.dash-venda-card:last-child { border-bottom: none; }
+
+@media (max-width: 768px) {
+  .dash-grid { grid-template-columns: 1fr !important; }
+  .dash-table-desktop { display: none; }
+  .dash-vendas-mobile { display: block; }
+  .top-row { padding: 10px 0; }
+}
+
 @media (max-width: 1100px) {
   .dash-stats { grid-template-columns: repeat(2, 1fr); }
   .dash-grid  { grid-template-columns: 1fr; }
