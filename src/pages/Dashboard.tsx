@@ -115,6 +115,7 @@ export function Dashboard() {
                           {v.formaPagamento}
                         </span>
                         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                          {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { day: '2-digit', month: '2-digit' })}
                           {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
