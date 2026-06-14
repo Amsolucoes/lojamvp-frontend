@@ -164,85 +164,114 @@ export function Produtos() {
 
       {/* Tabela */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Produto</th>
-                <th>Categoria</th>
-                <th>Custo</th>
-                <th>Venda</th>
-                <th>Margem</th>
-                <th>Estoque</th>
-                <th>Status</th>
-                <th></th>
+        {lista.length === 0 ? (
+          <div className="empty" style={{ padding: '40px 0' }}>
+            <Package size={32} />
+            <p>Nenhum produto encontrado.</p>
+          </div>
+        ) : (
+      <>
+      {/* Tabela — desktop */}
+      <div className="table-wrap prod-table-desktop">
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th><th>Categoria</th><th>Custo</th>
+              <th>Venda</th><th>Margem</th><th>Estoque</th>
+              <th>Status</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map(p => (
+              <tr key={p.id}>
+                <td>
+                  <div className="prod-nome">{p.nome}</div>
+                  {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
+                </td>
+                <td>
+                  <span className="badge badge-accent">
+                    {cats.find(c => c.nome === p.categoria)?.nome ?? p.categoria}
+                  </span>
+                </td>
+                <td style={{ color: 'var(--text-2)' }}>{fmt(p.precoCusto)}</td>
+                <td style={{ fontWeight: 500 }}>{fmt(p.precoVenda)}</td>
+                <td>{lucro(p) && <span className="badge badge-green">+{lucro(p)}%</span>}</td>
+                <td>
+                  {(p as any).variacoes?.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {(p as any).variacoes.map((v: any) => (
+                        <span key={v.id} style={{ fontSize: 11, color: v.estoque <= v.estoqueMinimo ? 'var(--red)' : 'var(--green)' }}>
+                          {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque} un.
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className={p.estoque <= p.estoqueMinimo ? 'estoque-baixo' : 'estoque-ok'}>
+                      {p.estoque} un.
+                    </span>
+                  )}
+                </td>
+                <td>
+                  <span className={`badge ${p.ativo ? 'badge-green' : 'badge-red'}`}>
+                    {p.ativo ? 'Ativo' : 'Inativo'}
+                  </span>
+                </td>
+                <td>
+                  <div className="row-actions">
+                    <button className="btn-ghost" onClick={() => abrirEditar(p)} title="Editar"><Edit2 size={14} /></button>
+                    <button className="btn-ghost" onClick={() => confirmarDelete(p.id)} title="Excluir" style={{ color: 'var(--red)' }}><Trash2 size={14} /></button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {lista.length === 0 ? (
-                <tr>
-                  <td colSpan={8}>
-                    <div className="empty">
-                      <Package size={32} />
-                      <p>Nenhum produto encontrado.</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : lista.map(p => (
-                <tr key={p.id}>
-                  <td>
-                    <div className="prod-nome">{p.nome}</div>
-                    {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
-                  </td>
-                  <td>
-                    <span className="badge badge-accent">
-                      {cats.find(c => c.nome === p.categoria)?.nome ?? p.categoria}
-                    </span>
-                  </td>
-                  <td style={{ color: 'var(--text-2)' }}>{fmt(p.precoCusto)}</td>
-                  <td style={{ fontWeight: 500 }}>{fmt(p.precoVenda)}</td>
-                  <td>
-                    {lucro(p) && (
-                      <span className="badge badge-green">+{lucro(p)}%</span>
-                    )}
-                  </td>
-                  <td>
-                    {(p as any).variacoes?.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {(p as any).variacoes.map((v: any) => (
-                          <span key={v.id} style={{ fontSize: 11, color: v.estoque <= v.estoqueMinimo ? 'var(--red)' : 'var(--green)' }}>
-                            {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque} un.
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className={p.estoque <= p.estoqueMinimo ? 'estoque-baixo' : 'estoque-ok'}>
-                        {p.estoque} un.
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <span className={`badge ${p.ativo ? 'badge-green' : 'badge-red'}`}>
-                      {p.ativo ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="btn-ghost" onClick={() => abrirEditar(p)} title="Editar">
-                        <Edit2 size={14} />
-                      </button>
-                      <button className="btn-ghost" onClick={() => confirmarDelete(p.id)} title="Excluir"
-                        style={{ color: 'var(--red)' }}>
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
+
+      {/* Cards — mobile */}
+      <div className="prod-cards-mobile">
+        {lista.map(p => (
+          <div key={p.id} className="prod-card-mobile">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div className="prod-nome">{p.nome}</div>
+                {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button className="btn-ghost" onClick={() => abrirEditar(p)}><Edit2 size={14} /></button>
+                <button className="btn-ghost" onClick={() => confirmarDelete(p.id)} style={{ color: 'var(--red)' }}><Trash2 size={14} /></button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+              <span className="badge badge-accent">{cats.find(c => c.nome === p.categoria)?.nome ?? p.categoria}</span>
+              <span className={`badge ${p.ativo ? 'badge-green' : 'badge-red'}`}>{p.ativo ? 'Ativo' : 'Inativo'}</span>
+              {lucro(p) && <span className="badge badge-green">+{lucro(p)}%</span>}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 13 }}>
+              <span style={{ color: 'var(--text-3)' }}>Custo: <strong style={{ color: 'var(--text-2)' }}>{fmt(p.precoCusto)}</strong></span>
+              <span style={{ color: 'var(--text-3)' }}>Venda: <strong style={{ color: 'var(--text-1)', fontWeight: 600 }}>{fmt(p.precoVenda)}</strong></span>
+            </div>
+            <div style={{ marginTop: 8 }}>
+              {(p as any).variacoes?.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {(p as any).variacoes.map((v: any) => (
+                    <span key={v.id} style={{ fontSize: 11, background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 6px', color: v.estoque <= v.estoqueMinimo ? 'var(--red)' : 'var(--green)' }}>
+                      {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque}un
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className={p.estoque <= p.estoqueMinimo ? 'estoque-baixo' : 'estoque-ok'} style={{ fontSize: 12 }}>
+                  Estoque: {p.estoque} un.
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  )}
+</div>
 
       {/* Modal novo/editar */}
       {modal && (
