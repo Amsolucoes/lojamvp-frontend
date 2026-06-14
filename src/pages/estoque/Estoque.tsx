@@ -139,16 +139,12 @@ export function Estoque() {
           <div className="est-filters">
             <div className="search-wrap" style={{ maxWidth: 300 }}>
               <Search size={14} className="search-icon" />
-              <input
-                className="search-input"
-                placeholder="Buscar produto..."
-                value={busca}
-                onChange={e => setBusca(e.target.value)}
-              />
+              <input className="search-input" placeholder="Buscar produto..."
+                value={busca} onChange={e => setBusca(e.target.value)} />
             </div>
             <div className="cat-tabs">
-              <button className={`cat-tab${filtro === 'todos'  ? ' active' : ''}`} onClick={() => setFiltro('todos')}>Todos</button>
-              <button className={`cat-tab${filtro === 'baixo'  ? ' active' : ''}`} onClick={() => setFiltro('baixo')}>
+              <button className={`cat-tab${filtro === 'todos' ? ' active' : ''}`} onClick={() => setFiltro('todos')}>Todos</button>
+              <button className={`cat-tab${filtro === 'baixo' ? ' active' : ''}`} onClick={() => setFiltro('baixo')}>
                 Estoque baixo {alertas > 0 && <span className="est-badge-warn">{alertas}</span>}
               </button>
               <button className={`cat-tab${filtro === 'zerado' ? ' active' : ''}`} onClick={() => setFiltro('zerado')}>
@@ -158,80 +154,112 @@ export function Estoque() {
           </div>
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Produto</th>
-                    <th>Categoria</th>
-                    <th>Estoque atual</th>
-                    <th>Mínimo</th>
-                    <th>Valor (custo)</th>
-                    <th>Status</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {prodsFiltrados.length === 0 ? (
-                    <tr>
-                      <td colSpan={7}>
-                        <div className="empty"><Boxes size={28} /><p>Nenhum produto encontrado.</p></div>
-                      </td>
-                    </tr>
-                  ) : prodsFiltrados.map(p => {
+            {prodsFiltrados.length === 0 ? (
+              <div className="empty" style={{ padding: '40px 0' }}><Boxes size={28} /><p>Nenhum produto encontrado.</p></div>
+            ) : (
+              <>
+                {/* Tabela — desktop */}
+                <div className="table-wrap est-table-desktop">
+                  <table>
+                    <thead>
+                      <tr><th>Produto</th><th>Categoria</th><th>Estoque atual</th><th>Mínimo</th><th>Valor (custo)</th><th>Status</th><th>Ações</th></tr>
+                    </thead>
+                    <tbody>
+                      {prodsFiltrados.map(p => {
+                        const status = statusEstoque(p);
+                        return (
+                          <tr key={p.id}>
+                            <td><div style={{ fontWeight: 500 }}>{p.nome}</div></td>
+                            <td><span className="badge badge-accent" style={{ fontSize: 11 }}>{p.categoria}</span></td>
+                            <td>
+                              {(p as any).variacoes?.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                  {(p as any).variacoes.map((v: any) => (
+                                    <span key={v.id} style={{ fontSize: 11, color: v.estoque <= v.estoqueMinimo ? 'var(--red)' : 'var(--green)' }}>
+                                      {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque} un.
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="est-qtd-cell">
+                                  <div className="est-bar-wrap">
+                                    <div className={`est-bar est-bar-${status}`}
+                                      style={{ width: `${Math.min(100, (p.estoque / Math.max(p.estoqueMinimo * 3, 1)) * 100)}%` }} />
+                                  </div>
+                                  <span className={`est-qtd est-qtd-${status}`}>{p.estoque} un.</span>
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ color: 'var(--text-3)', fontSize: 13 }}>{p.estoqueMinimo} un.</td>
+                            <td style={{ color: 'var(--text-2)', fontSize: 13 }}>{fmt(p.estoque * p.precoCusto)}</td>
+                            <td>
+                              {status === 'zerado' && <span className="badge badge-red">Zerado</span>}
+                              {status === 'baixo'  && <span className="badge badge-yellow"><AlertTriangle size={10} /> Baixo</span>}
+                              {status === 'ok'     && <span className="badge badge-green">OK</span>}
+                            </td>
+                            <td>
+                              <div className="est-acoes">
+                                <button className="btn-secondary est-btn-acao" onClick={() => abrirEntrada(p)}><ArrowDown size={13} style={{ color: 'var(--green)' }} /> Entrada</button>
+                                <button className="btn-ghost est-btn-acao" onClick={() => abrirAjuste(p)}><RefreshCw size={12} /> Ajustar</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Cards — mobile */}
+                <div className="est-cards-mobile">
+                  {prodsFiltrados.map(p => {
                     const status = statusEstoque(p);
                     return (
-                      <tr key={p.id}>
-                        <td>
-                          <div style={{ fontWeight: 500 }}>{p.nome}</div>
-                        </td>
-                        <td>
-                          <span className="badge badge-accent" style={{ fontSize: 11 }}>{p.categoria}</span>
-                        </td>
-                        <td>
+                      <div key={p.id} className="est-card-mobile">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <div style={{ fontWeight: 500 }}>{p.nome}</div>
+                            <span className="badge badge-accent" style={{ fontSize: 10, marginTop: 4 }}>{p.categoria}</span>
+                          </div>
+                          <div>
+                            {status === 'zerado' && <span className="badge badge-red">Zerado</span>}
+                            {status === 'baixo'  && <span className="badge badge-yellow"><AlertTriangle size={10} /> Baixo</span>}
+                            {status === 'ok'     && <span className="badge badge-green">OK</span>}
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 10 }}>
                           {(p as any).variacoes?.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                               {(p as any).variacoes.map((v: any) => (
-                                <span key={v.id} style={{ fontSize: 11, color: v.estoque <= v.estoqueMinimo ? 'var(--red)' : 'var(--green)' }}>
-                                  {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque} un.
+                                <span key={v.id} style={{ fontSize: 11, background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 6px', color: v.estoque <= v.estoqueMinimo ? 'var(--red)' : 'var(--green)' }}>
+                                  {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque}un
                                 </span>
                               ))}
                             </div>
                           ) : (
                             <div className="est-qtd-cell">
                               <div className="est-bar-wrap">
-                                <div
-                                  className={`est-bar est-bar-${status}`}
-                                  style={{ width: `${Math.min(100, (p.estoque / Math.max(p.estoqueMinimo * 3, 1)) * 100)}%` }}
-                                />
+                                <div className={`est-bar est-bar-${status}`}
+                                  style={{ width: `${Math.min(100, (p.estoque / Math.max(p.estoqueMinimo * 3, 1)) * 100)}%` }} />
                               </div>
                               <span className={`est-qtd est-qtd-${status}`}>{p.estoque} un.</span>
                             </div>
                           )}
-                        </td>
-                        <td style={{ color: 'var(--text-3)', fontSize: 13 }}>{p.estoqueMinimo} un.</td>
-                        <td style={{ color: 'var(--text-2)', fontSize: 13 }}>{fmt(p.estoque * p.precoCusto)}</td>
-                        <td>
-                          {status === 'zerado' && <span className="badge badge-red">Zerado</span>}
-                          {status === 'baixo'  && <span className="badge badge-yellow"><AlertTriangle size={10} /> Baixo</span>}
-                          {status === 'ok'     && <span className="badge badge-green">OK</span>}
-                        </td>
-                        <td>
-                          <div className="est-acoes">
-                            <button className="btn-secondary est-btn-acao" onClick={() => abrirEntrada(p)} title="Registrar entrada">
-                              <ArrowDown size={13} style={{ color: 'var(--green)' }} /> Entrada
-                            </button>
-                            <button className="btn-ghost est-btn-acao" onClick={() => abrirAjuste(p)} title="Ajustar estoque">
-                              <RefreshCw size={12} /> Ajustar
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                          <button className="btn-secondary est-btn-acao" style={{ flex: 1 }} onClick={() => abrirEntrada(p)}>
+                            <ArrowDown size={13} style={{ color: 'var(--green)' }} /> Entrada
+                          </button>
+                          <button className="btn-ghost est-btn-acao" style={{ flex: 1 }} onClick={() => abrirAjuste(p)}>
+                            <RefreshCw size={12} /> Ajustar
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </>
       )}
@@ -239,55 +267,64 @@ export function Estoque() {
       {/* Histórico */}
       {aba === 'movimentos' && (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data / Hora</th>
-                  <th>Produto</th>
-                  <th>Tipo</th>
-                  <th>Quantidade</th>
-                  <th>Observação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {movOrdenados.length === 0 ? (
-                  <tr>
-                    <td colSpan={5}>
-                      <div className="empty"><RefreshCw size={28} /><p>Nenhum movimento registrado ainda.</p></div>
-                    </td>
-                  </tr>
-                ) : movOrdenados.map(m => (
-                  <tr key={m.id}>
-                    <td style={{ color: 'var(--text-3)', fontSize: 12, whiteSpace: 'nowrap' }}>
-                      {new Date(m.criadoEm).toLocaleDateString('pt-BR')}{' '}
-                      {new Date(m.criadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td style={{ fontWeight: 500 }}>{m.nomeProduto}</td>
-                    <td>
-                      {m.tipo === 'entrada' && (
-                        <span className="badge badge-green"><ArrowDown size={10} /> Entrada</span>
-                      )}
-                      {m.tipo === 'saida' && (
-                        <span className="badge badge-red"><ArrowUp size={10} /> Saída</span>
-                      )}
-                      {m.tipo === 'ajuste' && (
-                        <span className="badge badge-blue"><RefreshCw size={10} /> Ajuste</span>
-                      )}
-                    </td>
-                    <td>
+          {movOrdenados.length === 0 ? (
+            <div className="empty" style={{ padding: '40px 0' }}><RefreshCw size={28} /><p>Nenhum movimento registrado ainda.</p></div>
+          ) : (
+            <>
+              {/* Tabela — desktop */}
+              <div className="table-wrap est-table-desktop">
+                <table>
+                  <thead>
+                    <tr><th>Data / Hora</th><th>Produto</th><th>Tipo</th><th>Quantidade</th><th>Observação</th></tr>
+                  </thead>
+                  <tbody>
+                    {movOrdenados.map(m => (
+                      <tr key={m.id}>
+                        <td style={{ color: 'var(--text-3)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                          {new Date(m.criadoEm).toLocaleDateString('pt-BR')}{' '}
+                          {new Date(m.criadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td style={{ fontWeight: 500 }}>{m.nomeProduto}</td>
+                        <td>
+                          {m.tipo === 'entrada' && <span className="badge badge-green"><ArrowDown size={10} /> Entrada</span>}
+                          {m.tipo === 'saida'   && <span className="badge badge-red"><ArrowUp size={10} /> Saída</span>}
+                          {m.tipo === 'ajuste'  && <span className="badge badge-blue"><RefreshCw size={10} /> Ajuste</span>}
+                        </td>
+                        <td><span className={`est-mov-qtd ${m.tipo === 'saida' ? 'saida' : 'entrada'}`}>{m.tipo === 'saida' ? '−' : '+'}{m.quantidade}</span></td>
+                        <td style={{ color: 'var(--text-3)', fontSize: 12 }}>{m.observacao || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Cards — mobile */}
+              <div className="est-cards-mobile">
+                {movOrdenados.map(m => (
+                  <div key={m.id} className="est-card-mobile">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontWeight: 500, fontSize: 13 }}>{m.nomeProduto}</div>
                       <span className={`est-mov-qtd ${m.tipo === 'saida' ? 'saida' : 'entrada'}`}>
                         {m.tipo === 'saida' ? '−' : '+'}{m.quantidade}
                       </span>
-                    </td>
-                    <td style={{ color: 'var(--text-3)', fontSize: 12 }}>
-                      {m.observacao || '—'}
-                    </td>
-                  </tr>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                      <div>
+                        {m.tipo === 'entrada' && <span className="badge badge-green"><ArrowDown size={10} /> Entrada</span>}
+                        {m.tipo === 'saida'   && <span className="badge badge-red"><ArrowUp size={10} /> Saída</span>}
+                        {m.tipo === 'ajuste'  && <span className="badge badge-blue"><RefreshCw size={10} /> Ajuste</span>}
+                      </div>
+                      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                        {new Date(m.criadoEm).toLocaleDateString('pt-BR')}{' '}
+                        {new Date(m.criadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    {m.observacao && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{m.observacao}</div>}
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
