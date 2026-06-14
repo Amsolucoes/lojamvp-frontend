@@ -153,17 +153,12 @@ export function Relatorios() {
                     <div className="rel-bar-label">
                       <span className="rel-nome">
                         {nome}
-                        {variacao && (
-                          <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 6 }}>
-                            {variacao}
-                          </span>
-                        )}
+                        {variacao && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 6 }}>{variacao}</span>}
                       </span>
                       <span className="rel-valor">{item.qtd} un. · {fmt(item.receita)}</span>
                     </div>
                     <div className="rel-bar-wrap">
-                      <div className="rel-bar rel-bar-accent"
-                        style={{ width: `${(item.qtd / maxQtd) * 100}%` }} />
+                      <div className="rel-bar rel-bar-accent" style={{ width: `${(item.qtd / maxQtd) * 100}%` }} />
                     </div>
                   </div>
                 </div>
@@ -174,7 +169,7 @@ export function Relatorios() {
           {/* Coluna direita */}
           <div className="rel-col-right">
 
-            {/* Por categoria — dinâmico */}
+            {/* Por categoria */}
             <div className="card rel-card">
               <div className="rel-card-title"><Package size={15} /> Vendas por categoria</div>
               {porCategoria.length === 0 ? (
@@ -187,12 +182,9 @@ export function Relatorios() {
                       <span className="rel-valor">{fmt(c.receita)}</span>
                     </div>
                     <div className="rel-bar-wrap">
-                      <div className="rel-bar rel-bar-blue"
-                        style={{ width: `${(c.receita / maxCat) * 100}%` }} />
+                      <div className="rel-bar rel-bar-blue" style={{ width: `${(c.receita / maxCat) * 100}%` }} />
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
-                      {c.qtd} unidades vendidas
-                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{c.qtd} unidades vendidas</div>
                   </div>
                 </div>
               ))}
@@ -208,8 +200,7 @@ export function Relatorios() {
                     <span className="badge badge-accent" style={{ fontSize: 11 }}>{p.qtd}x</span>
                   </div>
                   <div className="rel-bar-wrap" style={{ margin: '5px 0' }}>
-                    <div className="rel-bar rel-bar-green"
-                      style={{ width: `${(p.total / maxPag) * 100}%` }} />
+                    <div className="rel-bar rel-bar-green" style={{ width: `${(p.total / maxPag) * 100}%` }} />
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)' }}>{fmt(p.total)}</div>
                 </div>
@@ -219,16 +210,14 @@ export function Relatorios() {
             {/* Últimas vendas */}
             <div className="card rel-card">
               <div className="rel-card-title"><Calendar size={15} /> Últimas vendas</div>
-              <div className="table-wrap">
+              {/* Desktop */}
+              <div className="table-wrap rel-table-desktop">
                 <table>
-                  <thead>
-                    <tr><th>Data</th><th>Itens</th><th>Total</th></tr>
-                  </thead>
+                  <thead><tr><th>Data</th><th>Itens</th><th>Total</th></tr></thead>
                   <tbody>
                     {[...vendasFiltradas]
                       .sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime())
-                      .slice(0, 6)
-                      .map(v => (
+                      .slice(0, 6).map(v => (
                         <tr key={v.id}>
                           <td style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
                             {new Date(v.criadaEm).toLocaleDateString('pt-BR')}
@@ -243,13 +232,34 @@ export function Relatorios() {
                               );
                             })}
                           </td>
-                          <td style={{ fontWeight: 600, color: 'var(--green)', fontSize: 13 }}>
-                            {fmt(v.totalFinal)}
-                          </td>
+                          <td style={{ fontWeight: 600, color: 'var(--green)', fontSize: 13 }}>{fmt(v.totalFinal)}</td>
                         </tr>
                       ))}
                   </tbody>
                 </table>
+              </div>
+              {/* Mobile */}
+              <div className="rel-vendas-mobile">
+                {[...vendasFiltradas]
+                  .sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime())
+                  .slice(0, 6).map(v => (
+                    <div key={v.id} className="rel-venda-card">
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{new Date(v.criadaEm).toLocaleDateString('pt-BR')}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(v.totalFinal)}</span>
+                      </div>
+                      <div style={{ marginTop: 4 }}>
+                        {v.itens.map(i => {
+                          const { nome, variacao } = extrairVariacao(i.nomeProduto);
+                          return (
+                            <div key={i.produtoId + (variacao ?? '')} style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                              {nome} {variacao && <span style={{ color: 'var(--accent)' }}>({variacao})</span>} ×{i.quantidade}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
           </div>

@@ -115,6 +115,23 @@
   margin-bottom: 2px;
 }
 
+.rel-vendas-mobile { display: none; }
+
+.rel-venda-card {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rel-venda-card:last-child { border-bottom: none; }
+
+@media (max-width: 768px) {
+  .rel-grid { grid-template-columns: 1fr !important; }
+  .rel-col-right { display: flex; flex-direction: column; gap: 16px; }
+  .rel-table-desktop { display: none; }
+  .rel-vendas-mobile { display: block; }
+  .rel-stats { grid-template-columns: 1fr 1fr !important; }
+  .rel-periodo-tabs { flex-wrap: wrap; gap: 6px; }
+}
+
 @media (max-width: 1100px) {
   .rel-stats { grid-template-columns: repeat(2, 1fr); }
   .rel-grid  { grid-template-columns: 1fr; }
