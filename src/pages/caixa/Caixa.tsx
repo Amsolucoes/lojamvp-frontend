@@ -260,54 +260,78 @@ export function Caixa() {
               <p style={{ fontSize: 12 }}>Busque um produto acima para adicionar</p>
             </div>
           ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Produto</th>
-                    <th>Preço unit.</th>
-                    <th>Qtd</th>
-                    <th>Subtotal</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {carrinho.map(item => (
-                    <tr key={item.produtoId}>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{item.nomeProduto}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+            <>
+              {/* Tabela — desktop */}
+              <div className="table-wrap cx-table-desktop">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Produto</th><th>Preço unit.</th><th>Qtd</th><th>Subtotal</th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {carrinho.map(item => (
+                      <tr key={`${item.produtoId}-${item.variacaoId ?? ''}`}>
+                        <td>
+                          <div style={{ fontWeight: 500 }}>{item.nomeProduto}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>estoque: {item.estoqueDisp} un.</div>
+                        </td>
+                        <td>
+                          <input className="cx-preco-input" type="number" min={0} step={0.01}
+                            value={item.precoUnitario}
+                            onChange={e => editarPreco(item.produtoId, +e.target.value)} />
+                        </td>
+                        <td>
+                          <div className="cx-qtd">
+                            <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, -1)}><Minus size={12} /></button>
+                            <span className="cx-qtd-val">{item.quantidade}</span>
+                            <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, 1)}><Plus size={12} /></button>
+                          </div>
+                        </td>
+                        <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(item.subtotal)}</td>
+                        <td>
+                          <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removerItem(item.produtoId)}>
+                            <Trash2 size={13} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Cards — mobile */}
+              <div className="cx-cards-mobile">
+                {carrinho.map(item => (
+                  <div key={`${item.produtoId}-${item.variacaoId ?? ''}`} className="cx-item-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 500, fontSize: 14 }}>{item.nomeProduto}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
                           estoque: {item.estoqueDisp} un.
                         </div>
-                      </td>
-                      <td>
-                        <input
-                          className="cx-preco-input"
-                          type="number"
-                          min={0}
-                          step={0.01}
-                          value={item.precoUnitario}
-                          onChange={e => editarPreco(item.produtoId, +e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <div className="cx-qtd">
-                          <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, -1)}><Minus size={12} /></button>
-                          <span className="cx-qtd-val">{item.quantidade}</span>
-                          <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, 1)}><Plus size={12} /></button>
-                        </div>
-                      </td>
-                      <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(item.subtotal)}</td>
-                      <td>
-                        <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removerItem(item.produtoId)}>
-                          <Trash2 size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                      <button className="btn-ghost" style={{ color: 'var(--red)', flexShrink: 0 }}
+                        onClick={() => removerItem(item.produtoId)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, gap: 8 }}>
+                      <input className="cx-preco-input" type="number" min={0} step={0.01}
+                        value={item.precoUnitario}
+                        onChange={e => editarPreco(item.produtoId, +e.target.value)}
+                        style={{ maxWidth: 90 }} />
+                      <div className="cx-qtd">
+                        <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, -1)}><Minus size={12} /></button>
+                        <span className="cx-qtd-val">{item.quantidade}</span>
+                        <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, 1)}><Plus size={12} /></button>
+                      </div>
+                      <span style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 15 }}>{fmt(item.subtotal)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

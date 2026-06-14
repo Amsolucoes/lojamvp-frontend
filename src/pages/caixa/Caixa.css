@@ -254,6 +254,19 @@
   margin: 0 auto 16px;
 }
 
+.cx-cards-mobile { display: none; }
+
+.cx-item-card {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.cx-item-card:last-child { border-bottom: none; }
+
+@media (max-width: 768px) {
+  .cx-table-desktop { display: none; }
+  .cx-cards-mobile { display: block; }
+}
+
 @media (max-width: 900px) {
   .caixa-page {
     grid-template-columns: 1fr;
