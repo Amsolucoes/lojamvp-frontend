@@ -96,15 +96,12 @@ export function Produtos() {
       if (modal === 'novo') {
         const novo = await api.post<any>('/api/produtos', form);
         produtoId = novo.id;
-        // Recarrega produtos do contexto
-        await recarregar();
       } else if (editId) {
         await api.put(`/api/produtos/${editId}`, form);
         produtoId = editId;
-        await recarregar();
       } else return;
 
-      // Salva variações
+      // Salva variações PRIMEIRO
       for (const v of variacoes) {
         if (v.id) {
           await api.put(`/api/produtos/${produtoId}/variacoes/${v.id}`, v);
@@ -113,6 +110,8 @@ export function Produtos() {
         }
       }
 
+      // Recarrega DEPOIS de salvar tudo
+      await recarregar();
       setModal(null);
     } catch (e) {
       alert('Erro ao salvar: ' + (e as Error).message);
@@ -301,23 +300,24 @@ export function Produtos() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Preço de custo (R$)</label>
-                  <input type="number" min={0} step={0.01} value={form.precoCusto}
-                    onChange={e => setForm(f => ({ ...f, precoCusto: +e.target.value }))} />
+                  <input type="number" min={0} 
+                    value={form.precoCusto === 0 ? '' : form.precoCusto}
+                    onChange={e => setForm(f => ({ ...f, precoCusto: e.target.value === '' ? 0 : +e.target.value }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Preço de venda (R$)</label>
-                  <input type="number" min={0} step={0.01} value={form.precoVenda}
-                    onChange={e => setForm(f => ({ ...f, precoVenda: +e.target.value }))} />
+                  <input type="number" min={0} value={form.precoVenda === 0 ? '' : form.precoVenda}
+                    onChange={e => setForm(f => ({ ...f, precoVenda: e.target.value === '' ? 0 : +e.target.value }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Estoque atual</label>
-                  <input type="number" min={0} value={form.estoque}
-                    onChange={e => setForm(f => ({ ...f, estoque: +e.target.value }))} />
+                  <input type="number" min={0} value={form.estoque === 0 ? '' : form.estoque}
+                    onChange={e => setForm(f => ({ ...f, estoque: e.target.value === '' ? 0 : +e.target.value }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Estoque mínimo (alerta)</label>
-                  <input type="number" min={0} value={form.estoqueMinimo}
-                    onChange={e => setForm(f => ({ ...f, estoqueMinimo: +e.target.value }))} />
+                  <input type="number" min={0} value={form.estoqueMinimo === 0 ? '' : form.estoqueMinimo}
+                    onChange={e => setForm(f => ({ ...f, estoqueMinimo: e.target.value === '' ? 0 : +e.target.value }))} />
                 </div>
                 <div className="form-group" style={{ gridColumn: '1/-1' }}>
                   <label className="form-label">Descrição</label>
@@ -380,11 +380,11 @@ export function Produtos() {
                             <input value={v.cor ?? ''} placeholder="Cor"
                               onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, cor: e.target.value } : x))} />
                             {/* Estoque */}
-                            <input type="number" min={0} value={v.estoque}
-                              onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, estoque: +e.target.value } : x))} />
+                            <input type="number" min={0} value={v.estoque === 0 ? '' : v.estoque}
+                              onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, estoque: e.target.value === '' ? 0 : +e.target.value } : x))} />
                             {/* Mínimo */}
-                            <input type="number" min={0} value={v.estoqueMinimo}
-                              onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, estoqueMinimo: +e.target.value } : x))} />
+                            <input type="number" min={0} value={v.estoqueMinimo === 0 ? '' : v.estoqueMinimo}
+                              onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, estoqueMinimo: e.target.value === '' ? 0 : +e.target.value } : x))} />
                             {/* Remover */}
                             <button className="btn-ghost" style={{ color: 'var(--red)', padding: '4px' }}
                               onClick={() => setVariacoes(prev => prev.filter((_, j) => j !== i))}>
