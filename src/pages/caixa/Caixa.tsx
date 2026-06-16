@@ -49,6 +49,10 @@ export function Caixa() {
   const [variacoesDisponiveis, setVariacoesDisponiveis] = useState<{prodId: string; vars: VariacaoItem[]}[]>([]);
   const [modalVariacao, setModalVariacao] = useState<{prodId: string; nomeProd: string} | null>(null);
 
+  const [formas, setFormas] = useState<{forma: FormaPagamento; valor: number; parcelas?: number}[]>([
+  { forma: 'dinheiro', valor: 0 }]);
+  const [duasFormas, setDuasFormas] = useState(false);
+
   const prodsFiltrados = produtos.filter(p =>
     p.ativo && p.estoque > 0 &&
     (p.nome.toLowerCase().includes(buscaProd.toLowerCase()) ||
@@ -161,21 +165,25 @@ export function Caixa() {
     if (carrinho.length === 0) return;
     const venda = {
       itens: carrinho.map(item => ({
-        produtoId: item.produtoId,
-        nomeProduto: item.nomeProduto,
-        quantidade: item.quantidade,
+        produtoId:     item.produtoId,
+        nomeProduto:   item.nomeProduto,
+        quantidade:    item.quantidade,
         precoUnitario: item.precoUnitario,
-        subtotal: item.subtotal,
-        variacaoId: item.variacaoId ?? null,
+        subtotal:      item.subtotal,
+        variacaoId:    item.variacaoId ?? null,
       })),
-      clienteId: clienteId || undefined,
-      nomeCliente: clienteSel?.nome,
-      total: subtotal,
-      desconto: descontoVal,
-      totalFinal: total,
-      formaPagamento: formaPag,
-      troco: formaPag === 'dinheiro' ? troco : undefined,
-    };
+      clienteId:      clienteId || undefined,
+      nomeCliente:    clienteSel?.nome,
+      total:          subtotal,
+      desconto:       descontoVal,
+      totalFinal:     total,
+      formaPagamento: formas[0].forma,
+      parcelas:       formas[0].parcelas ?? 1,
+      formasPagamento: duasFormas ? formas : undefined,
+      troco: formas[0].forma === 'dinheiro' && !duasFormas && valorPago
+        ? Math.max(0, parseFloat(valorPago) - total)
+        : undefined,
+    } as any;
     registrarVenda(venda);
     setUltimaVenda(total.toString());
     setSucesso(true);
@@ -184,22 +192,22 @@ export function Caixa() {
 
   function limpar() {
     setCarrinho([]);
-    setDesconto(0);
-    setTipoDesc('reais');
-    setFormaPag('pix');
-    setValorPago('');
     setClienteId('');
     setBuscaCli('');
-    setBuscaProd('');
+    setDesconto(0);
+    setValorPago('');
+    setFormas([{ forma: 'dinheiro', valor: 0 }]);
+    setDuasFormas(false);
   }
 
   // Vendas do dia
   const hoje = new Date().toDateString();
   const vendasHoje = vendas.filter(v => new Date(v.criadaEm).toDateString() === hoje);
   const totalDia   = vendasHoje.reduce((s, v) => s + v.totalFinal, 0);
+  const totalFormas = formas.reduce((s, f) => s + f.valor, 0);
 
-  const podeFinalizar = carrinho.length > 0 &&
-    (formaPag !== 'dinheiro' || (!!valorPago && parseFloat(valorPago.replace(',', '.')) >= total));
+  const podeFinalizar = carrinho.length > 0 && 
+  (duasFormas ? Math.abs(totalFormas - total) < 0.01 : formas[0].forma !== undefined);
 
   return (
     <div className="page caixa-page">
@@ -418,58 +426,121 @@ export function Caixa() {
           </div>
         </div>
 
-        {/* Forma de pagamento */}
-        <div className="card cx-section">
-          <div className="cx-section-title">Forma de pagamento</div>
-          <div className="cx-formas">
-            {FORMAS.map(f => (
-              <button
-                key={f.value}
-                className={`cx-forma-btn${formaPag === f.value ? ' active' : ''}`}
-                onClick={() => setFormaPag(f.value)}
-              >
-                <span>{f.icon}</span>
-                <span>{f.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {formaPag === 'dinheiro' && (
-            <div style={{ marginTop: 12 }}>
-              <label className="form-label">Valor recebido</label>
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                value={valorPago}
-                onChange={e => setValorPago(e.target.value)}
-                placeholder={fmt(total)}
-                style={{ marginTop: 5 }}
-              />
-              {valorPago && parseFloat(valorPago.replace(',', '.')) >= total && (
-                <div className="cx-troco">
-                  Troco: <strong>{fmt(troco)}</strong>
-                </div>
-              )}
-              {valorPago && parseFloat(valorPago.replace(',', '.')) < total && (
-                <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>
-                  Valor insuficiente — faltam {fmt(total - parseFloat(valorPago.replace(',', '.')))}
-                </div>
-              )}
-            </div>
-          )}
+      {/* Forma de pagamento */}
+      <div className="card cx-section">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div className="cx-section-title" style={{ margin: 0 }}>Forma de pagamento</div>
+          <button className="btn-ghost" style={{ fontSize: 12, color: duasFormas ? 'var(--accent)' : 'var(--text-3)' }}
+            onClick={() => {
+              setDuasFormas(v => !v);
+              setFormas([{ forma: 'dinheiro', valor: 0 }, { forma: 'pix', valor: 0 }]);
+            }}>
+            {duasFormas ? '✓ 2 formas' : '+ 2 formas'}
+          </button>
         </div>
 
-        {/* Botão finalizar */}
-        <button
-          className={`cx-finalizar${podeFinalizar ? '' : ' disabled'}`}
-          onClick={podeFinalizar ? finalizarVenda : undefined}
-          disabled={!podeFinalizar}
-        >
-          <Check size={18} />
-          Finalizar venda · {fmt(total)}
-        </button>
+        {formas.map((f, idx) => (
+          <div key={idx} style={{ marginBottom: idx < formas.length - 1 ? 16 : 0 }}>
+            {duasFormas && (
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 6, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                {idx === 0 ? '1ª forma' : '2ª forma'}
+              </div>
+            )}
+            <div className="cx-formas">
+              {FORMAS.map(fp => (
+                <button key={fp.value}
+                  className={`cx-forma-btn${f.forma === fp.value ? ' active' : ''}`}
+                  onClick={() => setFormas(prev => prev.map((x, i) => i === idx ? { ...x, forma: fp.value } : x))}>
+                  <span>{fp.icon}</span>
+                  <span>{fp.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Cartão — parcelamento */}
+            {f.forma === 'credito' && (
+              <div style={{ marginTop: 10 }}>
+                <label className="form-label">Parcelamento</label>
+                <select style={{ marginTop: 5 }}
+                  value={f.parcelas ?? 1}
+                  onChange={e => setFormas(prev => prev.map((x, i) => i === idx ? { ...x, parcelas: +e.target.value } : x))}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                    <option key={n} value={n}>
+                      {n}x {fmt((duasFormas ? f.valor : total) / n)}{n === 1 ? ' (à vista)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Dinheiro — troco */}
+            {f.forma === 'dinheiro' && !duasFormas && (
+              <div style={{ marginTop: 10 }}>
+                <label className="form-label">Valor recebido</label>
+                <input type="number" min={0} step={0.01}
+                  value={valorPago}
+                  onChange={e => setValorPago(e.target.value)}
+                  placeholder={fmt(total)}
+                  style={{ marginTop: 5 }} />
+                {valorPago && parseFloat(valorPago) >= total && (
+                  <div className="cx-troco">Troco: <strong>{fmt(parseFloat(valorPago) - total)}</strong></div>
+                )}
+                {valorPago && parseFloat(valorPago) < total && (
+                  <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>
+                    Faltam {fmt(total - parseFloat(valorPago))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Valor de cada forma quando usa 2 */}
+            {duasFormas && (
+              <div style={{ marginTop: 10 }}>
+                <label className="form-label">Valor nesta forma</label>
+                <input type="number" min={0} step={0.01}
+                  value={f.valor === 0 ? '' : f.valor}
+                  onChange={e => {
+                    const val = +e.target.value || 0;
+                    setFormas(prev => {
+                      const nova = [...prev];
+                      nova[idx] = { ...nova[idx], valor: val };
+                      // Auto-preenche o restante na outra forma
+                      if (idx === 0) nova[1] = { ...nova[1], valor: Math.max(0, +(total - val).toFixed(2)) };
+                      return nova;
+                    });
+                  }}
+                  style={{ marginTop: 5 }}
+                  placeholder={fmt(idx === 0 ? total / 2 : total / 2)} />
+              </div>
+            )}
+          </div>
+        ))}
+
+        {duasFormas && (
+          <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--bg-3)', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-3)' }}>Total das formas:</span>
+              <span style={{ fontWeight: 600, color: Math.abs(totalFormas - total) < 0.01 ? 'var(--green)' : 'var(--red)' }}>
+                {fmt(totalFormas)}
+              </span>
+            </div>
+            {Math.abs(totalFormas - total) >= 0.01 && (
+              <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>
+                {totalFormas < total ? `Faltam ${fmt(total - totalFormas)}` : `Excesso de ${fmt(totalFormas - total)}`}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Botão finalizar */}
+      <button
+        className={`cx-finalizar${podeFinalizar ? '' : ' disabled'}`}
+        onClick={podeFinalizar ? finalizarVenda : undefined}
+        disabled={!podeFinalizar}>
+        <Check size={18} />
+        Finalizar venda · {fmt(total)}
+      </button>
 
       {/* Modal seleção de variação */}
       {modalVariacao && (
@@ -519,9 +590,9 @@ export function Caixa() {
             <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 4 }}>
               Total: <strong style={{ color: 'var(--green)' }}>{fmt(parseFloat(ultimaVenda ?? '0'))}</strong>
             </p>
-            {formaPag === 'dinheiro' && troco > 0 && (
+            {formas[0].forma === 'dinheiro' && valorPago && parseFloat(valorPago) > total && (
               <p style={{ color: 'var(--text-2)', fontSize: 13 }}>
-                Troco: <strong>{fmt(troco)}</strong>
+                Troco: <strong>{fmt(parseFloat(valorPago) - total)}</strong>
               </p>
             )}
             <button className="btn-primary" style={{ marginTop: 20, width: '100%' }} onClick={() => setSucesso(false)}>
@@ -531,5 +602,6 @@ export function Caixa() {
         </div>
       )}
     </div>
+  </div>
   );
 }
