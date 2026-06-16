@@ -17,7 +17,7 @@ export function FluxoCaixa() {
   const { vendas } = useApp();
   const hoje = new Date();
 
-  const [aba, setAba]       = useState<'diario' | 'mensal'>('diario');
+  const [aba, setAba]       = useState<'hoje' | 'diario' | 'mensal'>('hoje');
   const [mesRef, setMesRef] = useState(hoje.getMonth());
   const [anoRef, setAnoRef] = useState(hoje.getFullYear());
 
@@ -37,6 +37,13 @@ export function FluxoCaixa() {
       isFuturo: dia > hoje,
     };
   });
+
+  const vendasHoje = vendas.filter(v => 
+    new Date(v.criadaEm).toDateString() === hoje.toDateString()
+  );
+  const totalHoje    = vendasHoje.reduce((s, v) => s + v.totalFinal, 0);
+  const descontosHoje = vendasHoje.reduce((s, v) => s + v.desconto, 0);
+  const ticketHoje   = vendasHoje.length > 0 ? totalHoje / vendasHoje.length : 0;
 
   const totalEntMes   = diasFluxo.reduce((s, d) => s + d.entradas, 0);
   const totalDescMes  = diasFluxo.reduce((s, d) => s + d.descontos, 0);
@@ -78,6 +85,9 @@ export function FluxoCaixa() {
           <p className="page-subtitle">Entradas e movimentações financeiras</p>
         </div>
         <div className="cat-tabs">
+            <button className={`cat-tab${aba === 'hoje' ? ' active' : ''}`} onClick={() => setAba('hoje')}>
+              ⚡ Hoje
+            </button>
           <button className={`cat-tab${aba === 'diario' ? ' active' : ''}`} onClick={() => setAba('diario')}>
             <Calendar size={13} /> Diário
           </button>
@@ -86,6 +96,108 @@ export function FluxoCaixa() {
           </button>
         </div>
       </div>
+
+      {/* ── HOJE ── */}
+      {aba === 'hoje' && (
+        <>
+          <div className="fc-stats">
+            <div className="stat-card">
+              <div className="stat-label"><TrendingUp size={12} style={{ verticalAlign: -1 }} /> Total hoje</div>
+              <div className="stat-value" style={{ color: 'var(--green)' }}>{fmt(totalHoje)}</div>
+              <div className="stat-sub">{vendasHoje.length} venda(s)</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label"><DollarSign size={12} style={{ verticalAlign: -1 }} /> Ticket médio</div>
+              <div className="stat-value" style={{ fontSize: 20 }}>{fmt(ticketHoje)}</div>
+              <div className="stat-sub">por venda hoje</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label"><TrendingDown size={12} style={{ verticalAlign: -1 }} /> Descontos</div>
+              <div className="stat-value" style={{ fontSize: 20, color: 'var(--red)' }}>{fmt(descontosHoje)}</div>
+              <div className="stat-sub">hoje</div>
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
+              Vendas de hoje — {hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+            </div>
+
+            {vendasHoje.length === 0 ? (
+              <div className="empty" style={{ padding: '40px 0' }}>
+                <p>Nenhuma venda registrada hoje.</p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop */}
+                <div className="fc-table-desktop">
+                  <table>
+                    <thead>
+                      <tr><th>Horário</th><th>Cliente</th><th>Itens</th><th>Pagamento</th><th>Total</th></tr>
+                    </thead>
+                    <tbody>
+                      {[...vendasHoje].sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime()).map(v => (
+                        <tr key={v.id}>
+                          <td style={{ color: 'var(--text-3)', fontSize: 12 }}>
+                            {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td style={{ fontSize: 13 }}>{v.nomeCliente || '—'}</td>
+                          <td style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                            {v.itens.map(i => (
+                              <div key={i.produtoId}>{i.nomeProduto} ×{i.quantidade}</div>
+                            ))}
+                          </td>
+                          <td>
+                            <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
+                              {v.formaPagamento}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(v.totalFinal)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile */}
+                <div className="fc-cards-mobile">
+                  {[...vendasHoje].sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime()).map(v => (
+                    <div key={v.id} className="fc-card-mobile">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                            {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <span style={{ marginLeft: 8, fontSize: 13 }}>{v.nomeCliente || '—'}</span>
+                        </div>
+                        <span style={{ fontWeight: 700, color: 'var(--green)' }}>{fmt(v.totalFinal)}</span>
+                      </div>
+                      <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                        {v.itens.map(i => (
+                          <div key={i.produtoId}>{i.nomeProduto} ×{i.quantidade}</div>
+                        ))}
+                      </div>
+                      <div style={{ marginTop: 6 }}>
+                        <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
+                          {v.formaPagamento}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Total resumo no rodapé */}
+          {vendasHoje.length > 0 && (
+            <div className="card" style={{ marginTop: 16, padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{vendasHoje.length} venda(s) · {vendasHoje.flatMap(v => v.itens).reduce((s, i) => s + i.quantidade, 0)} itens vendidos</span>
+              <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--green)' }}>{fmt(totalHoje)}</span>
+            </div>
+          )}
+        </>
+      )}
 
       {/* ── DIÁRIO ── */}
       {aba === 'diario' && (
