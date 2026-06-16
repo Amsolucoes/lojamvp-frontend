@@ -177,9 +177,9 @@ export function Caixa() {
       total:          subtotal,
       desconto:       descontoVal,
       totalFinal:     total,
-      formaPagamento: formas[0].forma,
+      formaPagamento: duasFormas ? formas[0].forma : formas[0].forma,
       parcelas:       formas[0].parcelas ?? 1,
-      formasPagamento: duasFormas ? formas : undefined,
+      formasPagamento: duasFormas ? JSON.stringify(formas.map(f => ({ forma: f.forma, valor: f.valor}))) : null,
       troco: formas[0].forma === 'dinheiro' && !duasFormas && valorPago
         ? Math.max(0, parseFloat(valorPago) - total)
         : undefined,

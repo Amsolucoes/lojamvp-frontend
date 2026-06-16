@@ -55,7 +55,9 @@ function mapVenda(v: any): Venda {
   return {
     id: v.id, clienteId: v.clienteId, nomeCliente: v.nomeCliente,
     total: v.total, desconto: v.desconto, totalFinal: v.totalFinal,
-    formaPagamento: v.formaPagamento, troco: v.troco, criadaEm: v.criadaEm,
+    formaPagamento: v.formaPagamento,
+    formasPagamento: v.formasPagamento,
+    troco: v.troco, criadaEm: v.criadaEm,
     itens: (v.itens ?? []).map((i: any) => ({
       produtoId: i.produtoId, nomeProduto: i.nomeProduto,
       quantidade: i.quantidade, precoUnitario: i.precoUnitario,

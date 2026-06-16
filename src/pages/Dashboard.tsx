@@ -88,9 +88,20 @@ export function Dashboard() {
                         <td>{v.nomeCliente || <span style={{ color: 'var(--text-3)' }}>—</span>}</td>
                         <td style={{ color: 'var(--green)', fontWeight: 500 }}>{fmt(v.totalFinal)}</td>
                         <td>
-                          <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
-                            {v.formaPagamento}
-                          </span>
+                          {v.formasPagamento ? (
+                            JSON.parse(v.formasPagamento).map((f: any) => (
+                              <div key={f.forma} style={{ fontSize: 11 }}>
+                                <span className={`badge badge-${f.forma === 'pix' ? 'blue' : f.forma === 'dinheiro' ? 'green' : 'accent'}`}>
+                                  {f.forma}
+                                </span>
+                                <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>{fmt(f.valor)}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
+                              {v.formaPagamento}
+                            </span>
+                          )}
                         </td>
                         <td style={{ color: 'var(--text-3)' }}>
                           {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}

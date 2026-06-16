@@ -47,6 +47,7 @@ export interface Venda {
   desconto: number;
   totalFinal: number;
   formaPagamento: FormaPagamento;
+  formasPagamento?: string;
   troco?: number;
   criadaEm: string;
 }

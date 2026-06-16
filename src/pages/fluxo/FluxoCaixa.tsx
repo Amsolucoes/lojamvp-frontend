@@ -148,9 +148,20 @@ export function FluxoCaixa() {
                             ))}
                           </td>
                           <td>
-                            <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
-                              {v.formaPagamento}
-                            </span>
+                            {v.formasPagamento ? (
+                              JSON.parse(v.formasPagamento).map((f: any) => (
+                                <div key={f.forma} style={{ fontSize: 11 }}>
+                                  <span className={`badge badge-${f.forma === 'pix' ? 'blue' : f.forma === 'dinheiro' ? 'green' : 'accent'}`}>
+                                    {f.forma}
+                                  </span>
+                                  <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>{fmt(f.valor)}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
+                                {v.formaPagamento}
+                              </span>
+                            )}
                           </td>
                           <td style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(v.totalFinal)}</td>
                         </tr>
@@ -178,9 +189,20 @@ export function FluxoCaixa() {
                         ))}
                       </div>
                       <div style={{ marginTop: 6 }}>
-                        <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
-                          {v.formaPagamento}
-                        </span>
+                        {v.formasPagamento ? (
+                          JSON.parse(v.formasPagamento).map((f: any) => (
+                            <div key={f.forma} style={{ fontSize: 11 }}>
+                              <span className={`badge badge-${f.forma === 'pix' ? 'blue' : f.forma === 'dinheiro' ? 'green' : 'accent'}`}>
+                                {f.forma}
+                              </span>
+                              <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>{fmt(f.valor)}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
+                            {v.formaPagamento}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
