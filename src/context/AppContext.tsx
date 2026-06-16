@@ -155,6 +155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clienteId: v.clienteId ?? null,
       desconto: v.desconto,
       formaPagamento: v.formaPagamento,
+      formasPagamento: (v as any).formasPagamento ?? null,
       troco: v.troco ?? null,
     };
 
