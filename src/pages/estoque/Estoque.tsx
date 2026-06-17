@@ -30,8 +30,14 @@ export function Estoque() {
 
   const prodsFiltrados = produtos.filter(p => {
     const buscaOk = p.nome.toLowerCase().includes(busca.toLowerCase());
-    if (filtro === 'baixo')   return buscaOk && p.estoque > 0 && p.estoque <= p.estoqueMinimo;
-    if (filtro === 'zerado')  return buscaOk && p.estoque === 0;
+    const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
+    const temVarBaixo = vars?.length > 0 && vars.some((v: any) => v.estoque > 0 && v.estoque <= v.estoqueMinimo);
+    const temVarZerado = vars?.length > 0 && vars.some((v: any) => v.estoque === 0);
+    const estBaixo = vars?.length > 0 ? temVarBaixo : (p.estoque > 0 && p.estoque <= p.estoqueMinimo);
+    const estZerado = vars?.length > 0 ? temVarZerado : p.estoque === 0;
+
+    if (filtro === 'baixo')  return buscaOk && estBaixo;
+    if (filtro === 'zerado') return buscaOk && estZerado;
     return buscaOk;
   });
 
@@ -48,7 +54,7 @@ export function Estoque() {
     if (vars?.length > 0) return vars.some((v: any) => v.estoque === 0);
     return p.estoque === 0;
   }).length;
-  
+
   const totalItens = produtos.filter(p => p.ativo).reduce((s, p) => s + p.estoque, 0);
   const valorEstoque = produtos.filter(p => p.ativo).reduce((s, p) => s + p.estoque * p.precoCusto, 0);
 

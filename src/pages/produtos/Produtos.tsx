@@ -70,7 +70,7 @@ export function Produtos() {
   });
 
   function abrirNovo() {
-    setForm(EMPTY);
+    setForm({ ...EMPTY, categoria:cats[0]?.nome ?? ''});
     setVariacoes([]);
     setEditId(null);
     setModal('novo');
