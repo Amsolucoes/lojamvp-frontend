@@ -27,6 +27,7 @@ export function Estoque() {
   const [qtdAjuste, setQtdAjuste] = useState('');
   const [obsAjuste, setObsAjuste] = useState('');
   const [modalVariacaoEntrada, setModalVariacaoEntrada] = useState<{ produto: Produto } | null>(null);
+  const [filtroMov, setFiltroMov] = useState<'todos' | 'entrada' | 'saida' | 'ajuste'>('todos');
 
   const prodsFiltrados = produtos.filter(p => {
     const buscaOk = p.nome.toLowerCase().includes(busca.toLowerCase());
@@ -109,7 +110,9 @@ export function Estoque() {
     return 'ok';
   }
 
-  const movOrdenados = [...movimentos].reverse();
+  const movOrdenados = [...movimentos]
+    .reverse()
+    .filter(m => filtroMov === 'todos' || m.tipo === filtroMov);
 
   return (
     <div className="page">
@@ -293,8 +296,26 @@ export function Estoque() {
       {/* Histórico */}
       {aba === 'movimentos' && (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          {/* Filtro de tipo */}
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              { value: 'todos',   label: 'Todos'    },
+              { value: 'entrada', label: '↓ Entradas' },
+              { value: 'saida',   label: '↑ Saídas'   },
+              { value: 'ajuste',  label: '⟳ Ajustes'  },
+            ].map(f => (
+              <button key={f.value}
+                className={`cat-tab${filtroMov === f.value ? ' active' : ''}`}
+                onClick={() => setFiltroMov(f.value as any)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+
           {movOrdenados.length === 0 ? (
-            <div className="empty" style={{ padding: '40px 0' }}><RefreshCw size={28} /><p>Nenhum movimento registrado ainda.</p></div>
+            <div className="empty" style={{ padding: '40px 0' }}>
+              <RefreshCw size={28} /><p>Nenhum movimento encontrado.</p>
+            </div>
           ) : (
             <>
               {/* Tabela — desktop */}
