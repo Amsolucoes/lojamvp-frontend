@@ -23,7 +23,14 @@ function iniciais(nome: string) {
 export function Sidebar() {
   const { produtos } = useApp();
   const { usuario, logout } = useAuth();
-  const alertas = produtos.filter(p => p.ativo && p.estoque <= p.estoqueMinimo).length;
+
+  const alertas = produtos.filter(p => {
+    if (!p.ativo) return false;
+    const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
+    if (vars?.length > 0) return vars.some((v: any) => v.estoque > 0 && v.estoque <= v.estoqueMinimo);
+    return p.estoque > 0 && p.estoque <= p.estoqueMinimo;
+  }).length;
+  
   const [nomeLoja, setNomeLoja]     = useState('Minha Loja');
   const [corPrimaria, setCorPrimaria] = useState('#e8945a');
   const [logoUrl, setLogoUrl]       = useState('');

@@ -35,8 +35,20 @@ export function Estoque() {
     return buscaOk;
   });
 
-  const alertas   = produtos.filter(p => p.ativo && p.estoque > 0 && p.estoque <= p.estoqueMinimo).length;
-  const zerados   = produtos.filter(p => p.ativo && p.estoque === 0).length;
+  const alertas = produtos.filter(p => {
+    if (!p.ativo) return false;
+    const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
+    if (vars?.length > 0) return vars.some((v: any) => v.estoque > 0 && v.estoque <= v.estoqueMinimo);
+    return p.estoque > 0 && p.estoque <= p.estoqueMinimo;
+  }).length;
+
+  const zerados = produtos.filter(p => {
+    if (!p.ativo) return false;
+    const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
+    if (vars?.length > 0) return vars.some((v: any) => v.estoque === 0);
+    return p.estoque === 0;
+  }).length;
+  
   const totalItens = produtos.filter(p => p.ativo).reduce((s, p) => s + p.estoque, 0);
   const valorEstoque = produtos.filter(p => p.ativo).reduce((s, p) => s + p.estoque * p.precoCusto, 0);
 
@@ -78,8 +90,16 @@ export function Estoque() {
   }
 
   function statusEstoque(p: Produto) {
-    if (p.estoque === 0)                    return 'zerado';
-    if (p.estoque <= p.estoqueMinimo)       return 'baixo';
+    const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
+    if (vars?.length > 0) {
+      const temZerado = vars.some((v: any) => v.estoque === 0);
+      const temBaixo  = vars.some((v: any) => v.estoque > 0 && v.estoque <= v.estoqueMinimo);
+      if (temZerado) return 'zerado';
+      if (temBaixo)  return 'baixo';
+      return 'ok';
+    }
+    if (p.estoque === 0)              return 'zerado';
+    if (p.estoque <= p.estoqueMinimo) return 'baixo';
     return 'ok';
   }
 
