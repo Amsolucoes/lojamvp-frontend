@@ -432,8 +432,11 @@ export function Caixa() {
           <div className="cx-section-title" style={{ margin: 0 }}>Forma de pagamento</div>
           <button className="btn-ghost" style={{ fontSize: 12, color: duasFormas ? 'var(--accent)' : 'var(--text-3)' }}
             onClick={() => {
-              setDuasFormas(v => !v);
-              setFormas([{ forma: 'dinheiro', valor: 0 }, { forma: 'pix', valor: 0 }]);
+              const novoEstado = !duasFormas;
+              setDuasFormas(novoEstado);
+              setFormas(novoEstado ? 
+                [{ forma: 'dinheiro', valor: 0 }, { forma: 'pix', valor: 0 }]
+                : [{forma: 'dinheiro', valor: 0}]);
             }}>
             {duasFormas ? '✓ 2 formas' : '+ 2 formas'}
           </button>
