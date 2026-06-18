@@ -44,13 +44,13 @@ export function Clientes() {
   function abrirNovo() { setForm(EMPTY); setEditId(null); setModal('novo'); }
 
   function abrirEditar(c: Cliente) {
-    setForm({ nome: c.nome, telefone: c.telefone, cpf: c.cpf ?? '', email: c.email ?? '', endereco: c.endereco ?? '', observacoes: c.observacoes ?? '' });
+    setForm({ nome: c.nome, telefone: c.telefone, cpf: c.cpf ?? '', email: c.email ?? '', endereco: c.endereco ?? '', observacoes: c.observacoes ?? '', dataNascimento: c.dataNascimento ?? undefined });
     setEditId(c.id);
     setModal('editar');
   }
 
   function abrirVer(c: Cliente) {
-    setForm({ nome: c.nome, telefone: c.telefone, cpf: c.cpf ?? '', email: c.email ?? '', endereco: c.endereco ?? '', observacoes: c.observacoes ?? '' });
+    setForm({ nome: c.nome, telefone: c.telefone, cpf: c.cpf ?? '', email: c.email ?? '', endereco: c.endereco ?? '', observacoes: c.observacoes ?? '', dataNascimento: c.dataNascimento ?? undefined });
     setEditId(c.id);
     setModal('ver');
   }
