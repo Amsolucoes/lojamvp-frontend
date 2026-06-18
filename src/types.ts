@@ -22,6 +22,7 @@ export interface Cliente {
   telefone: string;
   cpf?: string;
   email?: string;
+  dataNascimento?: string;
   endereco?: string;
   observacoes?: string;
   criadoEm: string;

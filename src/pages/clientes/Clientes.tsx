@@ -5,7 +5,7 @@ import { Cliente } from '../../types';
 import './Clientes.css';
 
 type FormData = Omit<Cliente, 'id' | 'criadoEm'>;
-const EMPTY: FormData = { nome: '', telefone: '', cpf: '', email: '', endereco: '', observacoes: '' };
+const EMPTY: FormData = { nome: '', telefone: '', cpf: '', email: '', endereco: '', observacoes: '', dataNascimento: undefined };
 
 function fmtTel(v: string) {
   const d = v.replace(/\D/g, '').slice(0, 11);
@@ -188,6 +188,14 @@ export function Clientes() {
                 <div className="form-group">
                   <label className="form-label">E-mail <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
                   <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="email@exemplo.com" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Data de nascimento <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <input
+                    type="date"
+                    value={form.dataNascimento ?? ''}
+                    onChange={e => setForm(f => ({ ...f, dataNascimento: e.target.value || undefined }))}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Endereço <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
