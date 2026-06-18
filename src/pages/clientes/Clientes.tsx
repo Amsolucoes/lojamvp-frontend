@@ -149,6 +149,11 @@ export function Clientes() {
                 <div className="cli-nome">{c.nome}</div>
                 <div className="cli-info"><Phone size={12} />{c.telefone}</div>
                 {c.email && <div className="cli-info"><Mail size={12} />{c.email}</div>}
+                {c.dataNascimento && (
+                  <div className="cli-info">
+                    🎂 {new Date(c.dataNascimento).toLocaleDateString('pt-BR')}
+                  </div>
+                )}
                 <div className="cli-divider" />
                 <div className="cli-stats">
                   <div>
@@ -272,6 +277,12 @@ export function Clientes() {
                 {clienteAtivo.email    && <div className="cli-detail-row"><Mail size={14} /><span>{clienteAtivo.email}</span></div>}
                 {clienteAtivo.endereco && <div className="cli-detail-row"><MapPin size={14} /><span>{clienteAtivo.endereco}</span></div>}
                 {clienteAtivo.cpf      && <div className="cli-detail-row"><FileText size={14} /><span>CPF: {clienteAtivo.cpf}</span></div>}
+                {clienteAtivo.dataNascimento && (
+                  <div className="cli-detail-row">
+                    <span style={{ fontSize: 14 }}>🎂</span>
+                    <span>Nascimento: {new Date(clienteAtivo.dataNascimento).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                )}
                 {clienteAtivo.observacoes && (
                   <div className="cli-obs">{clienteAtivo.observacoes}</div>
                 )}
