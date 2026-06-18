@@ -34,16 +34,22 @@ export function Produtos() {
   const [editId, setEditId]       = useState<string | null>(null);
   const [form, setForm]           = useState<FormData>(EMPTY);
   const [confirmDel, setDel]      = useState<string | null>(null);
-  const [cats, setCats]           = useState<{id: string; nome: string}[]>([]);
+  const [cats, setCats]           = useState<{id: string; nome: string; tipoTamanho?: string}[]>([]);
   const [variacoes, setVariacoes] = useState<Variacao[]>([]);
   const [camposExtras, setCamposExtras] = useState<any[]>([]);
   const [temVariacoes, setTemVariacoes] = useState(false);
+  const [tipoTamanho, setTipoTamanho] = useState<string>('letra');
+
+  const TAMANHOS_LETRA = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
+  const TAMANHOS_NUMERO = ['32', '34', '36', '38', '40', '42', '44', '46'];
 
   useEffect(() => {
     api.get<any[]>('/api/perfis/loja/categorias').then(res => {
       if (res.length > 0) {
         setCats(res);
-        setForm(f => ({ ...f, categoria: f.categoria || res[0].nome }));
+        const catInicial = res[0];
+        setForm(f => ({ ...f, categoria: f.categoria || catInicial.nome }));
+        setTipoTamanho(catInicial.tipoTamanho ?? 'letra');
       } else {
         setCats([
           { id: '1', nome: 'Semi Joias' },
@@ -70,7 +76,9 @@ export function Produtos() {
   });
 
   function abrirNovo() {
-    setForm({ ...EMPTY, categoria:cats[0]?.nome ?? ''});
+    const catInicial = cats[0];
+    setForm({ ...EMPTY, categoria: catInicial?.nome ?? '' });
+    setTipoTamanho(catInicial?.tipoTamanho ?? 'letra');
     setVariacoes([]);
     setEditId(null);
     setModal('novo');
@@ -80,6 +88,8 @@ export function Produtos() {
     setForm({ ...p });
     setEditId(p.id);
     setModal('editar');
+    const cat = cats.find(c => c.nome === p.categoria);
+    setTipoTamanho(cat?.tipoTamanho ?? 'letra');
     api.get<any[]>(`/api/produtos/${p.id}/variacoes`).then(res => {
       setVariacoes(res.map((v: any) => ({
         id: v.id, tamanho: v.tamanho, cor: v.cor,
@@ -282,7 +292,12 @@ export function Produtos() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
+                  <select value={form.categoria} onChange={e => {
+                      const nomeCat = e.target.value;
+                      const cat = cats.find(c => c.nome === nomeCat);
+                      setForm(f => ({ ...f, categoria: nomeCat }));
+                      setTipoTamanho(cat?.tipoTamanho ?? 'letra');
+                    }}>
                     {cats.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
                   </select>
                 </div>
@@ -361,11 +376,11 @@ export function Produtos() {
                         </div>
                         {variacoes.map((v, i) => (
                           <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 80px 32px', gap: 6, alignItems: 'center' }}>
-                            {camposExtras.find(c => c.chave === 'tamanho')?.tipo === 'lista' ? (
+                            {camposExtras.find(c => c.chave === 'tamanho') ? (
                               <select value={v.tamanho ?? ''} onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, tamanho: e.target.value } : x))}>
                                 <option value="">—</option>
-                                {camposExtras.find(c => c.chave === 'tamanho')?.opcoes?.split(',').map((op: string) => (
-                                  <option key={op.trim()} value={op.trim()}>{op.trim()}</option>
+                                {(tipoTamanho === 'numero' ? TAMANHOS_NUMERO : TAMANHOS_LETRA).map(op => (
+                                  <option key={op} value={op}>{op}</option>
                                 ))}
                               </select>
                             ) : (
