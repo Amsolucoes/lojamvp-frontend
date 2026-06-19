@@ -28,7 +28,7 @@ function iniciais(nome: string) {
 }
 
 export function Clientes() {
-  const { clientes, vendas, addCliente, updateCliente, deleteCliente } = useApp();
+  const { clientes, vendas, trocas, addCliente, updateCliente, deleteCliente } = useApp();
   const [busca, setBusca]    = useState('');
   const [modal, setModal]    = useState<'novo' | 'editar' | 'ver' | null>(null);
   const [editId, setEditId]  = useState<string | null>(null);
@@ -324,6 +324,45 @@ export function Clientes() {
                               <td style={{ fontSize: 12 }}>{v.itens.length} item(s)</td>
                               <td><span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>{v.formaPagamento}</span></td>
                               <td style={{ fontWeight: 500, color: 'var(--green)' }}>{fmt(v.totalFinal)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {/* Histórico de trocas */}
+              {(trocas ?? []).filter(t => t.clienteId === clienteAtivo.id).length > 0 && (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 8px' }}>
+                    🔄 Histórico de trocas
+                  </div>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr><th>Data</th><th>Devolvido</th><th>Novo</th><th>Resultado</th></tr>
+                      </thead>
+                      <tbody>
+                        {(trocas ?? [])
+                          .filter(t => t.clienteId === clienteAtivo.id)
+                          .sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime())
+                          .map(t => (
+                            <tr key={t.id}>
+                              <td style={{ color: 'var(--text-3)', fontSize: 12 }}>
+                                {new Date(t.criadaEm).toLocaleDateString('pt-BR')}
+                              </td>
+                              <td style={{ fontSize: 12 }}>{fmt(t.totalDevolvido)}</td>
+                              <td style={{ fontSize: 12 }}>{fmt(t.totalNovo)}</td>
+                              <td style={{ fontSize: 12, fontWeight: 500 }}>
+                                {t.diferenca > 0 ? (
+                                  <span style={{ color: 'var(--red)' }}>Pagou {fmt(t.diferenca)}</span>
+                                ) : t.diferenca < 0 ? (
+                                  <span style={{ color: 'var(--green)' }}>+{fmt(t.creditoGerado)} crédito</span>
+                                ) : (
+                                  <span style={{ color: 'var(--text-3)' }}>Sem diferença</span>
+                                )}
+                              </td>
                             </tr>
                           ))}
                       </tbody>
