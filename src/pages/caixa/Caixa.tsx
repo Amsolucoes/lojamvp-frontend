@@ -59,6 +59,7 @@ export function Caixa() {
   const [trocaTipo, setTrocaTipo] = useState<'devolvido' | 'novo'>('devolvido');
   const [trocaFormaPag, setTrocaFormaPag] = useState<FormaPagamento>('pix');
   const [trocaResultado, setTrocaResultado] = useState<any>(null);
+  const [usarCredito, setUsarCredito] = useState(false);
 
   const [formas, setFormas] = useState<{forma: FormaPagamento; valor: number; parcelas?: number}[]>([
   { forma: 'dinheiro', valor: 0 }]);
@@ -77,12 +78,16 @@ export function Caixa() {
 
   const clienteSel = clientes.find(c => c.id === clienteId);
 
+
+
   // Subtotal, desconto, total
   const subtotal = carrinho.reduce((s, i) => s + i.subtotal, 0);
   const descontoVal = tipoDesc === 'pct'
     ? subtotal * (desconto / 100)
     : Math.min(desconto, subtotal);
-  const total = Math.max(0, subtotal - descontoVal);
+  const creditoCliente = clienteSel?.creditoLoja ?? 0;
+  const creditoUsado = usarCredito ? Math.min(creditoCliente, subtotal - descontoVal) : 0;
+  const total = Math.max(0, subtotal - descontoVal - creditoUsado);
   const troco = formaPag === 'dinheiro' && valorPago
     ? Math.max(0, parseFloat(valorPago.replace(',', '.')) - total)
     : 0;
@@ -262,13 +267,15 @@ export function Caixa() {
       total:          subtotal,
       desconto:       descontoVal,
       totalFinal:     total,
-      formaPagamento: duasFormas ? formas[0].forma : formas[0].forma,
+      creditoUsado:   creditoUsado > 0 ? creditoUsado : null,
+      formaPagamento: formas[0].forma,
       parcelas:       formas[0].parcelas ?? 1,
-      formasPagamento: duasFormas ? JSON.stringify(formas.map(f => ({ forma: f.forma, valor: f.valor}))) : null,
+      formasPagamento: duasFormas ? JSON.stringify(formas.map(f => ({ forma: f.forma, valor: f.valor }))) : null,
       troco: formas[0].forma === 'dinheiro' && !duasFormas && valorPago
         ? Math.max(0, parseFloat(valorPago) - total)
         : undefined,
     } as any;
+    recarregar();
     registrarVenda(venda);
     setUltimaVenda(total.toString());
     setSucesso(true);
@@ -283,6 +290,7 @@ export function Caixa() {
     setValorPago('');
     setFormas([{ forma: 'dinheiro', valor: 0 }]);
     setDuasFormas(false);
+    setUsarCredito(false);
   }
 
   // Vendas do dia
@@ -440,38 +448,44 @@ export function Caixa() {
         {/* Cliente */}
         <div className="card cx-section">
           <div className="cx-section-title"><User size={14} /> Cliente <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></div>
-          {clienteSel ? (
-            <div className="cx-cliente-sel">
-              <div>
-                <div style={{ fontWeight: 500, fontSize: 13 }}>{clienteSel.nome}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{clienteSel.telefone}</div>
-              </div>
-              <button className="btn-ghost" onClick={() => { setClienteId(''); setBuscaCli(''); }}><X size={13} /></button>
-            </div>
-          ) : (
-            <div style={{ position: 'relative' }}>
-              <input
-                placeholder="Buscar cliente..."
-                value={buscaCli}
-                onChange={e => { setBuscaCli(e.target.value); setShowCli(true); }}
-                onFocus={() => setShowCli(true)}
-                onBlur={() => setTimeout(() => setShowCli(false), 150)}
-              />
-              {showCli && buscaCli && (
-                <div className="cx-dropdown">
-                  {cliFiltrados.length === 0
-                    ? <div className="cx-dropdown-empty">Nenhum cliente encontrado</div>
-                    : cliFiltrados.slice(0, 5).map(c => (
-                      <button key={c.id} className="cx-dropdown-item" onMouseDown={() => { setClienteId(c.id); setShowCli(false); setBuscaCli(''); }}>
-                        <div className="cx-drop-nome">{c.nome}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{c.telefone}</div>
-                      </button>
-                    ))
-                  }
+            {clienteSel ? (
+              <div className="cx-cliente-sel">
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 13 }}>{clienteSel.nome}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{clienteSel.telefone}</div>
                 </div>
-              )}
-            </div>
-          )}
+                <button className="btn-ghost" onClick={() => { setClienteId(''); setBuscaCli(''); }}><X size={13} /></button>
+              </div>
+              ) : (
+              <div style={{ position: 'relative' }}>
+                <input
+                  placeholder="Buscar cliente..."
+                  value={buscaCli}
+                  onChange={e => { setBuscaCli(e.target.value); setShowCli(true); }}
+                  onFocus={() => setShowCli(true)}
+                  onBlur={() => setTimeout(() => setShowCli(false), 150)}
+                />
+                {showCli && buscaCli && (
+                  <div className="cx-dropdown">
+                    {cliFiltrados.length === 0
+                      ? <div className="cx-dropdown-empty">Nenhum cliente encontrado</div>
+                      : cliFiltrados.slice(0, 5).map(c => (
+                        <button key={c.id} className="cx-dropdown-item" onMouseDown={() => { setClienteId(c.id); setShowCli(false); setBuscaCli(''); }}>
+                          <div className="cx-drop-nome">{c.nome}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{c.telefone}</div>
+                        </button>
+                      ))
+                    }
+                  </div>
+                )}
+              </div>
+            )}
+            {clienteSel && creditoCliente > 0 && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 13, cursor: 'pointer' }}>
+                <input type="checkbox" checked={usarCredito} onChange={e => setUsarCredito(e.target.checked)} />
+                <span>Usar crédito de <strong style={{ color: 'var(--green)' }}>{fmt(creditoCliente)}</strong></span>
+              </label>
+            )}
         </div>
 
         {/* Desconto */}
@@ -508,6 +522,12 @@ export function Caixa() {
             <div className="cx-total-row" style={{ color: 'var(--red)' }}>
               <span>Desconto</span>
               <span>− {fmt(descontoVal)}</span>
+            </div>
+          )}
+          {creditoUsado > 0 && (
+            <div className="cx-total-row" style={{ color: 'var(--green)' }}>
+              <span>Crédito usado</span>
+              <span>− {fmt(creditoUsado)}</span>
             </div>
           )}
           <div className="cx-total-row cx-total-final">

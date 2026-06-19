@@ -158,11 +158,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         precoUnitario: i.precoUnitario,
         variacaoId: (i as any).variacaoId ?? null,
       })),
-      clienteId: v.clienteId ?? null,
-      desconto: v.desconto,
-      formaPagamento: v.formaPagamento,
+      clienteId:       v.clienteId ?? null,
+      desconto:        v.desconto,
+      formaPagamento:  v.formaPagamento,
       formasPagamento: (v as any).formasPagamento ?? null,
-      troco: v.troco ?? null,
+      creditoUsado:    (v as any).creditoUsado ?? null,
+      troco:           v.troco ?? null,
     };
 
     const nova = await api.post<any>('/api/vendas', payload);
