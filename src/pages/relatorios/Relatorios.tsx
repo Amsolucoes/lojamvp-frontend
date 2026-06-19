@@ -34,7 +34,7 @@ const labelPag: Record<string, string> = {
 };
 
 export function Relatorios() {
-  const { vendas, produtos } = useApp();
+  const { vendas, produtos, trocas } = useApp();
   const [periodo, setPeriodo] = useState<Periodo>('30d');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
@@ -96,6 +96,18 @@ export function Relatorios() {
   }).filter(x => x.qtd > 0).sort((a, b) => b.receita - a.receita);
 
   const maxCat = porCategoria[0]?.receita || 1;
+
+  const trocasFiltradas = (trocas ?? []).filter(t => {
+    const dataTroca = new Date(t.criadaEm);
+    if (periodo === 'custom') {
+      if (dataInicio && dataTroca < new Date(dataInicio + 'T00:00:00')) return false;
+      if (dataFim && dataTroca > new Date(dataFim + 'T23:59:59')) return false;
+      return true;
+    }
+    if (periodo === 'tudo') return true;
+    const dias = periodo === '7d' ? 7 : periodo === '30d' ? 30 : 90;
+    return dataTroca >= diasAtras(dias);
+  });
 
   return (
     <div className="page">
@@ -295,6 +307,54 @@ export function Relatorios() {
                   ))}
               </div>
             </div>
+
+            {/* Últimas trocas */}
+            {trocasFiltradas.length > 0 && (
+              <div className="card rel-card">
+                <div className="rel-card-title">🔄 Últimas trocas</div>
+                {/* Desktop */}
+                <div className="table-wrap rel-table-desktop">
+                  <table>
+                    <thead>
+                      <tr><th>Data</th><th>Cliente</th><th>Diferença</th></tr>
+                    </thead>
+                    <tbody>
+                      {trocasFiltradas.slice(0, 8).map(t => (
+                        <tr key={t.id}>
+                          <td style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                            {new Date(t.criadaEm).toLocaleDateString('pt-BR')}
+                          </td>
+                          <td style={{ fontSize: 12 }}>{t.nomeCliente}</td>
+                          <td style={{ fontWeight: 600, fontSize: 13 }}>
+                            {t.diferenca > 0 ? (
+                              <span style={{ color: 'var(--red)' }}>Pagou {fmt(t.diferenca)}</span>
+                            ) : t.diferenca < 0 ? (
+                              <span style={{ color: 'var(--green)' }}>Crédito {fmt(t.creditoGerado)}</span>
+                            ) : (
+                              <span style={{ color: 'var(--text-3)' }}>Sem dif.</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Mobile */}
+                <div className="rel-vendas-mobile">
+                  {trocasFiltradas.slice(0, 8).map(t => (
+                    <div key={t.id} className="rel-venda-card">
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{new Date(t.criadaEm).toLocaleDateString('pt-BR')}</span>
+                        {t.diferenca > 0 ? <span style={{ color: 'var(--red)', fontWeight: 600 }}>Pagou {fmt(t.diferenca)}</span>
+                          : t.diferenca < 0 ? <span style={{ color: 'var(--green)', fontWeight: 600 }}>Crédito {fmt(t.creditoGerado)}</span>
+                          : <span style={{ color: 'var(--text-3)' }}>Sem dif.</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>{t.nomeCliente}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

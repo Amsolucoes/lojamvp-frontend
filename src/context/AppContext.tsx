@@ -9,6 +9,7 @@ interface AppCtx {
   movimentos: MovimentoEstoque[];
   loading:    boolean;
   erro:       string | null;
+  trocas:     any[];
 
   addProduto:    (p: Omit<Produto, 'id' | 'criadoEm'>) => Promise<void>;
   updateProduto: (id: string, p: Partial<Produto>)       => Promise<void>;
@@ -83,6 +84,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [movimentos, setMovimentos] = useState<MovimentoEstoque[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [erro,       setErro]       = useState<string | null>(null);
+  const [trocas,     setTrocas]     = useState<any[]>([]);
 
   async function recarregar() {
     setLoading(true);
@@ -95,16 +97,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('loja:movimentos');
 
     try {
-      const [prods, clis, vends, movs] = await Promise.all([
+      const [prods, clis, vends, movs, trcs] = await Promise.all([
         api.get<any[]>('/api/produtos'),
         api.get<any[]>('/api/clientes'),
         api.get<any[]>('/api/vendas'),
         api.get<any[]>('/api/estoque/movimentos'),
+        api.get<any[]>('/api/trocas'),
       ]);
       setProdutos(prods.map(mapProduto));
       setClientes(clis.map(mapCliente));
       setVendas(vends.map(mapVenda));
       setMovimentos(movs.map(mapMovimento));
+      setTrocas(trcs);
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -210,7 +214,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={{
-      produtos, clientes, vendas, movimentos, loading, erro,
+      produtos, clientes, vendas, movimentos, loading, erro, trocas,
       addProduto, updateProduto, deleteProduto,
       addCliente, updateCliente, deleteCliente,
       registrarVenda, ajustarEstoque,
