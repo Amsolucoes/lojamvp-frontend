@@ -30,7 +30,7 @@ function fmt(n: number) {
 }
 
 export function Caixa() {
-  const { produtos, clientes, registrarVenda, vendas } = useApp();
+  const { produtos, clientes, registrarVenda, vendas, recarregar } = useApp();
 
   // Carrinho
   const [carrinho, setCarrinho]       = useState<CarrinhoItem[]>([]);
@@ -202,6 +202,7 @@ export function Caixa() {
 
       const res = await api.post<any>('/api/trocas', payload);
       setTrocaResultado(res);
+      await recarregar();
     } catch (e) {
       alert('Erro ao processar troca: ' + (e as Error).message);
     }
