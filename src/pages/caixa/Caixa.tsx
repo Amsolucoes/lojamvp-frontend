@@ -48,6 +48,7 @@ export function Caixa() {
   const buscaRef = useRef<HTMLInputElement>(null);
   const [variacoesDisponiveis, setVariacoesDisponiveis] = useState<{prodId: string; vars: VariacaoItem[]}[]>([]);
   const [modalVariacao, setModalVariacao] = useState<{prodId: string; nomeProd: string} | null>(null);
+  const [modalVarTroca, setModalVarTroca] = useState<{prodId: string; nomeProd: string; vars: any[]} | null>(null);
   const [modalTroca, setModalTroca] = useState(false);
   const [trocaCliente, setTrocaCliente] = useState('');
   const [trocaBuscaCli, setTrocaBuscaCli] = useState('');
@@ -108,6 +109,43 @@ export function Caixa() {
 
     // Sem variações — adiciona direto
     adicionarAoCarrinho(prodId, prod, null, null, null);
+  }
+
+  async function addProdutoTroca(prodId: string) {
+    const prod = produtos.find(p => p.id === prodId);
+    if (!prod) return;
+
+    try {
+      const vars = await api.get<any[]>(`/api/produtos/${prodId}/variacoes`);
+      if (vars.length > 0) {
+        setModalVarTroca({ prodId, nomeProd: prod.nome, vars: vars.filter(v => v.ativo) });
+        setTrocaBuscaProd('');
+        return;
+      }
+    } catch {}
+
+    // Sem variação
+    const item = { produtoId: prod.id, nomeProduto: prod.nome, variacaoId: null, quantidade: 1, precoUnitario: prod.precoVenda, voltaEstoque: true };
+    if (trocaTipo === 'devolvido') setDevolvidos(prev => [...prev, item]);
+    else setNovos(prev => [...prev, item]);
+    setTrocaBuscaProd('');
+  }
+
+  function addVariacaoTroca(v: any) {
+    if (!modalVarTroca) return;
+    const prod = produtos.find(p => p.id === modalVarTroca.prodId);
+    const label = [v.tamanho, v.cor].filter(Boolean).join(' / ');
+    const item = {
+      produtoId: modalVarTroca.prodId,
+      nomeProduto: modalVarTroca.nomeProd + (label ? ` (${label})` : ''),
+      variacaoId: v.id,
+      quantidade: 1,
+      precoUnitario: prod?.precoVenda ?? 0,
+      voltaEstoque: true,
+    };
+    if (trocaTipo === 'devolvido') setDevolvidos(prev => [...prev, item]);
+    else setNovos(prev => [...prev, item]);
+    setModalVarTroca(null);
   }
 
   function adicionarAoCarrinho(
@@ -728,12 +766,7 @@ export function Caixa() {
                     {trocaBuscaProd && (
                       <div className="cx-dropdown">
                         {produtos.filter(p => p.nome.toLowerCase().includes(trocaBuscaProd.toLowerCase())).slice(0, 6).map(p => (
-                          <button key={p.id} className="cx-dropdown-item" onMouseDown={() => {
-                            const item = { produtoId: p.id, nomeProduto: p.nome, quantidade: 1, precoUnitario: p.precoVenda, voltaEstoque: true };
-                            if (trocaTipo === 'devolvido') setDevolvidos(prev => [...prev, item]);
-                            else setNovos(prev => [...prev, item]);
-                            setTrocaBuscaProd('');
-                          }}>
+                          <button key={p.id} className="cx-dropdown-item" onMouseDown={() => addProdutoTroca(p.id)}>
                             <div className="cx-drop-nome">{p.nome}</div>
                             <div className="cx-drop-info">
                               <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(p.precoVenda)}</span>
@@ -833,6 +866,31 @@ export function Caixa() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal variação na troca */}
+      {modalVarTroca && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalVarTroca(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Escolha a variação</h2>
+              <button className="btn-ghost" onClick={() => setModalVarTroca(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 14 }}>{modalVarTroca.nomeProd}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {modalVarTroca.vars.map(v => (
+                  <button key={v.id} className="btn-secondary"
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px' }}
+                    onClick={() => addVariacaoTroca(v)}>
+                    <span style={{ fontWeight: 500 }}>{[v.tamanho, v.cor].filter(Boolean).join(' / ') || 'Padrão'}</span>
+                    <span className={`badge ${v.estoque > 0 ? 'badge-green' : 'badge-red'}`}>{v.estoque} un.</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
