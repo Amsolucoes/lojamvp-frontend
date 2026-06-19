@@ -296,10 +296,6 @@ export function Clientes() {
                     <span>Nascimento: {new Date(clienteAtivo.dataNascimento).toLocaleDateString('pt-BR')}</span>
                   </div>
                 )}
-                {clienteAtivo.creditoLoja && <div className='cli-detail-row'>
-                  <span style={{ fontSize: 14 }}>💰</span>
-                  <span>Credito: {fmt(clienteAtivo.creditoLoja ?? 0)}</span>
-                </div>}
                 {clienteAtivo.observacoes && (
                   <div className="cli-obs">{clienteAtivo.observacoes}</div>
                 )}
