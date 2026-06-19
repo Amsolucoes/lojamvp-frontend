@@ -7,7 +7,7 @@ function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-type Periodo = '7d' | '30d' | '90d' | 'tudo';
+type Periodo = '7d' | '30d' | '90d' | 'tudo' | 'custom';
 
 const PERIODOS: { value: Periodo; label: string }[] = [
   { value: '7d',   label: 'Últimos 7 dias'  },
@@ -36,11 +36,21 @@ const labelPag: Record<string, string> = {
 export function Relatorios() {
   const { vendas, produtos } = useApp();
   const [periodo, setPeriodo] = useState<Periodo>('30d');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
 
   const vendasFiltradas = vendas.filter(v => {
+    const dataVenda = new Date(v.criadaEm);
+    
+    if (periodo === 'custom') {
+      if (dataInicio && dataVenda < new Date(dataInicio + 'T00:00:00')) return false;
+      if (dataFim && dataVenda > new Date(dataFim + 'T23:59:59')) return false;
+      return true;
+    }
+    
     if (periodo === 'tudo') return true;
     const dias = periodo === '7d' ? 7 : periodo === '30d' ? 30 : 90;
-    return new Date(v.criadaEm) >= diasAtras(dias);
+    return dataVenda >= diasAtras(dias);
   });
 
   const totalVendido   = vendasFiltradas.reduce((s, v) => s + v.totalFinal, 0);
@@ -101,8 +111,31 @@ export function Relatorios() {
               {p.label}
             </button>
           ))}
+          <button className={`cat-tab${periodo === 'custom' ? ' active' : ''}`}
+            onClick={() => setPeriodo('custom')}>
+            📅 Personalizado
+          </button>
         </div>
       </div>
+
+      {periodo === 'custom' && (
+        <div className="card" style={{ marginBottom: 16, padding: 16, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">Data início</label>
+            <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
+          </div>
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">Data fim</label>
+            <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} />
+          </div>
+          {(dataInicio || dataFim) && (
+            <button className="btn-ghost" style={{ color: 'var(--red)' }}
+              onClick={() => { setDataInicio(''); setDataFim(''); }}>
+              Limpar
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Cards de resumo */}
       <div className="rel-stats">
