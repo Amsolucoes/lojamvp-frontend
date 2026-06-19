@@ -154,6 +154,11 @@ export function Clientes() {
                     🎂 {new Date(c.dataNascimento).toLocaleDateString('pt-BR')}
                   </div>
                 )}
+                {(c.creditoLoja ?? 0) > 0 && (
+                  <div className="cli-info" style={{ color: 'var(--green)', fontWeight: 600 }}>
+                    💰 Crédito: {fmt(c.creditoLoja ?? 0)}
+                  </div>
+                )}
                 <div className="cli-divider" />
                 <div className="cli-stats">
                   <div>
@@ -269,6 +274,14 @@ export function Clientes() {
                     {fmt(totalGasto(clienteAtivo.id))}
                   </div>
                 </div>
+                {(clienteAtivo.creditoLoja ?? 0) > 0 && (
+                  <div className="stat-card" style={{ flex: 1 }}>
+                    <div className="stat-label">Crédito na loja</div>
+                    <div className="stat-value" style={{ fontSize: 18, color: 'var(--green)' }}>
+                      {fmt(clienteAtivo.creditoLoja ?? 0)}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Dados */}
