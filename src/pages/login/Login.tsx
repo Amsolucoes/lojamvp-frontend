@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
 export function Login() {
@@ -11,6 +12,7 @@ export function Login() {
   const [erro, setErro]         = useState('');
   const [loading, setLoading]   = useState(false);
   const [nomeLoja, setNomeLoja] = useState('AlSoluções');
+  const navigate = useNavigate();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -22,7 +24,11 @@ export function Login() {
     setLoading(true);
     const res = await login(email, senha);
     setLoading(false);
-    if (!res.ok) setErro(res.erro ?? 'Erro ao fazer login.');
+    if (!res.ok) {
+      setErro(res.erro ?? 'Erro ao fazer login.');
+    } else {
+      navigate('/', { replace: true });
+    }
   }
 
   return (
