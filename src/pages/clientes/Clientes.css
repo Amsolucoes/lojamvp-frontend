@@ -133,6 +133,20 @@
   margin-top: 4px;
 }
 
+.cli-hist-mobile { display: none; }
+.cli-hist-card {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.cli-hist-card:last-child { border-bottom: none; }
+
 @media (max-width: 600px) {
   .cli-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .cli-hist-desktop { display: none; }
+  .cli-hist-mobile { display: block; }
+  .modal { max-width: 100% !important; }
+  .cli-modal-stats { flex-direction: column; }
 }
