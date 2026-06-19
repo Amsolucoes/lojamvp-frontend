@@ -34,6 +34,7 @@ export function Clientes() {
   const [editId, setEditId]  = useState<string | null>(null);
   const [form, setForm]      = useState<FormData>(EMPTY);
   const [confirmDel, setDel] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const lista = clientes.filter(c =>
     c.nome.toLowerCase().includes(busca.toLowerCase()) ||
@@ -44,22 +45,39 @@ export function Clientes() {
   function abrirNovo() { setForm(EMPTY); setEditId(null); setModal('novo'); }
 
   function abrirEditar(c: Cliente) {
-    setForm({ nome: c.nome, telefone: c.telefone, cpf: c.cpf ?? '', email: c.email ?? '', endereco: c.endereco ?? '', observacoes: c.observacoes ?? '' });
+    setForm({ 
+      nome: c.nome, telefone: c.telefone, cpf: c.cpf ?? '', 
+      email: c.email ?? '', endereco: c.endereco ?? '', 
+      observacoes: c.observacoes ?? '', 
+      dataNascimento: c.dataNascimento ? c.dataNascimento.split('T')[0] : undefined 
+    });
     setEditId(c.id);
     setModal('editar');
   }
 
   function abrirVer(c: Cliente) {
-    setForm({ nome: c.nome, telefone: c.telefone, cpf: c.cpf ?? '', email: c.email ?? '', endereco: c.endereco ?? '', observacoes: c.observacoes ?? '' });
+    setForm({ 
+      nome: c.nome, telefone: c.telefone, cpf: c.cpf ?? '', 
+      email: c.email ?? '', endereco: c.endereco ?? '', 
+      observacoes: c.observacoes ?? '', 
+      dataNascimento: c.dataNascimento ? c.dataNascimento.split('T')[0] : undefined 
+    });
     setEditId(c.id);
     setModal('ver');
   }
 
-  function salvar() {
+  async function salvar() {
     if (!form.nome.trim() || !form.telefone.trim()) return;
-    if (modal === 'novo') addCliente(form);
-    else if (editId) updateCliente(editId, form);
-    setModal(null);
+    try {
+      if (modal === 'novo') await addCliente(form);
+      else if (editId) await updateCliente(editId, form);
+      setModal(null);
+      setToast(modal === 'novo' ? 'Cliente cadastrado!' : 'Cliente atualizado!');
+      setTimeout(() => setToast(null), 2500);
+    } catch (e) {
+      setToast('Erro ao salvar cliente');
+      setTimeout(() => setToast(null), 2500);
+    }
   }
 
   function totalGasto(clienteId: string) {
@@ -131,6 +149,11 @@ export function Clientes() {
                 <div className="cli-nome">{c.nome}</div>
                 <div className="cli-info"><Phone size={12} />{c.telefone}</div>
                 {c.email && <div className="cli-info"><Mail size={12} />{c.email}</div>}
+                {c.dataNascimento && (
+                  <div className="cli-info">
+                    🎂 {new Date(c.dataNascimento).toLocaleDateString('pt-BR')}
+                  </div>
+                )}
                 <div className="cli-divider" />
                 <div className="cli-stats">
                   <div>
@@ -254,6 +277,12 @@ export function Clientes() {
                 {clienteAtivo.email    && <div className="cli-detail-row"><Mail size={14} /><span>{clienteAtivo.email}</span></div>}
                 {clienteAtivo.endereco && <div className="cli-detail-row"><MapPin size={14} /><span>{clienteAtivo.endereco}</span></div>}
                 {clienteAtivo.cpf      && <div className="cli-detail-row"><FileText size={14} /><span>CPF: {clienteAtivo.cpf}</span></div>}
+                {clienteAtivo.dataNascimento && (
+                  <div className="cli-detail-row">
+                    <span style={{ fontSize: 14 }}>🎂</span>
+                    <span>Nascimento: {new Date(clienteAtivo.dataNascimento).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                )}
                 {clienteAtivo.observacoes && (
                   <div className="cli-obs">{clienteAtivo.observacoes}</div>
                 )}
@@ -318,6 +347,17 @@ export function Clientes() {
               <button className="btn-danger" onClick={() => { deleteCliente(confirmDel); setDel(null); }}>Excluir</button>
             </div>
           </div>
+        </div>
+      )}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-2)', border: '1px solid var(--accent-border)',
+          color: 'var(--text-1)', padding: '12px 24px', borderRadius: 'var(--radius)',
+          boxShadow: 'var(--shadow-lg)', zIndex: 200, fontSize: 14, fontWeight: 500,
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span style={{ color: 'var(--green)' }}>✓</span> {toast}
         </div>
       )}
     </div>

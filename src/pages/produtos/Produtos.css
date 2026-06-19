@@ -104,3 +104,19 @@ tr:hover .row-actions { opacity: 1; }
   .prod-table-desktop { display: none; }
   .prod-cards-mobile { display: block; }
 }
+
+@media (min-width: 769px) {
+  .modal {
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-body {
+    overflow-y: auto;
+    flex: 1;
+  }
+  .modal-header,
+  .modal-footer {
+    flex-shrink: 0;
+  }
+}
