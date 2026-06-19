@@ -140,6 +140,20 @@
 }
 .cli-hist-card:last-child { border-bottom: none; }
 
+.modal {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-header,
+.modal-footer {
+  flex-shrink: 0;
+}
+
 @media (max-width: 600px) {
   .cli-grid { grid-template-columns: 1fr; }
 }
