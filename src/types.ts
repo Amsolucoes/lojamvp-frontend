@@ -26,6 +26,7 @@ export interface Cliente {
   endereco?: string;
   observacoes?: string;
   criadoEm: string;
+  creditoLoja?: number;
 }
 
 // ── Venda / Caixa ─────────────────────────────────────────────────

@@ -49,6 +49,7 @@ function mapCliente(c: any): Cliente {
     cpf: c.cpf, email: c.email, endereco: c.endereco,
     observacoes: c.observacoes, criadoEm: c.criadoEm,
     dataNascimento: c.dataNascimento,
+    creditoLoja: c.creditoLoja,
   };
 }
 

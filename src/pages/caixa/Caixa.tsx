@@ -48,6 +48,16 @@ export function Caixa() {
   const buscaRef = useRef<HTMLInputElement>(null);
   const [variacoesDisponiveis, setVariacoesDisponiveis] = useState<{prodId: string; vars: VariacaoItem[]}[]>([]);
   const [modalVariacao, setModalVariacao] = useState<{prodId: string; nomeProd: string} | null>(null);
+  const [modalTroca, setModalTroca] = useState(false);
+  const [trocaCliente, setTrocaCliente] = useState('');
+  const [trocaBuscaCli, setTrocaBuscaCli] = useState('');
+  const [trocaShowCli, setTrocaShowCli] = useState(false);
+  const [devolvidos, setDevolvidos] = useState<any[]>([]);
+  const [novos, setNovos] = useState<any[]>([]);
+  const [trocaBuscaProd, setTrocaBuscaProd] = useState('');
+  const [trocaTipo, setTrocaTipo] = useState<'devolvido' | 'novo'>('devolvido');
+  const [trocaFormaPag, setTrocaFormaPag] = useState<FormaPagamento>('pix');
+  const [trocaResultado, setTrocaResultado] = useState<any>(null);
 
   const [formas, setFormas] = useState<{forma: FormaPagamento; valor: number; parcelas?: number}[]>([
   { forma: 'dinheiro', valor: 0 }]);
@@ -161,6 +171,42 @@ export function Caixa() {
     ));
   }
 
+  async function confirmarTroca() {
+    if (!trocaCliente || devolvidos.length === 0 || novos.length === 0) return;
+
+    try {
+      const totDev  = devolvidos.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0);
+      const totNovo = novos.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0);
+      const dif = totNovo - totDev;
+
+      const payload = {
+        clienteId: trocaCliente,
+        devolvidos: devolvidos.map(i => ({
+          produtoId: i.produtoId,
+          nomeProduto: i.nomeProduto,
+          variacaoId: i.variacaoId ?? null,
+          quantidade: i.quantidade,
+          precoUnitario: i.precoUnitario,
+          voltaEstoque: i.voltaEstoque,
+        })),
+        novos: novos.map(i => ({
+          produtoId: i.produtoId,
+          nomeProduto: i.nomeProduto,
+          variacaoId: i.variacaoId ?? null,
+          quantidade: i.quantidade,
+          precoUnitario: i.precoUnitario,
+          voltaEstoque: false,
+        })),
+        formaPagamento: dif > 0 ? trocaFormaPag : null,
+      };
+
+      const res = await api.post<any>('/api/trocas', payload);
+      setTrocaResultado(res);
+    } catch (e) {
+      alert('Erro ao processar troca: ' + (e as Error).message);
+    }
+  }
+
   function finalizarVenda() {
     if (carrinho.length === 0) return;
     const venda = {
@@ -220,11 +266,16 @@ export function Caixa() {
               Hoje: {fmt(totalDia)} em {vendasHoje.length} venda(s)
             </p>
           </div>
-          {carrinho.length > 0 && (
-            <button className="btn-ghost" onClick={limpar} style={{ color: 'var(--red)' }}>
-              <Trash2 size={14} style={{ verticalAlign: -2 }} /> Limpar
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button className="btn-secondary" onClick={() => setModalTroca(true)}>
+              🔄 Troca
             </button>
-          )}
+            {carrinho.length > 0 && (
+              <button className="btn-ghost" onClick={limpar} style={{ color: 'var(--red)' }}>
+                <Trash2 size={14} style={{ verticalAlign: -2 }} /> Limpar
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Busca de produto */}
@@ -580,6 +631,207 @@ export function Caixa() {
                   ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Troca */}
+      {modalTroca && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalTroca(false)}>
+          <div className="modal" style={{ maxWidth: 640 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>🔄 Troca de produtos</h2>
+              <button className="btn-ghost" onClick={() => { setModalTroca(false); setDevolvidos([]); setNovos([]); setTrocaCliente(''); setTrocaResultado(null); }}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              {trocaResultado ? (
+                // Resultado da troca
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>✓</div>
+                  <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Troca realizada!</h3>
+                  <div style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: 16, textAlign: 'left', fontSize: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ color: 'var(--text-3)' }}>Total devolvido:</span>
+                      <span>{fmt(trocaResultado.totalDevolvido)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ color: 'var(--text-3)' }}>Total novo:</span>
+                      <span>{fmt(trocaResultado.totalNovo)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid var(--border)', fontWeight: 600 }}>
+                      {trocaResultado.diferenca > 0 ? (
+                        <><span style={{ color: 'var(--red)' }}>Cliente paga:</span><span style={{ color: 'var(--red)' }}>{fmt(trocaResultado.diferenca)}</span></>
+                      ) : trocaResultado.diferenca < 0 ? (
+                        <><span style={{ color: 'var(--green)' }}>Crédito gerado:</span><span style={{ color: 'var(--green)' }}>{fmt(trocaResultado.creditoGerado)}</span></>
+                      ) : (
+                        <><span>Troca sem diferença</span><span>—</span></>
+                      )}
+                    </div>
+                  </div>
+                  <button className="btn-primary" style={{ marginTop: 20, width: '100%' }}
+                    onClick={() => { setModalTroca(false); setDevolvidos([]); setNovos([]); setTrocaCliente(''); setTrocaResultado(null); }}>
+                    Concluir
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Cliente */}
+                  <div className="form-group" style={{ marginBottom: 16 }}>
+                    <label className="form-label">Cliente *</label>
+                    {trocaCliente ? (
+                      <div className="cx-cliente-sel">
+                        <div>
+                          <div style={{ fontWeight: 500, fontSize: 13 }}>{clientes.find(c => c.id === trocaCliente)?.nome}</div>
+                          {(clientes.find(c => c.id === trocaCliente)?.creditoLoja ?? 0) > 0 && (
+                            <div style={{ fontSize: 11, color: 'var(--green)' }}>
+                              Crédito atual: {fmt(clientes.find(c => c.id === trocaCliente)?.creditoLoja ?? 0)}
+                            </div>
+                          )}
+                        </div>
+                        <button className="btn-ghost" onClick={() => setTrocaCliente('')}><X size={13} /></button>
+                      </div>
+                    ) : (
+                      <div style={{ position: 'relative' }}>
+                        <input placeholder="Buscar cliente..." value={trocaBuscaCli}
+                          onChange={e => { setTrocaBuscaCli(e.target.value); setTrocaShowCli(true); }}
+                          onFocus={() => setTrocaShowCli(true)}
+                          onBlur={() => setTimeout(() => setTrocaShowCli(false), 150)} />
+                        {trocaShowCli && trocaBuscaCli && (
+                          <div className="cx-dropdown">
+                            {clientes.filter(c => c.nome.toLowerCase().includes(trocaBuscaCli.toLowerCase())).slice(0, 5).map(c => (
+                              <button key={c.id} className="cx-dropdown-item" onMouseDown={() => { setTrocaCliente(c.id); setTrocaShowCli(false); setTrocaBuscaCli(''); }}>
+                                <div className="cx-drop-nome">{c.nome}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{c.telefone}</div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Toggle devolvido/novo */}
+                  <div className="cx-tipo-toggle" style={{ marginBottom: 12 }}>
+                    <button className={trocaTipo === 'devolvido' ? 'active' : ''} onClick={() => setTrocaTipo('devolvido')}>
+                      Devolvidos ({devolvidos.length})
+                    </button>
+                    <button className={trocaTipo === 'novo' ? 'active' : ''} onClick={() => setTrocaTipo('novo')}>
+                      Novos ({novos.length})
+                    </button>
+                  </div>
+
+                  {/* Busca produto */}
+                  <div style={{ position: 'relative', marginBottom: 12 }}>
+                    <input placeholder="Buscar produto para adicionar..." value={trocaBuscaProd}
+                      onChange={e => setTrocaBuscaProd(e.target.value)} />
+                    {trocaBuscaProd && (
+                      <div className="cx-dropdown">
+                        {produtos.filter(p => p.nome.toLowerCase().includes(trocaBuscaProd.toLowerCase())).slice(0, 6).map(p => (
+                          <button key={p.id} className="cx-dropdown-item" onMouseDown={() => {
+                            const item = { produtoId: p.id, nomeProduto: p.nome, quantidade: 1, precoUnitario: p.precoVenda, voltaEstoque: true };
+                            if (trocaTipo === 'devolvido') setDevolvidos(prev => [...prev, item]);
+                            else setNovos(prev => [...prev, item]);
+                            setTrocaBuscaProd('');
+                          }}>
+                            <div className="cx-drop-nome">{p.nome}</div>
+                            <div className="cx-drop-info">
+                              <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(p.precoVenda)}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lista do tipo selecionado */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                    {(trocaTipo === 'devolvido' ? devolvidos : novos).map((item, i) => (
+                      <div key={i} style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius-sm)', padding: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 500, fontSize: 13 }}>{item.nomeProduto}</span>
+                          <button className="btn-ghost" style={{ color: 'var(--red)', padding: 2 }}
+                            onClick={() => {
+                              if (trocaTipo === 'devolvido') setDevolvidos(prev => prev.filter((_, j) => j !== i));
+                              else setNovos(prev => prev.filter((_, j) => j !== i));
+                            }}><X size={13} /></button>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                          <input type="number" min={1} value={item.quantidade} style={{ width: 60 }}
+                            onChange={e => {
+                              const q = +e.target.value || 1;
+                              if (trocaTipo === 'devolvido') setDevolvidos(prev => prev.map((x, j) => j === i ? { ...x, quantidade: q } : x));
+                              else setNovos(prev => prev.map((x, j) => j === i ? { ...x, quantidade: q } : x));
+                            }} />
+                          <input type="number" min={0} step={0.01} value={item.precoUnitario} style={{ width: 90 }}
+                            onChange={e => {
+                              const v = +e.target.value || 0;
+                              if (trocaTipo === 'devolvido') setDevolvidos(prev => prev.map((x, j) => j === i ? { ...x, precoUnitario: v } : x));
+                              else setNovos(prev => prev.map((x, j) => j === i ? { ...x, precoUnitario: v } : x));
+                            }} />
+                          <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(item.quantidade * item.precoUnitario)}</span>
+                          {trocaTipo === 'devolvido' && (
+                            <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+                              <input type="checkbox" checked={item.voltaEstoque}
+                                onChange={e => setDevolvidos(prev => prev.map((x, j) => j === i ? { ...x, voltaEstoque: e.target.checked } : x))} />
+                              Volta ao estoque
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Resumo */}
+                  {(devolvidos.length > 0 || novos.length > 0) && (
+                    <div style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: 14, marginBottom: 16 }}>
+                      {(() => {
+                        const totDev = devolvidos.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0);
+                        const totNovo = novos.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0);
+                        const dif = totNovo - totDev;
+                        return (
+                          <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                              <span style={{ color: 'var(--text-3)' }}>Devolvido:</span><span>{fmt(totDev)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                              <span style={{ color: 'var(--text-3)' }}>Novo:</span><span>{fmt(totNovo)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+                              {dif > 0 ? <><span style={{ color: 'var(--red)' }}>Cliente paga:</span><span style={{ color: 'var(--red)' }}>{fmt(dif)}</span></>
+                                : dif < 0 ? <><span style={{ color: 'var(--green)' }}>Crédito gerado:</span><span style={{ color: 'var(--green)' }}>{fmt(Math.abs(dif))}</span></>
+                                : <><span>Sem diferença</span><span>—</span></>}
+                            </div>
+                            {dif > 0 && (
+                              <div style={{ marginTop: 10 }}>
+                                <label className="form-label">Forma de pagamento da diferença</label>
+                                <div className="cx-formas" style={{ marginTop: 6 }}>
+                                  {FORMAS.map(fp => (
+                                    <button key={fp.value} className={`cx-forma-btn${trocaFormaPag === fp.value ? ' active' : ''}`}
+                                      onClick={() => setTrocaFormaPag(fp.value)}>
+                                      <span>{fp.icon}</span><span>{fp.label}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            {!trocaResultado && (
+              <div className="modal-footer">
+                <button className="btn-secondary" onClick={() => { setModalTroca(false); setDevolvidos([]); setNovos([]); setTrocaCliente(''); }}>Cancelar</button>
+                <button className="btn-primary"
+                  disabled={!trocaCliente || devolvidos.length === 0 || novos.length === 0}
+                  onClick={confirmarTroca}>
+                  Confirmar troca
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
