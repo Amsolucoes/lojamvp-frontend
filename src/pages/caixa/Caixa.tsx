@@ -251,7 +251,7 @@ export function Caixa() {
     }
   }
 
-  function finalizarVenda() {
+  async function finalizarVenda() {
     if (carrinho.length === 0) return;
     const venda = {
       itens: carrinho.map(item => ({
@@ -275,8 +275,8 @@ export function Caixa() {
         ? Math.max(0, parseFloat(valorPago) - total)
         : undefined,
     } as any;
-    recarregar();
-    registrarVenda(venda);
+    await registrarVenda(venda);
+    await recarregar();
     setUltimaVenda(total.toString());
     setSucesso(true);
     limpar();
