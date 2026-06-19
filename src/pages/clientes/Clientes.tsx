@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, Users, X, Phone, Mail, MapPin, FileText } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Cliente } from '../../types';
@@ -97,6 +97,15 @@ export function Clientes() {
   const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   const clienteAtivo = editId ? clientes.find(c => c.id === editId) : null;
+
+  useEffect(() => {
+    if (modal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [modal]);
 
   return (
     <div className="page">

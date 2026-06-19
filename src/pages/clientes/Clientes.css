@@ -154,6 +154,18 @@
   flex-shrink: 0;
 }
 
+.modal-overlay {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: auto;
+  min-height: 0;
+}
+
 @media (max-width: 600px) {
   .cli-grid { grid-template-columns: 1fr; }
 }
@@ -163,4 +175,9 @@
   .cli-hist-mobile { display: block; }
   .modal { max-width: 100% !important; }
   .cli-modal-stats { flex-direction: column; }
+
+  input[type="date"] {
+    width: 100%;
+    box-sizing: border-box;
+  }
 }
