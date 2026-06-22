@@ -481,9 +481,9 @@ export function Caixa() {
               </div>
             )}
             {clienteSel && creditoCliente > 0 && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 13, cursor: 'pointer' }}>
-                <input type="checkbox" checked={usarCredito} onChange={e => setUsarCredito(e.target.checked)} />
-                <span>Usar crédito de <strong style={{ color: 'var(--green)' }}>{fmt(creditoCliente)}</strong></span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 13, cursor: 'pointer', flexWrap: 'wrap', lineHeight: 1.4 }}>
+                <input type="checkbox" checked={usarCredito} onChange={e => setUsarCredito(e.target.checked)} style={{ flexShrink: 0, width: 16, height: 16 }} />
+                <span style={{ flex: 1, minWidth: 0 }}>Usar crédito de <strong style={{ color: 'var(--green)' }}>{fmt(creditoCliente)}</strong></span>
               </label>
             )}
         </div>
