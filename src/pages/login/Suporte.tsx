@@ -1,9 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export function Suporte() {
-  const [params] = useSearchParams();
   const navigate = useNavigate();
   const { setSessao } = useAuth();
   const feito = useRef(false);
@@ -12,18 +11,26 @@ export function Suporte() {
     if (feito.current) return;
     feito.current = true;
 
-    const token = params.get('token');
-    const nome = params.get('nome') ?? 'Suporte';
-    const email = params.get('email') ?? '';
-    const role = (params.get('role') as 'admin' | 'operador') ?? 'admin';
+    try {
+      const hash = window.location.hash.slice(1); // remove o #
+      if (!hash) { navigate('/login', { replace: true }); return; }
 
-    if (token) {
-      setSessao({ token, nome, email, role });
-      navigate('/', { replace: true });
-    } else {
+      const dados = JSON.parse(decodeURIComponent(hash));
+      if (dados.token) {
+        setSessao({
+          token: dados.token,
+          nome: dados.nome ?? 'Suporte',
+          email: dados.email ?? '',
+          role: (dados.role as 'admin' | 'operador') ?? 'admin',
+        });
+        navigate('/', { replace: true });
+      } else {
+        navigate('/login', { replace: true });
+      }
+    } catch {
       navigate('/login', { replace: true });
     }
-  }, [params, navigate, setSessao]);
+  }, [navigate, setSessao]);
 
   return (
     <div style={{ display: 'grid', placeItems: 'center', height: '100vh', color: '#888', fontFamily: 'sans-serif' }}>
