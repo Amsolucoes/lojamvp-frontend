@@ -11,6 +11,7 @@ interface Usuario {
 interface AuthCtx {
   usuario: Usuario | null;
   login: (email: string, senha: string) => Promise<{ ok: boolean; erro?: string }>;
+  setSessao: (u: Usuario) => void;
   logout: () => void;
 }
 
@@ -51,12 +52,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function setSessao(u: Usuario) {
+    setUsuario(u);
+    salvarSessao(u);
+  }
+
   function logout() {
     setUsuario(null);
     localStorage.removeItem('loja:sessao');
   }
 
-  return <Ctx.Provider value={{ usuario, login, logout }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ usuario, login, setSessao, logout }}>{children}</Ctx.Provider>;
 }
 
 export function useAuth() {

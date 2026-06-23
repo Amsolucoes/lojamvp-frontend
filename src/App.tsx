@@ -10,6 +10,7 @@ import { Caixa } from './pages/caixa/Caixa';
 import { Estoque } from './pages/estoque/Estoque';
 import { Relatorios } from './pages/relatorios/Relatorios';
 import { FluxoCaixa } from './pages/fluxo/FluxoCaixa';
+import { Cadastro } from './pages/login/Cadastro';
 
 function Rotas() {
   const { usuario } = useAuth();
@@ -17,6 +18,8 @@ function Rotas() {
   if (!usuario) {
     return (
       <Routes>
+        <Route path="/cadastro" element={<Cadastro />} />
+        <Route path="/login" element={<Login />} />
         <Route path="*" element={<Login />} />
       </Routes>
     );

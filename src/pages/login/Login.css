@@ -160,6 +160,25 @@
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
+
+.cad-perfis { display: flex; flex-direction: column; gap: 8px; }
+.cad-perfil {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start;
+  gap: 2px; padding: 12px 14px; border: 1px solid var(--border, #2a2a2a);
+  border-radius: 10px; background: transparent; cursor: pointer; text-align: left;
+  transition: border-color .15s, background .15s;
+}
+.cad-perfil:hover { border-color: var(--accent, #c38228); }
+.cad-perfil.active { border-color: var(--accent, #c38228); background: rgba(195,130,40,0.08); }
+.cad-perfil-icone { font-size: 20px; }
+.cad-perfil-nome { font-size: 14px; font-weight: 600; color: var(--text-1, #fff); }
+.cad-perfil-desc { font-size: 12px; color: var(--text-3, #888); }
+.cad-perfil-check {
+  position: absolute; top: 12px; right: 12px; width: 20px; height: 20px;
+  background: var(--accent, #c38228); color: #fff; border-radius: 50%;
+  display: grid; place-items: center;
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Hint de credenciais */

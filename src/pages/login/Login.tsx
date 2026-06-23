@@ -105,6 +105,13 @@ export function Login() {
             )}
           </button>
         </form>
+
+        <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'var(--text-3, #888)' }}>
+          Ainda não tem conta?{' '}
+          <a onClick={() => navigate('/cadastro')} style={{ color: 'var(--accent, #c38228)', cursor: 'pointer', fontWeight: 500 }}>
+            Criar conta grátis
+          </a>
+        </p>
       </div>
     </div>
   );
