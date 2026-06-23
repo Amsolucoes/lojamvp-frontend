@@ -11,6 +11,7 @@ import { Estoque } from './pages/estoque/Estoque';
 import { Relatorios } from './pages/relatorios/Relatorios';
 import { FluxoCaixa } from './pages/fluxo/FluxoCaixa';
 import { Cadastro } from './pages/login/Cadastro';
+import { Suporte } from './pages/login/Suporte';
 
 function Rotas() {
   const { usuario } = useAuth();
@@ -28,6 +29,7 @@ function Rotas() {
   return (
     <AppProvider>
       <Routes>
+        <Route path="/suporte" element={<Suporte />} />
         <Route element={<Layout />}>
           <Route index             element={<Dashboard />} />
           <Route path="produtos"   element={<Produtos />} />
