@@ -41,9 +41,10 @@ export function Dashboard() {
           padding: '14px 18px', borderRadius: 12, marginBottom: 16,
           background: situacao.fase === 'carencia' ? 'rgba(239,68,68,0.1)' : 'rgba(99,102,241,0.1)',
           border: `1px solid ${situacao.fase === 'carencia' ? 'rgba(239,68,68,0.3)' : 'rgba(99,102,241,0.3)'}`,
+          flexWrap: 'wrap',
         }}>
           <Clock size={18} style={{ color: situacao.fase === 'carencia' ? 'var(--red)' : 'var(--blue, #6366f1)', flexShrink: 0 }} />
-          <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 14, lineHeight: 1.5, flex: 1, minWidth: 200 }}>
             {situacao.fase === 'trial' ? (
               situacao.diasRestantes > 0 ? (
                 <>Seu período de teste termina em <strong>{situacao.diasRestantes} {situacao.diasRestantes === 1 ? 'dia' : 'dias'}</strong>. Assine para continuar usando sem interrupções.</>
@@ -54,6 +55,16 @@ export function Dashboard() {
               <>Sua fatura está vencida. Você tem <strong>{situacao.diasRestantes} {situacao.diasRestantes === 1 ? 'dia' : 'dias'}</strong> para pagar antes do bloqueio.</>
             )}
           </div>
+            <button
+            onClick={() => window.open('https://admin.aldevsoftware.com.br', '_blank')}
+            style={{
+              background: situacao.fase === 'carencia' ? 'var(--red)' : 'var(--blue, #6366f1)',
+              color: '#fff', padding: '9px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
+            }}
+          >
+            {situacao.fase === 'carencia' ? 'Pagar agora' : 'Ver assinatura'}
+          </button>
         </div>
       )}
       <div className="page-header">
