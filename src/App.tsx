@@ -19,6 +19,7 @@ function Rotas() {
   if (!usuario) {
     return (
       <Routes>
+        <Route path="/suporte" element={<Suporte />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<Login />} />
