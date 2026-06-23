@@ -1,6 +1,8 @@
-import { ShoppingCart, Package, TrendingUp, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, Package, TrendingUp, AlertTriangle, Clock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Produto, Venda, ItemVenda } from '../types';
+import { useState, useEffect } from 'react';
+import { api } from '../services/api';
 import './Dashboard.css';
 
 function fmt(n: number) {
@@ -25,8 +27,35 @@ export function Dashboard() {
     })
     .slice(0, 5);
 
+  const [situacao, setSituacao] = useState<any>(null);
+
+  useEffect(() => {
+    api.get('/api/loja/situacao').then(setSituacao).catch(() => {});
+  }, []);
+
   return (
     <div className="page">
+      {situacao && (situacao.fase === 'trial' || situacao.fase === 'carencia') && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '14px 18px', borderRadius: 12, marginBottom: 16,
+          background: situacao.fase === 'carencia' ? 'rgba(239,68,68,0.1)' : 'rgba(99,102,241,0.1)',
+          border: `1px solid ${situacao.fase === 'carencia' ? 'rgba(239,68,68,0.3)' : 'rgba(99,102,241,0.3)'}`,
+        }}>
+          <Clock size={18} style={{ color: situacao.fase === 'carencia' ? 'var(--red)' : 'var(--blue, #6366f1)', flexShrink: 0 }} />
+          <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+            {situacao.fase === 'trial' ? (
+              situacao.diasRestantes > 0 ? (
+                <>Seu período de teste termina em <strong>{situacao.diasRestantes} {situacao.diasRestantes === 1 ? 'dia' : 'dias'}</strong>. Assine para continuar usando sem interrupções.</>
+              ) : (
+                <>Seu teste termina <strong>hoje</strong>. Faça o pagamento para continuar.</>
+              )
+            ) : (
+              <>Sua fatura está vencida. Você tem <strong>{situacao.diasRestantes} {situacao.diasRestantes === 1 ? 'dia' : 'dias'}</strong> para pagar antes do bloqueio.</>
+            )}
+          </div>
+        </div>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title">Dashboard</h1>
