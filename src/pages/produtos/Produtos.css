@@ -100,9 +100,22 @@ tr:hover .row-actions { opacity: 1; }
 }
 .prod-card-mobile:last-child { border-bottom: none; }
 
+.prod-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
 @media (max-width: 768px) {
   .prod-table-desktop { display: none; }
   .prod-cards-mobile { display: block; }
+  .prod-header-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .prod-header-actions button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 @media (min-width: 769px) {

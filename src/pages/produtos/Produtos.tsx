@@ -83,7 +83,7 @@ export function Produtos() {
         nome: catForm.nome.trim(),
         tipoTamanho: catForm.tipoTamanho,
         usaTamanho: catForm.modo === 'tamanho_cor' || catForm.modo === 'so_tamanho',
-        usaCor: catForm.modo === 'tamanho_cor',
+        usaCor: catForm.modo === 'tamanho_cor' || catForm.modo === 'so_cor',
         tamanhosPersonalizados: catForm.tipoTamanho === 'personalizado' ? catForm.tamanhosPersonalizados : null,
       };
       let nova: any;
@@ -107,7 +107,11 @@ export function Produtos() {
 
   function abrirEditarCategoria(c: any) {
     setEditCatId(c.id);
-    const modo = (!c.usaTamanho && !c.usaCor) ? 'sem_grade' : (c.usaCor ? 'tamanho_cor' : 'so_tamanho');
+    const modo = (!c.usaTamanho && !c.usaCor) ? 'sem_grade'
+      : (c.usaTamanho && c.usaCor) ? 'tamanho_cor'
+      : c.usaTamanho ? 'so_tamanho'
+      : 'so_cor';
+
     setCatForm({
       nome: c.nome,
       modo,
@@ -213,7 +217,7 @@ export function Produtos() {
           <h1 className="page-title">Produtos</h1>
           <p className="page-subtitle">{produtos.length} produto(s) cadastrado(s)</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="prod-header-actions">
           <button className="btn-secondary" onClick={() => setModalGerenciar(true)}>
             Gerenciar categorias
           </button>
@@ -528,6 +532,7 @@ export function Produtos() {
                     {[
                       { v: 'tamanho_cor', t: 'Tamanho + Cor', d: 'Ex: Camiseta M Preta' },
                       { v: 'so_tamanho', t: 'Só Tamanho', d: 'Ex: Calça 40' },
+                      { v: 'so_cor', t: 'Só Cor', d: 'Ex: Bolsa Vermelha' },
                       { v: 'sem_grade', t: 'Sem grade', d: 'Produto único, sem variação' },
                     ].map(op => (
                       <button type="button" key={op.v}
