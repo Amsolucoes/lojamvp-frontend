@@ -44,19 +44,37 @@ export function Produtos() {
   const [editCatId, setEditCatId] = useState<string | null>(null);
   const [catForm, setCatForm] = useState({ nome: '', modo: 'tamanho_cor', tipoTamanho: 'letra', tamanhosPersonalizados: '' });
   const [savingCat, setSavingCat] = useState(false);
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
 
   const TAMANHOS_LETRA = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
   const TAMANHOS_NUMERO = ['32', '34', '36', '38', '40', '42', '44', '46'];
 
-  useEffect(() => {
-    carregarCategorias();
+    const lucro = (p: Produto) => {
+    if (p.precoCusto === 0) return null;
+    return ((p.precoVenda - p.precoCusto) / p.precoCusto * 100).toFixed(0);
+  };
 
-    api.get<any[]>('/api/perfis/loja/campos-extras').then(res => {
-      setCamposExtras(res);
-      const temTamanhoOuCor = res.some(c => c.chave === 'tamanho' || c.chave === 'cor');
-      setTemVariacoes(temTamanhoOuCor);
-    }).catch(() => {});
-  }, []);
+  // Estoque calculado por variações
+  const estoqueVariacoes    = variacoes.reduce((s, v) => s + v.estoque, 0);
+  const estoqueMinVariacoes = variacoes.reduce((s, v) => s + v.estoqueMinimo, 0);
+  const temVarsNoModal      = temVariacoes && variacoes.length > 0;
+
+  // Config da categoria selecionada
+  const catAtual = cats.find(c => c.nome === form.categoria);
+  const catUsaTamanho = catAtual?.usaTamanho ?? true;
+  const catUsaCor = catAtual?.usaCor ?? true;
+  const catSemGrade = catAtual ? (!catUsaTamanho && !catUsaCor) : false;
+
+  // Lista de tamanhos conforme o tipo
+  const tamanhosDisponiveis = (() => {
+    if (catAtual?.tipoTamanho === 'personalizado' && catAtual?.tamanhosPersonalizados) {
+      return catAtual.tamanhosPersonalizados.split(',').map(t => t.trim()).filter(Boolean);
+    }
+    return tipoTamanho === 'numero' ? TAMANHOS_NUMERO : TAMANHOS_LETRA;
+  })();
+
+  
 
   const lista = produtos.filter(p => {
     const ok     = p.nome.toLowerCase().includes(busca.toLowerCase()) ||
@@ -65,6 +83,10 @@ export function Produtos() {
     const statOk = statusFiltro === 'todos' || (statusFiltro === 'ativo' ? p.ativo : !p.ativo);
     return ok && catOk && statOk;
   });
+
+  const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
+  const paginaSegura = Math.min(paginaAtual, totalPaginas);
+  const listaPaginada = lista.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina);
 
   function carregarCategorias() {
     api.get<any[]>('/api/categorias').then(res => {
@@ -186,29 +208,19 @@ export function Produtos() {
     if (confirmDel) { deleteProduto(confirmDel); setDel(null); }
   }
 
-  const lucro = (p: Produto) => {
-    if (p.precoCusto === 0) return null;
-    return ((p.precoVenda - p.precoCusto) / p.precoCusto * 100).toFixed(0);
-  };
+  useEffect(() => {
+    carregarCategorias();
 
-  // Estoque calculado por variações
-  const estoqueVariacoes    = variacoes.reduce((s, v) => s + v.estoque, 0);
-  const estoqueMinVariacoes = variacoes.reduce((s, v) => s + v.estoqueMinimo, 0);
-  const temVarsNoModal      = temVariacoes && variacoes.length > 0;
+    api.get<any[]>('/api/perfis/loja/campos-extras').then(res => {
+      setCamposExtras(res);
+      const temTamanhoOuCor = res.some(c => c.chave === 'tamanho' || c.chave === 'cor');
+      setTemVariacoes(temTamanhoOuCor);
+    }).catch(() => {});
+  }, []);
 
-  // Config da categoria selecionada
-  const catAtual = cats.find(c => c.nome === form.categoria);
-  const catUsaTamanho = catAtual?.usaTamanho ?? true;
-  const catUsaCor = catAtual?.usaCor ?? true;
-  const catSemGrade = catAtual ? (!catUsaTamanho && !catUsaCor) : false;
-
-  // Lista de tamanhos conforme o tipo
-  const tamanhosDisponiveis = (() => {
-    if (catAtual?.tipoTamanho === 'personalizado' && catAtual?.tamanhosPersonalizados) {
-      return catAtual.tamanhosPersonalizados.split(',').map(t => t.trim()).filter(Boolean);
-    }
-    return tipoTamanho === 'numero' ? TAMANHOS_NUMERO : TAMANHOS_LETRA;
-  })();
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [busca, catFiltro, statusFiltro, porPagina]);
 
   return (
     <div className="page">
@@ -268,7 +280,7 @@ export function Produtos() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lista.map(p => (
+                  {listaPaginada.map(p => (
                     <tr key={p.id}>
                       <td>
                         <div className="prod-nome">{p.nome}</div>
@@ -308,7 +320,7 @@ export function Produtos() {
 
             {/* Cards — mobile */}
             <div className="prod-cards-mobile">
-              {lista.map(p => (
+              {listaPaginada.map(p => (
                 <div key={p.id} className="prod-card-mobile">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -350,6 +362,34 @@ export function Produtos() {
           </>
         )}
       </div>
+
+      {/* Paginação */}
+      {lista.length > 0 && (
+        <div className="prod-paginacao">
+          <div className="prod-pag-info">
+            Mostrando {(paginaSegura - 1) * porPagina + 1}–{Math.min(paginaSegura * porPagina, lista.length)} de {lista.length}
+          </div>
+          <div className="prod-pag-controles">
+            <select value={porPagina} onChange={e => setPorPagina(+e.target.value)} className="prod-pag-select">
+              <option value={5}>5 por página</option>
+              <option value={10}>10 por página</option>
+              <option value={20}>20 por página</option>
+              <option value={50}>50 por página</option>
+            </select>
+            <div className="prod-pag-botoes">
+              <button className="btn-secondary" disabled={paginaSegura <= 1}
+                onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}>
+                Anterior
+              </button>
+              <span className="prod-pag-atual">{paginaSegura} / {totalPaginas}</span>
+              <button className="btn-secondary" disabled={paginaSegura >= totalPaginas}
+                onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}>
+                Próxima
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal novo/editar */}
       {modal && (
