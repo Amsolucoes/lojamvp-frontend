@@ -577,7 +577,7 @@ export function Produtos() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalCat(false)}>Cancelar</button>
               <button className="btn-primary" onClick={salvarCategoria} disabled={savingCat}>
-                {savingCat ? 'Salvando...' : 'Criar categoria'}
+                {savingCat ? 'Salvando...' : editCatId ? 'Salvar categoria' : 'Criar categoria'}
               </button>
             </div>
           </div>
