@@ -40,6 +40,8 @@ export function Produtos() {
   const [temVariacoes, setTemVariacoes] = useState(false);
   const [tipoTamanho, setTipoTamanho] = useState<string>('letra');
   const [modalCat, setModalCat] = useState(false);
+  const [modalGerenciar, setModalGerenciar] = useState(false);
+  const [editCatId, setEditCatId] = useState<string | null>(null);
   const [catForm, setCatForm] = useState({ nome: '', modo: 'tamanho_cor', tipoTamanho: 'letra', tamanhosPersonalizados: '' });
   const [savingCat, setSavingCat] = useState(false);
 
@@ -84,16 +86,44 @@ export function Produtos() {
         usaCor: catForm.modo === 'tamanho_cor',
         tamanhosPersonalizados: catForm.tipoTamanho === 'personalizado' ? catForm.tamanhosPersonalizados : null,
       };
-      const nova = await api.post<any>('/api/categorias', payload);
+      let nova: any;
+      if (editCatId) {
+        nova = await api.put<any>(`/api/categorias/${editCatId}`, payload);
+      } else {
+        nova = await api.post<any>('/api/categorias', payload);
+      }
       await carregarCategorias();
-      // Seleciona a categoria recém-criada no produto
       setForm(f => ({ ...f, categoria: nova.nome }));
       setTipoTamanho(nova.tipoTamanho ?? 'letra');
       setModalCat(false);
+      setEditCatId(null);
     } catch (e) {
-      alert('Erro ao criar categoria: ' + (e as Error).message);
+      alert('Erro ao salvar categoria: ' + (e as Error).message);
     } finally {
       setSavingCat(false);
+    }
+  }
+
+  function abrirEditarCategoria(c: any) {
+    setEditCatId(c.id);
+    const modo = (!c.usaTamanho && !c.usaCor) ? 'sem_grade' : (c.usaCor ? 'tamanho_cor' : 'so_tamanho');
+    setCatForm({
+      nome: c.nome,
+      modo,
+      tipoTamanho: c.tipoTamanho ?? 'letra',
+      tamanhosPersonalizados: c.tamanhosPersonalizados ?? '',
+    });
+    setModalGerenciar(false);
+    setModalCat(true);
+  }
+
+  async function excluirCategoria(c: any) {
+    if (!confirm(`Excluir a categoria "${c.nome}"?`)) return;
+    try {
+      await api.delete(`/api/categorias/${c.id}`);
+      await carregarCategorias();
+    } catch (e) {
+      alert((e as Error).message);
     }
   }
 
@@ -181,9 +211,14 @@ export function Produtos() {
           <h1 className="page-title">Produtos</h1>
           <p className="page-subtitle">{produtos.length} produto(s) cadastrado(s)</p>
         </div>
-        <button className="btn-primary" onClick={abrirNovo}>
-          <Plus size={15} style={{ verticalAlign: -2 }} /> Novo produto
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-secondary" onClick={() => setModalGerenciar(true)}>
+            Gerenciar categorias
+          </button>
+          <button className="btn-primary" onClick={abrirNovo}>
+            <Plus size={15} style={{ verticalAlign: -2 }} /> Novo produto
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -339,7 +374,7 @@ export function Produtos() {
                     </select>
                     <button type="button" className="btn-secondary" title="Nova categoria"
                       style={{ padding: '0 12px' }}
-                      onClick={() => { setCatForm({ nome: '', modo: 'tamanho_cor', tipoTamanho: 'letra', tamanhosPersonalizados: '' }); setModalCat(true); }}>
+                      onClick={() => { setEditCatId(null); setCatForm({ nome: '', modo: 'tamanho_cor', tipoTamanho: 'letra', tamanhosPersonalizados: '' }); setModalCat(true); }}>
                       <Plus size={15} />
                     </button>
                   </div>
@@ -475,7 +510,7 @@ export function Produtos() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCat(false)}>
           <div className="modal" style={{ maxWidth: 440 }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Nova categoria</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>{editCatId ? 'Editar categoria' : 'Nova categoria'}</h2>
               <button className="btn-ghost" onClick={() => setModalCat(false)}><X size={16} /></button>
             </div>
             <div className="modal-body">
@@ -544,6 +579,55 @@ export function Produtos() {
               <button className="btn-primary" onClick={salvarCategoria} disabled={savingCat}>
                 {savingCat ? 'Salvando...' : 'Criar categoria'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal gerenciar categorias */}
+      {modalGerenciar && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalGerenciar(false)}>
+          <div className="modal" style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Gerenciar categorias</h2>
+              <button className="btn-ghost" onClick={() => setModalGerenciar(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <button className="btn-secondary" style={{ width: '100%', marginBottom: 14 }}
+                onClick={() => { setEditCatId(null); setCatForm({ nome: '', modo: 'tamanho_cor', tipoTamanho: 'letra', tamanhosPersonalizados: '' }); setModalGerenciar(false); setModalCat(true); }}>
+                <Plus size={14} style={{ verticalAlign: -2 }} /> Nova categoria
+              </button>
+              {cats.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>
+                  Nenhuma categoria cadastrada.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {cats.map(c => {
+                    const grade = (!c.usaTamanho && !c.usaCor) ? 'Sem grade'
+                      : c.usaCor ? `Tamanho (${c.tipoTamanho}) + Cor`
+                      : `Só tamanho (${c.tipoTamanho})`;
+                    return (
+                      <div key={c.id} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
+                      }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>{c.nome}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{grade}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button className="btn-ghost" title="Editar" onClick={() => abrirEditarCategoria(c)}><Edit2 size={14} /></button>
+                          <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => excluirCategoria(c)}><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalGerenciar(false)}>Fechar</button>
             </div>
           </div>
         </div>
