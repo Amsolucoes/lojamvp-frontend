@@ -34,31 +34,20 @@ export function Produtos() {
   const [editId, setEditId]       = useState<string | null>(null);
   const [form, setForm]           = useState<FormData>(EMPTY);
   const [confirmDel, setDel]      = useState<string | null>(null);
-  const [cats, setCats]           = useState<{id: string; nome: string; tipoTamanho?: string}[]>([]);
+  const [cats, setCats] = useState<{id: string; nome: string; tipoTamanho?: string; usaTamanho?: boolean; usaCor?: boolean; tamanhosPersonalizados?: string}[]>([]);
   const [variacoes, setVariacoes] = useState<Variacao[]>([]);
   const [camposExtras, setCamposExtras] = useState<any[]>([]);
   const [temVariacoes, setTemVariacoes] = useState(false);
   const [tipoTamanho, setTipoTamanho] = useState<string>('letra');
+  const [modalCat, setModalCat] = useState(false);
+  const [catForm, setCatForm] = useState({ nome: '', modo: 'tamanho_cor', tipoTamanho: 'letra', tamanhosPersonalizados: '' });
+  const [savingCat, setSavingCat] = useState(false);
 
   const TAMANHOS_LETRA = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
   const TAMANHOS_NUMERO = ['32', '34', '36', '38', '40', '42', '44', '46'];
 
   useEffect(() => {
-    api.get<any[]>('/api/perfis/loja/categorias').then(res => {
-      if (res.length > 0) {
-        setCats(res);
-        const catInicial = res[0];
-        setForm(f => ({ ...f, categoria: f.categoria || catInicial.nome }));
-        setTipoTamanho(catInicial.tipoTamanho ?? 'letra');
-      } else {
-        setCats([
-          { id: '1', nome: 'Semi Joias' },
-          { id: '2', nome: 'Maquiagem' },
-          { id: '3', nome: 'Acessórios' },
-          { id: '4', nome: 'Outro' },
-        ]);
-      }
-    });
+    carregarCategorias();
 
     api.get<any[]>('/api/perfis/loja/campos-extras').then(res => {
       setCamposExtras(res);
@@ -74,6 +63,39 @@ export function Produtos() {
     const statOk = statusFiltro === 'todos' || (statusFiltro === 'ativo' ? p.ativo : !p.ativo);
     return ok && catOk && statOk;
   });
+
+  function carregarCategorias() {
+    api.get<any[]>('/api/categorias').then(res => {
+      if (res.length > 0) {
+        setCats(res);
+        setForm(f => ({ ...f, categoria: f.categoria || res[0].nome }));
+      }
+    }).catch(() => {});
+  }
+
+  async function salvarCategoria() {
+    if (!catForm.nome.trim()) { alert('Digite o nome da categoria.'); return; }
+    setSavingCat(true);
+    try {
+      const payload = {
+        nome: catForm.nome.trim(),
+        tipoTamanho: catForm.tipoTamanho,
+        usaTamanho: catForm.modo === 'tamanho_cor' || catForm.modo === 'so_tamanho',
+        usaCor: catForm.modo === 'tamanho_cor',
+        tamanhosPersonalizados: catForm.tipoTamanho === 'personalizado' ? catForm.tamanhosPersonalizados : null,
+      };
+      const nova = await api.post<any>('/api/categorias', payload);
+      await carregarCategorias();
+      // Seleciona a categoria recém-criada no produto
+      setForm(f => ({ ...f, categoria: nova.nome }));
+      setTipoTamanho(nova.tipoTamanho ?? 'letra');
+      setModalCat(false);
+    } catch (e) {
+      alert('Erro ao criar categoria: ' + (e as Error).message);
+    } finally {
+      setSavingCat(false);
+    }
+  }
 
   function abrirNovo() {
     const catInicial = cats[0];
@@ -137,6 +159,20 @@ export function Produtos() {
   const estoqueVariacoes    = variacoes.reduce((s, v) => s + v.estoque, 0);
   const estoqueMinVariacoes = variacoes.reduce((s, v) => s + v.estoqueMinimo, 0);
   const temVarsNoModal      = temVariacoes && variacoes.length > 0;
+
+  // Config da categoria selecionada
+  const catAtual = cats.find(c => c.nome === form.categoria);
+  const catUsaTamanho = catAtual?.usaTamanho ?? true;
+  const catUsaCor = catAtual?.usaCor ?? true;
+  const catSemGrade = catAtual ? (!catUsaTamanho && !catUsaCor) : false;
+
+  // Lista de tamanhos conforme o tipo
+  const tamanhosDisponiveis = (() => {
+    if (catAtual?.tipoTamanho === 'personalizado' && catAtual?.tamanhosPersonalizados) {
+      return catAtual.tamanhosPersonalizados.split(',').map(t => t.trim()).filter(Boolean);
+    }
+    return tipoTamanho === 'numero' ? TAMANHOS_NUMERO : TAMANHOS_LETRA;
+  })();
 
   return (
     <div className="page">
@@ -292,14 +328,21 @@ export function Produtos() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <select value={form.categoria} onChange={e => {
-                      const nomeCat = e.target.value;
-                      const cat = cats.find(c => c.nome === nomeCat);
-                      setForm(f => ({ ...f, categoria: nomeCat }));
-                      setTipoTamanho(cat?.tipoTamanho ?? 'letra');
-                    }}>
-                    {cats.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
-                  </select>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <select style={{ flex: 1 }} value={form.categoria} onChange={e => {
+                        const nomeCat = e.target.value;
+                        const cat = cats.find(c => c.nome === nomeCat);
+                        setForm(f => ({ ...f, categoria: nomeCat }));
+                        setTipoTamanho(cat?.tipoTamanho ?? 'letra');
+                      }}>
+                      {cats.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+                    </select>
+                    <button type="button" className="btn-secondary" title="Nova categoria"
+                      style={{ padding: '0 12px' }}
+                      onClick={() => { setCatForm({ nome: '', modo: 'tamanho_cor', tipoTamanho: 'letra', tamanhosPersonalizados: '' }); setModalCat(true); }}>
+                      <Plus size={15} />
+                    </button>
+                  </div>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Código de barras</label>
@@ -354,10 +397,12 @@ export function Produtos() {
                 </div>
 
                 {/* Variações */}
-                {temVariacoes && (
+                {!catSemGrade && (
                   <div style={{ gridColumn: '1/-1' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-                      <label className="form-label" style={{ margin: 0 }}>Variações (Tamanho / Cor)</label>
+                      <label className="form-label" style={{ margin: 0 }}>
+                        Variações ({[catUsaTamanho && 'Tamanho', catUsaCor && 'Cor'].filter(Boolean).join(' / ')})
+                      </label>
                       <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }}
                         onClick={() => setVariacoes(prev => [...prev, { tamanho: '', cor: '', estoque: 0, estoqueMinimo: 1 }])}>
                         + Adicionar
@@ -369,23 +414,24 @@ export function Produtos() {
                       </p>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 80px 32px', gap: 6 }}>
-                          {['Tamanho', 'Cor', 'Estoque', 'Mín.', ''].map(h => (
-                            <div key={h} style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '1fr', catUsaCor && '1fr'].filter(Boolean).join(' ')} 80px 80px 32px`, gap: 6 }}>
+                          {[catUsaTamanho && 'Tamanho', catUsaCor && 'Cor', 'Estoque', 'Mín.', ''].filter(h => h !== false).map((h, i) => (
+                            <div key={i} style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
                           ))}
                         </div>
                         {variacoes.map((v, i) => (
-                          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 80px 32px', gap: 6, alignItems: 'center' }}>
-                            {camposExtras.find(c => c.chave === 'tamanho') ? (
+                          <div key={i} style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '1fr', catUsaCor && '1fr'].filter(Boolean).join(' ')} 80px 80px 32px`, gap: 6, alignItems: 'center' }}>
+                            {catUsaTamanho && (
                               <select value={v.tamanho ?? ''} onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, tamanho: e.target.value } : x))}>
                                 <option value="">—</option>
-                                {(tipoTamanho === 'numero' ? TAMANHOS_NUMERO : TAMANHOS_LETRA).map(op => (
+                                {tamanhosDisponiveis.map(op => (
                                   <option key={op} value={op}>{op}</option>
                                 ))}
                               </select>
-                            ) : (
-                              <input value={v.tamanho ?? ''} placeholder="Tamanho"
-                                onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, tamanho: e.target.value } : x))} />
+                            )}
+                            {catUsaCor && (
+                              <input value={v.cor ?? ''} placeholder="Cor"
+                                onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, cor: e.target.value } : x))} />
                             )}
                             <input value={v.cor ?? ''} placeholder="Cor"
                               onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, cor: e.target.value } : x))} />
@@ -418,6 +464,85 @@ export function Produtos() {
               <button className="btn-secondary" onClick={() => setModal(null)}>Cancelar</button>
               <button className="btn-primary" onClick={salvar}>
                 {modal === 'novo' ? 'Cadastrar' : 'Salvar alterações'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal nova categoria */}
+      {modalCat && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCat(false)}>
+          <div className="modal" style={{ maxWidth: 440 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Nova categoria</h2>
+              <button className="btn-ghost" onClick={() => setModalCat(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div className="form-group">
+                  <label className="form-label">Nome da categoria *</label>
+                  <input value={catForm.nome} autoFocus
+                    onChange={e => setCatForm(f => ({ ...f, nome: e.target.value }))}
+                    placeholder="Ex: Camiseta, Anel, Tênis..." />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Tipo de grade</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {[
+                      { v: 'tamanho_cor', t: 'Tamanho + Cor', d: 'Ex: Camiseta M Preta' },
+                      { v: 'so_tamanho', t: 'Só Tamanho', d: 'Ex: Calça 40' },
+                      { v: 'sem_grade', t: 'Sem grade', d: 'Produto único, sem variação' },
+                    ].map(op => (
+                      <button type="button" key={op.v}
+                        onClick={() => setCatForm(f => ({ ...f, modo: op.v }))}
+                        style={{
+                          textAlign: 'left', padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
+                          border: `1px solid ${catForm.modo === op.v ? 'var(--accent, #c38228)' : 'var(--border)'}`,
+                          background: catForm.modo === op.v ? 'rgba(195,130,40,0.08)' : 'transparent',
+                        }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>{op.t}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{op.d}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {(catForm.modo === 'tamanho_cor' || catForm.modo === 'so_tamanho') && (
+                  <div className="form-group">
+                    <label className="form-label">Tipo de tamanho</label>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {[
+                        { v: 'letra', t: 'Letra (PP-XG)' },
+                        { v: 'numero', t: 'Número (33-46)' },
+                        { v: 'personalizado', t: 'Personalizado' },
+                      ].map(op => (
+                        <button type="button" key={op.v}
+                          onClick={() => setCatForm(f => ({ ...f, tipoTamanho: op.v }))}
+                          style={{
+                            padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13,
+                            border: `1px solid ${catForm.tipoTamanho === op.v ? 'var(--accent, #c38228)' : 'var(--border)'}`,
+                            background: catForm.tipoTamanho === op.v ? 'rgba(195,130,40,0.08)' : 'transparent',
+                            color: 'var(--text-1)',
+                          }}>
+                          {op.t}
+                        </button>
+                      ))}
+                    </div>
+                    {catForm.tipoTamanho === 'personalizado' && (
+                      <input style={{ marginTop: 8 }} value={catForm.tamanhosPersonalizados}
+                        onChange={e => setCatForm(f => ({ ...f, tamanhosPersonalizados: e.target.value }))}
+                        placeholder="Separe por vírgula: Único, Bebê, Infantil" />
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalCat(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarCategoria} disabled={savingCat}>
+                {savingCat ? 'Salvando...' : 'Criar categoria'}
               </button>
             </div>
           </div>
