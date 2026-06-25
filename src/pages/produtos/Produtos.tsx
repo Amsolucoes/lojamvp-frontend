@@ -93,6 +93,7 @@ export function Produtos() {
         nova = await api.post<any>('/api/categorias', payload);
       }
       await carregarCategorias();
+      await recarregar();
       setForm(f => ({ ...f, categoria: nova.nome }));
       setTipoTamanho(nova.tipoTamanho ?? 'letra');
       setModalCat(false);
@@ -122,6 +123,7 @@ export function Produtos() {
     try {
       await api.delete(`/api/categorias/${c.id}`);
       await carregarCategorias();
+      await recarregar();
     } catch (e) {
       alert((e as Error).message);
     }
@@ -468,8 +470,6 @@ export function Produtos() {
                               <input value={v.cor ?? ''} placeholder="Cor"
                                 onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, cor: e.target.value } : x))} />
                             )}
-                            <input value={v.cor ?? ''} placeholder="Cor"
-                              onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, cor: e.target.value } : x))} />
                             <input type="number" min={0} value={v.estoque === 0 ? '' : v.estoque}
                               onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, estoque: e.target.value === '' ? 0 : +e.target.value } : x))} />
                             <input type="number" min={0} value={v.estoqueMinimo === 0 ? '' : v.estoqueMinimo}
