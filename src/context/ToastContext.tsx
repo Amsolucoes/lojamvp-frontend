@@ -42,16 +42,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div style={{
         position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
         zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8,
-        width: 'calc(100% - 32px)', maxWidth: 420, pointerEvents: 'none',
+        width: 'auto', maxWidth: 360, pointerEvents: 'none',
       }}>
         {toasts.map(t => (
           <div key={t.id}
             onClick={() => remover(t.id)}
             style={{
               pointerEvents: 'auto', cursor: 'pointer',
-              padding: '12px 16px', borderRadius: 10, fontSize: 14, fontWeight: 500,
-              color: '#fff', boxShadow: '0 8px 24px -8px rgba(0,0,0,0.4)',
-              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '9px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+              color: '#fff', boxShadow: '0 6px 18px -6px rgba(0,0,0,0.4)',
+              display: 'flex', alignItems: 'center', gap: 8,
               animation: 'toastIn 0.25s ease',
               background:
                 t.tipo === 'sucesso' ? '#16a34a' :
