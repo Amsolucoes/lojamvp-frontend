@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, Package, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import './Produtos.css';
 
 interface Variacao {
@@ -46,6 +47,8 @@ export function Produtos() {
   const [savingCat, setSavingCat] = useState(false);
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [porPagina, setPorPagina] = useState(10);
+  const { sucesso, erro } = useToast();
+  const [catParaExcluir, setCatParaExcluir] = useState<any>(null);
 
   const TAMANHOS_LETRA = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
   const TAMANHOS_NUMERO = ['32', '34', '36', '38', '40', '42', '44', '46'];
@@ -118,10 +121,11 @@ export function Produtos() {
       await recarregar();
       setForm(f => ({ ...f, categoria: nova.nome }));
       setTipoTamanho(nova.tipoTamanho ?? 'letra');
+      sucesso(editCatId ? 'Categoria atualizada.' : 'Categoria criada.');
       setModalCat(false);
       setEditCatId(null);
     } catch (e) {
-      alert('Erro ao salvar categoria: ' + (e as Error).message);
+      erro('Erro ao salvar categoria: ' + (e as Error).message);
     } finally {
       setSavingCat(false);
     }
@@ -144,14 +148,21 @@ export function Produtos() {
     setModalCat(true);
   }
 
-  async function excluirCategoria(c: any) {
-    if (!confirm(`Excluir a categoria "${c.nome}"?`)) return;
+  function pedirExcluirCategoria(c: any) {
+    setCatParaExcluir(c);
+  }
+
+  async function confirmarExcluirCategoria() {
+    if (!catParaExcluir) return;
     try {
-      await api.delete(`/api/categorias/${c.id}`);
+      await api.delete(`/api/categorias/${catParaExcluir.id}`);
       await carregarCategorias();
       await recarregar();
+      sucesso('Categoria excluída com sucesso.');
+      setCatParaExcluir(null);
     } catch (e) {
-      alert((e as Error).message);
+      erro((e as Error).message);
+      setCatParaExcluir(null);
     }
   }
 
@@ -663,7 +674,7 @@ export function Produtos() {
                         </div>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button className="btn-ghost" title="Editar" onClick={() => abrirEditarCategoria(c)}><Edit2 size={14} /></button>
-                          <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => excluirCategoria(c)}><Trash2 size={14} /></button>
+                          <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => pedirExcluirCategoria(c)}><Trash2 size={14} /></button>
                         </div>
                       </div>
                     );
@@ -673,6 +684,30 @@ export function Produtos() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalGerenciar(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar exclusão de categoria */}
+      {catParaExcluir && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setCatParaExcluir(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir categoria</h2>
+              <button className="btn-ghost" onClick={() => setCatParaExcluir(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Tem certeza que deseja excluir a categoria <strong style={{ color: 'var(--text-1)' }}>{catParaExcluir.nome}</strong>?
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>
+                Só é possível excluir categorias que não tenham produtos cadastrados.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setCatParaExcluir(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={confirmarExcluirCategoria}>Excluir</button>
             </div>
           </div>
         </div>

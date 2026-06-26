@@ -12,6 +12,7 @@ import { Relatorios } from './pages/relatorios/Relatorios';
 import { FluxoCaixa } from './pages/fluxo/FluxoCaixa';
 import { Cadastro } from './pages/login/Cadastro';
 import { Suporte } from './pages/login/Suporte';
+import { ToastProvider } from './context/ToastContext';
 
 function Rotas() {
   const { usuario } = useAuth();
@@ -48,10 +49,12 @@ function Rotas() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Rotas />
-      </BrowserRouter>
-    </AuthProvider>
+     <ToastProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Rotas />
+        </BrowserRouter>
+      </AuthProvider>
+     </ToastProvider>
   );
 }
