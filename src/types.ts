@@ -50,6 +50,7 @@ export interface Venda {
   totalFinal: number;
   formaPagamento: FormaPagamento;
   formasPagamento?: string;
+  parcelas?: number;
   troco?: number;
   criadaEm: string;
 }

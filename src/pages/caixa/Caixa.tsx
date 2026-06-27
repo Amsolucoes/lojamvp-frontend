@@ -79,8 +79,6 @@ export function Caixa() {
 
   const clienteSel = clientes.find(c => c.id === clienteId);
 
-
-
   // Subtotal, desconto, total
   const subtotal = carrinho.reduce((s, i) => s + i.subtotal, 0);
   const descontoVal = tipoDesc === 'pct'
@@ -274,7 +272,7 @@ export function Caixa() {
       creditoUsado:   creditoUsado > 0 ? creditoUsado : null,
       formaPagamento: formas[0].forma,
       parcelas:       formas[0].parcelas ?? 1,
-      formasPagamento: duasFormas ? JSON.stringify(formas.map(f => ({ forma: f.forma, valor: f.valor }))) : null,
+      formasPagamento: JSON.stringify(formas.map(f => ({ forma: f.forma, valor: duasFormas ? f.valor : total, parcelas: f.parcelas ?? 1 }))),
       troco: formas[0].forma === 'dinheiro' && !duasFormas && valorPago
         ? Math.max(0, parseFloat(valorPago) - total)
         : undefined,

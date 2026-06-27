@@ -149,10 +149,10 @@ export function FluxoCaixa() {
                           </td>
                           <td>
                             {v.formasPagamento ? (
-                              JSON.parse(v.formasPagamento).map((f: any) => (
-                                <div key={f.forma} style={{ fontSize: 11 }}>
+                              JSON.parse(v.formasPagamento).map((f: any, idx: number) => (
+                                <div key={idx} style={{ fontSize: 11 }}>
                                   <span className={`badge badge-${f.forma === 'pix' ? 'blue' : f.forma === 'dinheiro' ? 'green' : 'accent'}`}>
-                                    {f.forma}
+                                    {f.forma}{f.forma === 'credito' && f.parcelas > 1 ? ` ${f.parcelas}x` : ''}
                                   </span>
                                   <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>{fmt(f.valor)}</span>
                                 </div>
