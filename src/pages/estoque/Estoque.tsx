@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Plus, Minus, AlertTriangle, ArrowUp, ArrowDown, RefreshCw, X, Boxes } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
@@ -28,6 +28,13 @@ export function Estoque() {
   const [obsAjuste, setObsAjuste] = useState('');
   const [modalVariacaoEntrada, setModalVariacaoEntrada] = useState<{ produto: Produto } | null>(null);
   const [filtroMov, setFiltroMov] = useState<'todos' | 'entrada' | 'saida' | 'ajuste'>('todos');
+
+    // Paginação visão geral
+  const [pagVisao, setPagVisao] = useState(1);
+  const [porPagVisao, setPorPagVisao] = useState(10);
+  // Paginação movimentos
+  const [pagMov, setPagMov] = useState(1);
+  const [porPagMov, setPorPagMov] = useState(10);
 
   const prodsFiltrados = produtos.filter(p => {
     const buscaOk = p.nome.toLowerCase().includes(busca.toLowerCase());
@@ -114,6 +121,19 @@ export function Estoque() {
     .reverse()
     .filter(m => filtroMov === 'todos' || m.tipo === filtroMov);
 
+  // Paginação — visão geral
+  const totalPagVisao = Math.max(1, Math.ceil(prodsFiltrados.length / porPagVisao));
+  const pagVisaoSegura = Math.min(pagVisao, totalPagVisao);
+  const prodsPaginados = prodsFiltrados.slice((pagVisaoSegura - 1) * porPagVisao, pagVisaoSegura * porPagVisao);
+
+  // Paginação — movimentos
+  const totalPagMov = Math.max(1, Math.ceil(movOrdenados.length / porPagMov));
+  const pagMovSegura = Math.min(pagMov, totalPagMov);
+  const movPaginados = movOrdenados.slice((pagMovSegura - 1) * porPagMov, pagMovSegura * porPagMov);
+
+  useEffect(() => { setPagVisao(1); }, [busca, filtro, porPagVisao]);
+  useEffect(() => { setPagMov(1); }, [filtroMov, porPagMov]);
+  
   return (
     <div className="page">
       <div className="page-header">
@@ -194,7 +214,7 @@ export function Estoque() {
                       <tr><th>Produto</th><th>Categoria</th><th>Estoque atual</th><th>Mínimo</th><th>Valor (custo)</th><th>Status</th><th>Ações</th></tr>
                     </thead>
                     <tbody>
-                      {prodsFiltrados.map(p => {
+                      {prodsPaginados.map(p => {
                         const status = statusEstoque(p);
                         return (
                           <tr key={p.id}>
@@ -241,7 +261,7 @@ export function Estoque() {
 
                 {/* Cards — mobile */}
                 <div className="est-cards-mobile">
-                  {prodsFiltrados.map(p => {
+                  {prodsPaginados.map(p => {
                     const status = statusEstoque(p);
                     return (
                       <div key={p.id} className="est-card-mobile">
@@ -290,11 +310,32 @@ export function Estoque() {
               </>
             )}
           </div>
+          {prodsFiltrados.length > 0 && (
+            <div className="prod-paginacao">
+              <div className="prod-pag-info">
+                Mostrando {(pagVisaoSegura - 1) * porPagVisao + 1}–{Math.min(pagVisaoSegura * porPagVisao, prodsFiltrados.length)} de {prodsFiltrados.length}
+              </div>
+              <div className="prod-pag-controles">
+                <select value={porPagVisao} onChange={e => setPorPagVisao(+e.target.value)} className="prod-pag-select">
+                  <option value={5}>5 por página</option>
+                  <option value={10}>10 por página</option>
+                  <option value={20}>20 por página</option>
+                  <option value={50}>50 por página</option>
+                </select>
+                <div className="prod-pag-botoes">
+                  <button className="btn-secondary" disabled={pagVisaoSegura <= 1} onClick={() => setPagVisao(p => Math.max(1, p - 1))}>Anterior</button>
+                  <span className="prod-pag-atual">{pagVisaoSegura} / {totalPagVisao}</span>
+                  <button className="btn-secondary" disabled={pagVisaoSegura >= totalPagVisao} onClick={() => setPagVisao(p => Math.min(totalPagVisao, p + 1))}>Próxima</button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 
       {/* Histórico */}
       {aba === 'movimentos' && (
+        <>
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           {/* Filtro de tipo */}
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -325,7 +366,7 @@ export function Estoque() {
                     <tr><th>Data / Hora</th><th>Produto</th><th>Tipo</th><th>Quantidade</th><th>Observação</th></tr>
                   </thead>
                   <tbody>
-                    {movOrdenados.map(m => (
+                    {movPaginados.map(m => (
                       <tr key={m.id}>
                         <td style={{ color: 'var(--text-3)', fontSize: 12, whiteSpace: 'nowrap' }}>
                           {new Date(m.criadoEm).toLocaleDateString('pt-BR')}{' '}
@@ -347,7 +388,7 @@ export function Estoque() {
 
               {/* Cards — mobile */}
               <div className="est-cards-mobile">
-                {movOrdenados.map(m => (
+                {movPaginados.map(m => (
                   <div key={m.id} className="est-card-mobile">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontWeight: 500, fontSize: 13 }}>{m.nomeProduto}</div>
@@ -373,6 +414,28 @@ export function Estoque() {
             </>
           )}
         </div>
+
+         {movOrdenados.length > 0 && (
+            <div className="prod-paginacao">
+              <div className="prod-pag-info">
+                Mostrando {(pagMovSegura - 1) * porPagMov + 1}–{Math.min(pagMovSegura * porPagMov, movOrdenados.length)} de {movOrdenados.length}
+              </div>
+              <div className="prod-pag-controles">
+                <select value={porPagMov} onChange={e => setPorPagMov(+e.target.value)} className="prod-pag-select">
+                  <option value={5}>5 por página</option>
+                  <option value={10}>10 por página</option>
+                  <option value={20}>20 por página</option>
+                  <option value={50}>50 por página</option>
+                </select>
+                <div className="prod-pag-botoes">
+                  <button className="btn-secondary" disabled={pagMovSegura <= 1} onClick={() => setPagMov(p => Math.max(1, p - 1))}>Anterior</button>
+                  <span className="prod-pag-atual">{pagMovSegura} / {totalPagMov}</span>
+                  <button className="btn-secondary" disabled={pagMovSegura >= totalPagMov} onClick={() => setPagMov(p => Math.min(totalPagMov, p + 1))}>Próxima</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal seleção variação para entrada */}
