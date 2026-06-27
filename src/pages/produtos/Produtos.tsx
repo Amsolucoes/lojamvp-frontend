@@ -208,15 +208,26 @@ export function Produtos() {
       }
 
       await recarregar();
+      sucesso(modal === 'novo' ? 'Produto cadastrado.' : 'Produto atualizado.');
       setModal(null);
     } catch (e) {
-      alert('Erro ao salvar: ' + (e as Error).message);
+      erro('Erro ao salvar: ' + (e as Error).message);
     }
   }
 
   function confirmarDelete(id: string) { setDel(id); }
-  function executarDelete() {
-    if (confirmDel) { deleteProduto(confirmDel); setDel(null); }
+  
+  async function executarDelete() {
+    if (!confirmDel) return;
+    const nome = produtos.find(p => p.id === confirmDel)?.nome ?? 'Produto';
+    try {
+      await deleteProduto(confirmDel);
+      sucesso(`"${nome}" excluído com sucesso.`);
+      setDel(null);
+    } catch (e) {
+      erro((e as Error).message);
+      setDel(null);
+    }
   }
 
   useEffect(() => {
@@ -725,7 +736,10 @@ export function Produtos() {
               <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
                 Tem certeza que deseja excluir <strong style={{ color: 'var(--text-1)' }}>
                   {produtos.find(p => p.id === confirmDel)?.nome}
-                </strong>? Esta ação não pode ser desfeita.
+                </strong>?
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>
+                Isso vai remover também o <strong>estoque</strong> e as <strong>movimentações</strong> do produto. Produtos com vendas registradas não podem ser excluídos.
               </p>
             </div>
             <div className="modal-footer">

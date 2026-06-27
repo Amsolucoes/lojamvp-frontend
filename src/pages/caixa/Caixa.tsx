@@ -3,6 +3,7 @@ import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, User, ChevronDown 
 import { useApp } from '../../context/AppContext';
 import { ItemVenda, FormaPagamento } from '../../types';
 import { api } from '@/services/api';
+import { useToast } from '../../context/ToastContext';
 import './Caixa.css';
 
 interface VariacaoItem {
@@ -32,6 +33,8 @@ function fmt(n: number) {
 export function Caixa() {
   const { produtos, clientes, registrarVenda, vendas, recarregar } = useApp();
 
+  const { sucesso: toastSucesso, erro: toastErro } = useToast();
+
   // Carrinho
   const [carrinho, setCarrinho]       = useState<CarrinhoItem[]>([]);
   const [buscaProd, setBuscaProd]     = useState('');
@@ -43,8 +46,6 @@ export function Caixa() {
   const [clienteId, setClienteId]     = useState('');
   const [buscaCli, setBuscaCli]       = useState('');
   const [showCli, setShowCli]         = useState(false);
-  const [sucesso, setSucesso]         = useState(false);
-  const [ultimaVenda, setUltimaVenda] = useState<string | null>(null);
   const buscaRef = useRef<HTMLInputElement>(null);
   const [variacoesDisponiveis, setVariacoesDisponiveis] = useState<{prodId: string; vars: VariacaoItem[]}[]>([]);
   const [modalVariacao, setModalVariacao] = useState<{prodId: string; nomeProd: string} | null>(null);
@@ -215,7 +216,9 @@ export function Caixa() {
   }
 
   async function confirmarTroca() {
-    if (!trocaCliente || devolvidos.length === 0 || novos.length === 0) return;
+    if (!trocaCliente) { toastErro('Selecione o cliente da troca.'); return; }
+    if (devolvidos.length === 0) { toastErro('Adicione ao menos um produto devolvido.'); return; }
+    if (novos.length === 0) { toastErro('Adicione ao menos um produto novo.'); return; }
 
     try {
       const totDev  = devolvidos.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0);
@@ -246,13 +249,14 @@ export function Caixa() {
       const res = await api.post<any>('/api/trocas', payload);
       setTrocaResultado(res);
       await recarregar();
+      toastSucesso('Troca realizada com sucesso!');
     } catch (e) {
-      alert('Erro ao processar troca: ' + (e as Error).message);
+      toastErro('Erro ao processar troca: ' + (e as Error).message);
     }
   }
 
   async function finalizarVenda() {
-    if (carrinho.length === 0) return;
+    if (carrinho.length === 0) { toastErro('Adicione produtos ao carrinho.'); return; }
     const venda = {
       itens: carrinho.map(item => ({
         produtoId:     item.produtoId,
@@ -275,10 +279,18 @@ export function Caixa() {
         ? Math.max(0, parseFloat(valorPago) - total)
         : undefined,
     } as any;
+
+    const trocoVenda = formas[0].forma === 'dinheiro' && !duasFormas && valorPago
+      ? Math.max(0, parseFloat(valorPago.replace(',', '.')) - total)
+      : 0;
+
     await registrarVenda(venda);
     await recarregar();
-    setUltimaVenda(total.toString());
-    setSucesso(true);
+    toastSucesso(
+      trocoVenda > 0
+        ? `Venda registrada! Troco: ${fmt(trocoVenda)}`
+        : `Venda registrada! ${fmt(total)}`
+    );
     limpar();
   }
 
@@ -915,26 +927,6 @@ export function Caixa() {
         </div>
       )}
 
-      {/* Modal sucesso */}
-      {sucesso && (
-        <div className="modal-overlay">
-          <div className="modal cx-sucesso-modal">
-            <div className="cx-sucesso-icon">✓</div>
-            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 6 }}>Venda registrada!</h2>
-            <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 4 }}>
-              Total: <strong style={{ color: 'var(--green)' }}>{fmt(parseFloat(ultimaVenda ?? '0'))}</strong>
-            </p>
-            {formas[0].forma === 'dinheiro' && valorPago && parseFloat(valorPago) > total && (
-              <p style={{ color: 'var(--text-2)', fontSize: 13 }}>
-                Troco: <strong>{fmt(parseFloat(valorPago) - total)}</strong>
-              </p>
-            )}
-            <button className="btn-primary" style={{ marginTop: 20, width: '100%' }} onClick={() => setSucesso(false)}>
-              Nova venda
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   </div>
   );
