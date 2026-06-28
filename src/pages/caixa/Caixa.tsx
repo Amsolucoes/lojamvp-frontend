@@ -195,7 +195,9 @@ export function Caixa() {
   }
 
   function setQtdFracionada(prodId: string, variacaoId: string | undefined, valor: string) {
-    const qtd = valor === '' ? 0 : parseFloat(valor.replace(',', '.'));
+    // Aceita só números, vírgula e ponto; troca vírgula por ponto
+    const limpo = valor.replace(/[^\d.,]/g, '').replace(',', '.');
+    const qtd = limpo === '' || limpo === '.' ? 0 : parseFloat(limpo);
     setCarrinho(prev => prev.map(i => {
       if (i.produtoId !== prodId || i.variacaoId !== variacaoId) return i;
       const q = isNaN(qtd) ? 0 : qtd;
@@ -432,11 +434,11 @@ export function Caixa() {
                           {item.tipoVenda === 'fracionado' ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                               <input
-                                type="number" min={0} step={0.001}
+                                type="text" inputMode="decimal"
                                 className="cx-preco-input"
-                                style={{ width: 80, textAlign: 'center' }}
-                                value={item.quantidade === 0 ? '' : item.quantidade}
-                                placeholder="0"
+                                style={{ width: 110, textAlign: 'center' }}
+                                value={item.quantidade === 0 ? '' : String(item.quantidade).replace('.', ',')}
+                                placeholder="0,000"
                                 onChange={e => setQtdFracionada(item.produtoId, item.variacaoId, e.target.value)} />
                               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
                             </div>
@@ -491,11 +493,11 @@ export function Caixa() {
                       {item.tipoVenda === 'fracionado' ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <input
-                            type="number" min={0} step={0.001}
+                            type="text" inputMode="decimal"
                             className="cx-preco-input"
-                            style={{ width: 70, textAlign: 'center' }}
-                            value={item.quantidade === 0 ? '' : item.quantidade}
-                            placeholder="0"
+                            style={{ width: 90, textAlign: 'center' }}
+                            value={item.quantidade === 0 ? '' : String(item.quantidade).replace('.', ',')}
+                            placeholder="0,000"
                             onChange={e => setQtdFracionada(item.produtoId, item.variacaoId, e.target.value)} />
                           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
                         </div>
