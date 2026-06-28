@@ -17,6 +17,8 @@ type CarrinhoItem = ItemVenda & {
   estoqueDisp: number;
   variacaoId?: string;
   variacaoLabel?: string;
+  tipoVenda?: string;
+  unidadeMedida?: string;
 };
 
 const FORMAS: { value: FormaPagamento; label: string; icon: string }[] = [
@@ -174,18 +176,32 @@ export function Caixa() {
           : i
         );
       }
+      const ehFracionado = prod.tipoVenda === 'fracionado';
+      const qtdInicial = ehFracionado ? 0 : 1;
       return [...prev, {
         produtoId: prodId,
         nomeProduto: prod.nome + (label ? ` (${label})` : ''),
-        quantidade: 1,
+        quantidade: qtdInicial,
         precoUnitario: prod.precoVenda,
-        subtotal: prod.precoVenda,
+        subtotal: qtdInicial * prod.precoVenda,
         estoqueDisp,
         variacaoId: variacaoId ?? undefined,
         variacaoLabel: label || undefined,
+        tipoVenda: prod.tipoVenda,
+        unidadeMedida: prod.unidadeMedida,
       }];
     });
     setModalVariacao(null);
+  }
+
+  function setQtdFracionada(prodId: string, variacaoId: string | undefined, valor: string) {
+    const qtd = valor === '' ? 0 : parseFloat(valor.replace(',', '.'));
+    setCarrinho(prev => prev.map(i => {
+      if (i.produtoId !== prodId || i.variacaoId !== variacaoId) return i;
+      const q = isNaN(qtd) ? 0 : qtd;
+      if (q > i.estoqueDisp) return { ...i, quantidade: i.estoqueDisp, subtotal: i.estoqueDisp * i.precoUnitario };
+      return { ...i, quantidade: q, subtotal: q * i.precoUnitario };
+    }));
   }
 
   function alterarQtd(prodId: string, delta: number) {
@@ -358,8 +374,14 @@ export function Caixa() {
                   <div className="cx-drop-nome">{p.nome}</div>
                   <div className="cx-drop-info">
                     <span className="badge badge-accent" style={{ fontSize: 10 }}>{p.categoria}</span>
-                    <span style={{ color: 'var(--text-3)', fontSize: 12 }}>{p.estoque} un.</span>
-                    <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(p.precoVenda)}</span>
+                    <span style={{ color: 'var(--text-3)', fontSize: 12 }}>
+                      {p.tipoVenda === 'fracionado'
+                        ? `${p.estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${p.unidadeMedida}`
+                        : `${p.estoque} un.`}
+                    </span>
+                    <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
+                      {fmt(p.precoVenda)}{p.tipoVenda === 'fracionado' ? `/${p.unidadeMedida}` : ''}
+                    </span>
                   </div>
                 </button>
               ))}
@@ -390,7 +412,16 @@ export function Caixa() {
                       <tr key={`${item.produtoId}-${item.variacaoId ?? ''}`}>
                         <td>
                           <div style={{ fontWeight: 500 }}>{item.nomeProduto}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>estoque: {item.estoqueDisp} un.</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                            estoque: {item.tipoVenda === 'fracionado'
+                              ? `${item.estoqueDisp.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${item.unidadeMedida}`
+                              : `${item.estoqueDisp} un.`}
+                          </div>
+                          {item.tipoVenda === 'fracionado' && item.quantidade > 0 && (
+                            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                              {fmt(item.precoUnitario)}/{item.unidadeMedida} × {item.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} = {fmt(item.subtotal)}
+                            </div>
+                          )}
                         </td>
                         <td>
                           <input className="cx-preco-input" type="number" min={0} step={0.01}
@@ -398,11 +429,24 @@ export function Caixa() {
                             onChange={e => editarPreco(item.produtoId, +e.target.value)} />
                         </td>
                         <td>
-                          <div className="cx-qtd">
-                            <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, -1)}><Minus size={12} /></button>
-                            <span className="cx-qtd-val">{item.quantidade}</span>
-                            <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, 1)}><Plus size={12} /></button>
-                          </div>
+                          {item.tipoVenda === 'fracionado' ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <input
+                                type="number" min={0} step={0.001}
+                                className="cx-preco-input"
+                                style={{ width: 80, textAlign: 'center' }}
+                                value={item.quantidade === 0 ? '' : item.quantidade}
+                                placeholder="0"
+                                onChange={e => setQtdFracionada(item.produtoId, item.variacaoId, e.target.value)} />
+                              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
+                            </div>
+                          ) : (
+                            <div className="cx-qtd">
+                              <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, -1)}><Minus size={12} /></button>
+                              <span className="cx-qtd-val">{item.quantidade}</span>
+                              <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, 1)}><Plus size={12} /></button>
+                            </div>
+                          )}
                         </td>
                         <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(item.subtotal)}</td>
                         <td>
@@ -424,8 +468,15 @@ export function Caixa() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 500, fontSize: 14 }}>{item.nomeProduto}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
-                          estoque: {item.estoqueDisp} un.
+                          estoque: {item.tipoVenda === 'fracionado'
+                            ? `${item.estoqueDisp.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${item.unidadeMedida}`
+                            : `${item.estoqueDisp} un.`}
                         </div>
+                        {item.tipoVenda === 'fracionado' && item.quantidade > 0 && (
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                            {fmt(item.precoUnitario)}/{item.unidadeMedida} × {item.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} = {fmt(item.subtotal)}
+                          </div>
+                        )}
                       </div>
                       <button className="btn-ghost" style={{ color: 'var(--red)', flexShrink: 0 }}
                         onClick={() => removerItem(item.produtoId)}>
@@ -437,11 +488,24 @@ export function Caixa() {
                         value={item.precoUnitario}
                         onChange={e => editarPreco(item.produtoId, +e.target.value)}
                         style={{ maxWidth: 90 }} />
-                      <div className="cx-qtd">
-                        <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, -1)}><Minus size={12} /></button>
-                        <span className="cx-qtd-val">{item.quantidade}</span>
-                        <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, 1)}><Plus size={12} /></button>
-                      </div>
+                      {item.tipoVenda === 'fracionado' ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <input
+                            type="number" min={0} step={0.001}
+                            className="cx-preco-input"
+                            style={{ width: 70, textAlign: 'center' }}
+                            value={item.quantidade === 0 ? '' : item.quantidade}
+                            placeholder="0"
+                            onChange={e => setQtdFracionada(item.produtoId, item.variacaoId, e.target.value)} />
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
+                        </div>
+                      ) : (
+                        <div className="cx-qtd">
+                          <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, -1)}><Minus size={12} /></button>
+                          <span className="cx-qtd-val">{item.quantidade}</span>
+                          <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, 1)}><Plus size={12} /></button>
+                        </div>
+                      )}
                       <span style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 15 }}>{fmt(item.subtotal)}</span>
                     </div>
                   </div>
