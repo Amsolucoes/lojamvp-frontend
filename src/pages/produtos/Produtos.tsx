@@ -101,7 +101,7 @@ export function Produtos() {
   }
 
   async function salvarCategoria() {
-    if (!catForm.nome.trim()) { alert('Digite o nome da categoria.'); return; }
+    if (!catForm.nome.trim()) { erro('Digite o nome da categoria.'); return; }
     setSavingCat(true);
     try {
       const payload = {
