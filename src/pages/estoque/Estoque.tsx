@@ -18,6 +18,14 @@ function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function fmtQtd(p: any, valor?: number): string {
+  const v = valor ?? p.estoque ?? 0;
+  if (p.tipoVenda === 'fracionado') {
+    return `${v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${p.unidadeMedida}`;
+  }
+  return `${v} un.`;
+}
+
 export function Estoque() {
   const { produtos, movimentos, ajustarEstoque, recarregar } = useApp();
   const [aba, setAba]             = useState<AbaEstoque>('visao-geral');
@@ -85,11 +93,10 @@ export function Estoque() {
 
   function confirmarAjuste() {
     if (!modal || !qtdAjuste) return;
-    const qtd = parseInt(qtdAjuste);
+    const qtd = parseFloat(qtdAjuste.replace(',', '.'));
     if (isNaN(qtd) || qtd < 0) return;
 
     if (modal.variacaoId) {
-      // Entrada por variação — chama API diretamente
       api.post('/api/estoque/ajuste-variacao', {
         produtoId: modal.produto.id,
         variacaoId: modal.variacaoId,
@@ -101,6 +108,14 @@ export function Estoque() {
       ajustarEstoque(modal.produto.id, qtd, modal.tipo, obsAjuste || undefined);
     }
     setModal(null);
+  }
+
+  function fmtQtdMov(m: any): string {
+    const prod = produtos.find(p => p.id === m.produtoId);
+    if (prod?.tipoVenda === 'fracionado') {
+      return `${m.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${prod.unidadeMedida}`;
+    }
+    return `${m.quantidade}`;
   }
 
   function statusEstoque(p: Produto) {
@@ -235,11 +250,11 @@ export function Estoque() {
                                     <div className={`est-bar est-bar-${status}`}
                                       style={{ width: `${Math.min(100, (p.estoque / Math.max(p.estoqueMinimo * 3, 1)) * 100)}%` }} />
                                   </div>
-                                  <span className={`est-qtd est-qtd-${status}`}>{p.estoque} un.</span>
+                                  <span className={`est-qtd est-qtd-${status}`}>{fmtQtd(p)}</span>
                                 </div>
                               )}
                             </td>
-                            <td style={{ color: 'var(--text-3)', fontSize: 13 }}>{p.estoqueMinimo} un.</td>
+                            <td style={{ color: 'var(--text-3)', fontSize: 13 }}>{fmtQtd(p, p.estoqueMinimo)}</td>
                             <td style={{ color: 'var(--text-2)', fontSize: 13 }}>{fmt(p.estoque * p.precoCusto)}</td>
                             <td>
                               {status === 'zerado' && <span className="badge badge-red">Zerado</span>}
@@ -291,7 +306,7 @@ export function Estoque() {
                                 <div className={`est-bar est-bar-${status}`}
                                   style={{ width: `${Math.min(100, (p.estoque / Math.max(p.estoqueMinimo * 3, 1)) * 100)}%` }} />
                               </div>
-                              <span className={`est-qtd est-qtd-${status}`}>{p.estoque} un.</span>
+                              <span className={`est-qtd est-qtd-${status}`}>{fmtQtd(p)}</span>
                             </div>
                           )}
                         </div>
@@ -378,7 +393,7 @@ export function Estoque() {
                           {m.tipo === 'saida'   && <span className="badge badge-red"><ArrowUp size={10} /> Saída</span>}
                           {m.tipo === 'ajuste'  && <span className="badge badge-blue"><RefreshCw size={10} /> Ajuste</span>}
                         </td>
-                        <td><span className={`est-mov-qtd ${m.tipo === 'saida' ? 'saida' : 'entrada'}`}>{m.tipo === 'saida' ? '−' : '+'}{m.quantidade}</span></td>
+                        <td><span className={`est-mov-qtd ${m.tipo === 'saida' ? 'saida' : 'entrada'}`}>{m.tipo === 'saida' ? '−' : '+'}{fmtQtdMov(m)}</span></td>
                         <td style={{ color: 'var(--text-3)', fontSize: 12 }}>{m.observacao || '—'}</td>
                       </tr>
                     ))}
@@ -393,7 +408,7 @@ export function Estoque() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontWeight: 500, fontSize: 13 }}>{m.nomeProduto}</div>
                       <span className={`est-mov-qtd ${m.tipo === 'saida' ? 'saida' : 'entrada'}`}>
-                        {m.tipo === 'saida' ? '−' : '+'}{m.quantidade}
+                        {m.tipo === 'saida' ? '−' : '+'}{fmtQtdMov(m)}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
@@ -503,8 +518,8 @@ export function Estoque() {
               <div className="est-modal-prod">
                 <div className="est-modal-prod-nome">{modal.produto.nome}</div>
                 <div className="est-modal-prod-info">
-                  <span>Estoque atual: <strong>{modal.produto.estoque} un.</strong></span>
-                  <span>Mínimo: <strong>{modal.produto.estoqueMinimo} un.</strong></span>
+                  <span>Estoque atual: <strong>{fmtQtd(modal.produto)}</strong></span>
+                  <span>Mínimo: <strong>{fmtQtd(modal.produto, modal.produto.estoqueMinimo)}</strong></span>
                 </div>
               </div>
 
@@ -512,25 +527,36 @@ export function Estoque() {
                 <div className="form-group">
                   <label className="form-label">
                     {modal.tipo === 'entrada' ? 'Quantidade a adicionar' : 'Novo estoque total'}
+                    {modal.produto.tipoVenda === 'fracionado' ? ` (${modal.produto.unidadeMedida})` : ''}
                   </label>
-                  <div className="est-qtd-input-wrap">
-                    <button className="cx-qtd-btn" onClick={() => setQtdAjuste(q => String(Math.max(0, parseInt(q || '0') - 1)))}>
-                      <Minus size={13} />
-                    </button>
+                  {modal.produto.tipoVenda === 'fracionado' ? (
                     <input
-                      type="number"
-                      min={0}
+                      type="text" inputMode="decimal"
                       value={qtdAjuste}
-                      onChange={e => setQtdAjuste(e.target.value)}
+                      onChange={e => setQtdAjuste(e.target.value.replace(/[^\d.,]/g, ''))}
+                      placeholder="0,000"
                       style={{ textAlign: 'center', fontWeight: 600, fontSize: 18 }}
                     />
-                    <button className="cx-qtd-btn" onClick={() => setQtdAjuste(q => String(parseInt(q || '0') + 1))}>
-                      <Plus size={13} />
-                    </button>
-                  </div>
-                  {modal.tipo === 'entrada' && qtdAjuste && parseInt(qtdAjuste) > 0 && (
+                  ) : (
+                    <div className="est-qtd-input-wrap">
+                      <button className="cx-qtd-btn" onClick={() => setQtdAjuste(q => String(Math.max(0, parseInt(q || '0') - 1)))}>
+                        <Minus size={13} />
+                      </button>
+                      <input
+                        type="number"
+                        min={0}
+                        value={qtdAjuste}
+                        onChange={e => setQtdAjuste(e.target.value)}
+                        style={{ textAlign: 'center', fontWeight: 600, fontSize: 18 }}
+                      />
+                      <button className="cx-qtd-btn" onClick={() => setQtdAjuste(q => String(parseInt(q || '0') + 1))}>
+                        <Plus size={13} />
+                      </button>
+                    </div>
+                  )}
+                  {modal.tipo === 'entrada' && qtdAjuste && parseFloat(qtdAjuste.replace(',', '.')) > 0 && (
                     <div style={{ fontSize: 12, color: 'var(--green)', marginTop: 6 }}>
-                      Novo total: {modal.produto.estoque + parseInt(qtdAjuste)} un.
+                      Novo total: {fmtQtd(modal.produto, modal.produto.estoque + parseFloat(qtdAjuste.replace(',', '.')))}
                     </div>
                   )}
                 </div>
@@ -549,7 +575,7 @@ export function Estoque() {
               <button
                 className="btn-primary"
                 onClick={confirmarAjuste}
-                disabled={!qtdAjuste || parseInt(qtdAjuste) < 0}
+                disabled={!qtdAjuste || parseFloat(qtdAjuste.replace(',', '.')) < 0}
               >
                 {modal.tipo === 'entrada' ? 'Registrar entrada' : 'Salvar ajuste'}
               </button>
