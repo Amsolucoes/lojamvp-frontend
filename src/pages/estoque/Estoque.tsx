@@ -71,8 +71,22 @@ export function Estoque() {
     return p.estoque === 0;
   }).length;
 
-  const totalItens = produtos.filter(p => p.ativo).reduce((s, p) => s + p.estoque, 0);
-  const valorEstoque = produtos.filter(p => p.ativo).reduce((s, p) => s + p.estoque * p.precoCusto, 0);
+  const ativos = produtos.filter(p => p.ativo);
+  const totalUnidades = ativos.filter(p => p.tipoVenda !== 'fracionado').reduce((s, p) => s + p.estoque, 0);
+  const valorEstoque = ativos.reduce((s, p) => s + p.estoque * p.precoCusto, 0);
+
+  // Agrupa fracionados por unidade de medida (kg, g, L, ml)
+  const totaisFracionados = ativos
+    .filter(p => p.tipoVenda === 'fracionado')
+    .reduce((acc, p) => {
+      const u = p.unidadeMedida ?? '';
+      acc[u] = (acc[u] ?? 0) + p.estoque;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const textoFracionados = Object.entries(totaisFracionados)
+    .map(([u, v]) => `${v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${u}`)
+    .join(' · ');
 
   function abrirEntrada(p: Produto) {
     const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
@@ -162,8 +176,10 @@ export function Estoque() {
       <div className="est-stats">
         <div className="stat-card">
           <div className="stat-label">Total de itens</div>
-          <div className="stat-value">{totalItens}</div>
-          <div className="stat-sub">unidades em estoque</div>
+          <div className="stat-value">{totalUnidades}<span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-3)' }}> un.</span></div>
+          <div className="stat-sub">
+            {textoFracionados ? `+ ${textoFracionados} fracionado` : 'unidades em estoque'}
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Valor em estoque</div>
