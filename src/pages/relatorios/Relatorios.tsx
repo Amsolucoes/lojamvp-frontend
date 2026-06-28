@@ -35,6 +35,15 @@ const labelPag: Record<string, string> = {
 
 export function Relatorios() {
   const { vendas, produtos, trocas } = useApp();
+
+  function fmtQtdProd(produtoId: string, qtd: number): string {
+    const prod = produtos.find(p => p.id === produtoId);
+    if (prod?.tipoVenda === 'fracionado') {
+      return `${qtd.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${prod.unidadeMedida}`;
+    }
+    return `${qtd} un.`;
+  }
+
   const [periodo, setPeriodo] = useState<Periodo>('30d');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
@@ -56,18 +65,33 @@ export function Relatorios() {
   const totalVendido   = vendasFiltradas.reduce((s, v) => s + v.totalFinal, 0);
   const totalDesconto  = vendasFiltradas.reduce((s, v) => s + v.desconto, 0);
   const ticketMedio    = vendasFiltradas.length > 0 ? totalVendido / vendasFiltradas.length : 0;
-  const totalItensVend = vendasFiltradas.flatMap(v => v.itens).reduce((s, i) => s + i.quantidade, 0);
+  const itensVendidos = vendasFiltradas.flatMap(v => v.itens);
+  const totalUnidadesVend = itensVendidos.reduce((s, i) => {
+    const prod = produtos.find(p => p.id === i.produtoId);
+    return prod?.tipoVenda === 'fracionado' ? s : s + i.quantidade;
+  }, 0);
+  const fracionadosVend = itensVendidos.reduce((acc, i) => {
+    const prod = produtos.find(p => p.id === i.produtoId);
+    if (prod?.tipoVenda === 'fracionado') {
+      const u = prod.unidadeMedida ?? '';
+      acc[u] = (acc[u] ?? 0) + i.quantidade;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+  const textoFracVend = Object.entries(fracionadosVend)
+    .map(([u, v]) => `${v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${u}`)
+    .join(' · ');
 
   // Produtos mais vendidos — agrupado por nomeProduto (inclui variação)
   const rankItens = vendasFiltradas
     .flatMap(v => v.itens)
     .reduce((acc, item) => {
       const key = item.nomeProduto;
-      if (!acc[key]) acc[key] = { nomeProduto: item.nomeProduto, qtd: 0, receita: 0 };
+      if (!acc[key]) acc[key] = { nomeProduto: item.nomeProduto, produtoId: item.produtoId, qtd: 0, receita: 0 };
       acc[key].qtd     += item.quantidade;
       acc[key].receita += item.subtotal;
       return acc;
-    }, {} as Record<string, { nomeProduto: string; qtd: number; receita: number }>);
+    }, {} as Record<string, { nomeProduto: string; produtoId: string; qtd: number; receita: number }>);
 
   const rankProdutos = Object.values(rankItens)
     .sort((a, b) => b.qtd - a.qtd)
@@ -90,9 +114,27 @@ export function Relatorios() {
     const itens = vendasFiltradas.flatMap(v => v.itens).filter(i =>
       prods.some(p => p.id === i.produtoId)
     );
-    const qtd     = itens.reduce((s, i) => s + i.quantidade, 0);
     const receita = itens.reduce((s, i) => s + i.subtotal, 0);
-    return { categoria: cat, qtd, receita };
+
+    // Separa unidades de fracionados (agrupado por unidade de medida)
+    let unidades = 0;
+    const fracionados: Record<string, number> = {};
+    itens.forEach(i => {
+      const prod = produtos.find(p => p.id === i.produtoId);
+      if (prod?.tipoVenda === 'fracionado') {
+        const u = prod.unidadeMedida ?? '';
+        fracionados[u] = (fracionados[u] ?? 0) + i.quantidade;
+      } else {
+        unidades += i.quantidade;
+      }
+    });
+    const textoQtd = [
+      unidades > 0 ? `${unidades} un.` : '',
+      ...Object.entries(fracionados).map(([u, v]) => `${v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${u}`),
+    ].filter(Boolean).join(' · ');
+
+    const qtd = itens.reduce((s, i) => s + i.quantidade, 0);
+    return { categoria: cat, qtd, receita, textoQtd };
   }).filter(x => x.qtd > 0).sort((a, b) => b.receita - a.receita);
 
   const maxCat = porCategoria[0]?.receita || 1;
@@ -163,8 +205,11 @@ export function Relatorios() {
         </div>
         <div className="stat-card">
           <div className="stat-label"><Package size={12} style={{ verticalAlign: -1 }} /> Itens vendidos</div>
-          <div className="stat-value">{totalItensVend}</div>
-          <div className="stat-sub">unidades no período</div>
+          <div className="stat-value">
+            {totalUnidadesVend}<span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-3)' }}> un.</span>
+            {textoFracVend && <div style={{ fontSize: 'inherit' }}>{textoFracVend}</div>}
+          </div>
+          <div className="stat-sub">no período</div>
         </div>
         <div className="stat-card">
           <div className="stat-label"><Calendar size={12} style={{ verticalAlign: -1 }} /> Descontos</div>
@@ -200,7 +245,7 @@ export function Relatorios() {
                         {nome}
                         {variacao && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 6 }}>{variacao}</span>}
                       </span>
-                      <span className="rel-valor">{item.qtd} un. · {fmt(item.receita)}</span>
+                      <span className="rel-valor">{fmtQtdProd(item.produtoId, item.qtd)} · {fmt(item.receita)}</span>
                     </div>
                     <div className="rel-bar-wrap">
                       <div className="rel-bar rel-bar-accent" style={{ width: `${(item.qtd / maxQtd) * 100}%` }} />
@@ -229,7 +274,7 @@ export function Relatorios() {
                     <div className="rel-bar-wrap">
                       <div className="rel-bar rel-bar-blue" style={{ width: `${(c.receita / maxCat) * 100}%` }} />
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{c.qtd} unidades vendidas</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{c.textoQtd} vendido(s)</div>
                   </div>
                 </div>
               ))}
@@ -272,7 +317,7 @@ export function Relatorios() {
                               const { nome, variacao } = extrairVariacao(i.nomeProduto);
                               return (
                                 <div key={i.produtoId + (variacao ?? '')}>
-                                  {nome} {variacao && <span style={{ color: 'var(--accent)' }}>({variacao})</span>} ×{i.quantidade}
+                                  {nome} {variacao && <span style={{ color: 'var(--accent)' }}>({variacao})</span>} ×{fmtQtdProd(i.produtoId, i.quantidade)}
                                 </div>
                               );
                             })}
@@ -298,7 +343,7 @@ export function Relatorios() {
                           const { nome, variacao } = extrairVariacao(i.nomeProduto);
                           return (
                             <div key={i.produtoId + (variacao ?? '')} style={{ fontSize: 12, color: 'var(--text-2)' }}>
-                              {nome} {variacao && <span style={{ color: 'var(--accent)' }}>({variacao})</span>} ×{i.quantidade}
+                              {nome} {variacao && <span style={{ color: 'var(--accent)' }}>({variacao})</span>} ×{fmtQtdProd(i.produtoId, i.quantidade)}
                             </div>
                           );
                         })}
