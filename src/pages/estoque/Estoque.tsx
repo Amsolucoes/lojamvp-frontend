@@ -176,10 +176,13 @@ export function Estoque() {
       <div className="est-stats">
         <div className="stat-card">
           <div className="stat-label">Total de itens</div>
-          <div className="stat-value">{totalUnidades}<span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-3)' }}> un.</span></div>
-          <div className="stat-sub">
-            {textoFracionados ? `+ ${textoFracionados} fracionado` : 'unidades em estoque'}
+          <div className="stat-value">
+            {totalUnidades}<span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-3)' }}> un.</span>
+            {textoFracionados && (
+              <div style={{ fontSize: 'inherit', fontWeight: 'inherit' }}>{textoFracionados}</div>
+            )}
           </div>
+          <div className="stat-sub">em estoque</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Valor em estoque</div>
