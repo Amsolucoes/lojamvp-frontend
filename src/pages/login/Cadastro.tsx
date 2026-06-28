@@ -1,22 +1,17 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { Eye, EyeOff, AlertCircle, Check, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import './Login.css';
 
-const PERFIS = [
-  { id: '10000000-0000-0000-0000-000000000002', nome: 'Vestuário',  icone: '👕', desc: 'Roupas e moda' },
-  { id: '10000000-0000-0000-0000-000000000001', nome: 'Bijuterias e Acessórios', icone: '💍', desc: 'Semi joias e acessórios' },
-  { id: '10000000-0000-0000-0000-000000000003', nome: 'Calçados',   icone: '👟', desc: 'Sapatos, tênis e sandálias' },
-];
-
 export function Cadastro() {
   const navigate = useNavigate();
   const { setSessao } = useAuth();
 
+  const [perfis, setPerfis] = useState<{ id: string; nome: string; icone: string; desc: string }[]>([]);
   const [nomeLoja, setNomeLoja]   = useState('');
-  const [perfilId, setPerfilId]   = useState(PERFIS[0].id);
+  const [perfilId, setPerfilId]   = useState('');
   const [nome, setNome]           = useState('');
   const [email, setEmail]         = useState('');
   const [telefone, setTelefone]   = useState('');
@@ -24,6 +19,19 @@ export function Cadastro() {
   const [mostraSenha, setMostra]  = useState(false);
   const [erro, setErro]           = useState('');
   const [loading, setLoading]     = useState(false);
+
+  useEffect(() => {
+    api.get<any[]>('/api/perfis').then(res => {
+      const lista = res.map(p => ({
+        id: p.id,
+        nome: p.nome,
+        icone: p.icone ?? '🏪',
+        desc: p.descricao ?? '',
+      }));
+      setPerfis(lista);
+      if (lista.length > 0) setPerfilId(lista[0].id);
+    }).catch(() => {});
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -78,7 +86,7 @@ export function Cadastro() {
           <div className="form-group">
             <label className="form-label">Ramo da loja *</label>
             <div className="cad-perfis">
-              {PERFIS.map(p => (
+              {perfis.map(p => (
                 <button type="button" key={p.id}
                   className={`cad-perfil${perfilId === p.id ? ' active' : ''}`}
                   onClick={() => setPerfilId(p.id)} disabled={loading}>
