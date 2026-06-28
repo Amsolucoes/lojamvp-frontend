@@ -14,7 +14,16 @@ function fmtDia(date: Date) {
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 export function FluxoCaixa() {
-  const { vendas } = useApp();
+  const { vendas, produtos } = useApp();
+
+  function fmtQtdItem(produtoId: string, qtd: number): string {
+    const prod = produtos.find(p => p.id === produtoId);
+    if (prod?.tipoVenda === 'fracionado') {
+      return `${qtd.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${prod.unidadeMedida}`;
+    }
+    return `${qtd}`;
+  }
+
   const hoje = new Date();
 
   const [aba, setAba]       = useState<'hoje' | 'diario' | 'mensal'>('hoje');
@@ -144,7 +153,7 @@ export function FluxoCaixa() {
                           <td style={{ fontSize: 13 }}>{v.nomeCliente || '—'}</td>
                           <td style={{ fontSize: 12, color: 'var(--text-2)' }}>
                             {v.itens.map(i => (
-                              <div key={i.produtoId}>{i.nomeProduto} ×{i.quantidade}</div>
+                              <div key={i.produtoId}>{i.nomeProduto} ×{fmtQtdItem(i.produtoId, i.quantidade)}</div>
                             ))}
                           </td>
                           <td>
@@ -185,7 +194,7 @@ export function FluxoCaixa() {
                       </div>
                       <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-2)' }}>
                         {v.itens.map(i => (
-                          <div key={i.produtoId}>{i.nomeProduto} ×{i.quantidade}</div>
+                          <div key={i.produtoId}>{i.nomeProduto} ×{fmtQtdItem(i.produtoId, i.quantidade)}</div>
                         ))}
                       </div>
                       <div style={{ marginTop: 6 }}>
@@ -214,7 +223,27 @@ export function FluxoCaixa() {
           {/* Total resumo no rodapé */}
           {vendasHoje.length > 0 && (
             <div className="card" style={{ marginTop: 16, padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{vendasHoje.length} venda(s) · {vendasHoje.flatMap(v => v.itens).reduce((s, i) => s + i.quantidade, 0)} itens vendidos</span>
+              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
+                {vendasHoje.length} venda(s) · {(() => {
+                  const itens = vendasHoje.flatMap(v => v.itens);
+                  let un = 0;
+                  const frac: Record<string, number> = {};
+                  itens.forEach(i => {
+                    const prod = produtos.find(p => p.id === i.produtoId);
+                    if (prod?.tipoVenda === 'fracionado') {
+                      const u = prod.unidadeMedida ?? '';
+                      frac[u] = (frac[u] ?? 0) + i.quantidade;
+                    } else {
+                      un += i.quantidade;
+                    }
+                  });
+                  const partes = [
+                    un > 0 ? `${un} itens` : '',
+                    ...Object.entries(frac).map(([u, v]) => `${v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${u}`),
+                  ].filter(Boolean);
+                  return partes.length > 0 ? partes.join(' · ') + ' vendidos' : '0 itens vendidos';
+                })()}
+              </span>
               <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--green)' }}>{fmt(totalHoje)}</span>
             </div>
           )}
