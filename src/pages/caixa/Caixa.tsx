@@ -63,6 +63,7 @@ export function Caixa() {
   const [trocaFormaPag, setTrocaFormaPag] = useState<FormaPagamento>('pix');
   const [trocaResultado, setTrocaResultado] = useState<any>(null);
   const [usarCredito, setUsarCredito] = useState(false);
+  const [qtdTexto, setQtdTexto] = useState<Record<string, string>>({});
 
   const [formas, setFormas] = useState<{forma: FormaPagamento; valor: number; parcelas?: number}[]>([
   { forma: 'dinheiro', valor: 0 }]);
@@ -195,13 +196,15 @@ export function Caixa() {
   }
 
   function setQtdFracionada(prodId: string, variacaoId: string | undefined, valor: string) {
-    // Aceita só números, vírgula e ponto; troca vírgula por ponto
-    const limpo = valor.replace(/[^\d.,]/g, '').replace(',', '.');
-    const qtd = limpo === '' || limpo === '.' ? 0 : parseFloat(limpo);
+    // Permite só dígitos e uma vírgula/ponto
+    const limpo = valor.replace(/[^\d.,]/g, '');
+    const chave = `${prodId}-${variacaoId ?? 'sem'}`;
+    setQtdTexto(prev => ({ ...prev, [chave]: limpo }));
+
+    const num = limpo === '' ? 0 : parseFloat(limpo.replace(',', '.'));
+    const q = isNaN(num) ? 0 : num;
     setCarrinho(prev => prev.map(i => {
       if (i.produtoId !== prodId || i.variacaoId !== variacaoId) return i;
-      const q = isNaN(qtd) ? 0 : qtd;
-      if (q > i.estoqueDisp) return { ...i, quantidade: i.estoqueDisp, subtotal: i.estoqueDisp * i.precoUnitario };
       return { ...i, quantidade: q, subtotal: q * i.precoUnitario };
     }));
   }
@@ -437,7 +440,7 @@ export function Caixa() {
                                 type="text" inputMode="decimal"
                                 className="cx-preco-input"
                                 style={{ width: 110, textAlign: 'center' }}
-                                value={item.quantidade === 0 ? '' : String(item.quantidade).replace('.', ',')}
+                                value={qtdTexto[`${item.produtoId}-${item.variacaoId ?? 'sem'}`] ?? ''}
                                 placeholder="0,000"
                                 onChange={e => setQtdFracionada(item.produtoId, item.variacaoId, e.target.value)} />
                               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
@@ -496,7 +499,7 @@ export function Caixa() {
                             type="text" inputMode="decimal"
                             className="cx-preco-input"
                             style={{ width: 90, textAlign: 'center' }}
-                            value={item.quantidade === 0 ? '' : String(item.quantidade).replace('.', ',')}
+                            value={qtdTexto[`${item.produtoId}-${item.variacaoId ?? 'sem'}`] ?? ''}
                             placeholder="0,000"
                             onChange={e => setQtdFracionada(item.produtoId, item.variacaoId, e.target.value)} />
                           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
