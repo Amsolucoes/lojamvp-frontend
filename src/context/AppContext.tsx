@@ -40,6 +40,7 @@ function mapProduto(p: any): Produto {
     precoVenda: p.precoVenda, estoque: p.estoque,
     estoqueMinimo: p.estoqueMinimo, codigoBarras: p.codigoBarras,
     ativo: p.ativo, criadoEm: p.criadoEm,
+    tipoVenda: p.tipoVenda, unidadeMedida: p.unidadeMedida,
     variacoes: p.variacoes ?? [],
   } as any;
 }

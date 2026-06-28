@@ -13,6 +13,8 @@ export interface Produto {
   descricao?: string;
   ativo: boolean;
   criadoEm: string;
+  tipoVenda: string;
+  unidadeMedida?: string;
 }
 
 // ── Cliente ───────────────────────────────────────────────────────

@@ -20,10 +20,19 @@ function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function fmtEstoque(p: any): string {
+  if (p.tipoVenda === 'fracionado') {
+    const v = (p.estoque ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    return `${v} ${p.unidadeMedida}`;
+  }
+  return `${p.estoque} un.`;
+}
+
 type FormData = Omit<Produto, 'id' | 'criadoEm'>;
 const EMPTY: FormData = {
   nome: '', categoria: '', precoCusto: 0, precoVenda: 0,
   estoque: 0, estoqueMinimo: 3, codigoBarras: '', descricao: '', ativo: true,
+  tipoVenda: 'unidade', unidadeMedida: 'un',
 };
 
 export function Produtos() {
@@ -323,7 +332,7 @@ export function Produtos() {
                           </div>
                         ) : (
                           <span className={p.estoque <= p.estoqueMinimo ? 'estoque-baixo' : 'estoque-ok'}>
-                            {p.estoque} un.
+                            {fmtEstoque(p)}
                           </span>
                         )}
                       </td>
@@ -374,7 +383,7 @@ export function Produtos() {
                       </div>
                     ) : (
                       <span className={p.estoque <= p.estoqueMinimo ? 'estoque-baixo' : 'estoque-ok'} style={{ fontSize: 12 }}>
-                        Estoque: {p.estoque} un.
+                        Estoque: {fmtEstoque(p)}
                       </span>
                     )}
                   </div>
@@ -452,22 +461,49 @@ export function Produtos() {
                   <input value={form.codigoBarras} onChange={e => setForm(f => ({ ...f, codigoBarras: e.target.value }))} placeholder="Opcional" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Preço de custo (R$)</label>
-                  <input type="number" min={0}
+                  <label className="form-label">Tipo de venda</label>
+                  <select value={form.tipoVenda ?? 'unidade'} onChange={e => {
+                      const tv = e.target.value;
+                      setForm(f => ({ ...f, tipoVenda: tv, unidadeMedida: tv === 'unidade' ? 'un' : (f.unidadeMedida === 'un' ? 'kg' : f.unidadeMedida) }));
+                    }}>
+                    <option value="unidade">Por unidade</option>
+                    <option value="fracionado">Fracionado (peso/volume)</option>
+                  </select>
+                </div>
+                {form.tipoVenda === 'fracionado' && (
+                  <div className="form-group">
+                    <label className="form-label">Unidade de medida</label>
+                    <select value={form.unidadeMedida ?? 'kg'} onChange={e => setForm(f => ({ ...f, unidadeMedida: e.target.value }))}>
+                      <option value="kg">Quilograma (kg)</option>
+                      <option value="g">Grama (g)</option>
+                      <option value="L">Litro (L)</option>
+                      <option value="ml">Mililitro (ml)</option>
+                    </select>
+                  </div>
+                )}
+                <div className="form-group">
+                  <label className="form-label">
+                    Preço de custo (R$){form.tipoVenda === 'fracionado' ? ` por ${form.unidadeMedida}` : ''}
+                  </label>
+                  <input type="number" min={0} step={0.01}
                     value={form.precoCusto === 0 ? '' : form.precoCusto}
                     onChange={e => setForm(f => ({ ...f, precoCusto: e.target.value === '' ? 0 : +e.target.value }))} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Preço de venda (R$)</label>
-                  <input type="number" min={0}
+                  <label className="form-label">
+                    Preço de venda (R$){form.tipoVenda === 'fracionado' ? ` por ${form.unidadeMedida}` : ''}
+                  </label>
+                  <input type="number" min={0} step={0.01}
                     value={form.precoVenda === 0 ? '' : form.precoVenda}
                     onChange={e => setForm(f => ({ ...f, precoVenda: e.target.value === '' ? 0 : +e.target.value }))} />
                 </div>
 
                 {/* Estoque — desabilitado se tem variações */}
                 <div className="form-group">
-                  <label className="form-label">Estoque atual</label>
-                  <input type="number" min={0}
+                  <label className="form-label">
+                    Estoque atual{form.tipoVenda === 'fracionado' ? ` (${form.unidadeMedida})` : ''}
+                  </label>
+                  <input type="number" min={0} step={form.tipoVenda === 'fracionado' ? 0.001 : 1}
                     value={temVarsNoModal ? estoqueVariacoes : (form.estoque === 0 ? '' : form.estoque)}
                     disabled={temVarsNoModal}
                     onChange={e => setForm(f => ({ ...f, estoque: e.target.value === '' ? 0 : +e.target.value }))}
@@ -475,8 +511,10 @@ export function Produtos() {
                   {temVarsNoModal && <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Calculado pela grade</p>}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Estoque mínimo (alerta)</label>
-                  <input type="number" min={0}
+                  <label className="form-label">
+                    Estoque mínimo (alerta){form.tipoVenda === 'fracionado' ? ` (${form.unidadeMedida})` : ''}
+                  </label>
+                  <input type="number" min={0} step={form.tipoVenda === 'fracionado' ? 0.001 : 1}
                     value={temVarsNoModal ? estoqueMinVariacoes : (form.estoqueMinimo === 0 ? '' : form.estoqueMinimo)}
                     disabled={temVarsNoModal}
                     onChange={e => setForm(f => ({ ...f, estoqueMinimo: e.target.value === '' ? 0 : +e.target.value }))}
