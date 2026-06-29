@@ -478,6 +478,7 @@ export function Produtos() {
                       <option value="g">Grama (g)</option>
                       <option value="L">Litro (L)</option>
                       <option value="ml">Mililitro (ml)</option>
+                      <option value="m">Metro (m)</option>
                     </select>
                   </div>
                 )}
