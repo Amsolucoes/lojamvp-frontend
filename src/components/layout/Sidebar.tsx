@@ -1,20 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, TrendingUp, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, TrendingUp, LogOut, Menu, X, Scissors, Calendar } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import './Sidebar.css';
-
-const NAV = [
-  { to: '/',           icon: LayoutDashboard, label: 'Dashboard'      },
-  { to: '/produtos',   icon: Package,         label: 'Produtos'       },
-  { to: '/clientes',   icon: Users,           label: 'Clientes'       },
-  { to: '/caixa',      icon: ShoppingCart,    label: 'Caixa'          },
-  { to: '/estoque',    icon: Boxes,           label: 'Estoque'        },
-  { to: '/relatorios', icon: BarChart2,       label: 'Relatórios'     },
-  { to: '/fluxo',      icon: TrendingUp,      label: 'Fluxo de Caixa' },
-];
 
 function iniciais(nome: string) {
   return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
@@ -35,12 +25,21 @@ export function Sidebar() {
   const [corPrimaria, setCorPrimaria] = useState('#e8945a');
   const [logoUrl, setLogoUrl]       = useState('');
   const [aberto, setAberto]         = useState(false);
+  const [tipoPlano, setTipoPlano]   = useState('loja');
+  const [modulos, setModulos]       = useState<string[]>([]);
 
   useEffect(() => {
     api.get<any>('/api/cliente/config').then(res => {
       if (res?.nome)       setNomeLoja(res.nome);
       if (res?.corPrimaria) setCorPrimaria(res.corPrimaria);
       if (res?.logoUrl)    setLogoUrl(res.logoUrl);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    api.get<any>('/api/loja/situacao').then(res => {
+      if (res?.tipoPlano) setTipoPlano(res.tipoPlano);
+      if (Array.isArray(res?.modulosAtivos)) setModulos(res.modulosAtivos);
     }).catch(() => {});
   }, []);
 
@@ -54,6 +53,21 @@ export function Sidebar() {
   const logoEl = logoUrl
     ? <img src={logoUrl} alt="Logo" style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', objectFit: 'contain' }} />
     : <div className="sidebar-logo-icon">✦</div>;
+
+  const temServicos = modulos.includes('servicos');
+  const soServicos = tipoPlano === 'servicos';
+
+  const NAV = [
+    { to: '/',           icon: LayoutDashboard, label: 'Dashboard'      },
+    ...(!soServicos ? [{ to: '/produtos', icon: Package, label: 'Produtos' }] : []),
+    { to: '/clientes',   icon: Users,           label: 'Clientes'       },
+    { to: '/caixa',      icon: ShoppingCart,    label: 'Caixa'          },
+    ...(temServicos ? [{ to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
+    ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
+    ...(!soServicos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
+    { to: '/relatorios', icon: BarChart2,       label: 'Relatórios'     },
+    { to: '/fluxo',      icon: TrendingUp,      label: 'Fluxo de Caixa' },
+  ];
 
   return (
     <>

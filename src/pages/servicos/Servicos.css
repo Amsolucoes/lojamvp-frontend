@@ -1,0 +1,12 @@
+.serv-cards-mobile { display: none; }
+
+.serv-card-mobile {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.serv-card-mobile:last-child { border-bottom: none; }
+
+@media (max-width: 768px) {
+  .serv-table-desktop { display: none; }
+  .serv-cards-mobile { display: block; }
+}
