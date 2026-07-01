@@ -96,6 +96,16 @@ export function Login() {
             </div>
           )}
 
+          {bloqueado && (
+            <a
+              href="https://admin.aldevsoftware.com.br/"
+              className="login-btn"
+              style={{ marginTop: 10, textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              💳 Acesse aqui para regularizar →
+            </a>
+          )}
+
           <button
             type="submit"
             className={`login-btn${loading ? ' loading' : ''}`}
