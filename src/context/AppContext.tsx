@@ -183,6 +183,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       itens: v.itens.map(i => ({
         produtoId: (i as any).servicoId ? null : (i.produtoId ?? null),
         servicoId: (i as any).servicoId ?? null,
+        agendamentoId: (i as any).servicoId ?? null,
         quantidade: i.quantidade,
         precoUnitario: i.precoUnitario,
         variacaoId: (i as any).variacaoId ?? null,

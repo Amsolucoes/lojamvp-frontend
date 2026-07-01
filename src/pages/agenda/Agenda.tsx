@@ -25,6 +25,7 @@ interface Agendamento {
   duracaoMin: number;
   status: string;
   observacao?: string;
+  pago: boolean; 
 }
 
 function fmt(n: number) {
@@ -297,7 +298,14 @@ export function Agenda() {
                               </div>
                               <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
                                 {a.nomeCliente || 'Sem cliente'} · {a.duracaoMin}min
-                                {a.status !== 'agendado' && <span style={{ marginLeft: 6, color: info.cor, fontWeight: 500 }}>· {info.label}</span>}
+                                {a.status === 'cancelado' && (
+                                  <span style={{ marginLeft: 6, color: info.cor, fontWeight: 500 }}>· {info.label}</span>
+                                )}
+                                {a.status === 'concluido' && (
+                                  a.pago
+                                    ? <span style={{ marginLeft: 6, color: 'var(--green)', fontWeight: 600 }}>· 💰 Pago</span>
+                                    : <span style={{ marginLeft: 6, color: '#d97706', fontWeight: 600 }}>· ⏳ Pendente</span>
+                                )}
                               </div>
                               {a.observacao && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{a.observacao}</div>}
                             </div>

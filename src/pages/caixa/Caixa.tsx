@@ -22,10 +22,21 @@ interface Servico {
   ativo: boolean;
 }
 
+interface AgendamentoPendente {
+  id: string;
+  servicoId: string;
+  nomeServico: string;
+  clienteId?: string;
+  nomeCliente?: string;
+  preco: number;
+  dataHora: string;
+}
+
 // Item do carrinho — pode ser produto ou serviço
 type CarrinhoItem = ItemVenda & {
   tipo: 'produto' | 'servico';
   servicoId?: string;
+  agendamentoId?: string;
   estoqueDisp?: number;
   variacaoId?: string;
   variacaoLabel?: string;
@@ -89,6 +100,18 @@ export function Caixa() {
   const [buscaServ, setBuscaServ]     = useState('');
   const [showServ, setShowServ]       = useState(false);
   const buscaServRef = useRef<HTMLInputElement>(null);
+  const [pendentes, setPendentes] = useState<AgendamentoPendente[]>([]);
+
+  function carregarPendentes() {
+    api.get<AgendamentoPendente[]>('/api/agendamentos/pendentes-pagamento')
+      .then(setPendentes)
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    if (!temServicos) return;
+    carregarPendentes();
+  }, [temServicos]);
 
   const [formas, setFormas] = useState<{forma: FormaPagamento; valor: number; parcelas?: number}[]>([
   { forma: 'dinheiro', valor: 0 }]);
@@ -175,6 +198,24 @@ export function Caixa() {
     });
     setBuscaServ('');
     setShowServ(false);
+  }
+
+  function puxarPendente(p: AgendamentoPendente) {
+    if (p.clienteId) setClienteId(p.clienteId);
+
+    setCarrinho(prev => {
+      const existe = prev.find(i => i.tipo === 'servico' && i.agendamentoId === p.id);
+      if (existe) return prev;
+      return [...prev, {
+        tipo: 'servico',
+        servicoId: p.servicoId,
+        agendamentoId: p.id,
+        nomeProduto: p.nomeServico,
+        quantidade: 1,
+        precoUnitario: p.preco,
+        subtotal: p.preco,
+      } as CarrinhoItem];
+    });
   }
 
   async function addProdutoTroca(prodId: string) {
@@ -342,6 +383,7 @@ export function Caixa() {
       itens: carrinho.map(item => ({
         produtoId:     item.tipo === 'produto' ? item.produtoId : null,
         servicoId:     item.tipo === 'servico' ? item.servicoId : null,
+        agendamentoId: item.agendamentoId ?? null,
         nomeProduto:   item.nomeProduto,
         quantidade:    item.quantidade,
         precoUnitario: item.precoUnitario,
@@ -368,6 +410,7 @@ export function Caixa() {
 
     await registrarVenda(venda);
     await recarregar();
+    carregarPendentes();
     toastSucesso(
       trocoVenda > 0
         ? `Venda registrada! Troco: ${fmt(trocoVenda)}`
@@ -494,6 +537,33 @@ export function Caixa() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {temServicos && pendentes.length > 0 && (
+          <div className="card" style={{ marginTop: 8, padding: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
+              ✅ Concluídos aguardando pagamento ({pendentes.length})
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {pendentes.map(p => {
+                const jaNoCarrinho = carrinho.some(i => i.tipo === 'servico' && i.agendamentoId === p.id);
+                return (
+                  <button key={p.id} className="cx-dropdown-item" disabled={jaNoCarrinho}
+                    style={{ opacity: jaNoCarrinho ? 0.5 : 1, textAlign: 'left', border: '1px solid var(--border)', borderRadius: 6 }}
+                    onClick={() => puxarPendente(p)}>
+                    <div className="cx-drop-nome">{p.nomeServico}{p.nomeCliente ? ` — ${p.nomeCliente}` : ''}</div>
+                    <div className="cx-drop-info">
+                      <span style={{ color: 'var(--text-3)', fontSize: 12 }}>
+                        {new Date(p.dataHora).toLocaleDateString('pt-BR')}
+                      </span>
+                      <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(p.preco)}</span>
+                      {jaNoCarrinho && <span className="badge badge-green" style={{ fontSize: 10 }}>No carrinho</span>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
