@@ -7,6 +7,26 @@ function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+const LABEL_PAG: Record<string, string> = {
+  dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito',
+};
+
+// Lê formasPagamento seja string JSON ou array já parseado
+function parseFormas(fp: any): any[] {
+  if (!fp) return [];
+  if (Array.isArray(fp)) return fp;
+  try { return JSON.parse(fp); } catch { return []; }
+}
+
+function fmtForma(f: any): string {
+  const nome = LABEL_PAG[f.forma] ?? f.forma;
+  if (f.forma === 'credito' && f.parcelas > 1) {
+    const parcela = f.valor / f.parcelas;
+    return `${nome} ${f.parcelas}x de ${parcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+  }
+  return nome;
+}
+
 function fmtDia(date: Date) {
   return date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 }
@@ -157,18 +177,18 @@ export function FluxoCaixa() {
                             ))}
                           </td>
                           <td>
-                            {v.formasPagamento ? (
-                              JSON.parse(v.formasPagamento).map((f: any, idx: number) => (
-                                <div key={idx} style={{ fontSize: 11 }}>
+                            {parseFormas(v.formasPagamento).length > 0 ? (
+                              parseFormas(v.formasPagamento).map((f: any, idx: number) => (
+                                <div key={idx} style={{ fontSize: 11, marginBottom: 2 }}>
                                   <span className={`badge badge-${f.forma === 'pix' ? 'blue' : f.forma === 'dinheiro' ? 'green' : 'accent'}`}>
-                                    {f.forma}{f.forma === 'credito' && f.parcelas > 1 ? ` ${f.parcelas}x` : ''}
+                                    {fmtForma(f)}
                                   </span>
                                   <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>{fmt(f.valor)}</span>
                                 </div>
                               ))
                             ) : (
                               <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
-                                {v.formaPagamento}
+                                {LABEL_PAG[v.formaPagamento] ?? v.formaPagamento}
                               </span>
                             )}
                           </td>
@@ -198,18 +218,18 @@ export function FluxoCaixa() {
                         ))}
                       </div>
                       <div style={{ marginTop: 6 }}>
-                        {v.formasPagamento ? (
-                          JSON.parse(v.formasPagamento).map((f: any) => (
-                            <div key={f.forma} style={{ fontSize: 11 }}>
+                        {parseFormas(v.formasPagamento).length > 0 ? (
+                          parseFormas(v.formasPagamento).map((f: any, idx: number) => (
+                            <div key={idx} style={{ fontSize: 11, marginBottom: 2 }}>
                               <span className={`badge badge-${f.forma === 'pix' ? 'blue' : f.forma === 'dinheiro' ? 'green' : 'accent'}`}>
-                                {f.forma}
+                                {fmtForma(f)}
                               </span>
                               <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>{fmt(f.valor)}</span>
                             </div>
                           ))
                         ) : (
                           <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
-                            {v.formaPagamento}
+                            {LABEL_PAG[v.formaPagamento] ?? v.formaPagamento}
                           </span>
                         )}
                       </div>
