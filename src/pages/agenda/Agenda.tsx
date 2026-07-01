@@ -195,8 +195,16 @@ export function Agenda() {
   );
 
   // Agendamentos por faixa de horário
+  // Agendamentos por faixa de 30 min (encaixa horários quebrados na faixa correta)
   function agsNaFaixa(faixa: string) {
-    return agendamentos.filter(a => horaLocal(a.dataHora) === faixa);
+    const [fh, fm] = faixa.split(':').map(Number);
+    const inicioFaixa = fh * 60 + fm;          // minutos desde 00:00
+    const fimFaixa = inicioFaixa + 30;
+    return agendamentos.filter(a => {
+      const d = new Date(a.dataHora);
+      const min = d.getHours() * 60 + d.getMinutes();
+      return min >= inicioFaixa && min < fimFaixa;
+    });
   }
 
   return (
