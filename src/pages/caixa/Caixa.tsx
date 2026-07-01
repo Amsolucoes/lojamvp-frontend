@@ -47,7 +47,7 @@ type CarrinhoItem = ItemVenda & {
 // Chave única do item no carrinho (produto+variação ou serviço)
 function itemKey(item: CarrinhoItem): string {
   return item.tipo === 'servico'
-    ? `serv-${item.servicoId}`
+    ? `serv-${item.servicoId}-${item.agendamentoId ?? 'avulso'}`
     : `prod-${item.produtoId}-${item.variacaoId ?? 'sem'}`;
 }
 
