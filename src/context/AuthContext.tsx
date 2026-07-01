@@ -10,7 +10,7 @@ interface Usuario {
 
 interface AuthCtx {
   usuario: Usuario | null;
-  login: (email: string, senha: string) => Promise<{ ok: boolean; erro?: string }>;
+  login: (email: string, senha: string) => Promise<{ ok: boolean; erro?: string; bloqueado?: boolean }>;
   setSessao: (u: Usuario) => void;
   logout: () => void;
 }
@@ -48,7 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       salvarSessao(u);
       return { ok: true };
     } catch (err) {
-      return { ok: false, erro: (err as Error).message };
+      const e = err as Error & { bloqueado?: boolean };
+      return { ok: false, erro: e.message, bloqueado: e.bloqueado === true };
     }
   }
 

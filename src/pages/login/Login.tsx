@@ -12,6 +12,7 @@ export function Login() {
   const [erro, setErro]         = useState('');
   const [loading, setLoading]   = useState(false);
   const [nomeLoja, setNomeLoja] = useState('AlSoluções');
+  const [bloqueado, setBloqueado] = useState(false);
   const navigate = useNavigate();
 
   async function handleSubmit(e: FormEvent) {
@@ -21,11 +22,13 @@ export function Login() {
       return;
     }
     setErro('');
+    setBloqueado(false);
     setLoading(true);
     const res = await login(email, senha);
     setLoading(false);
     if (!res.ok) {
       setErro(res.erro ?? 'Erro ao fazer login.');
+      setBloqueado(res.bloqueado === true);
     } else {
       navigate('/', { replace: true });
     }

@@ -39,7 +39,10 @@ async function request<T>(
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data?.erro ?? data?.title ?? `Erro ${res.status}`);
+    const err = new Error(data?.erro ?? data?.title ?? `Erro ${res.status}`) as Error & { bloqueado?: boolean; status?: number };
+    err.bloqueado = data?.bloqueado === true;
+    err.status = res.status;
+    throw err;
   }
 
   return data as T;
