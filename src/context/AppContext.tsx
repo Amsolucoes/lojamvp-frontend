@@ -11,6 +11,13 @@ interface AppCtx {
   erro:       string | null;
   trocas:     any[];
 
+  // Módulos ativos da loja (ex: ['produtos', 'servicos'])
+  modulosAtivos: string[];
+  tipoPlano:     string;
+  temProdutos:   boolean;
+  temServicos:   boolean;
+  soServicos:    boolean;
+
   addProduto:    (p: Omit<Produto, 'id' | 'criadoEm'>) => Promise<void>;
   updateProduto: (id: string, p: Partial<Produto>)       => Promise<void>;
   deleteProduto: (id: string)                            => Promise<void>;
@@ -64,7 +71,9 @@ function mapVenda(v: any): Venda {
     parcelas: v.parcelas,
     troco: v.troco, criadaEm: v.criadaEm,
     itens: (v.itens ?? []).map((i: any) => ({
-      produtoId: i.produtoId, nomeProduto: i.nomeProduto,
+      produtoId: i.produtoId ?? null,
+      servicoId: i.servicoId ?? null,
+      nomeProduto: i.nomeProduto,
       quantidade: i.quantidade, precoUnitario: i.precoUnitario,
       subtotal: i.subtotal,
     })),
@@ -87,6 +96,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading,    setLoading]    = useState(true);
   const [erro,       setErro]       = useState<string | null>(null);
   const [trocas,     setTrocas]     = useState<any[]>([]);
+  const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
+  const [tipoPlano, setTipoPlano] = useState<string>('loja');
+
+  // Mesma lógica usada na Sidebar
+  const temServicos = modulosAtivos.includes('servicos');
+  const soServicos  = tipoPlano === 'servicos';
+  const temProdutos = !soServicos;
 
   async function recarregar() {
     setLoading(true);
@@ -115,6 +131,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setErro((e as Error).message);
     } finally {
       setLoading(false);
+    }
+
+    // Módulos ativos / plano — busca separada pra não travar o resto se falhar
+    try {
+      const situacao = await api.get<any>('/api/loja/situacao');
+      setModulosAtivos(situacao.modulosAtivos ?? []);
+      setTipoPlano(situacao.tipoPlano ?? 'loja');
+    } catch {
+      setModulosAtivos([]);
+      setTipoPlano('loja');
     }
   }
 
@@ -155,7 +181,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function registrarVenda(v: Omit<Venda, 'id' | 'criadaEm'>) {
     const payload = {
       itens: v.itens.map(i => ({
-        produtoId: i.produtoId,
+        produtoId: (i as any).servicoId ? null : (i.produtoId ?? null),
+        servicoId: (i as any).servicoId ?? null,
         quantidade: i.quantidade,
         precoUnitario: i.precoUnitario,
         variacaoId: (i as any).variacaoId ?? null,
@@ -171,8 +198,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const nova = await api.post<any>('/api/vendas', payload);
     setVendas(prev => [mapVenda(nova), ...prev]);
 
-    // Atualiza estoque local
+    // Atualiza estoque local (só itens de produto baixam estoque)
     nova.itens.forEach((item: any) => {
+      if (!item.produtoId) return;
       setProdutos(prev => prev.map(p =>
         p.id === item.produtoId
           ? { ...p, estoque: Math.max(0, p.estoque - item.quantidade) }
@@ -180,15 +208,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ));
     });
 
-    const novosMovs = nova.itens.map((item: any) => mapMovimento({
-      id: crypto.randomUUID(),
-      produtoId: item.produtoId,
-      nomeProduto: item.nomeProduto,
-      tipo: 'saida',
-      quantidade: item.quantidade,
-      observacao: `Venda #${nova.id.slice(-8)}`,
-      criadoEm: nova.criadaEm,
-    }));
+    const novosMovs = nova.itens
+      .filter((item: any) => !!item.produtoId)
+      .map((item: any) => mapMovimento({
+        id: crypto.randomUUID(),
+        produtoId: item.produtoId,
+        nomeProduto: item.nomeProduto,
+        tipo: 'saida',
+        quantidade: item.quantidade,
+        observacao: `Venda #${nova.id.slice(-8)}`,
+        criadoEm: nova.criadaEm,
+      }));
     setMovimentos(prev => [...novosMovs, ...prev]);
   }
 
@@ -218,6 +248,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{
       produtos, clientes, vendas, movimentos, loading, erro, trocas,
+      modulosAtivos, tipoPlano, temProdutos, temServicos, soServicos,
       addProduto, updateProduto, deleteProduto,
       addCliente, updateCliente, deleteCliente,
       registrarVenda, ajustarEstoque,

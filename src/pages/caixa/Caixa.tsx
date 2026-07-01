@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, User, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, User, Scissors } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ItemVenda, FormaPagamento } from '../../types';
 import { api } from '@/services/api';
@@ -13,13 +13,32 @@ interface VariacaoItem {
   estoque: number;
 }
 
-type CarrinhoItem = ItemVenda & { 
-  estoqueDisp: number;
+interface Servico {
+  id: string;
+  nome: string;
+  categoria: string;
+  preco: number;
+  duracaoMin: number;
+  ativo: boolean;
+}
+
+// Item do carrinho — pode ser produto ou serviço
+type CarrinhoItem = ItemVenda & {
+  tipo: 'produto' | 'servico';
+  servicoId?: string;
+  estoqueDisp?: number;
   variacaoId?: string;
   variacaoLabel?: string;
   tipoVenda?: string;
   unidadeMedida?: string;
 };
+
+// Chave única do item no carrinho (produto+variação ou serviço)
+function itemKey(item: CarrinhoItem): string {
+  return item.tipo === 'servico'
+    ? `serv-${item.servicoId}`
+    : `prod-${item.produtoId}-${item.variacaoId ?? 'sem'}`;
+}
 
 const FORMAS: { value: FormaPagamento; label: string; icon: string }[] = [
   { value: 'dinheiro', label: 'Dinheiro',  icon: '💵' },
@@ -33,7 +52,7 @@ function fmt(n: number) {
 }
 
 export function Caixa() {
-  const { produtos, clientes, registrarVenda, vendas, recarregar } = useApp();
+  const { produtos, clientes, registrarVenda, vendas, recarregar, temProdutos, temServicos, soServicos } = useApp();
 
   const { sucesso: toastSucesso, erro: toastErro } = useToast();
 
@@ -65,14 +84,29 @@ export function Caixa() {
   const [usarCredito, setUsarCredito] = useState(false);
   const [qtdTexto, setQtdTexto] = useState<Record<string, string>>({});
 
+  // Serviços
+  const [servicos, setServicos]       = useState<Servico[]>([]);
+  const [buscaServ, setBuscaServ]     = useState('');
+  const [showServ, setShowServ]       = useState(false);
+  const buscaServRef = useRef<HTMLInputElement>(null);
+
   const [formas, setFormas] = useState<{forma: FormaPagamento; valor: number; parcelas?: number}[]>([
   { forma: 'dinheiro', valor: 0 }]);
   const [duasFormas, setDuasFormas] = useState(false);
+
+  useEffect(() => {
+    if (!temServicos) return;
+    api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
+  }, [temServicos]);
 
   const prodsFiltrados = produtos.filter(p =>
     p.ativo && p.estoque > 0 &&
     (p.nome.toLowerCase().includes(buscaProd.toLowerCase()) ||
      (p.codigoBarras?.includes(buscaProd) ?? false))
+  );
+
+  const servsFiltrados = servicos.filter(s =>
+    s.nome.toLowerCase().includes(buscaServ.toLowerCase())
   );
 
   const cliFiltrados = clientes.filter(c =>
@@ -116,6 +150,31 @@ export function Caixa() {
 
     // Sem variações — adiciona direto
     adicionarAoCarrinho(prodId, prod, null, null, null);
+  }
+
+  function addServico(servId: string) {
+    const serv = servicos.find(s => s.id === servId);
+    if (!serv) return;
+
+    setCarrinho(prev => {
+      const existe = prev.find(i => i.tipo === 'servico' && i.servicoId === servId);
+      if (existe) {
+        return prev.map(i => i.tipo === 'servico' && i.servicoId === servId
+          ? { ...i, quantidade: i.quantidade + 1, subtotal: (i.quantidade + 1) * i.precoUnitario }
+          : i
+        );
+      }
+      return [...prev, {
+        tipo: 'servico',
+        servicoId: serv.id,
+        nomeProduto: serv.nome,
+        quantidade: 1,
+        precoUnitario: serv.preco,
+        subtotal: serv.preco,
+      } as CarrinhoItem];
+    });
+    setBuscaServ('');
+    setShowServ(false);
   }
 
   async function addProdutoTroca(prodId: string) {
@@ -168,11 +227,10 @@ export function Caixa() {
     const label = [tamanho, cor].filter(Boolean).join(' / ');
 
     setCarrinho(prev => {
-      const chave = `${prodId}-${variacaoId ?? 'sem'}`;
-      const existe = prev.find(i => i.produtoId === prodId && i.variacaoId === variacaoId);
+      const existe = prev.find(i => i.tipo === 'produto' && i.produtoId === prodId && i.variacaoId === (variacaoId ?? undefined));
       if (existe) {
         if (existe.quantidade >= estoqueDisp) return prev;
-        return prev.map(i => i.produtoId === prodId && i.variacaoId === variacaoId
+        return prev.map(i => i === existe
           ? { ...i, quantidade: i.quantidade + 1, subtotal: (i.quantidade + 1) * i.precoUnitario }
           : i
         );
@@ -180,6 +238,7 @@ export function Caixa() {
       const ehFracionado = prod.tipoVenda === 'fracionado';
       const qtdInicial = ehFracionado ? 0 : 1;
       return [...prev, {
+        tipo: 'produto',
         produtoId: prodId,
         nomeProduto: prod.nome + (label ? ` (${label})` : ''),
         quantidade: qtdInicial,
@@ -190,7 +249,7 @@ export function Caixa() {
         variacaoLabel: label || undefined,
         tipoVenda: prod.tipoVenda,
         unidadeMedida: prod.unidadeMedida,
-      }];
+      } as CarrinhoItem];
     });
     setModalVariacao(null);
   }
@@ -204,31 +263,34 @@ export function Caixa() {
     const num = limpo === '' ? 0 : parseFloat(limpo.replace(',', '.'));
     const q = isNaN(num) ? 0 : num;
     setCarrinho(prev => prev.map(i => {
-      if (i.produtoId !== prodId || i.variacaoId !== variacaoId) return i;
+      if (i.tipo !== 'produto' || i.produtoId !== prodId || i.variacaoId !== variacaoId) return i;
       return { ...i, quantidade: q, subtotal: q * i.precoUnitario };
     }));
   }
 
-  function alterarQtd(prodId: string, delta: number) {
+  function alterarQtd(item: CarrinhoItem, delta: number) {
+    const key = itemKey(item);
     setCarrinho(prev => prev
       .map(i => {
-        if (i.produtoId !== prodId) return i;
+        if (itemKey(i) !== key) return i;
         const novaQtd = i.quantidade + delta;
         if (novaQtd <= 0) return null as unknown as CarrinhoItem;
-        if (novaQtd > i.estoqueDisp) return i;
+        if (i.tipo === 'produto' && i.estoqueDisp !== undefined && novaQtd > i.estoqueDisp) return i;
         return { ...i, quantidade: novaQtd, subtotal: novaQtd * i.precoUnitario };
       })
       .filter(Boolean)
     );
   }
 
-  function removerItem(prodId: string) {
-    setCarrinho(prev => prev.filter(i => i.produtoId !== prodId));
+  function removerItem(item: CarrinhoItem) {
+    const key = itemKey(item);
+    setCarrinho(prev => prev.filter(i => itemKey(i) !== key));
   }
 
-  function editarPreco(prodId: string, novoPreco: number) {
+  function editarPreco(item: CarrinhoItem, novoPreco: number) {
+    const key = itemKey(item);
     setCarrinho(prev => prev.map(i =>
-      i.produtoId === prodId
+      itemKey(i) === key
         ? { ...i, precoUnitario: novoPreco, subtotal: i.quantidade * novoPreco }
         : i
     ));
@@ -275,10 +337,11 @@ export function Caixa() {
   }
 
   async function finalizarVenda() {
-    if (carrinho.length === 0) { toastErro('Adicione produtos ao carrinho.'); return; }
+    if (carrinho.length === 0) { toastErro('Adicione produtos ou serviços ao carrinho.'); return; }
     const venda = {
       itens: carrinho.map(item => ({
-        produtoId:     item.produtoId,
+        produtoId:     item.tipo === 'produto' ? item.produtoId : null,
+        servicoId:     item.tipo === 'servico' ? item.servicoId : null,
         nomeProduto:   item.nomeProduto,
         quantidade:    item.quantidade,
         precoUnitario: item.precoUnitario,
@@ -335,7 +398,7 @@ export function Caixa() {
 
   return (
     <div className="page caixa-page">
-      {/* Coluna esquerda — produtos + carrinho */}
+      {/* Coluna esquerda — produtos/serviços + carrinho */}
       <div className="caixa-left">
         <div className="page-header" style={{ marginBottom: 16 }}>
           <div>
@@ -345,9 +408,11 @@ export function Caixa() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="btn-secondary" onClick={() => setModalTroca(true)}>
-              🔄 Troca
-            </button>
+            {temProdutos && (
+              <button className="btn-secondary" onClick={() => setModalTroca(true)}>
+                🔄 Troca
+              </button>
+            )}
             {carrinho.length > 0 && (
               <button className="btn-ghost" onClick={limpar} style={{ color: 'var(--red)' }}>
                 <Trash2 size={14} style={{ verticalAlign: -2 }} /> Limpar
@@ -357,42 +422,80 @@ export function Caixa() {
         </div>
 
         {/* Busca de produto */}
-        <div className="cx-busca-wrap">
-          <div className="search-wrap" style={{ flex: 1 }}>
-            <Search size={14} className="search-icon" />
-            <input
-              ref={buscaRef}
-              className="search-input"
-              placeholder="Buscar produto por nome ou código de barras..."
-              value={buscaProd}
-              onChange={e => { setBuscaProd(e.target.value); setShowProd(true); }}
-              onFocus={() => setShowProd(true)}
-              onBlur={() => setTimeout(() => setShowProd(false), 150)}
-            />
-          </div>
-          {showProd && buscaProd && (
-            <div className="cx-dropdown">
-              {prodsFiltrados.length === 0 ? (
-                <div className="cx-dropdown-empty">Nenhum produto encontrado</div>
-              ) : prodsFiltrados.slice(0, 8).map(p => (
-                <button key={p.id} className="cx-dropdown-item" onMouseDown={() => addProduto(p.id)}>
-                  <div className="cx-drop-nome">{p.nome}</div>
-                  <div className="cx-drop-info">
-                    <span className="badge badge-accent" style={{ fontSize: 10 }}>{p.categoria}</span>
-                    <span style={{ color: 'var(--text-3)', fontSize: 12 }}>
-                      {p.tipoVenda === 'fracionado'
-                        ? `${p.estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${p.unidadeMedida}`
-                        : `${p.estoque} un.`}
-                    </span>
-                    <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
-                      {fmt(p.precoVenda)}{p.tipoVenda === 'fracionado' ? `/${p.unidadeMedida}` : ''}
-                    </span>
-                  </div>
-                </button>
-              ))}
+        {temProdutos && (
+          <div className="cx-busca-wrap">
+            <div className="search-wrap" style={{ flex: 1 }}>
+              <Search size={14} className="search-icon" />
+              <input
+                ref={buscaRef}
+                className="search-input"
+                placeholder="Buscar produto por nome ou código de barras..."
+                value={buscaProd}
+                onChange={e => { setBuscaProd(e.target.value); setShowProd(true); }}
+                onFocus={() => setShowProd(true)}
+                onBlur={() => setTimeout(() => setShowProd(false), 150)}
+              />
             </div>
-          )}
-        </div>
+            {showProd && buscaProd && (
+              <div className="cx-dropdown">
+                {prodsFiltrados.length === 0 ? (
+                  <div className="cx-dropdown-empty">Nenhum produto encontrado</div>
+                ) : prodsFiltrados.slice(0, 8).map(p => (
+                  <button key={p.id} className="cx-dropdown-item" onMouseDown={() => addProduto(p.id)}>
+                    <div className="cx-drop-nome">{p.nome}</div>
+                    <div className="cx-drop-info">
+                      <span className="badge badge-accent" style={{ fontSize: 10 }}>{p.categoria}</span>
+                      <span style={{ color: 'var(--text-3)', fontSize: 12 }}>
+                        {p.tipoVenda === 'fracionado'
+                          ? `${p.estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${p.unidadeMedida}`
+                          : `${p.estoque} un.`}
+                      </span>
+                      <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
+                        {fmt(p.precoVenda)}{p.tipoVenda === 'fracionado' ? `/${p.unidadeMedida}` : ''}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Busca de serviço — botão/campo separado */}
+        {temServicos && (
+          <div className="cx-busca-wrap" style={{ marginTop: temProdutos ? 8 : 0 }}>
+            <div className="search-wrap" style={{ flex: 1 }}>
+              <Scissors size={14} className="search-icon" />
+              <input
+                ref={buscaServRef}
+                className="search-input"
+                placeholder="Adicionar serviço..."
+                value={buscaServ}
+                onChange={e => { setBuscaServ(e.target.value); setShowServ(true); }}
+                onFocus={() => setShowServ(true)}
+                onBlur={() => setTimeout(() => setShowServ(false), 150)}
+              />
+            </div>
+            {showServ && (
+              <div className="cx-dropdown">
+                {servsFiltrados.length === 0 ? (
+                  <div className="cx-dropdown-empty">
+                    {servicos.length === 0 ? 'Nenhum serviço cadastrado' : 'Nenhum serviço encontrado'}
+                  </div>
+                ) : servsFiltrados.slice(0, 8).map(s => (
+                  <button key={s.id} className="cx-dropdown-item" onMouseDown={() => addServico(s.id)}>
+                    <div className="cx-drop-nome">{s.nome}</div>
+                    <div className="cx-drop-info">
+                      <span className="badge badge-accent" style={{ fontSize: 10 }}>{s.categoria}</span>
+                      <span style={{ color: 'var(--text-3)', fontSize: 12 }}>{s.duracaoMin} min</span>
+                      <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(s.preco)}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Carrinho */}
         <div className="card cx-carrinho">
@@ -400,7 +503,13 @@ export function Caixa() {
             <div className="empty" style={{ padding: '40px 0' }}>
               <ShoppingCart size={32} />
               <p>Carrinho vazio</p>
-              <p style={{ fontSize: 12 }}>Busque um produto acima para adicionar</p>
+              <p style={{ fontSize: 12 }}>
+                {temProdutos && temServicos
+                  ? 'Busque um produto ou serviço acima para adicionar'
+                  : temServicos
+                  ? 'Busque um serviço acima para adicionar'
+                  : 'Busque um produto acima para adicionar'}
+              </p>
             </div>
           ) : (
             <>
@@ -409,20 +518,25 @@ export function Caixa() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Produto</th><th>Preço unit.</th><th>Qtd</th><th>Subtotal</th><th></th>
+                      <th>Item</th><th>Preço unit.</th><th>Qtd</th><th>Subtotal</th><th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {carrinho.map(item => (
-                      <tr key={`${item.produtoId}-${item.variacaoId ?? ''}`}>
+                      <tr key={itemKey(item)}>
                         <td>
-                          <div style={{ fontWeight: 500 }}>{item.nomeProduto}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                            estoque: {item.tipoVenda === 'fracionado'
-                              ? `${item.estoqueDisp.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${item.unidadeMedida}`
-                              : `${item.estoqueDisp} un.`}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {item.tipo === 'servico' && <Scissors size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />}
+                            <div style={{ fontWeight: 500 }}>{item.nomeProduto}</div>
                           </div>
-                          {item.tipoVenda === 'fracionado' && item.quantidade > 0 && (
+                          {item.tipo === 'produto' && (
+                            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                              estoque: {item.tipoVenda === 'fracionado'
+                                ? `${(item.estoqueDisp ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${item.unidadeMedida}`
+                                : `${item.estoqueDisp ?? 0} un.`}
+                            </div>
+                          )}
+                          {item.tipo === 'produto' && item.tipoVenda === 'fracionado' && item.quantidade > 0 && (
                             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
                               {fmt(item.precoUnitario)}/{item.unidadeMedida} × {item.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} = {fmt(item.subtotal)}
                             </div>
@@ -431,10 +545,10 @@ export function Caixa() {
                         <td>
                           <input className="cx-preco-input" type="number" min={0} step={0.01}
                             value={item.precoUnitario}
-                            onChange={e => editarPreco(item.produtoId, +e.target.value)} />
+                            onChange={e => editarPreco(item, +e.target.value)} />
                         </td>
                         <td>
-                          {item.tipoVenda === 'fracionado' ? (
+                          {item.tipo === 'produto' && item.tipoVenda === 'fracionado' ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                               <input
                                 type="text" inputMode="decimal"
@@ -442,20 +556,20 @@ export function Caixa() {
                                 style={{ width: 110, textAlign: 'center' }}
                                 value={qtdTexto[`${item.produtoId}-${item.variacaoId ?? 'sem'}`] ?? ''}
                                 placeholder="0,000"
-                                onChange={e => setQtdFracionada(item.produtoId, item.variacaoId, e.target.value)} />
+                                onChange={e => setQtdFracionada(item.produtoId!, item.variacaoId, e.target.value)} />
                               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
                             </div>
                           ) : (
                             <div className="cx-qtd">
-                              <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, -1)}><Minus size={12} /></button>
+                              <button className="cx-qtd-btn" onClick={() => alterarQtd(item, -1)}><Minus size={12} /></button>
                               <span className="cx-qtd-val">{item.quantidade}</span>
-                              <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, 1)}><Plus size={12} /></button>
+                              <button className="cx-qtd-btn" onClick={() => alterarQtd(item, 1)}><Plus size={12} /></button>
                             </div>
                           )}
                         </td>
                         <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(item.subtotal)}</td>
                         <td>
-                          <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removerItem(item.produtoId)}>
+                          <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removerItem(item)}>
                             <Trash2 size={13} />
                           </button>
                         </td>
@@ -468,32 +582,37 @@ export function Caixa() {
               {/* Cards — mobile */}
               <div className="cx-cards-mobile">
                 {carrinho.map(item => (
-                  <div key={`${item.produtoId}-${item.variacaoId ?? ''}`} className="cx-item-card">
+                  <div key={itemKey(item)} className="cx-item-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 500, fontSize: 14 }}>{item.nomeProduto}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
-                          estoque: {item.tipoVenda === 'fracionado'
-                            ? `${item.estoqueDisp.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${item.unidadeMedida}`
-                            : `${item.estoqueDisp} un.`}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {item.tipo === 'servico' && <Scissors size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />}
+                          <div style={{ fontWeight: 500, fontSize: 14 }}>{item.nomeProduto}</div>
                         </div>
-                        {item.tipoVenda === 'fracionado' && item.quantidade > 0 && (
+                        {item.tipo === 'produto' && (
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                            estoque: {item.tipoVenda === 'fracionado'
+                              ? `${(item.estoqueDisp ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${item.unidadeMedida}`
+                              : `${item.estoqueDisp ?? 0} un.`}
+                          </div>
+                        )}
+                        {item.tipo === 'produto' && item.tipoVenda === 'fracionado' && item.quantidade > 0 && (
                           <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
                             {fmt(item.precoUnitario)}/{item.unidadeMedida} × {item.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} = {fmt(item.subtotal)}
                           </div>
                         )}
                       </div>
                       <button className="btn-ghost" style={{ color: 'var(--red)', flexShrink: 0 }}
-                        onClick={() => removerItem(item.produtoId)}>
+                        onClick={() => removerItem(item)}>
                         <Trash2 size={14} />
                       </button>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, gap: 8 }}>
                       <input className="cx-preco-input" type="number" min={0} step={0.01}
                         value={item.precoUnitario}
-                        onChange={e => editarPreco(item.produtoId, +e.target.value)}
+                        onChange={e => editarPreco(item, +e.target.value)}
                         style={{ maxWidth: 90 }} />
-                      {item.tipoVenda === 'fracionado' ? (
+                      {item.tipo === 'produto' && item.tipoVenda === 'fracionado' ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <input
                             type="text" inputMode="decimal"
@@ -501,14 +620,14 @@ export function Caixa() {
                             style={{ width: 90, textAlign: 'center' }}
                             value={qtdTexto[`${item.produtoId}-${item.variacaoId ?? 'sem'}`] ?? ''}
                             placeholder="0,000"
-                            onChange={e => setQtdFracionada(item.produtoId, item.variacaoId, e.target.value)} />
+                            onChange={e => setQtdFracionada(item.produtoId!, item.variacaoId, e.target.value)} />
                           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
                         </div>
                       ) : (
                         <div className="cx-qtd">
-                          <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, -1)}><Minus size={12} /></button>
+                          <button className="cx-qtd-btn" onClick={() => alterarQtd(item, -1)}><Minus size={12} /></button>
                           <span className="cx-qtd-val">{item.quantidade}</span>
-                          <button className="cx-qtd-btn" onClick={() => alterarQtd(item.produtoId, 1)}><Plus size={12} /></button>
+                          <button className="cx-qtd-btn" onClick={() => alterarQtd(item, 1)}><Plus size={12} /></button>
                         </div>
                       )}
                       <span style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 15 }}>{fmt(item.subtotal)}</span>
