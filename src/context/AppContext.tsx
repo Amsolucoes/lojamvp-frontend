@@ -10,6 +10,8 @@ interface AppCtx {
   loading:    boolean;
   erro:       string | null;
   trocas:     any[];
+  fase:       string;
+  nomeLoja:   string;
 
   // Módulos ativos da loja (ex: ['produtos', 'servicos'])
   modulosAtivos: string[];
@@ -98,6 +100,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [trocas,     setTrocas]     = useState<any[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
   const [tipoPlano, setTipoPlano] = useState<string>('loja');
+  const [fase, setFase] = useState<string>('ativo');
+  const [nomeLoja, setNomeLoja] = useState<string>('');
 
   // Mesma lógica usada na Sidebar
   const temServicos = modulosAtivos.includes('servicos');
@@ -138,9 +142,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const situacao = await api.get<any>('/api/loja/situacao');
       setModulosAtivos(situacao.modulosAtivos ?? []);
       setTipoPlano(situacao.tipoPlano ?? 'loja');
+      setFase(situacao.fase ?? 'ativo');
+      setNomeLoja(situacao.nomeLoja ?? '');
     } catch {
       setModulosAtivos([]);
       setTipoPlano('loja');
+      setFase('ativo');
+      setNomeLoja('');
     }
   }
 
@@ -250,6 +258,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{
       produtos, clientes, vendas, movimentos, loading, erro, trocas,
       modulosAtivos, tipoPlano, temProdutos, temServicos, soServicos,
+      fase, nomeLoja,
       addProduto, updateProduto, deleteProduto,
       addCliente, updateCliente, deleteCliente,
       registrarVenda, ajustarEstoque,

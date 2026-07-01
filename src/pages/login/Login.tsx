@@ -12,7 +12,6 @@ export function Login() {
   const [erro, setErro]         = useState('');
   const [loading, setLoading]   = useState(false);
   const [nomeLoja, setNomeLoja] = useState('AlSoluções');
-  const [bloqueado, setBloqueado] = useState(false);
   const navigate = useNavigate();
 
   async function handleSubmit(e: FormEvent) {
@@ -22,13 +21,11 @@ export function Login() {
       return;
     }
     setErro('');
-    setBloqueado(false);
     setLoading(true);
     const res = await login(email, senha);
     setLoading(false);
     if (!res.ok) {
       setErro(res.erro ?? 'Erro ao fazer login.');
-      setBloqueado(res.bloqueado === true);
     } else {
       navigate('/', { replace: true });
     }
@@ -94,16 +91,6 @@ export function Login() {
               <AlertCircle size={14} />
               {erro}
             </div>
-          )}
-
-          {bloqueado && (
-            <a
-              href="https://admin.aldevsoftware.com.br/"
-              className="login-btn"
-              style={{ marginTop: 10, textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-            >
-              💳 Acesse aqui para regularizar →
-            </a>
           )}
 
           <button
