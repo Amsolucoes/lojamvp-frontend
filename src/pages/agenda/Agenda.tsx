@@ -47,10 +47,12 @@ function gerarFaixas(horaInicio: number, horaFim: number): string[] {
   return faixas;
 }
 
-// Converte uma data ISO (UTC) para "HH:MM" no horário local
+// Extrai "HH:MM" direto da string, sem aplicar fuso
 function horaLocal(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  // formato esperado: "2026-07-01T08:30:00" (com ou sem Z/offset)
+  const t = iso.includes('T') ? iso.split('T')[1] : iso.split(' ')[1] ?? '';
+  const [h, m] = t.split(':');
+  return `${(h ?? '00').padStart(2, '0')}:${(m ?? '00').padStart(2, '0')}`;
 }
 
 const STATUS_INFO: Record<string, { label: string; cor: string; bg: string }> = {
@@ -137,17 +139,18 @@ export function Agenda() {
     if (!form.servicoId) { erro('Escolha um serviço.'); return; }
     setSaving(true);
     try {
-      // Monta a data/hora no horário local e converte para ISO
-      const [h, m] = form.hora.split(':').map(Number);
-      const dataHora = new Date(dia);
-      dataHora.setHours(h, m, 0, 0);
+      // Monta a data/hora como string local (sem conversão UTC, evita bug de fuso)
+      const ano = dia.getFullYear();
+      const mes = String(dia.getMonth() + 1).padStart(2, '0');
+      const d = String(dia.getDate()).padStart(2, '0');
+      const dataHoraLocal = `${ano}-${mes}-${d}T${form.hora}:00`;
 
       const payload = {
         servicoId: form.servicoId,
         clienteId: form.clienteId || null,
         nomeCliente: form.clienteId ? null : (form.nomeCliente || null),
         preco: form.preco,
-        dataHora: dataHora.toISOString(),
+        dataHora: dataHoraLocal,
         duracaoMin: form.duracaoMin,
         observacao: form.observacao || null,
       };
