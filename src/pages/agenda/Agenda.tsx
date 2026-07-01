@@ -197,17 +197,28 @@ export function Agenda() {
     c.nome.toLowerCase().includes(buscaCli.toLowerCase()) || c.telefone.includes(buscaCli)
   );
 
-  // Agendamentos por faixa de horário
-  // Agendamentos por faixa de 30 min (encaixa horários quebrados na faixa correta)
+ // Minutos desde 00:00 do horário de início do agendamento
+  function minInicio(a: Agendamento): number {
+    const t = horaLocal(a.dataHora);
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  // Para cada faixa, retorna os agendamentos com um flag "inicio" (true = começa aqui, false = continuação)
   function agsNaFaixa(faixa: string) {
     const [fh, fm] = faixa.split(':').map(Number);
-    const inicioFaixa = fh * 60 + fm;          // minutos desde 00:00
+    const inicioFaixa = fh * 60 + fm;
     const fimFaixa = inicioFaixa + 30;
-    return agendamentos.filter(a => {
-      const d = new Date(a.dataHora);
-      const min = d.getHours() * 60 + d.getMinutes();
-      return min >= inicioFaixa && min < fimFaixa;
-    });
+    return agendamentos
+      .map(a => {
+        const ini = minInicio(a);
+        const fimAg = ini + (a.duracaoMin || 30);
+        // O agendamento aparece nesta faixa se ele se sobrepõe à janela da faixa
+        const apareceAqui = ini < fimFaixa && fimAg > inicioFaixa;
+        const comecaAqui = ini >= inicioFaixa && ini < fimFaixa;
+        return apareceAqui ? { a, comecaAqui } : null;
+      })
+      .filter((x): x is { a: Agendamento; comecaAqui: boolean } => x !== null);
   }
 
   return (
@@ -256,6 +267,7 @@ export function Agenda() {
           <div className="agenda-grade">
             {faixas.map(faixa => {
               const ags = agsNaFaixa(faixa);
+              const temInicio = ags.some(x => x.comecaAqui);
               return (
                 <div key={faixa} className="agenda-linha">
                   <div className="agenda-hora">{faixa}</div>
@@ -265,8 +277,17 @@ export function Agenda() {
                         <Plus size={13} /> Agendar
                       </button>
                     ) : (
-                      ags.map(a => {
+                      ags.map(({ a, comecaAqui }) => {
                         const info = STATUS_INFO[a.status] ?? STATUS_INFO.agendado;
+                        // Faixa de continuação: versão discreta, sem ações
+                        if (!comecaAqui) {
+                          return (
+                            <div key={a.id} className="agenda-card agenda-card-cont" style={{ borderLeft: `3px solid ${info.cor}`, background: info.bg, opacity: a.status === 'cancelado' ? 0.5 : 0.75 }}>
+                              <span style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>{a.nomeServico} (continuação)</span>
+                            </div>
+                          );
+                        }
+                        // Faixa de início: card completo
                         return (
                           <div key={a.id} className="agenda-card" style={{ borderLeft: `3px solid ${info.cor}`, background: info.bg, opacity: a.status === 'cancelado' ? 0.6 : 1 }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -287,7 +308,7 @@ export function Agenda() {
                               {a.status !== 'cancelado' && (
                                 <button className="btn-ghost" title="Cancelar" style={{ color: 'var(--red)', padding: 4 }} onClick={() => mudarStatus(a, 'cancelado')}><Ban size={14} /></button>
                               )}
-                              <button className="btn-ghost" title="Editar" style={{ padding: 4 }} onClick={() => abrirEditar(a)}><Plus size={14} style={{ transform: 'rotate(45deg)', display: 'none' }} /><span style={{ fontSize: 11 }}>✎</span></button>
+                              <button className="btn-ghost" title="Editar" style={{ padding: 4 }} onClick={() => abrirEditar(a)}><span style={{ fontSize: 11 }}>✎</span></button>
                               <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)', padding: 4 }} onClick={() => setConfirmDel(a)}><Trash2 size={13} /></button>
                             </div>
                           </div>
