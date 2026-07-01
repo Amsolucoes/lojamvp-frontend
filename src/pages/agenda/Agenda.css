@@ -25,10 +25,10 @@
 .agenda-slot {
   flex: 1;
   min-width: 0;
-  padding: 6px 8px;
+  padding: 4px 6px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   justify-content: center;
 }
 
@@ -55,6 +55,8 @@
   gap: 8px;
   padding: 8px 10px;
   border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .agenda-acoes {
