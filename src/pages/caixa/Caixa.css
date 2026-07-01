@@ -262,6 +262,14 @@
 }
 .cx-item-card:last-child { border-bottom: none; }
 
+.cx-busca-wrap {
+  width: 100%;
+}
+.cx-busca-wrap .search-wrap {
+  max-width: none;
+  width: 100%;
+}
+
 @media (max-width: 768px) {
   .cx-table-desktop { display: none; }
   .cx-cards-mobile { display: block; }
