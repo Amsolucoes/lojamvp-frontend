@@ -38,6 +38,35 @@ function hojeStr() {
   return d;
 }
 
+// Retorna array com os 7 dias da semana que contém 'base' (domingo a sábado)
+function diasDaSemana(base: Date): Date[] {
+  const inicio = new Date(base);
+  inicio.setDate(base.getDate() - base.getDay()); // volta pro domingo
+  inicio.setHours(0, 0, 0, 0);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(inicio);
+    d.setDate(inicio.getDate() + i);
+    return d;
+  });
+}
+
+// Retorna todos os dias do mês de 'base', com padding pro grid começar no domingo
+function diasDoMesGrid(base: Date): (Date | null)[] {
+  const ano = base.getFullYear();
+  const mes = base.getMonth();
+  const primeiro = new Date(ano, mes, 1);
+  const totalDias = new Date(ano, mes + 1, 0).getDate();
+  const padInicio = primeiro.getDay(); // quantos vazios antes do dia 1
+  const celulas: (Date | null)[] = [];
+  for (let i = 0; i < padInicio; i++) celulas.push(null);
+  for (let d = 1; d <= totalDias; d++) celulas.push(new Date(ano, mes, d));
+  return celulas;
+}
+
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // Gera faixas de 30 min entre início e fim (ex: "08:00", "08:30"...)
 function gerarFaixas(horaInicio: number, horaFim: number): string[] {
   const faixas: string[] = [];
@@ -65,13 +94,11 @@ const STATUS_INFO: Record<string, { label: string; cor: string; bg: string }> = 
 export function Agenda() {
   const { clientes } = useApp();
   const { sucesso, erro } = useToast();
-
   const [dia, setDia] = useState<Date>(hojeStr());
   const [horaInicio, setHoraInicio] = useState(8);
   const [horaFim, setHoraFim] = useState(18);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
-
   const [modal, setModal] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -82,10 +109,9 @@ export function Agenda() {
   const [showCli, setShowCli] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState<Agendamento | null>(null);
-
   const faixas = gerarFaixas(horaInicio, horaFim);
-
   const [carregandoFaixa, setCarregandoFaixa] = useState(true);
+  const [visao, setVisao] = useState<'dia' | 'semana' | 'mes'>('dia');
 
   useEffect(() => {
     api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
@@ -98,14 +124,23 @@ export function Agenda() {
     }).catch(() => {}).finally(() => setCarregandoFaixa(false));
   }, []);
 
-  useEffect(() => { carregar(); }, [dia]);
+  useEffect(() => { carregar(); }, [dia, visao]);
 
   function carregar() {
-    const ano = dia.getFullYear();
-    const mes = String(dia.getMonth() + 1).padStart(2, '0');
-    const d = String(dia.getDate()).padStart(2, '0');
-    api.get<Agendamento[]>(`/api/agendamentos?data=${ano}-${mes}-${d}`)
-      .then(setAgendamentos).catch(() => {});
+    let url = '';
+    if (visao === 'dia') {
+      url = `/api/agendamentos?data=${ymd(dia)}`;
+    } else if (visao === 'semana') {
+      const semana = diasDaSemana(dia);
+      url = `/api/agendamentos?de=${ymd(semana[0])}&ate=${ymd(semana[6])}`;
+    } else {
+      const ano = dia.getFullYear();
+      const mes = dia.getMonth();
+      const primeiro = new Date(ano, mes, 1);
+      const ultimo = new Date(ano, mes + 1, 0);
+      url = `/api/agendamentos?de=${ymd(primeiro)}&ate=${ymd(ultimo)}`;
+    }
+    api.get<Agendamento[]>(url).then(setAgendamentos).catch(() => {});
   }
 
   function navDia(delta: number) {
@@ -246,113 +281,221 @@ export function Agenda() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Agenda</h1>
-          <p className="page-subtitle">{agendamentos.length} agendamento(s) no dia</p>
+          <p className="page-subtitle">{agendamentos.length} agendamento(s)</p>
         </div>
-        <button className="btn-primary" onClick={() => abrirNovo()}>
-          <Plus size={15} style={{ verticalAlign: -2 }} /> Novo agendamento
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="cat-tabs">
+            <button className={`cat-tab${visao === 'dia' ? ' active' : ''}`} onClick={() => setVisao('dia')}>Dia</button>
+            <button className={`cat-tab${visao === 'semana' ? ' active' : ''}`} onClick={() => setVisao('semana')}>Semana</button>
+            <button className={`cat-tab${visao === 'mes' ? ' active' : ''}`} onClick={() => setVisao('mes')}>Mês</button>
+          </div>
+          <button className="btn-primary" onClick={() => abrirNovo()}>
+            <Plus size={15} style={{ verticalAlign: -2 }} /> Novo agendamento
+          </button>
+        </div>
       </div>
 
       {/* Navegação de dia + faixa */}
-      <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn-secondary" onClick={() => navDia(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
-          <button className="btn-secondary" onClick={() => setDia(hojeStr())} style={{ padding: '6px 14px' }}>Hoje</button>
-          <button className="btn-secondary" onClick={() => navDia(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
-          <span style={{ fontWeight: 600, fontSize: 15, marginLeft: 8, textTransform: 'capitalize' }}>
-            {dia.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
-            {ehHoje && <span className="badge badge-accent" style={{ marginLeft: 8, fontSize: 10 }}>Hoje</span>}
-          </span>
+      {visao === 'dia' && (
+        <>
+        <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button className="btn-secondary" onClick={() => navDia(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+            <button className="btn-secondary" onClick={() => setDia(hojeStr())} style={{ padding: '6px 14px' }}>Hoje</button>
+            <button className="btn-secondary" onClick={() => navDia(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+            <span style={{ fontWeight: 600, fontSize: 15, marginLeft: 8, textTransform: 'capitalize' }}>
+              {dia.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+              {ehHoje && <span className="badge badge-accent" style={{ marginLeft: 8, fontSize: 10 }}>Hoje</span>}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+            <Clock size={14} style={{ color: 'var(--text-3)' }} />
+            <span style={{ color: 'var(--text-3)' }}>Faixa:</span>
+            <select value={horaInicio} onChange={e => mudarHoraInicio(+e.target.value)} style={{ width: 'auto', padding: '4px 8px' }}>
+              {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>)}
+            </select>
+            <span style={{ color: 'var(--text-3)' }}>até</span>
+            <select value={horaFim} onChange={e => mudarHoraFim(+e.target.value)} style={{ width: 'auto', padding: '4px 8px' }}>
+              {Array.from({ length: 24 }, (_, i) => i + 1).map(i => <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>)}
+            </select>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-          <Clock size={14} style={{ color: 'var(--text-3)' }} />
-          <span style={{ color: 'var(--text-3)' }}>Faixa:</span>
-          <select value={horaInicio} onChange={e => mudarHoraInicio(+e.target.value)} style={{ width: 'auto', padding: '4px 8px' }}>
-            {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>)}
-          </select>
-          <span style={{ color: 'var(--text-3)' }}>até</span>
-          <select value={horaFim} onChange={e => mudarHoraFim(+e.target.value)} style={{ width: 'auto', padding: '4px 8px' }}>
-            {Array.from({ length: 24 }, (_, i) => i + 1).map(i => <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>)}
-          </select>
-        </div>
-      </div>
 
-      {/* Grade de horários */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {carregandoFaixa ? (
-          <div className="empty" style={{ padding: '40px 0' }}>
-            <CalIcon size={32} /><p>Carregando agenda...</p>
-          </div>
-        ) : servicos.length === 0 ? (
-          <div className="empty" style={{ padding: '40px 0' }}>
-            <CalIcon size={32} /><p>Cadastre serviços antes de agendar.</p>
-          </div>
-        ) : (
-          <div className="agenda-grade">
-            {faixas.map(faixa => {
-              const ags = agsNaFaixa(faixa);
-              const temInicio = ags.some(x => x.comecaAqui);
-              return (
-                <div key={faixa} className="agenda-linha">
-                  <div className="agenda-hora">{faixa}</div>
-                  <div className="agenda-slot">
-                    {ags.length === 0 ? (
-                      <button className="agenda-vazio" onClick={() => abrirNovo(faixa)}>
-                        <Plus size={13} /> Agendar
-                      </button>
-                    ) : (
-                      ags.map(({ a, comecaAqui }) => {
-                        const info = STATUS_INFO[a.status] ?? STATUS_INFO.agendado;
-                        // Faixa de continuação: versão discreta, sem ações
-                        if (!comecaAqui) {
+        {/* Grade de horários */}
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          {carregandoFaixa ? (
+            <div className="empty" style={{ padding: '40px 0' }}>
+              <CalIcon size={32} /><p>Carregando agenda...</p>
+            </div>
+          ) : servicos.length === 0 ? (
+            <div className="empty" style={{ padding: '40px 0' }}>
+              <CalIcon size={32} /><p>Cadastre serviços antes de agendar.</p>
+            </div>
+          ) : (
+            <div className="agenda-grade">
+              {faixas.map(faixa => {
+                const ags = agsNaFaixa(faixa);
+                const temInicio = ags.some(x => x.comecaAqui);
+                return (
+                  <div key={faixa} className="agenda-linha">
+                    <div className="agenda-hora">{faixa}</div>
+                    <div className="agenda-slot">
+                      {ags.length === 0 ? (
+                        <button className="agenda-vazio" onClick={() => abrirNovo(faixa)}>
+                          <Plus size={13} /> Agendar
+                        </button>
+                      ) : (
+                        ags.map(({ a, comecaAqui }) => {
+                          const info = STATUS_INFO[a.status] ?? STATUS_INFO.agendado;
+                          // Faixa de continuação: versão discreta, sem ações
+                          if (!comecaAqui) {
+                            return (
+                              <div key={a.id} className="agenda-card agenda-card-cont" style={{ borderLeft: `3px solid ${info.cor}`, background: info.bg, opacity: a.status === 'cancelado' ? 0.5 : 0.75 }}>
+                                <span style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>{a.nomeServico} (continuação)</span>
+                              </div>
+                            );
+                          }
+                          // Faixa de início: card completo
                           return (
-                            <div key={a.id} className="agenda-card agenda-card-cont" style={{ borderLeft: `3px solid ${info.cor}`, background: info.bg, opacity: a.status === 'cancelado' ? 0.5 : 0.75 }}>
-                              <span style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>{a.nomeServico} (continuação)</span>
+                            <div key={a.id} className="agenda-card" style={{ borderLeft: `3px solid ${info.cor}`, background: info.bg, opacity: a.status === 'cancelado' ? 0.6 : 1 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: 13 }}>
+                                  {a.nomeServico}
+                                  <span style={{ fontWeight: 400, color: 'var(--text-3)', marginLeft: 6 }}>{fmt(a.preco)}</span>
+                                </div>
+                                <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                                  {a.nomeCliente || 'Sem cliente'} · {a.duracaoMin}min
+                                  {a.status === 'cancelado' && (
+                                    <span style={{ marginLeft: 6, color: info.cor, fontWeight: 500 }}>· {info.label}</span>
+                                  )}
+                                  {a.status === 'concluido' && (
+                                    a.pago
+                                      ? <span style={{ marginLeft: 6, color: 'var(--green)', fontWeight: 600 }}>· 💰 Pago</span>
+                                      : <span style={{ marginLeft: 6, color: '#d97706', fontWeight: 600 }}>· ⏳ Pendente</span>
+                                  )}
+                                </div>
+                                {a.observacao && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{a.observacao}</div>}
+                              </div>
+                              <div className="agenda-acoes">
+                                {a.status !== 'concluido' && (
+                                  <button className="btn-ghost" title="Concluir" style={{ color: 'var(--green)', padding: 4 }} onClick={() => mudarStatus(a, 'concluido')}><Check size={14} /></button>
+                                )}
+                                {a.status !== 'cancelado' && (
+                                  <button className="btn-ghost" title="Cancelar" style={{ color: 'var(--red)', padding: 4 }} onClick={() => mudarStatus(a, 'cancelado')}><Ban size={14} /></button>
+                                )}
+                                <button className="btn-ghost" title="Editar" style={{ padding: 4 }} onClick={() => abrirEditar(a)}><span style={{ fontSize: 11 }}>✎</span></button>
+                                <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)', padding: 4 }} onClick={() => setConfirmDel(a)}><Trash2 size={13} /></button>
+                              </div>
                             </div>
                           );
-                        }
-                        // Faixa de início: card completo
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </>
+      )}
+
+      {/* ── VISÃO SEMANA ── */}
+      {visao === 'semana' && (
+        <>
+          <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button className="btn-secondary" onClick={() => { const d = new Date(dia); d.setDate(d.getDate() - 7); setDia(d); }} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+            <button className="btn-secondary" onClick={() => setDia(hojeStr())} style={{ padding: '6px 14px' }}>Hoje</button>
+            <button className="btn-secondary" onClick={() => { const d = new Date(dia); d.setDate(d.getDate() + 7); setDia(d); }} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+            <span style={{ fontWeight: 600, fontSize: 14, marginLeft: 8 }}>
+              {diasDaSemana(dia)[0].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} — {diasDaSemana(dia)[6].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {diasDaSemana(dia).map(d => {
+              const doDia = agendamentos
+                .filter(a => ymd(new Date(a.dataHora)) === ymd(d))
+                .sort((a, b) => a.dataHora.localeCompare(b.dataHora));
+              const ehHojeDia = d.toDateString() === new Date().toDateString();
+              return (
+                <div key={ymd(d)} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                  <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: ehHojeDia ? 'var(--accent-bg)' : 'transparent' }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, textTransform: 'capitalize' }}>
+                      {d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}
+                      {ehHojeDia && <span className="badge badge-accent" style={{ marginLeft: 8, fontSize: 10 }}>Hoje</span>}
+                    </span>
+                    <button className="btn-ghost" style={{ fontSize: 12, padding: '2px 8px' }} onClick={() => { setDia(new Date(d)); setVisao('dia'); }}>Ver dia →</button>
+                  </div>
+                  {doDia.length === 0 ? (
+                    <div style={{ padding: '14px', fontSize: 12, color: 'var(--text-3)' }}>Nenhum agendamento.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      {doDia.map(a => {
+                        const info = STATUS_INFO[a.status] ?? STATUS_INFO.agendado;
                         return (
-                          <div key={a.id} className="agenda-card" style={{ borderLeft: `3px solid ${info.cor}`, background: info.bg, opacity: a.status === 'cancelado' ? 0.6 : 1 }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 600, fontSize: 13 }}>
-                                {a.nomeServico}
-                                <span style={{ fontWeight: 400, color: 'var(--text-3)', marginLeft: 6 }}>{fmt(a.preco)}</span>
-                              </div>
-                              <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
-                                {a.nomeCliente || 'Sem cliente'} · {a.duracaoMin}min
-                                {a.status === 'cancelado' && (
-                                  <span style={{ marginLeft: 6, color: info.cor, fontWeight: 500 }}>· {info.label}</span>
-                                )}
-                                {a.status === 'concluido' && (
-                                  a.pago
-                                    ? <span style={{ marginLeft: 6, color: 'var(--green)', fontWeight: 600 }}>· 💰 Pago</span>
-                                    : <span style={{ marginLeft: 6, color: '#d97706', fontWeight: 600 }}>· ⏳ Pendente</span>
-                                )}
-                              </div>
-                              {a.observacao && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{a.observacao}</div>}
+                          <div key={a.id} style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', borderLeft: `3px solid ${info.cor}`, opacity: a.status === 'cancelado' ? 0.6 : 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                            <div style={{ minWidth: 0 }}>
+                              <span style={{ fontWeight: 600, fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{horaLocal(a.dataHora)}</span>
+                              <span style={{ marginLeft: 8, fontSize: 13 }}>{a.nomeServico}</span>
+                              <div style={{ fontSize: 12, color: 'var(--text-2)' }}>{a.nomeCliente || 'Sem cliente'} · {fmt(a.preco)}</div>
                             </div>
-                            <div className="agenda-acoes">
-                              {a.status !== 'concluido' && (
-                                <button className="btn-ghost" title="Concluir" style={{ color: 'var(--green)', padding: 4 }} onClick={() => mudarStatus(a, 'concluido')}><Check size={14} /></button>
-                              )}
-                              {a.status !== 'cancelado' && (
-                                <button className="btn-ghost" title="Cancelar" style={{ color: 'var(--red)', padding: 4 }} onClick={() => mudarStatus(a, 'cancelado')}><Ban size={14} /></button>
-                              )}
-                              <button className="btn-ghost" title="Editar" style={{ padding: 4 }} onClick={() => abrirEditar(a)}><span style={{ fontSize: 11 }}>✎</span></button>
-                              <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)', padding: 4 }} onClick={() => setConfirmDel(a)}><Trash2 size={13} /></button>
-                            </div>
+                            <button className="btn-ghost" title="Editar" style={{ padding: 4, flexShrink: 0 }} onClick={() => { setDia(new Date(d)); abrirEditar(a); }}><span style={{ fontSize: 11 }}>✎</span></button>
                           </div>
                         );
-                      })
-                    )}
-                  </div>
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {/* ── VISÃO MÊS ── */}
+      {visao === 'mes' && (
+        <>
+          <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button className="btn-secondary" onClick={() => { const d = new Date(dia); d.setMonth(d.getMonth() - 1); setDia(d); }} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+            <button className="btn-secondary" onClick={() => setDia(hojeStr())} style={{ padding: '6px 14px' }}>Hoje</button>
+            <button className="btn-secondary" onClick={() => { const d = new Date(dia); d.setMonth(d.getMonth() + 1); setDia(d); }} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+            <span style={{ fontWeight: 600, fontSize: 15, marginLeft: 8, textTransform: 'capitalize' }}>
+              {dia.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+            </span>
+          </div>
+
+          <div className="card" style={{ padding: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 8 }}>
+              {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d => (
+                <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-3)' }}>{d}</div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+              {diasDoMesGrid(dia).map((d, i) => {
+                if (!d) return <div key={`v${i}`} />;
+                const qtd = agendamentos.filter(a => ymd(new Date(a.dataHora)) === ymd(d) && a.status !== 'cancelado').length;
+                const ehHojeDia = d.toDateString() === new Date().toDateString();
+                return (
+                  <button key={ymd(d)}
+                    onClick={() => { setDia(new Date(d)); setVisao('dia'); }}
+                    style={{
+                      aspectRatio: '1', border: '1px solid var(--border)', borderRadius: 8,
+                      background: ehHojeDia ? 'var(--accent-bg)' : 'transparent',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 4, cursor: 'pointer', padding: 4,
+                    }}>
+                    <span style={{ fontSize: 13, fontWeight: ehHojeDia ? 700 : 400 }}>{d.getDate()}</span>
+                    {qtd > 0 && (
+                      <span className="badge badge-accent" style={{ fontSize: 9, padding: '1px 5px' }}>{qtd}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Modal novo/editar */}
       {modal && (
