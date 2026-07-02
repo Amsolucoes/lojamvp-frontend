@@ -89,6 +89,13 @@ export function Agenda() {
     api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    api.get<any>('/api/loja/situacao').then(res => {
+      if (typeof res?.agendaHoraInicio === 'number') setHoraInicio(res.agendaHoraInicio);
+      if (typeof res?.agendaHoraFim === 'number') setHoraFim(res.agendaHoraFim);
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => { carregar(); }, [dia]);
 
   function carregar() {
@@ -222,6 +229,16 @@ export function Agenda() {
       .filter((x): x is { a: Agendamento; comecaAqui: boolean } => x !== null);
   }
 
+  function mudarHoraInicio(v: number) {
+    setHoraInicio(v);
+    api.patch('/api/loja/agenda-horario', { horaInicio: v, horaFim }).catch(() => {});
+  }
+
+  function mudarHoraFim(v: number) {
+    setHoraFim(v);
+    api.patch('/api/loja/agenda-horario', { horaInicio, horaFim: v }).catch(() => {});
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -248,11 +265,11 @@ export function Agenda() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
           <Clock size={14} style={{ color: 'var(--text-3)' }} />
           <span style={{ color: 'var(--text-3)' }}>Faixa:</span>
-          <select value={horaInicio} onChange={e => setHoraInicio(+e.target.value)} style={{ width: 'auto', padding: '4px 8px' }}>
+          <select value={horaInicio} onChange={e => mudarHoraInicio(+e.target.value)} style={{ width: 'auto', padding: '4px 8px' }}>
             {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>)}
           </select>
           <span style={{ color: 'var(--text-3)' }}>até</span>
-          <select value={horaFim} onChange={e => setHoraFim(+e.target.value)} style={{ width: 'auto', padding: '4px 8px' }}>
+          <select value={horaFim} onChange={e => mudarHoraFim(+e.target.value)} style={{ width: 'auto', padding: '4px 8px' }}>
             {Array.from({ length: 24 }, (_, i) => i + 1).map(i => <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>)}
           </select>
         </div>
