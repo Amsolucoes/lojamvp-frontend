@@ -380,11 +380,13 @@ export function Agenda() {
                                 {a.status !== 'concluido' && (
                                   <button className="btn-ghost" title="Concluir" style={{ color: 'var(--green)', padding: 4 }} onClick={() => mudarStatus(a, 'concluido')}><Check size={14} /></button>
                                 )}
-                                {a.status !== 'cancelado' && (
+                                {!a.pago && a.status !== 'cancelado' && (
                                   <button className="btn-ghost" title="Cancelar" style={{ color: 'var(--red)', padding: 4 }} onClick={() => mudarStatus(a, 'cancelado')}><Ban size={14} /></button>
                                 )}
                                 <button className="btn-ghost" title="Editar" style={{ padding: 4 }} onClick={() => abrirEditar(a)}><span style={{ fontSize: 11 }}>✎</span></button>
-                                <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)', padding: 4 }} onClick={() => setConfirmDel(a)}><Trash2 size={13} /></button>
+                                {!a.pago && (
+                                  <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)', padding: 4 }} onClick={() => setConfirmDel(a)}><Trash2 size={13} /></button>
+                                )}
                               </div>
                             </div>
                           );
