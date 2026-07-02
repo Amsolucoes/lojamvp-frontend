@@ -68,7 +68,7 @@ export function Cadastro() {
       <div className="login-orb login-orb-1" />
       <div className="login-orb login-orb-2" />
 
-      <div className="login-box" style={{ maxWidth: 460 }}>
+      <div className="login-box" style={{ maxWidth: 640 }}>
         <div className="login-logo">
           <div className="login-logo-icon">✦</div>
           <div>
