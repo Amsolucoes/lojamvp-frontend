@@ -85,6 +85,8 @@ export function Agenda() {
 
   const faixas = gerarFaixas(horaInicio, horaFim);
 
+  const [carregandoFaixa, setCarregandoFaixa] = useState(true);
+
   useEffect(() => {
     api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
   }, []);
@@ -93,7 +95,7 @@ export function Agenda() {
     api.get<any>('/api/loja/situacao').then(res => {
       if (typeof res?.agendaHoraInicio === 'number') setHoraInicio(res.agendaHoraInicio);
       if (typeof res?.agendaHoraFim === 'number') setHoraFim(res.agendaHoraFim);
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setCarregandoFaixa(false));
   }, []);
 
   useEffect(() => { carregar(); }, [dia]);
@@ -277,7 +279,11 @@ export function Agenda() {
 
       {/* Grade de horários */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {servicos.length === 0 ? (
+        {carregandoFaixa ? (
+          <div className="empty" style={{ padding: '40px 0' }}>
+            <CalIcon size={32} /><p>Carregando agenda...</p>
+          </div>
+        ) : servicos.length === 0 ? (
           <div className="empty" style={{ padding: '40px 0' }}>
             <CalIcon size={32} /><p>Cadastre serviços antes de agendar.</p>
           </div>
