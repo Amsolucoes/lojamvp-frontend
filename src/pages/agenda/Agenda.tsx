@@ -552,7 +552,7 @@ export function Agenda() {
                 </div>
 
                 {/* Hora + duração + preço */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10 }}>
                   <div className="form-group">
                     <label className="form-label">Hora</label>
                     <input type="time" value={form.hora} onChange={e => setForm(f => ({ ...f, hora: e.target.value }))} />
