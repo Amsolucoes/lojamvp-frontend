@@ -9,7 +9,7 @@ export function Cadastro() {
   const navigate = useNavigate();
   const { setSessao } = useAuth();
 
-  const [perfis, setPerfis] = useState<{ id: string; nome: string; icone: string; desc: string }[]>([]);
+  const [perfis, setPerfis] = useState<{ id: string; nome: string; icone: string; desc: string; tipoPlano: string }[]>([]);
   const [nomeLoja, setNomeLoja]   = useState('');
   const [perfilId, setPerfilId]   = useState('');
   const [nome, setNome]           = useState('');
@@ -27,11 +27,15 @@ export function Cadastro() {
         nome: p.nome,
         icone: p.icone ?? '🏪',
         desc: p.descricao ?? '',
+        tipoPlano: p.tipoPlanoAplica ?? 'loja',
       }));
       setPerfis(lista);
-      if (lista.length > 0) setPerfilId(lista[0].id);
     }).catch(() => {});
   }, []);
+
+  const grupoBranco = perfis.filter(p => p.nome === 'Começar do zero');
+  const grupoLojas = perfis.filter(p => p.tipoPlano === 'loja' && p.nome !== 'Começar do zero');
+  const grupoServicos = perfis.filter(p => p.tipoPlano === 'servicos' || p.tipoPlano === 'loja_modulos');
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -85,8 +89,39 @@ export function Cadastro() {
 
           <div className="form-group">
             <label className="form-label">Ramo da loja *</label>
+
+            {grupoBranco.length > 0 && (
+              <div className="cad-perfis" style={{ marginBottom: 12 }}>
+                {grupoBranco.map(p => (
+                  <button type="button" key={p.id}
+                    className={`cad-perfil${perfilId === p.id ? ' active' : ''}`}
+                    onClick={() => setPerfilId(p.id)} disabled={loading}>
+                    <span className="cad-perfil-icone">{p.icone}</span>
+                    <span className="cad-perfil-nome">{p.nome}</span>
+                    <span className="cad-perfil-desc">{p.desc}</span>
+                    {perfilId === p.id && <span className="cad-perfil-check"><Check size={13} /></span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="cad-grupo-titulo">🛍️ Lojas de produtos</div>
+            <div className="cad-perfis" style={{ marginBottom: 12 }}>
+              {grupoLojas.map(p => (
+                <button type="button" key={p.id}
+                  className={`cad-perfil${perfilId === p.id ? ' active' : ''}`}
+                  onClick={() => setPerfilId(p.id)} disabled={loading}>
+                  <span className="cad-perfil-icone">{p.icone}</span>
+                  <span className="cad-perfil-nome">{p.nome}</span>
+                  <span className="cad-perfil-desc">{p.desc}</span>
+                  {perfilId === p.id && <span className="cad-perfil-check"><Check size={13} /></span>}
+                </button>
+              ))}
+            </div>
+
+            <div className="cad-grupo-titulo">✂️ Serviços e agendamentos</div>
             <div className="cad-perfis">
-              {perfis.map(p => (
+              {grupoServicos.map(p => (
                 <button type="button" key={p.id}
                   className={`cad-perfil${perfilId === p.id ? ' active' : ''}`}
                   onClick={() => setPerfilId(p.id)} disabled={loading}>

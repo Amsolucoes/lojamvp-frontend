@@ -179,6 +179,15 @@
   display: grid; place-items: center;
 }
 
+.cad-grupo-titulo {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2, #666);
+  margin: 8px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Hint de credenciais */
