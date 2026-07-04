@@ -61,6 +61,9 @@ export function AgendamentoPublico() {
   const [erro, setErro] = useState('');
   const [resultado, setResultado] = useState<{ mensagem: string; status: string } | null>(null);
 
+  const [clienteReconhecido, setClienteReconhecido] = useState<string | null>(null);
+  const [verificandoTel, setVerificandoTel] = useState(false);
+
   // Carrega dados da loja
   useEffect(() => {
     if (!slug) return;
@@ -112,6 +115,30 @@ export function AgendamentoPublico() {
       setErro((e as Error).message);
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function verificarTelefone(tel: string) {
+    const digitos = tel.replace(/\D/g, '');
+    if (digitos.length < 8) {
+      setClienteReconhecido(null);
+      return;
+    }
+    setVerificandoTel(true);
+    try {
+      const res = await api.get<{ existe: boolean; primeiroNome?: string }>(
+        `/api/publico/${slug}/cliente?telefone=${digitos}`
+      );
+      if (res.existe && res.primeiroNome) {
+        setClienteReconhecido(res.primeiroNome);
+        if (!nome.trim()) setNome(res.primeiroNome);
+      } else {
+        setClienteReconhecido(null);
+      }
+    } catch {
+      setClienteReconhecido(null);
+    } finally {
+      setVerificandoTel(false);
     }
   }
 
@@ -245,7 +272,7 @@ export function AgendamentoPublico() {
           </div>
         )}
 
-        {/* PASSO 3 — Dados do cliente */}
+       {/* PASSO 3 — Dados do cliente */}
         {passo === 3 && servicoSel && diaSel && horaSel && (
           <div className="ag-card">
             <button className="ag-voltar" onClick={() => setPasso(2)}>← Voltar</button>
@@ -259,14 +286,24 @@ export function AgendamentoPublico() {
             </div>
 
             <div className="ag-campo">
-              <label>Nome completo</label>
+              <label>Telefone / WhatsApp</label>
+              <input value={telefone}
+                onChange={e => { setTelefone(e.target.value); setErro(''); }}
+                onBlur={e => verificarTelefone(e.target.value)}
+                placeholder="(00) 00000-0000" inputMode="tel" />
+              {verificandoTel && <p className="ag-dica">Verificando...</p>}
+            </div>
+
+            {clienteReconhecido && (
+              <div className="ag-reconhecido">
+                👋 Bem-vindo de volta, <strong>{clienteReconhecido}</strong>!
+              </div>
+            )}
+
+            <div className="ag-campo">
+              <label>{clienteReconhecido ? 'Confirme seu nome' : 'Nome completo'}</label>
               <input value={nome} onChange={e => { setNome(e.target.value); setErro(''); }}
                 placeholder="Seu nome" />
-            </div>
-            <div className="ag-campo">
-              <label>Telefone / WhatsApp</label>
-              <input value={telefone} onChange={e => { setTelefone(e.target.value); setErro(''); }}
-                placeholder="(00) 00000-0000" inputMode="tel" />
             </div>
 
             {erro && <p className="ag-erro">{erro}</p>}

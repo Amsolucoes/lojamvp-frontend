@@ -181,6 +181,17 @@
   border: 3px solid #e5e7eb; border-top-color: var(--loja-cor);
   border-radius: 50%; animation: ag-spin .7s linear infinite;
 }
+
+.ag-reconhecido {
+  background: color-mix(in srgb, var(--loja-cor) 12%, white);
+  border: 1px solid color-mix(in srgb, var(--loja-cor) 30%, white);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+.ag-dica { font-size: 12px; color: #6b7280; margin: 6px 0 0; }
+
 @keyframes ag-spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 480px) {
