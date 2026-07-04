@@ -38,6 +38,7 @@ export function Clientes() {
   const [toast, setToast] = useState<string | null>(null);
   const [servicosCliente, setServicosCliente] = useState<any[]>([]);
   const [resumoServicos, setResumoServicos] = useState<Record<string, { qtd: number; total: number }>>({});
+  const [temServicos, setTemServicos] = useState(false);
 
   const lista = clientes.filter(c =>
     c.nome.toLowerCase().includes(busca.toLowerCase()) ||
@@ -131,6 +132,12 @@ export function Clientes() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    api.get<any>('/api/loja/situacao')
+      .then(res => setTemServicos(Array.isArray(res?.modulosAtivos) && res.modulosAtivos.includes('servicos')))
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="page">
       <div className="page-header">
@@ -198,10 +205,12 @@ export function Clientes() {
                     <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(gasto)}</div>
                     <div className="cli-stat-label">{compras} compra(s)</div>
                   </div>
-                  <div>
-                    <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(totalServicos(c.id))}</div>
-                    <div className="cli-stat-label">{qtdServicos(c.id)} serviço(s)</div>
-                  </div>
+                  {temServicos && (
+                    <div>
+                      <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(totalServicos(c.id))}</div>
+                      <div className="cli-stat-label">{qtdServicos(c.id)} serviço(s)</div>
+                    </div>
+                  )}
                 </div>
                 {ultima && (
                   <div className="cli-ultima">
