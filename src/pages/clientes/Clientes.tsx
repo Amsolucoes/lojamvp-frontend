@@ -378,53 +378,54 @@ export function Clientes() {
                           </div>
                         </div>
                       ))}
-                    {/* Histórico de serviços */}
-                    {servicosCliente.length > 0 && (
-                      <>
-                        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 8px' }}>
-                          ✂️ Histórico de serviços
+                  </div>
+                </>
+              )}
+
+              {/* Histórico de serviços */}
+              {servicosCliente.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 8px' }}>
+                    ✂️ Histórico de serviços
+                  </div>
+                  {/* Desktop */}
+                  <div className="table-wrap cli-hist-desktop">
+                    <table>
+                      <thead>
+                        <tr><th>Data</th><th>Serviço</th><th>Status</th><th>Valor</th></tr>
+                      </thead>
+                      <tbody>
+                        {servicosCliente.map(s => (
+                          <tr key={s.id}>
+                            <td style={{ color: 'var(--text-3)', fontSize: 12 }}>{new Date(s.dataHora).toLocaleDateString('pt-BR')}</td>
+                            <td style={{ fontSize: 12 }}>{s.nomeServico}</td>
+                            <td>
+                              {s.status === 'concluido'
+                                ? <span className="badge badge-green">Concluído</span>
+                                : <span className="badge badge-blue">Agendado</span>}
+                            </td>
+                            <td style={{ fontWeight: 500, color: 'var(--green)' }}>{fmt(s.preco)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {/* Mobile */}
+                  <div className="cli-hist-mobile">
+                    {servicosCliente.map(s => (
+                      <div key={s.id} className="cli-hist-card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{new Date(s.dataHora).toLocaleDateString('pt-BR')}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(s.preco)}</span>
                         </div>
-                        {/* Desktop */}
-                        <div className="table-wrap cli-hist-desktop">
-                          <table>
-                            <thead>
-                              <tr><th>Data</th><th>Serviço</th><th>Status</th><th>Valor</th></tr>
-                            </thead>
-                            <tbody>
-                              {servicosCliente.map(s => (
-                                <tr key={s.id}>
-                                  <td style={{ color: 'var(--text-3)', fontSize: 12 }}>{new Date(s.dataHora).toLocaleDateString('pt-BR')}</td>
-                                  <td style={{ fontSize: 12 }}>{s.nomeServico}</td>
-                                  <td>
-                                    {s.status === 'concluido'
-                                      ? <span className="badge badge-green">Concluído</span>
-                                      : <span className="badge badge-blue">Agendado</span>}
-                                  </td>
-                                  <td style={{ fontWeight: 500, color: 'var(--green)' }}>{fmt(s.preco)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{s.nomeServico}</span>
+                          {s.status === 'concluido'
+                            ? <span className="badge badge-green">Concluído</span>
+                            : <span className="badge badge-blue">Agendado</span>}
                         </div>
-                        {/* Mobile */}
-                        <div className="cli-hist-mobile">
-                          {servicosCliente.map(s => (
-                            <div key={s.id} className="cli-hist-card">
-                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{new Date(s.dataHora).toLocaleDateString('pt-BR')}</span>
-                                <span style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(s.preco)}</span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                                <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{s.nomeServico}</span>
-                                {s.status === 'concluido'
-                                  ? <span className="badge badge-green">Concluído</span>
-                                  : <span className="badge badge-blue">Agendado</span>}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
+                      </div>
+                    ))}
                   </div>
                 </>
               )}
