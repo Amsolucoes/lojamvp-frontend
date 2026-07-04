@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, Users, X, Phone, Mail, MapPin, FileText } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Cliente } from '../../types';
+import { api } from '../../services/api';
 import './Clientes.css';
 
 type FormData = Omit<Cliente, 'id' | 'criadoEm'>;
@@ -35,6 +36,8 @@ export function Clientes() {
   const [form, setForm]      = useState<FormData>(EMPTY);
   const [confirmDel, setDel] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [servicosCliente, setServicosCliente] = useState<any[]>([]);
+  const [resumoServicos, setResumoServicos] = useState<Record<string, { qtd: number; total: number }>>({});
 
   const lista = clientes.filter(c =>
     c.nome.toLowerCase().includes(busca.toLowerCase()) ||
@@ -64,6 +67,10 @@ export function Clientes() {
     });
     setEditId(c.id);
     setModal('ver');
+    setServicosCliente([]);
+    api.get<any[]>(`/api/agendamentos/cliente/${c.id}`)
+      .then(res => setServicosCliente(res.filter(s => s.status !== 'cancelado')))
+      .catch(() => setServicosCliente([]));
   }
 
   async function salvar() {
@@ -94,6 +101,13 @@ export function Clientes() {
     return vs.sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime())[0];
   }
 
+  function qtdServicos(clienteId: string) {
+    return resumoServicos[clienteId]?.qtd ?? 0;
+  }
+  function totalServicos(clienteId: string) {
+    return resumoServicos[clienteId]?.total ?? 0;
+  }
+
   const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   const clienteAtivo = editId ? clientes.find(c => c.id === editId) : null;
@@ -106,6 +120,16 @@ export function Clientes() {
     }
     return () => { document.body.style.overflow = ''; };
   }, [modal]);
+
+  useEffect(() => {
+    api.get<any[]>('/api/agendamentos/resumo-clientes')
+      .then(res => {
+        const mapa: Record<string, { qtd: number; total: number }> = {};
+        res.forEach(r => { mapa[r.clienteId] = { qtd: r.qtd, total: r.total }; });
+        setResumoServicos(mapa);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="page">
@@ -175,7 +199,11 @@ export function Clientes() {
                     <div className="cli-stat-label">compras</div>
                   </div>
                   <div>
-                    <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(gasto)}</div>
+                    <div className="cli-stat-val">{qtdServicos(c.id)}</div>
+                    <div className="cli-stat-label">serviços</div>
+                  </div>
+                  <div>
+                    <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(gasto + totalServicos(c.id))}</div>
                     <div className="cli-stat-label">total gasto</div>
                   </div>
                 </div>
@@ -354,6 +382,53 @@ export function Clientes() {
                           </div>
                         </div>
                       ))}
+                    {/* Histórico de serviços */}
+                    {servicosCliente.length > 0 && (
+                      <>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 8px' }}>
+                          ✂️ Histórico de serviços
+                        </div>
+                        {/* Desktop */}
+                        <div className="table-wrap cli-hist-desktop">
+                          <table>
+                            <thead>
+                              <tr><th>Data</th><th>Serviço</th><th>Status</th><th>Valor</th></tr>
+                            </thead>
+                            <tbody>
+                              {servicosCliente.map(s => (
+                                <tr key={s.id}>
+                                  <td style={{ color: 'var(--text-3)', fontSize: 12 }}>{new Date(s.dataHora).toLocaleDateString('pt-BR')}</td>
+                                  <td style={{ fontSize: 12 }}>{s.nomeServico}</td>
+                                  <td>
+                                    {s.status === 'concluido'
+                                      ? <span className="badge badge-green">Concluído</span>
+                                      : <span className="badge badge-blue">Agendado</span>}
+                                  </td>
+                                  <td style={{ fontWeight: 500, color: 'var(--green)' }}>{fmt(s.preco)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        {/* Mobile */}
+                        <div className="cli-hist-mobile">
+                          {servicosCliente.map(s => (
+                            <div key={s.id} className="cli-hist-card">
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{new Date(s.dataHora).toLocaleDateString('pt-BR')}</span>
+                                <span style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(s.preco)}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                                <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{s.nomeServico}</span>
+                                {s.status === 'concluido'
+                                  ? <span className="badge badge-green">Concluído</span>
+                                  : <span className="badge badge-blue">Agendado</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </>
               )}
