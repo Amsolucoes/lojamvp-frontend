@@ -39,6 +39,7 @@ export function Clientes() {
   const [servicosCliente, setServicosCliente] = useState<any[]>([]);
   const [resumoServicos, setResumoServicos] = useState<Record<string, { qtd: number; total: number }>>({});
   const [temServicos, setTemServicos] = useState(false);
+  const [assinantesIds, setAssinantesIds] = useState<Set<string>>(new Set());
 
   const lista = clientes.filter(c =>
     c.nome.toLowerCase().includes(busca.toLowerCase()) ||
@@ -138,6 +139,12 @@ export function Clientes() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    api.get<any[]>('/api/planos/assinantes')
+      .then(res => setAssinantesIds(new Set(res.map(a => a.clienteId))))
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="page">
       <div className="page-header">
@@ -186,7 +193,10 @@ export function Clientes() {
                     <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setDel(c.id)} title="Excluir"><Trash2 size={13} /></button>
                   </div>
                 </div>
-                <div className="cli-nome">{c.nome}</div>
+                <div className="cli-nome">
+                  {c.nome}
+                  {assinantesIds.has(c.id) && <span className="cli-plano-flag">⭐ Plano</span>}
+                </div>
                 <div className="cli-info"><Phone size={12} />{c.telefone}</div>
                 {c.email && <div className="cli-info"><Mail size={12} />{c.email}</div>}
                 {c.dataNascimento && (
