@@ -1,0 +1,189 @@
+/* ── Página pública de agendamento ──────────────────────────────── */
+.ag-bg {
+  --loja-cor: #c38228;
+  min-height: 100vh;
+  background: #f4f4f5;
+  padding: 20px 16px 40px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1f2937;
+}
+
+.ag-container {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* Cabeçalho */
+.ag-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 4px 20px;
+}
+.ag-logo {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+.ag-logo-placeholder {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: var(--loja-cor);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700;
+  flex-shrink: 0;
+}
+.ag-loja-nome { font-size: 20px; font-weight: 700; margin: 0; }
+.ag-loja-sub { font-size: 13px; color: #6b7280; margin: 2px 0 0; }
+
+/* Passos */
+.ag-passos {
+  display: flex; gap: 6px; justify-content: center;
+  margin-bottom: 16px;
+}
+.ag-passo-dot {
+  width: 28px; height: 4px; border-radius: 2px;
+  background: #d1d5db;
+  transition: background .2s;
+}
+.ag-passo-dot.ativo { background: var(--loja-cor); }
+
+/* Card */
+.ag-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.04);
+}
+.ag-centro { text-align: center; max-width: 400px; margin: 40px auto 0; }
+
+.ag-secao-titulo { font-size: 16px; font-weight: 600; margin: 0 0 14px; }
+
+/* Voltar */
+.ag-voltar {
+  background: none; border: none; color: #6b7280;
+  font-size: 14px; cursor: pointer; padding: 0 0 12px;
+}
+.ag-voltar:hover { color: var(--loja-cor); }
+
+/* Serviços */
+.ag-servicos { display: flex; flex-direction: column; gap: 10px; }
+.ag-servico {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px;
+  border: 1.5px solid #e5e7eb; border-radius: 12px;
+  background: #fff; cursor: pointer; text-align: left;
+  transition: border-color .15s, transform .05s;
+}
+.ag-servico:hover { border-color: var(--loja-cor); }
+.ag-servico:active { transform: scale(.99); }
+.ag-servico-info { display: flex; flex-direction: column; gap: 3px; }
+.ag-servico-nome { font-size: 15px; font-weight: 600; }
+.ag-servico-dur { font-size: 12px; color: #6b7280; }
+.ag-servico-preco { font-size: 15px; font-weight: 700; color: var(--loja-cor); }
+
+/* Dias (scroll horizontal) */
+.ag-dias {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding-bottom: 6px; -webkit-overflow-scrolling: touch;
+}
+.ag-dia {
+  flex-shrink: 0;
+  width: 60px; padding: 10px 0;
+  border: 1.5px solid #e5e7eb; border-radius: 12px;
+  background: #fff; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  transition: border-color .15s, background .15s;
+}
+.ag-dia:hover { border-color: var(--loja-cor); }
+.ag-dia.ativo { border-color: var(--loja-cor); background: var(--loja-cor); color: #fff; }
+.ag-dia-semana { font-size: 11px; text-transform: uppercase; opacity: .7; }
+.ag-dia-num { font-size: 20px; font-weight: 700; }
+.ag-dia-mes { font-size: 11px; opacity: .7; }
+
+/* Horários */
+.ag-horarios {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+}
+.ag-hora {
+  padding: 11px 0;
+  border: 1.5px solid #e5e7eb; border-radius: 10px;
+  background: #fff; cursor: pointer;
+  font-size: 14px; font-weight: 600;
+  transition: border-color .15s, background .15s;
+}
+.ag-hora:hover { border-color: var(--loja-cor); }
+.ag-hora.ativo { border-color: var(--loja-cor); background: var(--loja-cor); color: #fff; }
+
+/* Resumo */
+.ag-resumo {
+  background: #f9fafb; border-radius: 12px;
+  padding: 14px 16px; margin: 4px 0 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ag-resumo-topo { margin-bottom: 20px; }
+.ag-resumo-linha {
+  display: flex; justify-content: space-between; font-size: 14px;
+}
+.ag-resumo-linha span { color: #6b7280; }
+
+/* Campos */
+.ag-campo { margin-bottom: 14px; }
+.ag-campo label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #374151; }
+.ag-campo input {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid #e5e7eb; border-radius: 10px;
+  font-size: 15px; box-sizing: border-box;
+  transition: border-color .15s;
+}
+.ag-campo input:focus { outline: none; border-color: var(--loja-cor); }
+
+/* Botão principal */
+.ag-btn-principal {
+  width: 100%; margin-top: 8px;
+  padding: 14px; border: none; border-radius: 12px;
+  background: var(--loja-cor); color: #fff;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: opacity .15s, transform .05s;
+}
+.ag-btn-principal:hover { opacity: .92; }
+.ag-btn-principal:active { transform: scale(.99); }
+.ag-btn-principal:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Sucesso */
+.ag-check {
+  width: 64px; height: 64px; margin: 0 auto 16px;
+  border-radius: 50%; background: var(--loja-cor);
+  color: #fff; font-size: 32px;
+  display: flex; align-items: center; justify-content: center;
+}
+.ag-titulo { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
+.ag-sub { font-size: 14px; color: #6b7280; margin: 0 0 20px; line-height: 1.5; }
+.ag-emoji { font-size: 48px; margin-bottom: 12px; }
+.ag-rodape-nota { font-size: 13px; color: #9ca3af; margin: 16px 0 0; }
+
+/* Utilidades */
+.ag-vazio { font-size: 14px; color: #6b7280; text-align: center; padding: 16px 0; }
+.ag-erro { color: #dc2626; font-size: 13px; margin: 0 0 12px; }
+.ag-powered { text-align: center; font-size: 12px; color: #9ca3af; margin-top: 20px; }
+
+.ag-loading, .ag-loading-inline {
+  display: flex; align-items: center; justify-content: center;
+}
+.ag-loading { min-height: 60vh; }
+.ag-loading-inline { padding: 20px 0; }
+.ag-spinner {
+  width: 28px; height: 28px;
+  border: 3px solid #e5e7eb; border-top-color: var(--loja-cor);
+  border-radius: 50%; animation: ag-spin .7s linear infinite;
+}
+@keyframes ag-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 480px) {
+  .ag-card { padding: 18px; }
+  .ag-loja-nome { font-size: 18px; }
+}

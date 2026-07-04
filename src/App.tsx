@@ -14,14 +14,27 @@ import { Servicos } from './pages/servicos/Servicos';
 import { Agenda } from './pages/agenda/Agenda';
 import { Cadastro } from './pages/login/Cadastro';
 import { Suporte } from './pages/login/Suporte';
+import { AgendamentoPublico } from './pages/publico/AgendamentoPublico';
 import { ToastProvider } from './context/ToastContext';
 
 function Rotas() {
   const { usuario } = useAuth();
 
+  // Rotas públicas (funcionam com ou sem login)
+  // Se a URL é de agendamento público, renderiza direto
+  const path = window.location.pathname;
+  if (path.startsWith('/agendar/')) {
+    return (
+      <Routes>
+        <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
+      </Routes>
+    );
+  }
+
   if (!usuario) {
     return (
       <Routes>
+        <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
         <Route path="/suporte" element={<Suporte />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/login" element={<Login />} />
@@ -33,6 +46,7 @@ function Rotas() {
   return (
     <AppProvider>
       <Routes>
+        <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
         <Route path="/suporte" element={<Suporte />} />
         <Route element={<Layout />}>
           <Route index             element={<Dashboard />} />
