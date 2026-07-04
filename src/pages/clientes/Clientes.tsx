@@ -195,16 +195,12 @@ export function Clientes() {
                 <div className="cli-divider" />
                 <div className="cli-stats">
                   <div>
-                    <div className="cli-stat-val">{compras}</div>
-                    <div className="cli-stat-label">compras</div>
+                    <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(gasto)}</div>
+                    <div className="cli-stat-label">{compras} compra(s)</div>
                   </div>
                   <div>
-                    <div className="cli-stat-val">{qtdServicos(c.id)}</div>
-                    <div className="cli-stat-label">serviços</div>
-                  </div>
-                  <div>
-                    <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(gasto + totalServicos(c.id))}</div>
-                    <div className="cli-stat-label">total gasto</div>
+                    <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(totalServicos(c.id))}</div>
+                    <div className="cli-stat-label">{qtdServicos(c.id)} serviço(s)</div>
                   </div>
                 </div>
                 {ultima && (
