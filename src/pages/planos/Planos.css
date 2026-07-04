@@ -1,0 +1,87 @@
+/* ── Abas ───────────────────────────────────────────────────────── */
+.planos-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.planos-tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 16px;
+  background: none; border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-3);
+  font-size: 14px; font-weight: 500;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+}
+.planos-tab:hover { color: var(--text-1); }
+.planos-tab.ativo { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── Grid de planos ─────────────────────────────────────────────── */
+.planos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+.plano-card {
+  position: relative;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.plano-card.inativo { opacity: .6; }
+.plano-card-top {
+  display: flex; align-items: start; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.plano-nome { font-size: 16px; font-weight: 600; }
+.plano-acoes { display: flex; gap: 2px; }
+.plano-valor {
+  font-size: 24px; font-weight: 700; color: var(--accent);
+  margin-bottom: 12px;
+}
+.plano-valor span { font-size: 13px; font-weight: 400; color: var(--text-3); }
+.plano-servicos { display: flex; flex-wrap: wrap; gap: 6px; }
+.plano-servico-tag {
+  font-size: 11px; padding: 3px 8px;
+  background: var(--accent-bg); color: var(--accent);
+  border-radius: 20px;
+}
+.plano-inativo-badge {
+  position: absolute; top: 14px; right: 14px;
+  display: none;
+}
+
+/* ── Assinantes mobile/desktop ──────────────────────────────────── */
+.planos-desktop { display: block; }
+.planos-mobile { display: none; }
+
+.assinante-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.assinante-card:last-child { margin-bottom: 0; }
+
+/* ── Serviços no modal de plano ─────────────────────────────────── */
+.plano-svc-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 200px; overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+.plano-svc-check {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; cursor: pointer;
+}
+.plano-svc-check input { width: 16px; height: 16px; margin: 0; }
+
+@media (max-width: 640px) {
+  .planos-desktop { display: none; }
+  .planos-mobile { display: block; }
+}

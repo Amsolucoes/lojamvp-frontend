@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, TrendingUp, LogOut, Menu, X, Scissors, Calendar } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -64,6 +64,7 @@ export function Sidebar() {
     { to: '/caixa',      icon: ShoppingCart,    label: 'Caixa'          },
     ...(temServicos ? [{ to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
     ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
+    ...(temServicos ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
     ...(!soServicos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
     { to: '/relatorios', icon: BarChart2,       label: 'Relatórios'     },
     { to: '/fluxo',      icon: TrendingUp,      label: 'Fluxo de Caixa' },

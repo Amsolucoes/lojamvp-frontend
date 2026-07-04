@@ -15,6 +15,7 @@ import { Agenda } from './pages/agenda/Agenda';
 import { Cadastro } from './pages/login/Cadastro';
 import { Suporte } from './pages/login/Suporte';
 import { AgendamentoPublico } from './pages/publico/AgendamentoPublico';
+import { Planos } from './pages/planos/Planos';
 import { ToastProvider } from './context/ToastContext';
 
 function Rotas() {
@@ -58,6 +59,7 @@ function Rotas() {
           <Route path="fluxo"      element={<FluxoCaixa />} />
           <Route path="servicos"   element={<Servicos />} />
           <Route path="agenda"     element={<Agenda />} />
+          <Route path="planos"     element={<Planos />} />
           <Route path="*"          element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
