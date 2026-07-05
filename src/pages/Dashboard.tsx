@@ -10,7 +10,7 @@ function fmt(n: number) {
 }
 
 export function Dashboard() {
-  const { produtos, clientes, vendas } = useApp();
+  const { produtos, clientes, vendas, temServicos } = useApp();
 
   const hoje = new Date().toDateString();
   const vendasHoje = vendas.filter(v => new Date(v.criadaEm).toDateString() === hoje);
@@ -28,10 +28,19 @@ export function Dashboard() {
     .slice(0, 5);
 
   const [situacao, setSituacao] = useState<any>(null);
+  const [assinantes, setAssinantes] = useState<any[]>([]);
 
   useEffect(() => {
     api.get('/api/loja/situacao').then(setSituacao).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (temServicos) {
+      api.get<any[]>('/api/planos/assinantes').then(setAssinantes).catch(() => {});
+    }
+  }, [temServicos]);
+
+  const receitaRecorrente = assinantes.reduce((s, a) => s + (a.valor ?? 0), 0);
 
   return (
     <div className="page">
@@ -99,6 +108,13 @@ export function Dashboard() {
           </div>
           <div className="stat-sub">produto(s) com estoque baixo</div>
         </div>
+        {temServicos && (
+          <div className="stat-card">
+            <div className="stat-label">Assinantes</div>
+            <div className="stat-value">{assinantes.length}</div>
+            <div className="stat-sub">{fmt(receitaRecorrente)}/mês recorrente</div>
+          </div>
+        )}
       </div>
 
       <div className="dash-grid">
