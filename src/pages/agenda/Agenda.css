@@ -79,7 +79,10 @@
 .agenda-form-row input {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 @media (max-width: 480px) {
