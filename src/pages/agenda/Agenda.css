@@ -72,16 +72,26 @@
   gap: 10px;
 }
 
-@media (max-width: 768px) {
-  .agenda-hora { width: 52px; padding: 10px 6px; font-size: 11px; }
-  /* No mobile, o slot vazio fica sempre visível pra facilitar o toque */
-  .agenda-vazio { opacity: 1; }
-  .agenda-card { flex-direction: column; }
-  .agenda-acoes { align-self: flex-end; }
+.agenda-form-row .form-group {
+  min-width: 0;
+}
+
+.agenda-form-row input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 @media (max-width: 480px) {
   .agenda-form-row {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+@media (max-width: 768px) {
+  .agenda-hora { width: 52px; padding: 10px 6px; font-size: 11px; }
+  /* No mobile, o slot vazio fica sempre visível pra facilitar o toque */
+  .agenda-vazio { opacity: 1; }
+  .agenda-card { flex-direction: column; }
+  .agenda-acoes { align-self: flex-end; }
 }
