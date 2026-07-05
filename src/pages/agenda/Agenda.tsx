@@ -572,7 +572,7 @@ export function Agenda() {
                 {/* Observação */}
                 <div className="form-group">
                   <label className="form-label">Observação</label>
-                  <input value={form.observacao} onChange={e => setForm(f => ({ ...f, observacao: e.target.value }))} placeholder="Ex: cachorro tem medo de secador" />
+                  <input value={form.observacao} onChange={e => setForm(f => ({ ...f, observacao: e.target.value }))} placeholder="Ex: alguma preferência ou observação" />
                 </div>
               </div>
             </div>

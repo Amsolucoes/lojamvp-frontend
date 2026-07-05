@@ -33,7 +33,7 @@ interface Assinante {
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export function Planos() {
-  const { clientes } = useApp();
+  const { clientes, recarregar } = useApp();
   const [aba, setAba] = useState<'planos' | 'assinantes'>('planos');
 
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -187,6 +187,7 @@ export function Planos() {
     try {
       await api.post(`/api/planos/assinantes/${a.assinaturaId}/pagamento`, { pago });
       await carregar();
+      await recarregar();
       showToast(pago ? 'Marcado como pago' : 'Marcado como pendente');
     } catch (e) {
       showToast((e as Error).message);
