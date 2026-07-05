@@ -67,9 +67,9 @@
 }
 
 .agenda-form-row {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
 }
 
 .agenda-form-row .form-group {
