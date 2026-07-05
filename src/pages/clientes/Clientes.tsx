@@ -29,7 +29,7 @@ function iniciais(nome: string) {
 }
 
 export function Clientes() {
-  const { clientes, vendas, trocas, addCliente, updateCliente, deleteCliente } = useApp();
+  const { clientes, vendas, trocas, soServicos, addCliente, updateCliente, deleteCliente } = useApp();
   const [busca, setBusca]    = useState('');
   const [modal, setModal]    = useState<'novo' | 'editar' | 'ver' | null>(null);
   const [editId, setEditId]  = useState<string | null>(null);
@@ -211,10 +211,12 @@ export function Clientes() {
                 )}
                 <div className="cli-divider" />
                 <div className="cli-stats">
-                  <div>
-                    <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(gasto)}</div>
-                    <div className="cli-stat-label">{compras} compra(s)</div>
-                  </div>
+                  {!soServicos && (
+                    <div>
+                      <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(gasto)}</div>
+                      <div className="cli-stat-label">{compras} compra(s)</div>
+                    </div>
+                  )}
                   {temServicos && (
                     <div>
                       <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(totalServicos(c.id))}</div>
@@ -316,16 +318,28 @@ export function Clientes() {
             <div className="modal-body">
               {/* Stats */}
               <div className="cli-modal-stats">
-                <div className="stat-card" style={{ flex: 1 }}>
-                  <div className="stat-label">Compras</div>
-                  <div className="stat-value">{qtdCompras(clienteAtivo.id)}</div>
-                </div>
-                <div className="stat-card" style={{ flex: 1 }}>
-                  <div className="stat-label">Total gasto</div>
-                  <div className="stat-value" style={{ fontSize: 18, color: 'var(--green)' }}>
-                    {fmt(totalGasto(clienteAtivo.id))}
+                {!soServicos && (
+                  <div className="stat-card" style={{ flex: 1 }}>
+                    <div className="stat-label">Compras</div>
+                    <div className="stat-value">{qtdCompras(clienteAtivo.id)}</div>
                   </div>
-                </div>
+                )}
+                {!soServicos && (
+                  <div className="stat-card" style={{ flex: 1 }}>
+                    <div className="stat-label">Total gasto</div>
+                    <div className="stat-value" style={{ fontSize: 18, color: 'var(--green)' }}>
+                      {fmt(totalGasto(clienteAtivo.id))}
+                    </div>
+                  </div>
+                )}
+                {temServicos && (
+                  <div className="stat-card" style={{ flex: 1 }}>
+                    <div className="stat-label">Serviços</div>
+                    <div className="stat-value" style={{ fontSize: 18, color: 'var(--green)' }}>
+                      {fmt(totalServicos(clienteAtivo.id))}
+                    </div>
+                  </div>
+                )}
                 {(clienteAtivo.creditoLoja ?? 0) > 0 && (
                   <div className="stat-card" style={{ flex: 1 }}>
                     <div className="stat-label">Crédito na loja</div>
