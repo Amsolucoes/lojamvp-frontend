@@ -55,6 +55,10 @@ export function Planos() {
   const [erroModal, setErroModal] = useState('');
   const [salvando, setSalvando] = useState(false);
 
+  const [assinanteEditando, setAssinanteEditando] = useState<Assinante | null>(null);
+  const [confirmExcluirPlano, setConfirmExcluirPlano] = useState<Plano | null>(null);
+  const [confirmCancelarAssinante, setConfirmCancelarAssinante] = useState<Assinante | null>(null);
+
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
@@ -136,14 +140,20 @@ export function Planos() {
     }
   }
 
-  async function excluirPlano(p: Plano) {
-    if (!confirm(`Excluir o plano "${p.nome}"?`)) return;
+  function excluirPlano(p: Plano) {
+    setConfirmExcluirPlano(p);
+  }
+
+  async function confirmarExcluirPlano() {
+    if (!confirmExcluirPlano) return;
     try {
-      await api.delete(`/api/planos/${p.id}`);
+      await api.delete(`/api/planos/${confirmExcluirPlano.id}`);
       await carregar();
       showToast('Plano excluído');
     } catch (e) {
       showToast((e as Error).message);
+    } finally {
+      setConfirmExcluirPlano(null);
     }
   }
 
@@ -159,6 +169,14 @@ export function Planos() {
   // ── Assinantes ──────────────────────────────────────────────────
   function abrirVincular() {
     setFormAssinante({ clienteId: '', planoId: '', diaVencimento: '10' });
+    setAssinanteEditando(null);
+    setErroModal('');
+    setModalAssinante(true);
+  }
+
+  function abrirEditarAssinante(a: Assinante) {
+    setFormAssinante({ clienteId: a.clienteId, planoId: a.planoId, diaVencimento: String(a.diaVencimento) });
+    setAssinanteEditando(a);
     setErroModal('');
     setModalAssinante(true);
   }
@@ -170,14 +188,23 @@ export function Planos() {
     }
     setSalvando(true);
     try {
-      await api.post('/api/planos/assinantes', {
-        clienteId: formAssinante.clienteId,
-        planoId: formAssinante.planoId,
-        diaVencimento: parseInt(formAssinante.diaVencimento) || 10,
-      });
+      if (assinanteEditando) {
+        await api.put(`/api/planos/assinantes/${assinanteEditando.assinaturaId}`, {
+          planoId: formAssinante.planoId,
+          diaVencimento: parseInt(formAssinante.diaVencimento) || 10,
+        });
+        showToast('Assinatura atualizada!');
+      } else {
+        await api.post('/api/planos/assinantes', {
+          clienteId: formAssinante.clienteId,
+          planoId: formAssinante.planoId,
+          diaVencimento: parseInt(formAssinante.diaVencimento) || 10,
+        });
+        showToast('Cliente vinculado ao plano!');
+      }
       setModalAssinante(false);
+      setAssinanteEditando(null);
       await carregar();
-      showToast('Cliente vinculado ao plano!');
     } catch (e) {
       setErroModal((e as Error).message);
     } finally {
@@ -207,14 +234,20 @@ export function Planos() {
     }
   }
 
-  async function cancelarAssinatura(a: Assinante) {
-    if (!confirm(`Cancelar o plano de ${a.clienteNome}?`)) return;
+  function cancelarAssinatura(a: Assinante) {
+    setConfirmCancelarAssinante(a);
+  }
+
+  async function confirmarCancelarAssinatura() {
+    if (!confirmCancelarAssinante) return;
     try {
-      await api.patch(`/api/planos/assinantes/${a.assinaturaId}/cancelar`, {});
+      await api.patch(`/api/planos/assinantes/${confirmCancelarAssinante.assinaturaId}/cancelar`, {});
       await carregar();
       showToast('Plano cancelado');
     } catch (e) {
       showToast((e as Error).message);
+    } finally {
+      setConfirmCancelarAssinante(null);
     }
   }
 
@@ -333,6 +366,7 @@ export function Planos() {
                           ) : (
                             <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => marcarPagamento(a, true)}><Check size={13} /> Pagar</button>
                           )}
+                          <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarAssinante(a)}><Edit2 size={12} /> Editar</button>
                           <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => cancelarAssinatura(a)}>Cancelar</button>
                         </div>
                       </td>
@@ -376,6 +410,7 @@ export function Planos() {
                     ) : (
                       <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, true)}>Marcar pago</button>
                     )}
+                    <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirEditarAssinante(a)}><Edit2 size={12} /></button>
                     <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--red)' }} onClick={() => cancelarAssinatura(a)}>Cancelar</button>
                   </div>
                 </div>
@@ -436,13 +471,14 @@ export function Planos() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalAssinante(false)}>
           <div className="modal">
             <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Vincular cliente a um plano</h2>
-              <button className="btn-ghost" onClick={() => setModalAssinante(false)}><X size={16} /></button>
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>{assinanteEditando ? 'Editar assinatura' : 'Vincular cliente a um plano'}</h2>
+              <button className="btn-ghost" onClick={() => { setModalAssinante(false); setAssinanteEditando(null); }}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <div className="form-group" style={{ marginBottom: 14 }}>
                 <label className="form-label">Cliente *</label>
-                <select value={formAssinante.clienteId} onChange={e => setFormAssinante(f => ({ ...f, clienteId: e.target.value }))}>
+                <select value={formAssinante.clienteId} disabled={!!assinanteEditando}
+                  onChange={e => setFormAssinante(f => ({ ...f, clienteId: e.target.value }))}>
                   <option value="">Selecione...</option>
                   {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
@@ -462,10 +498,52 @@ export function Planos() {
               {erroModal && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{erroModal}</p>}
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setModalAssinante(false)}>Cancelar</button>
+              <button className="btn-secondary" onClick={() => { setModalAssinante(false); setAssinanteEditando(null); }}>Cancelar</button>
               <button className="btn-primary" onClick={vincular} disabled={salvando}>
-                {salvando ? 'Vinculando...' : 'Vincular'}
+                {salvando ? 'Salvando...' : (assinanteEditando ? 'Salvar alterações' : 'Vincular')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar exclusão de plano */}
+      {confirmExcluirPlano && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirPlano(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir plano</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluirPlano(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Tem certeza que deseja excluir o plano <strong style={{ color: 'var(--text-1)' }}>{confirmExcluirPlano.nome}</strong>?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluirPlano(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={confirmarExcluirPlano}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar cancelamento de assinatura */}
+      {confirmCancelarAssinante && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmCancelarAssinante(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Cancelar plano</h2>
+              <button className="btn-ghost" onClick={() => setConfirmCancelarAssinante(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Tem certeza que deseja cancelar o plano de <strong style={{ color: 'var(--text-1)' }}>{confirmCancelarAssinante.clienteNome}</strong>?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmCancelarAssinante(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={confirmarCancelarAssinatura}>Confirmar cancelamento</button>
             </div>
           </div>
         </div>
