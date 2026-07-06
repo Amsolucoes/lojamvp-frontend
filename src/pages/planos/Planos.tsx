@@ -28,6 +28,8 @@ interface Assinante {
   valor: number;
   diaVencimento: number;
   pagoNoMes: boolean;
+  mesesEmAtraso: number; 
+  valorTotalAtraso: number;
 }
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -194,6 +196,17 @@ export function Planos() {
     }
   }
 
+  async function quitarAtraso(a: Assinante) {
+    try {
+      await api.post(`/api/planos/assinantes/${a.assinaturaId}/quitar-atraso`, {});
+      await carregar();
+      await recarregar();
+      showToast(`Atraso quitado: ${fmt(a.valorTotalAtraso)}`);
+    } catch (e) {
+      showToast((e as Error).message);
+    }
+  }
+
   async function cancelarAssinatura(a: Assinante) {
     if (!confirm(`Cancelar o plano de ${a.clienteNome}?`)) return;
     try {
@@ -299,15 +312,27 @@ export function Planos() {
                       <td style={{ fontSize: 13 }}>{fmt(a.valor)}</td>
                       <td style={{ fontSize: 13 }}>Dia {a.diaVencimento}</td>
                       <td>
-                        {a.pagoNoMes
-                          ? <span className="badge badge-green">Pago</span>
-                          : <span className="badge badge-accent">Pendente</span>}
+                        {a.mesesEmAtraso > 1 ? (
+                          <span className="badge badge-red">{a.mesesEmAtraso} meses em atraso · {fmt(a.valorTotalAtraso)}</span>
+                        ) : a.mesesEmAtraso === 1 ? (
+                          <span className="badge badge-yellow">1 mês em atraso · {fmt(a.valorTotalAtraso)}</span>
+                        ) : a.pagoNoMes ? (
+                          <span className="badge badge-green">Pago</span>
+                        ) : (
+                          <span className="badge badge-accent">Pendente</span>
+                        )}
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                          {a.pagoNoMes
-                            ? <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => marcarPagamento(a, false)}>Desfazer</button>
-                            : <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => marcarPagamento(a, true)}><Check size={13} /> Pagar</button>}
+                          {a.mesesEmAtraso > 0 ? (
+                            <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => quitarAtraso(a)}>
+                              <Check size={13} /> Quitar {fmt(a.valorTotalAtraso)}
+                            </button>
+                          ) : a.pagoNoMes ? (
+                            <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => marcarPagamento(a, false)}>Desfazer</button>
+                          ) : (
+                            <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => marcarPagamento(a, true)}><Check size={13} /> Pagar</button>
+                          )}
                           <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => cancelarAssinatura(a)}>Cancelar</button>
                         </div>
                       </td>
@@ -326,14 +351,31 @@ export function Planos() {
                       <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{a.planoNome} · {fmt(a.valor)}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Vencimento dia {a.diaVencimento}</div>
                     </div>
-                    {a.pagoNoMes
-                      ? <span className="badge badge-green">Pago</span>
-                      : <span className="badge badge-accent">Pendente</span>}
+                    {a.mesesEmAtraso > 1 ? (
+                      <span className="badge badge-red">{a.mesesEmAtraso}x atraso</span>
+                    ) : a.mesesEmAtraso === 1 ? (
+                      <span className="badge badge-yellow">1 mês atraso</span>
+                    ) : a.pagoNoMes ? (
+                      <span className="badge badge-green">Pago</span>
+                    ) : (
+                      <span className="badge badge-accent">Pendente</span>
+                    )}
                   </div>
+                  {a.mesesEmAtraso > 0 && (
+                    <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>
+                      Total em atraso: {fmt(a.valorTotalAtraso)}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                    {a.pagoNoMes
-                      ? <button className="btn-secondary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, false)}>Desfazer</button>
-                      : <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, true)}>Marcar pago</button>}
+                    {a.mesesEmAtraso > 0 ? (
+                      <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => quitarAtraso(a)}>
+                        Quitar {fmt(a.valorTotalAtraso)}
+                      </button>
+                    ) : a.pagoNoMes ? (
+                      <button className="btn-secondary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, false)}>Desfazer</button>
+                    ) : (
+                      <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, true)}>Marcar pago</button>
+                    )}
                     <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--red)' }} onClick={() => cancelarAssinatura(a)}>Cancelar</button>
                   </div>
                 </div>
