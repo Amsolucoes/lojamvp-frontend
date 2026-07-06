@@ -112,6 +112,7 @@ export function Agenda() {
   const faixas = gerarFaixas(horaInicio, horaFim);
   const [carregandoFaixa, setCarregandoFaixa] = useState(true);
   const [visao, setVisao] = useState<'dia' | 'semana' | 'mes'>('dia');
+  const [pendentes, setPendentes] = useState<Agendamento[]>([]);
 
   useEffect(() => {
     api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
@@ -125,6 +126,11 @@ export function Agenda() {
   }, []);
 
   useEffect(() => { carregar(); }, [dia, visao]);
+  useEffect(() => { carregarPendentes(); }, []);
+
+  function carregarPendentes() {
+    api.get<Agendamento[]>('/api/agendamentos/pendentes').then(setPendentes).catch(() => {});
+  }
 
   function carregar() {
     let url = '';
@@ -225,6 +231,28 @@ export function Agenda() {
     }
   }
 
+  async function aprovarPendente(a: Agendamento) {
+    try {
+      await api.patch(`/api/agendamentos/${a.id}/status`, { status: 'agendado' });
+      carregarPendentes();
+      carregar();
+      sucesso('Agendamento aprovado!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function recusarPendente(a: Agendamento) {
+    try {
+      await api.patch(`/api/agendamentos/${a.id}/status`, { status: 'cancelado' });
+      carregarPendentes();
+      carregar();
+      sucesso('Agendamento recusado.');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
   async function excluir() {
     if (!confirmDel) return;
     try {
@@ -294,6 +322,41 @@ export function Agenda() {
           </button>
         </div>
       </div>
+
+      {/* Banner de pendentes de aprovação (agendamentos online) */}
+      {pendentes.length > 0 && (
+        <div className="card" style={{ marginBottom: 16, borderColor: 'var(--accent-border)', background: 'var(--accent-bg)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <Clock size={16} style={{ color: 'var(--accent)' }} />
+            <strong style={{ fontSize: 14 }}>
+              {pendentes.length} agendamento(s) online aguardando sua aprovação
+            </strong>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {pendentes.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>
+                    {p.nomeServico}
+                    <span style={{ fontWeight: 400, color: 'var(--text-3)', marginLeft: 6 }}>{fmt(p.preco)}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                    {p.nomeCliente || 'Sem cliente'} · {new Date(p.dataHora).toLocaleDateString('pt-BR')} às {horaLocal(p.dataHora)}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  <button className="btn-primary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => aprovarPendente(p)}>
+                    <Check size={13} style={{ verticalAlign: -2 }} /> Aprovar
+                  </button>
+                  <button className="btn-secondary" style={{ fontSize: 12, padding: '6px 12px', color: 'var(--red)' }} onClick={() => recusarPendente(p)}>
+                    <Ban size={13} style={{ verticalAlign: -2 }} /> Recusar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Navegação de dia + faixa */}
       {visao === 'dia' && (
