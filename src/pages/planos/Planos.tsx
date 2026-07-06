@@ -251,6 +251,22 @@ export function Planos() {
     }
   }
 
+  const [paginaPlanos, setPaginaPlanos] = useState(1);
+  const [porPaginaPlanos, setPorPaginaPlanos] = useState(10);
+  const [paginaAssinantes, setPaginaAssinantes] = useState(1);
+  const [porPaginaAssinantes, setPorPaginaAssinantes] = useState(10);
+
+  useEffect(() => { setPaginaPlanos(1); }, [porPaginaPlanos]);
+  useEffect(() => { setPaginaAssinantes(1); }, [porPaginaAssinantes]);
+
+  const totalPaginasPlanos = Math.max(1, Math.ceil(planos.length / porPaginaPlanos));
+  const paginaPlanosSegura = Math.min(paginaPlanos, totalPaginasPlanos);
+  const planosPaginados = planos.slice((paginaPlanosSegura - 1) * porPaginaPlanos, paginaPlanosSegura * porPaginaPlanos);
+
+  const totalPaginasAssinantes = Math.max(1, Math.ceil(assinantes.length / porPaginaAssinantes));
+  const paginaAssinantesSegura = Math.min(paginaAssinantes, totalPaginasAssinantes);
+  const assinantesPaginados = assinantes.slice((paginaAssinantesSegura - 1) * porPaginaAssinantes, paginaAssinantesSegura * porPaginaAssinantes);
+
   const planosAtivos = planos.filter(p => p.ativo);
 
   return (
@@ -288,33 +304,55 @@ export function Planos() {
             </div>
           </div>
         ) : (
-          <div className="planos-grid">
-            {planos.map(p => {
-              const svs = p.servicosIds ? p.servicosIds.split(',').filter(Boolean) : [];
-              return (
-                <div key={p.id} className={`plano-card${!p.ativo ? ' inativo' : ''}`}>
-                  <div className="plano-card-top">
-                    <div className="plano-nome">{p.nome}</div>
-                    <div className="plano-acoes">
-                      <button className="btn-ghost" title="Editar" onClick={() => abrirEditarPlano(p)}><Edit2 size={13} /></button>
-                      <button className="btn-ghost" title={p.ativo ? 'Desativar' : 'Ativar'} onClick={() => alternarAtivo(p)}><Power size={13} /></button>
-                      <button className="btn-ghost" style={{ color: 'var(--red)' }} title="Excluir" onClick={() => excluirPlano(p)}><Trash2 size={13} /></button>
+          <>
+            <div className="planos-grid">
+              {planosPaginados.map(p => {
+                const svs = p.servicosIds ? p.servicosIds.split(',').filter(Boolean) : [];
+                return (
+                  <div key={p.id} className={`plano-card${!p.ativo ? ' inativo' : ''}`}>
+                    <div className="plano-card-top">
+                      <div className="plano-nome">{p.nome}</div>
+                      <div className="plano-acoes">
+                        <button className="btn-ghost" title="Editar" onClick={() => abrirEditarPlano(p)}><Edit2 size={13} /></button>
+                        <button className="btn-ghost" title={p.ativo ? 'Desativar' : 'Ativar'} onClick={() => alternarAtivo(p)}><Power size={13} /></button>
+                        <button className="btn-ghost" style={{ color: 'var(--red)' }} title="Excluir" onClick={() => excluirPlano(p)}><Trash2 size={13} /></button>
+                      </div>
                     </div>
+                    <div className="plano-valor">{fmt(p.valor)}<span>/mês</span></div>
+                    {svs.length > 0 && (
+                      <div className="plano-servicos">
+                        {svs.map(sid => {
+                          const s = servicos.find(x => x.id === sid);
+                          return s ? <span key={sid} className="plano-servico-tag">{s.nome}</span> : null;
+                        })}
+                      </div>
+                    )}
+                    {!p.ativo && <div className="plano-inativo-badge">Inativo</div>}
                   </div>
-                  <div className="plano-valor">{fmt(p.valor)}<span>/mês</span></div>
-                  {svs.length > 0 && (
-                    <div className="plano-servicos">
-                      {svs.map(sid => {
-                        const s = servicos.find(x => x.id === sid);
-                        return s ? <span key={sid} className="plano-servico-tag">{s.nome}</span> : null;
-                      })}
-                    </div>
-                  )}
-                  {!p.ativo && <div className="plano-inativo-badge">Inativo</div>}
+                );
+              })}
+            </div>
+            {planos.length > 0 && (
+              <div className="prod-paginacao">
+                <div className="prod-pag-info">
+                  Mostrando {(paginaPlanosSegura - 1) * porPaginaPlanos + 1}–{Math.min(paginaPlanosSegura * porPaginaPlanos, planos.length)} de {planos.length}
                 </div>
-              );
-            })}
-          </div>
+                <div className="prod-pag-controles">
+                  <select value={porPaginaPlanos} onChange={e => setPorPaginaPlanos(+e.target.value)} className="prod-pag-select">
+                    <option value={5}>5 por página</option>
+                    <option value={10}>10 por página</option>
+                    <option value={20}>20 por página</option>
+                    <option value={50}>50 por página</option>
+                  </select>
+                  <div className="prod-pag-botoes">
+                    <button className="btn-secondary" disabled={paginaPlanosSegura <= 1} onClick={() => setPaginaPlanos(p => Math.max(1, p - 1))}>Anterior</button>
+                    <span className="prod-pag-atual">{paginaPlanosSegura} / {totalPaginasPlanos}</span>
+                    <button className="btn-secondary" disabled={paginaPlanosSegura >= totalPaginasPlanos} onClick={() => setPaginaPlanos(p => Math.min(totalPaginasPlanos, p + 1))}>Próxima</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )
       ) : (
         // ── ABA ASSINANTES ──
@@ -327,96 +365,118 @@ export function Planos() {
             </div>
           </div>
         ) : (
-          <div className="card">
-            {/* Desktop */}
-            <div className="table-wrap planos-desktop">
-              <table>
-                <thead>
-                  <tr><th>Cliente</th><th>Plano</th><th>Valor</th><th>Venc.</th><th>Este mês</th><th></th></tr>
-                </thead>
-                <tbody>
-                  {assinantes.map(a => (
-                    <tr key={a.assinaturaId}>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{a.clienteNome}</div>
-                        {a.clienteTelefone && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{a.clienteTelefone}</div>}
-                      </td>
-                      <td style={{ fontSize: 13 }}>{a.planoNome}</td>
-                      <td style={{ fontSize: 13 }}>{fmt(a.valor)}</td>
-                      <td style={{ fontSize: 13 }}>Dia {a.diaVencimento}</td>
-                      <td>
-                        {a.mesesEmAtraso > 1 ? (
-                          <span className="badge badge-red">{a.mesesEmAtraso} meses em atraso · {fmt(a.valorTotalAtraso)}</span>
-                        ) : a.mesesEmAtraso === 1 ? (
-                          <span className="badge badge-yellow">1 mês em atraso · {fmt(a.valorTotalAtraso)}</span>
-                        ) : a.pagoNoMes ? (
-                          <span className="badge badge-green">Pago</span>
-                        ) : (
-                          <span className="badge badge-accent">Pendente</span>
-                        )}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                          {a.mesesEmAtraso > 0 ? (
-                            <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => quitarAtraso(a)}>
-                              <Check size={13} /> Quitar {fmt(a.valorTotalAtraso)}
-                            </button>
+          <>
+            <div className="card">
+              {/* Desktop */}
+              <div className="table-wrap planos-desktop">
+                <table>
+                  <thead>
+                    <tr><th>Cliente</th><th>Plano</th><th>Valor</th><th>Venc.</th><th>Este mês</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {assinantesPaginados.map(a => (
+                      <tr key={a.assinaturaId}>
+                        <td>
+                          <div style={{ fontWeight: 500 }}>{a.clienteNome}</div>
+                          {a.clienteTelefone && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{a.clienteTelefone}</div>}
+                        </td>
+                        <td style={{ fontSize: 13 }}>{a.planoNome}</td>
+                        <td style={{ fontSize: 13 }}>{fmt(a.valor)}</td>
+                        <td style={{ fontSize: 13 }}>Dia {a.diaVencimento}</td>
+                        <td>
+                          {a.mesesEmAtraso > 1 ? (
+                            <span className="badge badge-red">{a.mesesEmAtraso} meses em atraso · {fmt(a.valorTotalAtraso)}</span>
+                          ) : a.mesesEmAtraso === 1 ? (
+                            <span className="badge badge-yellow">1 mês em atraso · {fmt(a.valorTotalAtraso)}</span>
                           ) : a.pagoNoMes ? (
-                            <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => marcarPagamento(a, false)}>Desfazer</button>
+                            <span className="badge badge-green">Pago</span>
                           ) : (
-                            <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => marcarPagamento(a, true)}><Check size={13} /> Pagar</button>
+                            <span className="badge badge-accent">Pendente</span>
                           )}
-                          <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarAssinante(a)}><Edit2 size={12} /> Editar</button>
-                          <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => cancelarAssinatura(a)}>Cancelar</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* Mobile */}
-            <div className="planos-mobile">
-              {assinantes.map(a => (
-                <div key={a.assinaturaId} className="assinante-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{a.clienteNome}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{a.planoNome} · {fmt(a.valor)}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Vencimento dia {a.diaVencimento}</div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                            {a.mesesEmAtraso > 0 ? (
+                              <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => quitarAtraso(a)}>
+                                <Check size={13} /> Quitar {fmt(a.valorTotalAtraso)}
+                              </button>
+                            ) : a.pagoNoMes ? (
+                              <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => marcarPagamento(a, false)}>Desfazer</button>
+                            ) : (
+                              <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => marcarPagamento(a, true)}><Check size={13} /> Pagar</button>
+                            )}
+                            <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarAssinante(a)}><Edit2 size={12} /> Editar</button>
+                            <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => cancelarAssinatura(a)}>Cancelar</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Mobile */}
+              <div className="planos-mobile">
+                {assinantesPaginados.map(a => (
+                  <div key={a.assinaturaId} className="assinante-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{a.clienteNome}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{a.planoNome} · {fmt(a.valor)}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Vencimento dia {a.diaVencimento}</div>
+                      </div>
+                      {a.mesesEmAtraso > 1 ? (
+                        <span className="badge badge-red">{a.mesesEmAtraso}x atraso</span>
+                      ) : a.mesesEmAtraso === 1 ? (
+                        <span className="badge badge-yellow">1 mês atraso</span>
+                      ) : a.pagoNoMes ? (
+                        <span className="badge badge-green">Pago</span>
+                      ) : (
+                        <span className="badge badge-accent">Pendente</span>
+                      )}
                     </div>
-                    {a.mesesEmAtraso > 1 ? (
-                      <span className="badge badge-red">{a.mesesEmAtraso}x atraso</span>
-                    ) : a.mesesEmAtraso === 1 ? (
-                      <span className="badge badge-yellow">1 mês atraso</span>
-                    ) : a.pagoNoMes ? (
-                      <span className="badge badge-green">Pago</span>
-                    ) : (
-                      <span className="badge badge-accent">Pendente</span>
+                    {a.mesesEmAtraso > 0 && (
+                      <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>
+                        Total em atraso: {fmt(a.valorTotalAtraso)}
+                      </div>
                     )}
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                      {a.mesesEmAtraso > 0 ? (
+                        <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => quitarAtraso(a)}>
+                          Quitar {fmt(a.valorTotalAtraso)}
+                        </button>
+                      ) : a.pagoNoMes ? (
+                        <button className="btn-secondary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, false)}>Desfazer</button>
+                      ) : (
+                        <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, true)}>Marcar pago</button>
+                      )}
+                      <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirEditarAssinante(a)}><Edit2 size={12} /></button>
+                      <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--red)' }} onClick={() => cancelarAssinatura(a)}>Cancelar</button>
+                    </div>
                   </div>
-                  {a.mesesEmAtraso > 0 && (
-                    <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>
-                      Total em atraso: {fmt(a.valorTotalAtraso)}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                    {a.mesesEmAtraso > 0 ? (
-                      <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => quitarAtraso(a)}>
-                        Quitar {fmt(a.valorTotalAtraso)}
-                      </button>
-                    ) : a.pagoNoMes ? (
-                      <button className="btn-secondary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, false)}>Desfazer</button>
-                    ) : (
-                      <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, true)}>Marcar pago</button>
-                    )}
-                    <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirEditarAssinante(a)}><Edit2 size={12} /></button>
-                    <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--red)' }} onClick={() => cancelarAssinatura(a)}>Cancelar</button>
+                ))}
+              </div>
+            </div>
+            {assinantes.length > 0 && (
+              <div className="prod-paginacao">
+                <div className="prod-pag-info">
+                  Mostrando {(paginaAssinantesSegura - 1) * porPaginaAssinantes + 1}–{Math.min(paginaAssinantesSegura * porPaginaAssinantes, assinantes.length)} de {assinantes.length}
+                </div>
+                <div className="prod-pag-controles">
+                  <select value={porPaginaAssinantes} onChange={e => setPorPaginaAssinantes(+e.target.value)} className="prod-pag-select">
+                    <option value={5}>5 por página</option>
+                    <option value={10}>10 por página</option>
+                    <option value={20}>20 por página</option>
+                    <option value={50}>50 por página</option>
+                  </select>
+                  <div className="prod-pag-botoes">
+                    <button className="btn-secondary" disabled={paginaAssinantesSegura <= 1} onClick={() => setPaginaAssinantes(p => Math.max(1, p - 1))}>Anterior</button>
+                    <span className="prod-pag-atual">{paginaAssinantesSegura} / {totalPaginasAssinantes}</span>
+                    <button className="btn-secondary" disabled={paginaAssinantesSegura >= totalPaginasAssinantes} onClick={() => setPaginaAssinantes(p => Math.min(totalPaginasAssinantes, p + 1))}>Próxima</button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            )}
+          </>
         )
       )}
 

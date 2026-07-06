@@ -85,3 +85,62 @@
   .planos-desktop { display: none; }
   .planos-mobile { display: block; }
 }
+
+.prod-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.prod-pag-info {
+  font-size: 13px;
+  color: var(--text-3);
+}
+.prod-pag-controles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.prod-pag-select {
+  width: auto;
+  min-width: 130px;
+}
+.prod-pag-botoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.prod-pag-atual {
+  font-size: 13px;
+  color: var(--text-2);
+  min-width: 48px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .prod-paginacao {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .prod-pag-info { text-align: center; }
+  .prod-pag-controles {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .prod-pag-botoes {
+    display: flex;
+    width: 100%;
+    align-items: center;
+  }
+  .prod-pag-botoes button { flex: 1; justify-content: center; }
+  .prod-pag-atual {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
