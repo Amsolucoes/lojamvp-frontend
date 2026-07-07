@@ -40,12 +40,20 @@ export function Clientes() {
   const [resumoServicos, setResumoServicos] = useState<Record<string, { qtd: number; total: number }>>({});
   const [temServicos, setTemServicos] = useState(false);
   const [assinantesIds, setAssinantesIds] = useState<Set<string>>(new Set());
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(12);
 
   const lista = clientes.filter(c =>
     c.nome.toLowerCase().includes(busca.toLowerCase()) ||
     c.telefone.includes(busca) ||
     (c.cpf?.includes(busca) ?? false)
   );
+
+  const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const listaPaginada = lista.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina);
+
+  useEffect(() => { setPagina(1); }, [busca, porPagina]);
 
   function abrirNovo() { setForm(EMPTY); setEditId(null); setModal('novo'); }
 
@@ -180,7 +188,7 @@ export function Clientes() {
         </div>
       ) : (
         <div className="cli-grid">
-          {lista.map(c => {
+          {listaPaginada.map(c => {
             const compras = qtdCompras(c.id);
             const gasto   = totalGasto(c.id);
             const ultima  = ultimaCompra(c.id);
@@ -232,6 +240,26 @@ export function Clientes() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {lista.length > 0 && (
+        <div className="prod-paginacao">
+          <div className="prod-pag-info">
+            Mostrando {(paginaSegura - 1) * porPagina + 1}–{Math.min(paginaSegura * porPagina, lista.length)} de {lista.length}
+          </div>
+          <div className="prod-pag-controles">
+            <select value={porPagina} onChange={e => setPorPagina(+e.target.value)} className="prod-pag-select">
+              <option value={12}>12 por página</option>
+              <option value={24}>24 por página</option>
+              <option value={48}>48 por página</option>
+            </select>
+            <div className="prod-pag-botoes">
+              <button className="btn-secondary" disabled={paginaSegura <= 1} onClick={() => setPagina(p => Math.max(1, p - 1))}>Anterior</button>
+              <span className="prod-pag-atual">{paginaSegura} / {totalPaginas}</span>
+              <button className="btn-secondary" disabled={paginaSegura >= totalPaginas} onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}>Próxima</button>
+            </div>
+          </div>
         </div>
       )}
 
