@@ -56,7 +56,7 @@ export function Produtos() {
   const [savingCat, setSavingCat] = useState(false);
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [porPagina, setPorPagina] = useState(10);
-  const { sucesso, erro } = useToast();
+  const { sucesso, erro, aviso } = useToast();
   const [catParaExcluir, setCatParaExcluir] = useState<any>(null);
 
   const TAMANHOS_LETRA = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
@@ -220,7 +220,12 @@ export function Produtos() {
       sucesso(modal === 'novo' ? 'Produto cadastrado.' : 'Produto atualizado.');
       setModal(null);
     } catch (e) {
-      erro('Erro ao salvar: ' + (e as Error).message);
+      const err = e as Error & { status?: number };
+      if (err.status === 409) {
+        aviso(err.message);
+      } else {
+        erro('Erro ao salvar: ' + err.message);
+      }
     }
   }
 

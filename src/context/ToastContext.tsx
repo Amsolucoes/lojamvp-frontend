@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-type ToastTipo = 'sucesso' | 'erro' | 'info';
+type ToastTipo = 'sucesso' | 'erro' | 'aviso' | 'info';
 
 interface Toast {
   id: number;
@@ -12,6 +12,7 @@ interface ToastCtx {
   toast: (mensagem: string, tipo?: ToastTipo) => void;
   sucesso: (mensagem: string) => void;
   erro: (mensagem: string) => void;
+  aviso: (mensagem: string) => void;
   info: (mensagem: string) => void;
 }
 
@@ -34,10 +35,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const sucesso = useCallback((m: string) => toast(m, 'sucesso'), [toast]);
   const erro = useCallback((m: string) => toast(m, 'erro'), [toast]);
+  const aviso = useCallback((m: string) => toast(m, 'aviso'), [toast]);
   const info = useCallback((m: string) => toast(m, 'info'), [toast]);
 
   return (
-    <Ctx.Provider value={{ toast, sucesso, erro, info }}>
+    <Ctx.Provider value={{ toast, sucesso, erro, aviso, info }}>
       {children}
       <div style={{
         position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
@@ -56,10 +58,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               background:
                 t.tipo === 'sucesso' ? '#16a34a' :
                 t.tipo === 'erro'    ? '#dc2626' :
+                t.tipo === 'aviso'   ? '#d97706' :
                                        '#334155',
             }}>
             <span style={{ fontSize: 16 }}>
-              {t.tipo === 'sucesso' ? '✓' : t.tipo === 'erro' ? '⚠️' : 'ℹ️'}
+              {t.tipo === 'sucesso' ? '✓' : t.tipo === 'erro' ? '⚠️' : t.tipo === 'aviso' ? '⚠️' : 'ℹ️'}
             </span>
             <span>{t.mensagem}</span>
           </div>
