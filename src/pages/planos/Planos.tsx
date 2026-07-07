@@ -32,6 +32,14 @@ interface Assinante {
   valorTotalAtraso: number;
 }
 
+interface PagamentoHistorico {
+  id: string;
+  mesReferencia: string;
+  valor: number;
+  status: string;
+  pagoEm: string | null;
+}
+
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export function Planos() {
@@ -58,6 +66,9 @@ export function Planos() {
   const [assinanteEditando, setAssinanteEditando] = useState<Assinante | null>(null);
   const [confirmExcluirPlano, setConfirmExcluirPlano] = useState<Plano | null>(null);
   const [confirmCancelarAssinante, setConfirmCancelarAssinante] = useState<Assinante | null>(null);
+
+  const [historicoAssinante, setHistoricoAssinante] = useState<Assinante | null>(null);
+  const [historico, setHistorico] = useState<PagamentoHistorico[]>([]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -209,6 +220,15 @@ export function Planos() {
       setErroModal((e as Error).message);
     } finally {
       setSalvando(false);
+    }
+  }
+
+  async function abrirHistorico(a: Assinante) {
+    setHistoricoAssinante(a);
+    try {
+      setHistorico(await api.get<PagamentoHistorico[]>(`/api/planos/assinantes/${a.assinaturaId}/historico`));
+    } catch {
+      setHistorico([]);
     }
   }
 
@@ -406,6 +426,7 @@ export function Planos() {
                               <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => marcarPagamento(a, true)}><Check size={13} /> Pagar</button>
                             )}
                             <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarAssinante(a)}><Edit2 size={12} /> Editar</button>
+                            <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirHistorico(a)}>Histórico</button>
                             <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => cancelarAssinatura(a)}>Cancelar</button>
                           </div>
                         </td>
@@ -450,6 +471,7 @@ export function Planos() {
                         <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, true)}>Marcar pago</button>
                       )}
                       <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirEditarAssinante(a)}><Edit2 size={12} /></button>
+                      <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirHistorico(a)}>Histórico</button>
                       <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--red)' }} onClick={() => cancelarAssinatura(a)}>Cancelar</button>
                     </div>
                   </div>
@@ -604,6 +626,44 @@ export function Planos() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setConfirmCancelarAssinante(null)}>Cancelar</button>
               <button className="btn-danger" onClick={confirmarCancelarAssinatura}>Confirmar cancelamento</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historicoAssinante && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setHistoricoAssinante(null)}>
+          <div className="modal" style={{ maxWidth: 460 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Histórico — {historicoAssinante.clienteNome}</h2>
+              <button className="btn-ghost" onClick={() => setHistoricoAssinante(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              {historico.length === 0 ? (
+                <p style={{ color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Nenhum pagamento registrado ainda.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {historico.map(h => (
+                    <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: 13 }}>
+                          {new Date(h.mesReferencia).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                        </div>
+                        {h.pagoEm && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Pago em {new Date(h.pagoEm).toLocaleDateString('pt-BR')}</div>}
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: 600 }}>{fmt(h.valor)}</div>
+                        <span className={`badge ${h.status === 'pago' ? 'badge-green' : 'badge-accent'}`} style={{ fontSize: 10 }}>
+                          {h.status === 'pago' ? 'Pago' : 'Pendente'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setHistoricoAssinante(null)}>Fechar</button>
             </div>
           </div>
         </div>

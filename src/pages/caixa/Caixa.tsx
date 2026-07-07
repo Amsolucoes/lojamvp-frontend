@@ -42,6 +42,7 @@ type CarrinhoItem = ItemVenda & {
   variacaoLabel?: string;
   tipoVenda?: string;
   unidadeMedida?: string;
+  incluidoPlano?: boolean;
 };
 
 // Chave única do item no carrinho (produto+variação ou serviço)
@@ -101,6 +102,13 @@ export function Caixa() {
   const [showServ, setShowServ]       = useState(false);
   const buscaServRef = useRef<HTMLInputElement>(null);
   const [pendentes, setPendentes] = useState<AgendamentoPendente[]>([]);
+
+  const [planoCliente, setPlanoCliente] = useState<{ temPlano: boolean; servicosIncluidos: string[]; emDia: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!clienteId) { setPlanoCliente(null); return; }
+    api.get<any>(`/api/planos/cliente/${clienteId}`).then(setPlanoCliente).catch(() => setPlanoCliente(null));
+  }, [clienteId]);
 
   function carregarPendentes() {
     api.get<AgendamentoPendente[]>('/api/agendamentos/pendentes-pagamento')
@@ -179,11 +187,15 @@ export function Caixa() {
     const serv = servicos.find(s => s.id === servId);
     if (!serv) return;
 
+    const incluido = !!(planoCliente?.temPlano && planoCliente.emDia && planoCliente.servicosIncluidos.includes(servId));
+    const preco = incluido ? 0 : serv.preco;
+
     setCarrinho(prev => {
       const existe = prev.find(i => i.tipo === 'servico' && i.servicoId === servId);
       if (existe) {
+        const novaQtd = existe.quantidade + 1;
         return prev.map(i => i.tipo === 'servico' && i.servicoId === servId
-          ? { ...i, quantidade: i.quantidade + 1, subtotal: (i.quantidade + 1) * i.precoUnitario }
+          ? { ...i, quantidade: novaQtd, subtotal: novaQtd * i.precoUnitario }
           : i
         );
       }
@@ -192,8 +204,9 @@ export function Caixa() {
         servicoId: serv.id,
         nomeProduto: serv.nome,
         quantidade: 1,
-        precoUnitario: serv.preco,
-        subtotal: serv.preco,
+        precoUnitario: preco,
+        subtotal: preco,
+        incluidoPlano: incluido,
       } as CarrinhoItem];
     });
     setBuscaServ('');
@@ -598,6 +611,7 @@ export function Caixa() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             {item.tipo === 'servico' && <Scissors size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />}
                             <div style={{ fontWeight: 500 }}>{item.nomeProduto}</div>
+                            {item.incluidoPlano && <span className="badge badge-green" style={{ fontSize: 10 }}>Incluso no plano</span>}
                           </div>
                           {item.tipo === 'produto' && (
                             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
