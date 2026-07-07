@@ -30,6 +30,7 @@ interface Assinante {
   pagoNoMes: boolean;
   mesesEmAtraso: number; 
   valorTotalAtraso: number;
+  totalConsumos: number;
 }
 
 interface PagamentoHistorico {
@@ -38,6 +39,13 @@ interface PagamentoHistorico {
   valor: number;
   status: string;
   pagoEm: string | null;
+}
+
+interface ConsumoServico {
+  id: string;
+  servicoId: string;
+  nomeServico: string;
+  criadoEm: string;
 }
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -69,6 +77,8 @@ export function Planos() {
 
   const [historicoAssinante, setHistoricoAssinante] = useState<Assinante | null>(null);
   const [historico, setHistorico] = useState<PagamentoHistorico[]>([]);
+
+  const [consumos, setConsumos] = useState<ConsumoServico[]>([]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -226,9 +236,15 @@ export function Planos() {
   async function abrirHistorico(a: Assinante) {
     setHistoricoAssinante(a);
     try {
-      setHistorico(await api.get<PagamentoHistorico[]>(`/api/planos/assinantes/${a.assinaturaId}/historico`));
+      const [hist, cons] = await Promise.all([
+        api.get<PagamentoHistorico[]>(`/api/planos/assinantes/${a.assinaturaId}/historico`),
+        api.get<ConsumoServico[]>(`/api/planos/assinantes/${a.assinaturaId}/consumos`),
+      ]);
+      setHistorico(hist);
+      setConsumos(cons);
     } catch {
       setHistorico([]);
+      setConsumos([]);
     }
   }
 
@@ -400,7 +416,12 @@ export function Planos() {
                           <div style={{ fontWeight: 500 }}>{a.clienteNome}</div>
                           {a.clienteTelefone && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{a.clienteTelefone}</div>}
                         </td>
-                        <td style={{ fontSize: 13 }}>{a.planoNome}</td>
+                        <td style={{ fontSize: 13 }}>
+                          {a.planoNome}
+                          {a.totalConsumos > 0 && (
+                            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{a.totalConsumos}x utilizado</div>
+                          )}
+                        </td>
                         <td style={{ fontSize: 13 }}>{fmt(a.valor)}</td>
                         <td style={{ fontSize: 13 }}>Dia {a.diaVencimento}</td>
                         <td>
@@ -442,7 +463,9 @@ export function Planos() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                       <div>
                         <div style={{ fontWeight: 600 }}>{a.clienteNome}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{a.planoNome} · {fmt(a.valor)}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                          {a.planoNome} · {fmt(a.valor)}{a.totalConsumos > 0 ? ` · ${a.totalConsumos}x usado` : ''}
+                        </div>
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Vencimento dia {a.diaVencimento}</div>
                       </div>
                       {a.mesesEmAtraso > 1 ? (
@@ -660,6 +683,22 @@ export function Planos() {
                     </div>
                   ))}
                 </div>
+              )}
+
+              {consumos.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.05em', margin: '20px 0 8px' }}>
+                    Serviços utilizados ({consumos.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {consumos.map(c => (
+                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                        <span>{c.nomeServico}</span>
+                        <span style={{ color: 'var(--text-3)' }}>{new Date(c.criadoEm).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
             <div className="modal-footer">

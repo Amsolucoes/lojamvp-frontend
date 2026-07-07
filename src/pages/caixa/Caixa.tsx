@@ -43,6 +43,7 @@ type CarrinhoItem = ItemVenda & {
   tipoVenda?: string;
   unidadeMedida?: string;
   incluidoPlano?: boolean;
+  assinaturaId?: string;
 };
 
 // Chave única do item no carrinho (produto+variação ou serviço)
@@ -103,7 +104,7 @@ export function Caixa() {
   const buscaServRef = useRef<HTMLInputElement>(null);
   const [pendentes, setPendentes] = useState<AgendamentoPendente[]>([]);
 
-  const [planoCliente, setPlanoCliente] = useState<{ temPlano: boolean; servicosIncluidos: string[]; emDia: boolean } | null>(null);
+  const [planoCliente, setPlanoCliente] = useState<{ temPlano: boolean; assinaturaId?: string; servicosIncluidos: string[]; emDia: boolean } | null>(null);
 
   useEffect(() => {
     if (!clienteId) { setPlanoCliente(null); return; }
@@ -189,6 +190,7 @@ export function Caixa() {
 
     const incluido = !!(planoCliente?.temPlano && planoCliente.emDia && planoCliente.servicosIncluidos.includes(servId));
     const preco = incluido ? 0 : serv.preco;
+    const assinaturaId = incluido ? planoCliente?.assinaturaId : undefined;
 
     setCarrinho(prev => {
       const existe = prev.find(i => i.tipo === 'servico' && i.servicoId === servId);
@@ -207,6 +209,7 @@ export function Caixa() {
         precoUnitario: preco,
         subtotal: preco,
         incluidoPlano: incluido,
+        assinaturaId,
       } as CarrinhoItem];
     });
     setBuscaServ('');
@@ -220,10 +223,12 @@ export function Caixa() {
     if (existeNoCarrinho) return;
 
     let incluido = false;
+    let assinaturaIdInfo: string | undefined;
     if (p.clienteId) {
       try {
         const info = await api.get<any>(`/api/planos/cliente/${p.clienteId}`);
         incluido = info.temPlano && info.emDia && info.servicosIncluidos.includes(p.servicoId);
+        assinaturaIdInfo = incluido ? info.assinaturaId : undefined;
       } catch {}
     }
     const preco = incluido ? 0 : p.preco;
@@ -237,6 +242,7 @@ export function Caixa() {
       precoUnitario: preco,
       subtotal: preco,
       incluidoPlano: incluido,
+      assinaturaId: assinaturaIdInfo,
     } as CarrinhoItem]);
   }
 
@@ -406,6 +412,7 @@ export function Caixa() {
         produtoId:     item.tipo === 'produto' ? item.produtoId : null,
         servicoId:     item.tipo === 'servico' ? item.servicoId : null,
         agendamentoId: item.agendamentoId ?? null,
+        assinaturaId:  item.assinaturaId ?? null,
         nomeProduto:   item.nomeProduto,
         quantidade:    item.quantidade,
         precoUnitario: item.precoUnitario,
