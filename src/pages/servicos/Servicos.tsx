@@ -38,6 +38,8 @@ export function Servicos() {
   const [form, setForm] = useState<FormData>(EMPTY);
   const [confirmDel, setConfirmDel] = useState<Servico | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
 
   useEffect(() => { carregar(); }, []);
 
@@ -52,6 +54,12 @@ export function Servicos() {
     const catOk = catFiltro === 'todas' || s.categoria === catFiltro;
     return buscaOk && catOk;
   });
+
+  const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const listaPaginada = lista.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina);
+
+  useEffect(() => { setPagina(1); }, [busca, catFiltro, porPagina]);
 
   function abrirNovo() {
     setForm(EMPTY);
@@ -139,7 +147,7 @@ export function Servicos() {
                   <tr><th>Serviço</th><th>Categoria</th><th>Duração</th><th>Preço</th><th>Status</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {lista.map(s => (
+                  {listaPaginada.map(s => (
                     <tr key={s.id}>
                       <td><div style={{ fontWeight: 500 }}>{s.nome}</div></td>
                       <td><span className="badge badge-accent">{s.categoria}</span></td>
@@ -160,7 +168,7 @@ export function Servicos() {
 
             {/* Mobile */}
             <div className="serv-cards-mobile">
-              {lista.map(s => (
+              {listaPaginada.map(s => (
                 <div key={s.id} className="serv-card-mobile">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -185,6 +193,27 @@ export function Servicos() {
           </>
         )}
       </div>
+
+      {lista.length > 0 && (
+        <div className="prod-paginacao">
+          <div className="prod-pag-info">
+            Mostrando {(paginaSegura - 1) * porPagina + 1}–{Math.min(paginaSegura * porPagina, lista.length)} de {lista.length}
+          </div>
+          <div className="prod-pag-controles">
+            <select value={porPagina} onChange={e => setPorPagina(+e.target.value)} className="prod-pag-select">
+              <option value={5}>5 por página</option>
+              <option value={10}>10 por página</option>
+              <option value={20}>20 por página</option>
+              <option value={50}>50 por página</option>
+            </select>
+            <div className="prod-pag-botoes">
+              <button className="btn-secondary" disabled={paginaSegura <= 1} onClick={() => setPagina(p => Math.max(1, p - 1))}>Anterior</button>
+              <span className="prod-pag-atual">{paginaSegura} / {totalPaginas}</span>
+              <button className="btn-secondary" disabled={paginaSegura >= totalPaginas} onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}>Próxima</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal novo/editar */}
       {modal && (
