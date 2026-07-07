@@ -213,22 +213,31 @@ export function Caixa() {
     setShowServ(false);
   }
 
-  function puxarPendente(p: AgendamentoPendente) {
+  async function puxarPendente(p: AgendamentoPendente) {
     if (p.clienteId) setClienteId(p.clienteId);
 
-    setCarrinho(prev => {
-      const existe = prev.find(i => i.tipo === 'servico' && i.agendamentoId === p.id);
-      if (existe) return prev;
-      return [...prev, {
-        tipo: 'servico',
-        servicoId: p.servicoId,
-        agendamentoId: p.id,
-        nomeProduto: p.nomeServico,
-        quantidade: 1,
-        precoUnitario: p.preco,
-        subtotal: p.preco,
-      } as CarrinhoItem];
-    });
+    const existeNoCarrinho = carrinho.find(i => i.tipo === 'servico' && i.agendamentoId === p.id);
+    if (existeNoCarrinho) return;
+
+    let incluido = false;
+    if (p.clienteId) {
+      try {
+        const info = await api.get<any>(`/api/planos/cliente/${p.clienteId}`);
+        incluido = info.temPlano && info.emDia && info.servicosIncluidos.includes(p.servicoId);
+      } catch {}
+    }
+    const preco = incluido ? 0 : p.preco;
+
+    setCarrinho(prev => [...prev, {
+      tipo: 'servico',
+      servicoId: p.servicoId,
+      agendamentoId: p.id,
+      nomeProduto: p.nomeServico,
+      quantidade: 1,
+      precoUnitario: preco,
+      subtotal: preco,
+      incluidoPlano: incluido,
+    } as CarrinhoItem]);
   }
 
   async function addProdutoTroca(prodId: string) {
