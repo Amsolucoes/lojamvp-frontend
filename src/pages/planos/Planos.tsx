@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Edit2, Trash2, CreditCard, Users, Check, Power } from 'lucide-react';
+import { Plus, X, Edit2, Trash2, CreditCard, Users, Check, Power, Search } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import './Planos.css';
@@ -74,6 +74,8 @@ export function Planos() {
   const [assinanteEditando, setAssinanteEditando] = useState<Assinante | null>(null);
   const [confirmExcluirPlano, setConfirmExcluirPlano] = useState<Plano | null>(null);
   const [confirmCancelarAssinante, setConfirmCancelarAssinante] = useState<Assinante | null>(null);
+  const [buscaAssinante, setBuscaAssinante] = useState('');
+  const [filtroAssinante, setFiltroAssinante] = useState<'todos' | 'pago' | 'pendente' | 'atraso' | 'naoIniciou'>('todos');
 
   const [historicoAssinante, setHistoricoAssinante] = useState<Assinante | null>(null);
   const [historico, setHistorico] = useState<PagamentoHistorico[]>([]);
@@ -293,15 +295,35 @@ export function Planos() {
   const [porPaginaAssinantes, setPorPaginaAssinantes] = useState(10);
 
   useEffect(() => { setPaginaPlanos(1); }, [porPaginaPlanos]);
-  useEffect(() => { setPaginaAssinantes(1); }, [porPaginaAssinantes]);
+  useEffect(() => { setPaginaAssinantes(1); }, [porPaginaAssinantes, buscaAssinante, filtroAssinante]);
 
   const totalPaginasPlanos = Math.max(1, Math.ceil(planos.length / porPaginaPlanos));
   const paginaPlanosSegura = Math.min(paginaPlanos, totalPaginasPlanos);
   const planosPaginados = planos.slice((paginaPlanosSegura - 1) * porPaginaPlanos, paginaPlanosSegura * porPaginaPlanos);
 
-  const totalPaginasAssinantes = Math.max(1, Math.ceil(assinantes.length / porPaginaAssinantes));
+ const assinantesFiltrados = assinantes.filter(a => {
+    const buscaOk = a.clienteNome.toLowerCase().includes(buscaAssinante.toLowerCase());
+    if (!buscaOk) return false;
+    if (filtroAssinante === 'todos') return true;
+    if (filtroAssinante === 'atraso') return a.mesesEmAtraso > 0;
+    if (filtroAssinante === 'naoIniciou') return (a as any).aindaNaoIniciou === true;
+    if (filtroAssinante === 'pago') return a.mesesEmAtraso === 0 && a.pagoNoMes;
+    if (filtroAssinante === 'pendente') return a.mesesEmAtraso === 0 && !a.pagoNoMes && !(a as any).aindaNaoIniciou;
+    return true;
+  });
+
+  const resumoAssinantes = {
+    totalPago: assinantes.filter(a => a.mesesEmAtraso === 0 && a.pagoNoMes).reduce((s, a) => s + a.valor, 0),
+    qtdPago: assinantes.filter(a => a.mesesEmAtraso === 0 && a.pagoNoMes).length,
+    totalPendente: assinantes.filter(a => a.mesesEmAtraso === 0 && !a.pagoNoMes && !(a as any).aindaNaoIniciou).reduce((s, a) => s + a.valor, 0),
+    qtdPendente: assinantes.filter(a => a.mesesEmAtraso === 0 && !a.pagoNoMes && !(a as any).aindaNaoIniciou).length,
+    totalAtraso: assinantes.reduce((s, a) => s + a.valorTotalAtraso, 0),
+    qtdAtraso: assinantes.filter(a => a.mesesEmAtraso > 0).length,
+  };
+
+  const totalPaginasAssinantes = Math.max(1, Math.ceil(assinantesFiltrados.length / porPaginaAssinantes));
   const paginaAssinantesSegura = Math.min(paginaAssinantes, totalPaginasAssinantes);
-  const assinantesPaginados = assinantes.slice((paginaAssinantesSegura - 1) * porPaginaAssinantes, paginaAssinantesSegura * porPaginaAssinantes);
+  const assinantesPaginados = assinantesFiltrados.slice((paginaAssinantesSegura - 1) * porPaginaAssinantes, paginaAssinantesSegura * porPaginaAssinantes);
 
   const planosAtivos = planos.filter(p => p.ativo);
 
@@ -400,8 +422,48 @@ export function Planos() {
               <button className="btn-primary" onClick={abrirVincular} style={{ marginTop: 12 }}>Vincular cliente</button>
             </div>
           </div>
+        ) : assinantesFiltrados.length === 0 ? (
+          <div className="card">
+            <div className="empty">
+              <Users size={36} />
+              <p>Nenhum assinante encontrado com esse filtro.</p>
+            </div>
+          </div>
         ) : (
           <>
+            <div className="cli-filters" style={{ marginBottom: 0 }}>
+              <div className="search-wrap" style={{ maxWidth: 280 }}>
+                <Search size={14} className="search-icon" />
+                <input className="search-input" placeholder="Buscar assinante..."
+                  value={buscaAssinante} onChange={e => setBuscaAssinante(e.target.value)} />
+              </div>
+              <div className="cat-tabs">
+                <button className={`cat-tab${filtroAssinante === 'todos' ? ' active' : ''}`} onClick={() => setFiltroAssinante('todos')}>Todos</button>
+                <button className={`cat-tab${filtroAssinante === 'pago' ? ' active' : ''}`} onClick={() => setFiltroAssinante('pago')}>Pagos</button>
+                <button className={`cat-tab${filtroAssinante === 'pendente' ? ' active' : ''}`} onClick={() => setFiltroAssinante('pendente')}>Pendentes</button>
+                <button className={`cat-tab${filtroAssinante === 'atraso' ? ' active' : ''}`} onClick={() => setFiltroAssinante('atraso')}>Em atraso</button>
+                <button className={`cat-tab${filtroAssinante === 'naoIniciou' ? ' active' : ''}`} onClick={() => setFiltroAssinante('naoIniciou')}>Ainda não iniciou</button>
+              </div>
+            </div>
+
+            <div className="planos-resumo" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
+              <div className="stat-card">
+                <div className="stat-label">Pago este mês</div>
+                <div className="stat-value" style={{ color: 'var(--green)', fontSize: 18 }}>{fmt(resumoAssinantes.totalPago)}</div>
+                <div className="stat-sub">{resumoAssinantes.qtdPago} assinante(s)</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Pendente (mês atual)</div>
+                <div className="stat-value" style={{ color: 'var(--yellow, #d97706)', fontSize: 18 }}>{fmt(resumoAssinantes.totalPendente)}</div>
+                <div className="stat-sub">{resumoAssinantes.qtdPendente} assinante(s)</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Em atraso</div>
+                <div className="stat-value" style={{ color: 'var(--red)', fontSize: 18 }}>{fmt(resumoAssinantes.totalAtraso)}</div>
+                <div className="stat-sub">{resumoAssinantes.qtdAtraso} assinante(s)</div>
+              </div>
+            </div>
+
             <div className="card">
               {/* Desktop */}
               <div className="table-wrap planos-desktop">
