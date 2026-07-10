@@ -431,7 +431,7 @@ export function Planos() {
           </div>
         ) : (
           <>
-            <div className="cli-filters" style={{ marginBottom: 0 }}>
+            <div className="cli-filters" style={{ marginBottom: 16, rowGap: 10 }}>
               <div className="search-wrap" style={{ maxWidth: 280 }}>
                 <Search size={14} className="search-icon" />
                 <input className="search-input" placeholder="Buscar assinante..."
