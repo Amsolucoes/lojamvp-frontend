@@ -167,6 +167,11 @@ export function Financeiro() {
 
   const categoriasDaAba = categorias.filter(c => c.tipo === aba || c.tipo === 'ambos');
 
+  function iconeCategoria(nome: string | null) {
+    if (!nome) return null;
+    return categorias.find(c => c.nome === nome)?.icone ?? null;
+  }
+
   const listaPagar = linhasPagar.filter(l => catFiltro === 'todas' || l.categoriaNome === catFiltro);
   const listaReceber = receberUnificado; // sem filtro de categoria (planos não têm categoria própria ainda)
 
@@ -516,7 +521,9 @@ export function Financeiro() {
                             </div>
                             {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
                           </td>
-                          <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{l.categoriaNome ?? '—'}</td>
+                          <td style={{ fontSize: 13, color: 'var(--text-2)' }}>
+                            {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'}
+                          </td>
                           <td style={{ fontSize: 13 }}>{l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}</td>
                           <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
                           <td>
@@ -553,7 +560,9 @@ export function Financeiro() {
                             {l.origem === 'cartao_fatura' && <CreditCard size={12} style={{ verticalAlign: -1, marginRight: 4, color: 'var(--accent)' }} />}
                             {l.descricao}
                           </div>
-                          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{l.categoriaNome ?? '—'} · {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                            {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'} · {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}
+                          </div>
                           {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
                         </div>
                         <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
