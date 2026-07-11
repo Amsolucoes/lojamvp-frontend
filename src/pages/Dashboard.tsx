@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Produto, Venda, ItemVenda } from '../types';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { DashboardFinanceiro } from './DashboardFinanceiro';
 import './Dashboard.css';
 
 function fmt(n: number) {
@@ -10,7 +11,9 @@ function fmt(n: number) {
 }
 
 export function Dashboard() {
-  const { produtos, clientes, vendas, temServicos } = useApp();
+  const { produtos, clientes, vendas, temServicos, soFinanceiro } = useApp();
+
+  if (soFinanceiro) return <DashboardFinanceiro />;
 
   const hoje = new Date().toDateString();
   const vendasHoje = vendas.filter(v => new Date(v.criadaEm).toDateString() === hoje);
