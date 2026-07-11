@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import './Financeiro.css';
@@ -40,11 +40,45 @@ interface Resumo {
   totalVencido: number; qtdVencido: number;
 }
 
+interface Cartao {
+  id: string;
+  nome: string;
+  limite: number;
+  diaFechamento: number;
+  diaVencimento: number;
+  contaBancariaId: string;
+  ativo: boolean;
+}
+
+interface LinhaPagar {
+  id: string;
+  descricao: string;
+  categoriaNome: string | null;
+  valor: number;
+  vencimento: string;
+  status: string;
+  pagoEm: string | null;
+  numeroParcela: number | null;
+  totalParcelas: number | null;
+  origem: string; // avulso | cartao_item | cartao_fatura
+  cartaoId: string | null;
+  cartaoNome: string | null;
+}
+
+interface ItemFaturaDetalhe {
+  id: string;
+  descricao: string;
+  valor: number;
+  dataCompra: string;
+  categoriaNome: string | null;
+}
+
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const ICONES_CATEGORIA = ['🏷️','🏠','💧','💡','📶','📦','👤','🧾','💳','🛒','📁','🍽️','🚗','🎓','🏥','🎮','✈️','🐾','🎁','📱','💊','⛽','🧹','🎬'];
 
-function ehVencido(l: Lancamento) {
+function ehVencido(l: { status: string; vencimento: string }) {
+  if (!l.vencimento) return false;
   return l.status === 'pendente' && new Date(l.vencimento) < new Date(new Date().toDateString());
 }
 
@@ -61,6 +95,17 @@ export function Financeiro() {
   const [receberUnificado, setReceberUnificado] = useState<any[]>([]);
   const [resumo, setResumo] = useState<{ pagar: Resumo; receber: Resumo } | null>(null);
   const [catFiltro, setCatFiltro] = useState('todas');
+  const [modoPagar, setModoPagar] = useState<'agrupado' | 'detalhado'>('agrupado');
+  const [linhasPagar, setLinhasPagar] = useState<LinhaPagar[]>([]);
+
+  const [cartoes, setCartoes] = useState<Cartao[]>([]);
+  const [modalCartoes, setModalCartoes] = useState(false);
+  const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '' });
+  const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
+
+  const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
+  const [faturaDados, setFaturaDados] = useState<{ vencimento: string; total: number; status: string; itens: ItemFaturaDetalhe[] } | null>(null);
+  const [formCompra, setFormCompra] = useState({ descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '' });
 
   const [modalLancamento, setModalLancamento] = useState(false);
   const [modalContas, setModalContas] = useState(false);
@@ -91,8 +136,8 @@ export function Financeiro() {
   }
   async function carregarLancamentos() {
     if (aba === 'pagar') {
-      api.get<Lancamento[]>(`/api/financeiro/lancamentos?tipo=pagar&ano=${anoRef}&mes=${mesRef + 1}`)
-        .then(setLancamentos).catch(() => {});
+      api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?ano=${anoRef}&mes=${mesRef + 1}&modo=${modoPagar}`)
+        .then(setLinhasPagar).catch(() => {});
     } else {
       const inicio = new Date(anoRef, mesRef, 1).toISOString();
       const fim = new Date(anoRef, mesRef + 1, 0).toISOString();
@@ -100,13 +145,17 @@ export function Financeiro() {
         .then(setReceberUnificado).catch(() => {});
     }
   }
+
+  function carregarCartoes() {
+    api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {});
+  }
   async function carregarResumo() {
     api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoRef}&mes=${mesRef + 1}`)
       .then(setResumo).catch(() => {});
   }
 
-  useEffect(() => { carregarContas(); carregarCategorias(); }, []);
-  useEffect(() => { carregarLancamentos(); carregarResumo(); }, [aba, mesRef, anoRef]);
+  useEffect(() => { carregarContas(); carregarCategorias(); carregarCartoes(); }, []);
+  useEffect(() => { carregarLancamentos(); carregarResumo(); }, [aba, mesRef, anoRef, modoPagar]);
   useEffect(() => { setCatFiltro('todas'); }, [aba]);
 
   function navMes(delta: number) {
@@ -118,7 +167,7 @@ export function Financeiro() {
 
   const categoriasDaAba = categorias.filter(c => c.tipo === aba || c.tipo === 'ambos');
 
-  const listaPagar = lancamentos.filter(l => catFiltro === 'todas' || l.categoriaNome === catFiltro);
+  const listaPagar = linhasPagar.filter(l => catFiltro === 'todas' || l.categoriaNome === catFiltro);
   const listaReceber = receberUnificado; // sem filtro de categoria (planos não têm categoria própria ainda)
 
   const resumoAba = resumo ? resumo[aba] : null;
@@ -194,6 +243,85 @@ export function Financeiro() {
       carregarLancamentos();
       carregarResumo();
       sucesso('Lançamento excluído');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+// ── Fatura do cartão (pagar/desfazer) ──────────────────────────
+  async function marcarPagamentoCartaoFatura(l: LinhaPagar, pago: boolean) {
+    if (!l.cartaoId) return;
+    try {
+      await api.post(`/api/financeiro/cartoes/${l.cartaoId}/fatura/pagamento?ano=${anoRef}&mes=${mesRef + 1}`, { pago });
+      carregarLancamentos();
+      carregarResumo();
+      carregarContas();
+      sucesso(pago ? 'Fatura marcada como paga' : 'Fatura marcada como pendente');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  // ── Cartões de crédito ──────────────────────────────────────────
+  function abrirNovoCartao() {
+    setEditandoCartao(null);
+    setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: contas[0]?.id ?? '' });
+  }
+  function abrirEditarCartao(c: Cartao) {
+    setEditandoCartao(c);
+    setFormCartao({
+      nome: c.nome, limite: String(c.limite),
+      diaFechamento: String(c.diaFechamento), diaVencimento: String(c.diaVencimento),
+      contaBancariaId: c.contaBancariaId,
+    });
+  }
+  async function salvarCartao() {
+    if (!formCartao.nome.trim() || !formCartao.contaBancariaId) { erro('Preencha nome e conta vinculada.'); return; }
+    try {
+      const payload = {
+        nome: formCartao.nome.trim(),
+        limite: parseFloat(formCartao.limite) || 0,
+        diaFechamento: parseInt(formCartao.diaFechamento) || 10,
+        diaVencimento: parseInt(formCartao.diaVencimento) || 15,
+        contaBancariaId: formCartao.contaBancariaId,
+      };
+      if (editandoCartao) await api.put(`/api/financeiro/cartoes/${editandoCartao.id}`, payload);
+      else await api.post('/api/financeiro/cartoes', payload);
+      setEditandoCartao(null);
+      setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '' });
+      carregarCartoes();
+      carregarLancamentos();
+      sucesso('Cartão salvo!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function abrirFatura(c: Cartao) {
+    setFaturaAberta(c);
+    setFaturaDados(null);
+    try {
+      const res = await api.get<any>(`/api/financeiro/cartoes/${c.id}/fatura?ano=${anoRef}&mes=${mesRef + 1}`);
+      setFaturaDados(res);
+    } catch {
+      setFaturaDados({ vencimento: '', total: 0, status: 'pendente', itens: [] });
+    }
+  }
+
+  async function lancarCompra() {
+    if (!faturaAberta) return;
+    if (!formCompra.descricao.trim() || !formCompra.valor) { erro('Preencha descrição e valor.'); return; }
+    try {
+      await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/lancamentos`, {
+        descricao: formCompra.descricao.trim(),
+        valor: parseFloat(formCompra.valor),
+        dataCompra: formCompra.dataCompra,
+        categoriaId: formCompra.categoriaId || null,
+      });
+      setFormCompra({ descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '' });
+      abrirFatura(faturaAberta);
+      carregarLancamentos();
+      sucesso('Compra lançada!');
     } catch (e) {
       erro((e as Error).message);
     }
@@ -289,8 +417,9 @@ export function Financeiro() {
           <h1 className="page-title">Financeiro</h1>
           <p className="page-subtitle">Contas a pagar e a receber</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn-secondary" onClick={() => setModalContas(true)}><Wallet size={14} /> Contas</button>
+          <button className="btn-secondary" onClick={() => setModalCartoes(true)}><CreditCard size={14} /> Cartões</button>
           <button className="btn-secondary" onClick={() => setModalCategorias(true)}><Tag size={14} /> Categorias</button>
           <button className="btn-primary" onClick={abrirNovoLancamento}><Plus size={15} /> Novo lançamento</button>
         </div>
@@ -341,14 +470,22 @@ export function Financeiro() {
           <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesRef]} {anoRef}</span>
           <button className="btn-secondary" onClick={() => navMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
         </div>
-        {aba === 'pagar' && categoriasDaAba.length > 0 && (
-          <div className="cat-tabs">
-            <button className={`cat-tab${catFiltro === 'todas' ? ' active' : ''}`} onClick={() => setCatFiltro('todas')}>Todas</button>
-            {categoriasDaAba.map(c => (
-              <button key={c.id} className={`cat-tab${catFiltro === c.nome ? ' active' : ''}`} onClick={() => setCatFiltro(c.nome)}>
-                {c.icone} {c.nome}
-              </button>
-            ))}
+        {aba === 'pagar' && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="cx-tipo-toggle">
+              <button className={modoPagar === 'agrupado' ? 'active' : ''} onClick={() => setModoPagar('agrupado')}>Agrupado</button>
+              <button className={modoPagar === 'detalhado' ? 'active' : ''} onClick={() => setModoPagar('detalhado')}>Detalhado</button>
+            </div>
+            {categoriasDaAba.length > 0 && (
+              <div className="cat-tabs">
+                <button className={`cat-tab${catFiltro === 'todas' ? ' active' : ''}`} onClick={() => setCatFiltro('todas')}>Todas</button>
+                {categoriasDaAba.map(c => (
+                  <button key={c.id} className={`cat-tab${catFiltro === c.nome ? ' active' : ''}`} onClick={() => setCatFiltro(c.nome)}>
+                    {c.icone} {c.nome}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -366,57 +503,77 @@ export function Financeiro() {
                     <tr><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr>
                   </thead>
                   <tbody>
-                    {listaPagar.map(l => (
-                      <tr key={l.id}>
-                        <td>
-                          <div style={{ fontWeight: 500 }}>{l.descricao}</div>
-                          {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
-                        </td>
-                        <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{l.categoriaNome ?? '—'}</td>
-                        <td style={{ fontSize: 13 }}>{new Date(l.vencimento).toLocaleDateString('pt-BR')}</td>
-                        <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
-                        <td>
-                          {l.status === 'pago' ? <span className="badge badge-green">Pago</span>
-                            : ehVencido(l) ? <span className="badge badge-red">Vencido</span>
-                            : <span className="badge badge-accent">Pendente</span>}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                            {l.status === 'pago'
-                              ? <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => marcarPagamento(l, false)}>Desfazer</button>
-                              : <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => marcarPagamento(l, true)}><Check size={13} /> Pagar</button>}
-                            <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmExcluir(l)}><Trash2 size={13} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {listaPagar.map(l => {
+                      const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item';
+                      const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
+                      const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
+                      return (
+                        <tr key={l.id}>
+                          <td>
+                            <div style={{ fontWeight: 500 }}>
+                              {l.origem === 'cartao_fatura' && <CreditCard size={12} style={{ verticalAlign: -1, marginRight: 4, color: 'var(--accent)' }} />}
+                              {l.descricao}
+                            </div>
+                            {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
+                          </td>
+                          <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{l.categoriaNome ?? '—'}</td>
+                          <td style={{ fontSize: 13 }}>{l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}</td>
+                          <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
+                          <td>
+                            {l.status === 'pago' ? <span className="badge badge-green">Pago</span>
+                              : ehVencido(l as any) ? <span className="badge badge-red">Vencido</span>
+                              : <span className="badge badge-accent">Pendente</span>}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                              {l.status === 'pago'
+                                ? <button className="btn-ghost" style={{ fontSize: 11 }} onClick={desfazer}>Desfazer</button>
+                                : <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={pagar}><Check size={13} /> Pagar</button>}
+                              {l.origem === 'avulso' && (
+                                <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmExcluir(l as any)}><Trash2 size={13} /></button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
               <div className="fin-cards-mobile">
-                {listaPagar.map(l => (
-                  <div key={l.id} className="fin-card-mobile">
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{l.descricao}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{l.categoriaNome ?? '—'} · {new Date(l.vencimento).toLocaleDateString('pt-BR')}</div>
-                        {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
+                {listaPagar.map(l => {
+                  const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item';
+                  const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
+                  const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
+                  return (
+                    <div key={l.id} className="fin-card-mobile">
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontWeight: 500 }}>
+                            {l.origem === 'cartao_fatura' && <CreditCard size={12} style={{ verticalAlign: -1, marginRight: 4, color: 'var(--accent)' }} />}
+                            {l.descricao}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{l.categoriaNome ?? '—'} · {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}</div>
+                          {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
+                        </div>
+                        <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
                       </div>
-                      <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                      {l.status === 'pago' ? <span className="badge badge-green">Pago</span>
-                        : ehVencido(l) ? <span className="badge badge-red">Vencido</span>
-                        : <span className="badge badge-accent">Pendente</span>}
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        {l.status === 'pago'
-                          ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => marcarPagamento(l, false)}>Desfazer</button>
-                          : <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => marcarPagamento(l, true)}>Pagar</button>}
-                        <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(l)}><Trash2 size={14} /></button>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                        {l.status === 'pago' ? <span className="badge badge-green">Pago</span>
+                          : ehVencido(l as any) ? <span className="badge badge-red">Vencido</span>
+                          : <span className="badge badge-accent">Pendente</span>}
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {l.status === 'pago'
+                            ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={desfazer}>Desfazer</button>
+                            : <button className="btn-primary" style={{ fontSize: 12 }} onClick={pagar}>Pagar</button>}
+                          {l.origem === 'avulso' && (
+                            <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(l as any)}><Trash2 size={14} /></button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )
@@ -740,6 +897,128 @@ export function Financeiro() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalCategorias(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal cartões de crédito */}
+      {modalCartoes && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCartoes(false)}>
+          <div className="modal" style={{ maxWidth: 520 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Cartões de crédito</h2>
+              <button className="btn-ghost" onClick={() => setModalCartoes(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+                {cartoes.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhum cartão cadastrado.</p>
+                ) : cartoes.map(c => (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{c.nome}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Limite {fmt(c.limite)} · Fecha dia {c.diaFechamento} · Vence dia {c.diaVencimento}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => { setModalCartoes(false); abrirFatura(c); }}>Ver fatura</button>
+                      <button className="btn-ghost" onClick={() => abrirEditarCartao(c)}>Editar</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoCartao ? 'Editar cartão' : 'Novo cartão'}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input value={formCartao.nome} onChange={e => setFormCartao(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Santander" />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div className="form-group">
+                      <label className="form-label">Limite (R$)</label>
+                      <input type="number" step={0.01} value={formCartao.limite} onChange={e => setFormCartao(f => ({ ...f, limite: e.target.value }))} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Conta de pagamento</label>
+                      <select value={formCartao.contaBancariaId} onChange={e => setFormCartao(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                        <option value="">Selecione...</option>
+                        {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Dia de fechamento</label>
+                      <input type="number" min={1} max={28} value={formCartao.diaFechamento} onChange={e => setFormCartao(f => ({ ...f, diaFechamento: e.target.value }))} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Dia de vencimento</label>
+                      <input type="number" min={1} max={28} value={formCartao.diaVencimento} onChange={e => setFormCartao(f => ({ ...f, diaVencimento: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn-primary" onClick={salvarCartao}>{editandoCartao ? 'Salvar' : 'Adicionar cartão'}</button>
+                    {editandoCartao && <button className="btn-secondary" onClick={abrirNovoCartao}>Cancelar edição</button>}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalCartoes(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal fatura do cartão */}
+      {faturaAberta && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setFaturaAberta(null)}>
+          <div className="modal" style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Fatura — {faturaAberta.nome}</h2>
+              <button className="btn-ghost" onClick={() => setFaturaAberta(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              {faturaDados && (
+                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 12, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Total do ciclo</div>
+                    <div style={{ fontWeight: 700, fontSize: 18 }}>{fmt(faturaDados.total)}</div>
+                  </div>
+                  <span className={`badge ${faturaDados.status === 'pago' ? 'badge-green' : 'badge-accent'}`}>
+                    {faturaDados.status === 'pago' ? 'Fatura paga' : 'Pendente'}
+                  </span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+                {faturaDados?.itens.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma compra neste ciclo.</p>
+                ) : faturaDados?.itens.map(i => (
+                  <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                    <div>
+                      <div>{i.descricao}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{new Date(i.dataCompra).toLocaleDateString('pt-BR')}{i.categoriaNome ? ` · ${i.categoriaNome}` : ''}</div>
+                    </div>
+                    <span style={{ fontWeight: 600 }}>{fmt(i.valor)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Lançar compra</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input value={formCompra.descricao} onChange={e => setFormCompra(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Netflix" />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))} placeholder="Valor" />
+                    <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
+                  </div>
+                  <select value={formCompra.categoriaId} onChange={e => setFormCompra(f => ({ ...f, categoriaId: e.target.value }))}>
+                    <option value="">Sem categoria</option>
+                    {categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
+                  </select>
+                  <button className="btn-primary" onClick={lancarCompra}>Adicionar compra</button>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setFaturaAberta(null)}>Fechar</button>
             </div>
           </div>
         </div>
