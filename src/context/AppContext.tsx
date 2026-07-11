@@ -12,6 +12,7 @@ interface AppCtx {
   trocas:     any[];
   fase:       string;
   nomeLoja:   string;
+  
 
   // Módulos ativos da loja (ex: ['produtos', 'servicos'])
   modulosAtivos: string[];
@@ -19,6 +20,8 @@ interface AppCtx {
   temProdutos:   boolean;
   temServicos:   boolean;
   soServicos:    boolean;
+  soFinanceiro: boolean;
+  temFinanceiro: boolean;
 
   addProduto:    (p: Omit<Produto, 'id' | 'criadoEm'>) => Promise<void>;
   updateProduto: (id: string, p: Partial<Produto>)       => Promise<void>;
@@ -106,7 +109,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Mesma lógica usada na Sidebar
   const temServicos = modulosAtivos.includes('servicos');
   const soServicos  = tipoPlano === 'servicos';
-  const temProdutos = !soServicos;
+  const soFinanceiro = tipoPlano === 'financeiro';
+  const temFinanceiro = modulosAtivos.includes('financeiro') || soFinanceiro;
+  const temProdutos = !soServicos && !soFinanceiro;
 
   async function recarregar() {
     setLoading(true);
@@ -259,6 +264,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{
       produtos, clientes, vendas, movimentos, loading, erro, trocas,
       modulosAtivos, tipoPlano, temProdutos, temServicos, soServicos,
+      soFinanceiro, temFinanceiro,
       fase, nomeLoja,
       addProduto, updateProduto, deleteProduto,
       addCliente, updateCliente, deleteCliente,
