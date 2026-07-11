@@ -42,6 +42,7 @@ interface Resumo {
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const ICONES_CATEGORIA = ['🏷️','🏠','💧','💡','📶','📦','👤','🧾','💳','🛒','📁','🍽️','🚗','🎓','🏥','🎮','✈️','🐾','🎁','📱','💊','⛽','🧹','🎬'];
 
 function ehVencido(l: Lancamento) {
   return l.status === 'pendente' && new Date(l.vencimento) < new Date(new Date().toDateString());
@@ -729,7 +730,9 @@ export function Financeiro() {
                       <option value="pagar">Só Pagar</option>
                       <option value="receber">Só Receber</option>
                     </select>
-                    <input style={{ width: 70 }} value={formCat.icone} onChange={e => setFormCat(f => ({ ...f, icone: e.target.value }))} placeholder="🏷️" />
+                    <select style={{ width: 90 }} value={formCat.icone} onChange={e => setFormCat(f => ({ ...f, icone: e.target.value }))}>
+                      {ICONES_CATEGORIA.map(i => <option key={i} value={i}>{i}</option>)}
+                    </select>
                   </div>
                   <button className="btn-primary" onClick={salvarCategoria}>Adicionar categoria</button>
                 </div>
