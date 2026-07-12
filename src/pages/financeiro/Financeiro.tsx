@@ -286,6 +286,7 @@ export function Financeiro() {
           categoriaId: formLanc.categoriaId || null,
           observacao: formLanc.observacao || null,
           valor: parseFloat(formLanc.valor), vencimento: formLanc.vencimento,
+          jaPago: formLanc.jaPago,
         });
       } else if (formLanc.modo === 'parcelada') {
         await api.post('/api/financeiro/lancamentos/parcelado', {
@@ -297,6 +298,7 @@ export function Financeiro() {
           totalParcelas: formLanc.tipoParcelamento === 'quantidade' ? (parseInt(formLanc.totalParcelas) || 2) : null,
           dataFim: formLanc.tipoParcelamento === 'dataFim' ? formLanc.dataFim : null,
           primeiroVencimento: formLanc.vencimento,
+          jaPago: formLanc.jaPago,
         });
       } else {
         await api.post('/api/financeiro/fixos', {
@@ -306,6 +308,7 @@ export function Financeiro() {
           observacao: formLanc.observacao || null,
           valor: parseFloat(formLanc.valor),
           diaVencimento: parseInt(formLanc.diaVencimento) || 10,
+          jaPago: formLanc.jaPago,
         });
       }
       setModalLancamento(false);
@@ -993,6 +996,19 @@ export function Financeiro() {
               <button className="btn-ghost" onClick={() => setModalLancamento(false)}><X size={16} /></button>
             </div>
             <div className="modal-body">
+              <div className="cx-tipo-toggle" style={{ marginBottom: 14 }}>
+                <button type="button" className={!formLanc.jaPago ? 'active' : ''} onClick={() => setFormLanc(f => ({ ...f, jaPago: false }))}>
+                  Pendente
+                </button>
+                <button type="button" className={formLanc.jaPago ? 'active' : ''} onClick={() => setFormLanc(f => ({ ...f, jaPago: true }))}>
+                  {aba === 'pagar' ? '✓ Já paguei' : '✓ Já recebi'}
+                </button>
+              </div>
+              {formLanc.jaPago && (formLanc.modo === 'parcelada' || formLanc.modo === 'fixa') && (
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: -8, marginBottom: 14 }}>
+                  {formLanc.modo === 'parcelada' ? 'Marca só a 1ª parcela como paga.' : 'Marca só este mês como pago.'}
+                </p>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Tipo de lançamento</label>
