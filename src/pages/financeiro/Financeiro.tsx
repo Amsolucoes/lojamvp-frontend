@@ -795,8 +795,8 @@ export function Financeiro() {
                   <tbody>
                     {agruparPorData(listaPagar).map(([data, itens]) => (
                       <>
-                        <tr key={`grupo-${data}`} style={{ background: 'var(--bg-3)' }}>
-                          <td colSpan={6} style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', padding: '6px 12px' }}>
+                        <tr key={`grupo-${data}`}>
+                          <td colSpan={6} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 12px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
                             {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
                             <span style={{ fontWeight: 400, color: 'var(--text-3)', marginLeft: 8 }}>
                               {fmt(itens.reduce((s, i) => s + i.valor, 0))}
@@ -854,12 +854,20 @@ export function Financeiro() {
                 </table>
               </div>
               <div className="fin-cards-mobile">
-                {listaPagar.map(l => {
-                  const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item';
-                  const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
-                  const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
-                  return (
-                    <div key={l.id} className="fin-card-mobile">
+                {agruparPorData(listaPagar).map(([data, itens]) => (
+                  <div key={`m-grupo-${data}`}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 16px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
+                      {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
+                      <span style={{ fontWeight: 400, color: 'var(--text-2)', marginLeft: 8 }}>
+                        {fmt(itens.reduce((s, i) => s + i.valor, 0))}
+                      </span>
+                    </div>
+                    {itens.map(l => {
+                      const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item';
+                      const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
+                      const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
+                      return (
+                        <div key={l.id} className="fin-card-mobile">
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <div>
                           <div style={{ fontWeight: 500 }}>
@@ -891,8 +899,10 @@ export function Financeiro() {
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             </>
           )
@@ -909,8 +919,8 @@ export function Financeiro() {
                   <tbody>
                     {agruparPorData(listaReceber).map(([data, itens]) => (
                       <>
-                        <tr key={`grupo-r-${data}`} style={{ background: 'var(--bg-3)' }}>
-                          <td colSpan={6} style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', padding: '6px 12px' }}>
+                        <tr key={`grupo-r-${data}`}>
+                          <td colSpan={6} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 12px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
                             {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
                             <span style={{ fontWeight: 400, color: 'var(--text-3)', marginLeft: 8 }}>
                               {fmt(itens.reduce((s: number, i: any) => s + i.valor, 0))}
@@ -956,8 +966,16 @@ export function Financeiro() {
                 </table>
               </div>
               <div className="fin-cards-mobile">
-                {listaReceber.map((l: any) => (
-                  <div key={l.id} className="fin-card-mobile">
+                {agruparPorData(listaReceber).map(([data, itens]) => (
+                  <div key={`m-grupo-r-${data}`}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 16px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
+                      {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
+                      <span style={{ fontWeight: 400, color: 'var(--text-2)', marginLeft: 8 }}>
+                        {fmt(itens.reduce((s: number, i: any) => s + i.valor, 0))}
+                      </span>
+                    </div>
+                    {itens.map((l: any) => (
+                      <div key={l.id} className="fin-card-mobile">
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <div>
                         <div style={{ fontWeight: 500 }}>{l.descricao}</div>
@@ -979,6 +997,8 @@ export function Financeiro() {
                         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Ver em Planos</span>
                       )}
                     </div>
+                  </div>
+                    ))}
                   </div>
                 ))}
               </div>
