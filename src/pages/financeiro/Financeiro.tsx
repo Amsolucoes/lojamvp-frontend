@@ -427,8 +427,50 @@ export function Financeiro() {
     }
   }
 
+  function abrirEditarItemCartao(item: ItemFaturaDetalhe) {
+    setEditandoItemCartao(item);
+    setFormEditItemCartao({
+      descricao: item.descricao.replace(/\s\(\d+\/\d+\)$/, ''), // remove sufixo "(2/10)" pra editar só o nome base
+      valor: String(item.valor),
+      dataCompra: item.dataCompra.slice(0, 10),
+      categoriaId: '',
+    });
+  }
+
+  async function salvarEdicaoItemCartao(modo: 'unica' | 'todas') {
+    if (!editandoItemCartao || !faturaAberta) return;
+    try {
+      await api.put(`/api/financeiro/cartoes/lancamentos/${editandoItemCartao.id}?modo=${modo}`, {
+        descricao: formEditItemCartao.descricao.trim(),
+        valor: parseFloat(formEditItemCartao.valor),
+        dataCompra: formEditItemCartao.dataCompra,
+        categoriaId: formEditItemCartao.categoriaId || null,
+      });
+      setEditandoItemCartao(null);
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      sucesso('Compra atualizada!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function excluirItemCartao(modo: 'unica' | 'todas') {
+    if (!confirmExcluirItemCartao || !faturaAberta) return;
+    try {
+      await api.delete(`/api/financeiro/cartoes/lancamentos/${confirmExcluirItemCartao.id}?modo=${modo}`);
+      setConfirmExcluirItemCartao(null);
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      sucesso('Compra excluída!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
   const [modalPagarFatura, setModalPagarFatura] = useState(false);
   const [formPagFatura, setFormPagFatura] = useState({ modo: 'total' as 'total' | 'parcial' | 'parcelado', valorPago: '', totalParcelas: '3' });
+  const [editandoItemCartao, setEditandoItemCartao] = useState<ItemFaturaDetalhe | null>(null);
+  const [formEditItemCartao, setFormEditItemCartao] = useState({ descricao: '', valor: '', dataCompra: '', categoriaId: '' });
+  const [confirmExcluirItemCartao, setConfirmExcluirItemCartao] = useState<ItemFaturaDetalhe | null>(null);
 
   async function pagarFaturaModal(modo: string, extra?: any) {
     if (!faturaAberta) return;
@@ -1154,15 +1196,19 @@ export function Financeiro() {
                 {faturaDados?.itens.length === 0 ? (
                   <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma compra neste ciclo.</p>
                 ) : faturaDados?.itens.map(i => (
-                  <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                    <div>
+                  <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div>
                         {i.descricao}
                         {i.modo === 'fixa' && <span className="badge badge-accent" style={{ fontSize: 9, marginLeft: 6 }}>Fixo</span>}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{new Date(i.dataCompra).toLocaleDateString('pt-BR')}{i.categoriaNome ? ` · ${i.categoriaNome}` : ''}</div>
                     </div>
-                    <span style={{ fontWeight: 600 }}>{fmt(i.valor)}</span>
+                    <span style={{ fontWeight: 600, flexShrink: 0 }}>{fmt(i.valor)}</span>
+                    <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                      <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditarItemCartao(i)}>✎</button>
+                      <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluirItemCartao(i)}><Trash2 size={13} /></button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1296,6 +1342,93 @@ export function Financeiro() {
               }}>
                 Confirmar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar item do cartão */}
+      {editandoItemCartao && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditandoItemCartao(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar compra</h2>
+              <button className="btn-ghost" onClick={() => setEditandoItemCartao(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Descrição</label>
+                  <input value={formEditItemCartao.descricao} onChange={e => setFormEditItemCartao(f => ({ ...f, descricao: e.target.value }))} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="form-group">
+                    <label className="form-label">Valor (R$)</label>
+                    <input type="number" min={0} step={0.01} value={formEditItemCartao.valor} onChange={e => setFormEditItemCartao(f => ({ ...f, valor: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Data</label>
+                    <input type="date" value={formEditItemCartao.dataCompra} onChange={e => setFormEditItemCartao(f => ({ ...f, dataCompra: e.target.value }))} />
+                  </div>
+                </div>
+                {(editandoItemCartao.modo === 'fixa' || editandoItemCartao.modo === 'parcelada') && (
+                  <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                    {editandoItemCartao.modo === 'fixa'
+                      ? 'Essa é uma compra fixa. Você pode alterar só este mês, ou os próximos meses também.'
+                      : 'Essa é uma parcela. Você pode alterar só esta, ou as demais parcelas futuras.'}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setEditandoItemCartao(null)}>Cancelar</button>
+              {(editandoItemCartao.modo === 'fixa' || editandoItemCartao.modo === 'parcelada') ? (
+                <>
+                  <button className="btn-secondary" onClick={() => salvarEdicaoItemCartao('unica')}>Só esta</button>
+                  <button className="btn-primary" onClick={() => salvarEdicaoItemCartao('todas')}>
+                    {editandoItemCartao.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-primary" onClick={() => salvarEdicaoItemCartao('unica')}>Salvar</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar exclusão de item do cartão */}
+      {confirmExcluirItemCartao && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirItemCartao(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir compra</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluirItemCartao(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir <strong style={{ color: 'var(--text-1)' }}>{confirmExcluirItemCartao.descricao}</strong>?
+              </p>
+              {(confirmExcluirItemCartao.modo === 'fixa' || confirmExcluirItemCartao.modo === 'parcelada') && (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>
+                  {confirmExcluirItemCartao.modo === 'fixa'
+                    ? 'Essa é uma compra fixa. Você pode excluir só este mês, ou parar de gerar os próximos.'
+                    : 'Essa é uma parcela. Você pode excluir só esta, ou todas as parcelas futuras.'}
+                </p>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluirItemCartao(null)}>Cancelar</button>
+              {(confirmExcluirItemCartao.modo === 'fixa' || confirmExcluirItemCartao.modo === 'parcelada') ? (
+                <>
+                  <button className="btn-secondary" onClick={() => excluirItemCartao('unica')}>Só esta</button>
+                  <button className="btn-danger" onClick={() => excluirItemCartao('todas')}>
+                    {confirmExcluirItemCartao.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-danger" onClick={() => excluirItemCartao('unica')}>Excluir</button>
+              )}
             </div>
           </div>
         </div>
