@@ -269,6 +269,7 @@ export function Financeiro() {
       vencimento: new Date().toISOString().slice(0, 10),
       totalParcelas: '2', diaVencimento: '10',
       tipoParcelamento: 'quantidade', dataFim: new Date().toISOString().slice(0, 10),
+      jaPago: false,
     });
     setModalLancamento(true);
   }
