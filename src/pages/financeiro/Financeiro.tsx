@@ -53,6 +53,7 @@ interface Cartao {
 interface LinhaPagar {
   id: string;
   descricao: string;
+  observacao?: string | null;
   categoriaNome: string | null;
   categoriaId: string | null;
   contaBancariaId: string | null;
@@ -74,6 +75,7 @@ interface ItemFaturaDetalhe {
   valor: number;
   dataCompra: string;
   categoriaNome: string | null;
+  categoriaId: string | null;
   modo: string;
 }
 
@@ -100,6 +102,10 @@ export function Financeiro() {
   const [receberUnificado, setReceberUnificado] = useState<any[]>([]);
   const [resumo, setResumo] = useState<{ pagar: Resumo; receber: Resumo } | null>(null);
   const [catFiltro, setCatFiltro] = useState('todas');
+  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pago' | 'pendente'>('todos');
+  const [periodoTipo, setPeriodoTipo] = useState<'mes' | 'personalizado'>('mes');
+  const [periodoDe, setPeriodoDe] = useState(new Date().toISOString().slice(0, 10));
+  const [periodoAte, setPeriodoAte] = useState(new Date().toISOString().slice(0, 10));
   const [modoPagar, setModoPagar] = useState<'agrupado' | 'detalhado'>('agrupado');
   const [linhasPagar, setLinhasPagar] = useState<LinhaPagar[]>([]);
 
@@ -124,16 +130,19 @@ export function Financeiro() {
   const [modalAjuste, setModalAjuste] = useState<Conta | null>(null);
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
-  const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '' });
+  const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEdit, setSalvandoEdit] = useState(false);
   const [escopoEdit, setEscopoEdit] = useState<'unica' | 'todas' | null>(null);
 
   const [formLanc, setFormLanc] = useState({
     modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
-    contaBancariaId: '', categoriaId: '', descricao: '', valor: '',
+    contaBancariaId: '', categoriaId: '', descricao: '', valor: '', observacao: '',
     vencimento: new Date().toISOString().slice(0, 10),
     totalParcelas: '2', diaVencimento: '10',
+    tipoParcelamento: 'quantidade' as 'quantidade' | 'dataFim',
+    dataFim: new Date().toISOString().slice(0, 10),
   });
+
   const [salvandoLanc, setSalvandoLanc] = useState(false);
 
   const [formConta, setFormConta] = useState({ nome: '', saldoInicial: '' });
@@ -147,17 +156,32 @@ export function Financeiro() {
   async function carregarContas() {
     api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }
+
   async function carregarCategorias() {
     api.get<Categoria[]>('/api/financeiro/categorias').then(setCategorias).catch(() => {});
   }
+
+  function periodoQuery() {
+    if (periodoTipo === 'personalizado') {
+      return `de=${periodoDe}&ate=${periodoAte}`;
+    }
+    return `ano=${anoRef}&mes=${mesRef + 1}`;
+  }
+
   async function carregarLancamentos() {
     if (aba === 'pagar') {
-      api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?ano=${anoRef}&mes=${mesRef + 1}&modo=${modoPagar}`)
+      api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?${periodoQuery()}&modo=${modoPagar}`)
         .then(setLinhasPagar).catch(() => {});
     } else {
-      const inicio = new Date(anoRef, mesRef, 1).toISOString();
-      const fim = new Date(anoRef, mesRef + 1, 0).toISOString();
-      api.get<any[]>(`/api/financeiro/receber-unificado?de=${inicio}&ate=${fim}`)
+      let de: string, ate: string;
+      if (periodoTipo === 'personalizado') {
+        de = new Date(periodoDe).toISOString();
+        ate = new Date(periodoAte).toISOString();
+      } else {
+        de = new Date(anoRef, mesRef, 1).toISOString();
+        ate = new Date(anoRef, mesRef + 1, 0).toISOString();
+      }
+      api.get<any[]>(`/api/financeiro/receber-unificado?de=${de}&ate=${ate}`)
         .then(setReceberUnificado).catch(() => {});
     }
   }
@@ -165,13 +189,14 @@ export function Financeiro() {
   function carregarCartoes() {
     api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {});
   }
+
   async function carregarResumo() {
     api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoRef}&mes=${mesRef + 1}`)
       .then(setResumo).catch(() => {});
   }
 
   useEffect(() => { carregarContas(); carregarCategorias(); carregarCartoes(); }, []);
-  useEffect(() => { carregarLancamentos(); carregarResumo(); }, [aba, mesRef, anoRef, modoPagar]);
+  useEffect(() => { carregarLancamentos(); carregarResumo(); }, [aba, mesRef, anoRef, modoPagar, periodoTipo, periodoDe, periodoAte]);
   useEffect(() => { setCatFiltro('todas'); }, [aba]);
 
   function navMes(delta: number) {
@@ -188,21 +213,61 @@ export function Financeiro() {
     return categorias.find(c => c.nome === nome)?.icone ?? null;
   }
 
-  const listaPagar = linhasPagar.filter(l => catFiltro === 'todas' || l.categoriaNome === catFiltro);
+  function agruparPorData<T extends { vencimento: string }>(lista: T[]) {
+    const grupos: Record<string, T[]> = {};
+    lista.forEach(l => {
+      const chave = l.vencimento ? l.vencimento.slice(0, 10) : 'sem-data';
+      if (!grupos[chave]) grupos[chave] = [];
+      grupos[chave].push(l);
+    });
+    return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
+  }
+
+  function passaStatus(status: string) {
+    if (statusFiltro === 'todos') return true;
+    return status === statusFiltro;
+  }
+
+  const listaPagar = linhasPagar.filter(l =>
+    (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaStatus(l.status)
+  );
   const listaReceber = receberUnificado.filter((l: any) => {
-    if (catFiltro === 'todas') return true;
-    if (catFiltro === '__plano__') return l.origem === 'plano';
-    return l.origem === 'avulso' && l.categoriaNome === catFiltro;
+    const catOk = catFiltro === 'todas'
+      ? true
+      : catFiltro === '__plano__'
+      ? l.origem === 'plano'
+      : l.origem === 'avulso' && l.categoriaNome === catFiltro;
+    return catOk && passaStatus(l.status);
   });
 
-  const resumoAba = resumo ? resumo[aba] : null;
+  // Quando algum filtro (categoria ou status) está ativo, recalcula os totais
+  // com base na lista já filtrada, em vez do resumo geral do backend.
+  const filtroAtivo = catFiltro !== 'todas' || statusFiltro !== 'todos';
+  const hoje0h = new Date(new Date().toDateString());
+
+  function resumoDaLista(lista: any[]) {
+    const pagos = lista.filter(l => l.status === 'pago');
+    const pendentesFuturos = lista.filter(l => l.status === 'pendente' && l.vencimento && new Date(l.vencimento) >= hoje0h);
+    const vencidos = lista.filter(l => l.status === 'pendente' && l.vencimento && new Date(l.vencimento) < hoje0h);
+    return {
+      totalPago: pagos.reduce((s, l) => s + l.valor, 0), qtdPago: pagos.length,
+      totalPendente: pendentesFuturos.reduce((s, l) => s + l.valor, 0), qtdPendente: pendentesFuturos.length,
+      totalVencido: vencidos.reduce((s, l) => s + l.valor, 0), qtdVencido: vencidos.length,
+    };
+  }
+
+  const resumoAba = filtroAtivo
+    ? resumoDaLista(aba === 'pagar' ? listaPagar : listaReceber)
+    : (resumo ? resumo[aba] : null);
 
   // ── Lançamento ──────────────────────────────────────────────────
   function abrirNovoLancamento() {
     setFormLanc({
       modo: 'avulsa', contaBancariaId: contas[0]?.id ?? '', categoriaId: '',
-      descricao: '', valor: '', vencimento: new Date().toISOString().slice(0, 10),
+      descricao: '', valor: '', observacao: '',
+      vencimento: new Date().toISOString().slice(0, 10),
       totalParcelas: '2', diaVencimento: '10',
+      tipoParcelamento: 'quantidade', dataFim: new Date().toISOString().slice(0, 10),
     });
     setModalLancamento(true);
   }
@@ -224,8 +289,10 @@ export function Financeiro() {
           contaBancariaId: formLanc.contaBancariaId, tipo: aba,
           descricao: formLanc.descricao.trim(),
           categoriaId: formLanc.categoriaId || null,
+          observacao: formLanc.observacao || null,
           valorParcela: parseFloat(formLanc.valor),
-          totalParcelas: parseInt(formLanc.totalParcelas) || 2,
+          totalParcelas: formLanc.tipoParcelamento === 'quantidade' ? (parseInt(formLanc.totalParcelas) || 2) : null,
+          dataFim: formLanc.tipoParcelamento === 'dataFim' ? formLanc.dataFim : null,
           primeiroVencimento: formLanc.vencimento,
         });
       } else {
@@ -282,6 +349,7 @@ export function Financeiro() {
       descricao: l.descricao,
       valor: String(l.valor),
       vencimento: l.vencimento ? l.vencimento.slice(0, 10) : '',
+      observacao: l.observacao ?? '',
     });
   }
 
@@ -430,10 +498,10 @@ export function Financeiro() {
   function abrirEditarItemCartao(item: ItemFaturaDetalhe) {
     setEditandoItemCartao(item);
     setFormEditItemCartao({
-      descricao: item.descricao.replace(/\s\(\d+\/\d+\)$/, ''), // remove sufixo "(2/10)" pra editar só o nome base
+      descricao: item.descricao.replace(/\s\(\d+\/\d+\)$/, ''),
       valor: String(item.valor),
       dataCompra: item.dataCompra.slice(0, 10),
-      categoriaId: '',
+      categoriaId: item.categoriaId ?? '',
     });
   }
 
@@ -625,37 +693,47 @@ export function Financeiro() {
 
       {/* Navegação de mês */}
       <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn-secondary" onClick={() => navMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
-          <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesRef]} {anoRef}</span>
-          <button className="btn-secondary" onClick={() => navMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div className="cx-tipo-toggle">
+            <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
+            <button className={periodoTipo === 'personalizado' ? 'active' : ''} onClick={() => setPeriodoTipo('personalizado')}>Personalizado</button>
+          </div>
+          {periodoTipo === 'mes' ? (
+            <>
+              <button className="btn-secondary" onClick={() => navMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+              <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesRef]} {anoRef}</span>
+              <button className="btn-secondary" onClick={() => navMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+            </>
+          ) : (
+            <>
+              <input type="date" value={periodoDe} onChange={e => setPeriodoDe(e.target.value)} style={{ width: 'auto' }} />
+              <span style={{ color: 'var(--text-3)' }}>até</span>
+              <input type="date" value={periodoAte} onChange={e => setPeriodoAte(e.target.value)} style={{ width: 'auto' }} />
+            </>
+          )}
         </div>
-        {aba === 'pagar' ? (
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          {aba === 'pagar' && (
             <div className="cx-tipo-toggle">
               <button className={modoPagar === 'agrupado' ? 'active' : ''} onClick={() => setModoPagar('agrupado')}>Agrupado</button>
               <button className={modoPagar === 'detalhado' ? 'active' : ''} onClick={() => setModoPagar('detalhado')}>Detalhado</button>
             </div>
-            {categoriasDaAba.length > 0 && (
-              <select value={catFiltro} onChange={e => setCatFiltro(e.target.value)} style={{ width: 'auto', minWidth: 160 }}>
-                <option value="todas">Todas as categorias</option>
-                {categoriasDaAba.map(c => (
-                  <option key={c.id} value={c.nome}>{c.icone} {c.nome}</option>
-                ))}
-              </select>
-            )}
-          </div>
-        ) : (
-          categoriasDaAba.length > 0 && (
+          )}
+          {categoriasDaAba.length > 0 && (
             <select value={catFiltro} onChange={e => setCatFiltro(e.target.value)} style={{ width: 'auto', minWidth: 160 }}>
               <option value="todas">Todas as categorias</option>
-              <option value="__plano__">💳 Mensalidades (Planos)</option>
+              {aba === 'receber' && <option value="__plano__">💳 Mensalidades (Planos)</option>}
               {categoriasDaAba.map(c => (
                 <option key={c.id} value={c.nome}>{c.icone} {c.nome}</option>
               ))}
             </select>
-          )
-        )}
+          )}
+          <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value as any)} style={{ width: 'auto', minWidth: 130 }}>
+            <option value="todos">Todos os status</option>
+            <option value="pago">Só pagos</option>
+            <option value="pendente">Só pendentes</option>
+          </select>
+        </div>
       </div>
 
       {/* Lista */}
@@ -671,12 +749,22 @@ export function Financeiro() {
                     <tr><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr>
                   </thead>
                   <tbody>
-                    {listaPagar.map(l => {
-                      const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item';
-                      const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
-                      const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
-                      return (
-                        <tr key={l.id}>
+                    {agruparPorData(listaPagar).map(([data, itens]) => (
+                      <>
+                        <tr key={`grupo-${data}`} style={{ background: 'var(--bg-3)' }}>
+                          <td colSpan={6} style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', padding: '6px 12px' }}>
+                            {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
+                            <span style={{ fontWeight: 400, color: 'var(--text-3)', marginLeft: 8 }}>
+                              {fmt(itens.reduce((s, i) => s + i.valor, 0))}
+                            </span>
+                          </td>
+                        </tr>
+                        {itens.map(l => {
+                          const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item';
+                          const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
+                          const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
+                          return (
+                            <tr key={l.id}>
                           <td>
                             <div style={{ fontWeight: 500 }}>
                               {l.origem === 'cartao_fatura' && <CreditCard size={12} style={{ verticalAlign: -1, marginRight: 4, color: 'var(--accent)' }} />}
@@ -708,8 +796,10 @@ export function Financeiro() {
                             </div>
                           </td>
                         </tr>
-                      );
-                    })}
+                          );
+                        })}
+                      </>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -724,6 +814,7 @@ export function Financeiro() {
                         <div>
                           <div style={{ fontWeight: 500 }}>
                             {l.origem === 'cartao_fatura' && <CreditCard size={12} style={{ verticalAlign: -1, marginRight: 4, color: 'var(--accent)' }} />}
+                            {l.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
                             {l.descricao}
                           </div>
                           <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
@@ -766,7 +857,17 @@ export function Financeiro() {
                     <tr><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Origem</th><th></th></tr>
                   </thead>
                   <tbody>
-                    {listaReceber.map((l: any) => (
+                    {agruparPorData(listaReceber).map(([data, itens]) => (
+                      <>
+                        <tr key={`grupo-r-${data}`} style={{ background: 'var(--bg-3)' }}>
+                          <td colSpan={6} style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', padding: '6px 12px' }}>
+                            {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
+                            <span style={{ fontWeight: 400, color: 'var(--text-3)', marginLeft: 8 }}>
+                              {fmt(itens.reduce((s: number, i: any) => s + i.valor, 0))}
+                            </span>
+                          </td>
+                        </tr>
+                        {itens.map((l: any) => (
                       <tr key={l.id}>
                         <td style={{ fontWeight: 500 }}>{l.descricao}</td>
                         <td style={{ fontSize: 13 }}>{new Date(l.vencimento).toLocaleDateString('pt-BR')}</td>
@@ -791,6 +892,8 @@ export function Financeiro() {
                           )}
                         </td>
                       </tr>
+                        ))}
+                      </>
                     ))}
                   </tbody>
                 </table>
@@ -877,6 +980,11 @@ export function Financeiro() {
                     placeholder={aba === 'pagar' ? 'Ex: Aluguel do estúdio' : 'Ex: Venda avulsa'} />
                 </div>
 
+                <div className="form-group">
+                  <label className="form-label">Observação <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <input value={formLanc.observacao} onChange={e => setFormLanc(f => ({ ...f, observacao: e.target.value }))} placeholder="Notas internas" />
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group">
                     <label className="form-label">{formLanc.modo === 'parcelada' ? 'Valor da parcela' : 'Valor'} (R$) *</label>
@@ -892,9 +1000,20 @@ export function Financeiro() {
                     </div>
                   ) : formLanc.modo === 'parcelada' ? (
                     <div className="form-group">
-                      <label className="form-label">Total de parcelas</label>
-                      <input type="number" min={2} max={60} value={formLanc.totalParcelas}
-                        onChange={e => setFormLanc(f => ({ ...f, totalParcelas: e.target.value }))} />
+                      <label className="form-label">
+                        {formLanc.tipoParcelamento === 'quantidade' ? 'Total de parcelas' : 'Até quando'}
+                        <button type="button" className="btn-ghost" style={{ fontSize: 10, marginLeft: 8, padding: '2px 6px' }}
+                          onClick={() => setFormLanc(f => ({ ...f, tipoParcelamento: f.tipoParcelamento === 'quantidade' ? 'dataFim' : 'quantidade' }))}>
+                          {formLanc.tipoParcelamento === 'quantidade' ? 'usar data fim' : 'usar quantidade'}
+                        </button>
+                      </label>
+                      {formLanc.tipoParcelamento === 'quantidade' ? (
+                        <input type="number" min={2} max={120} value={formLanc.totalParcelas}
+                          onChange={e => setFormLanc(f => ({ ...f, totalParcelas: e.target.value }))} />
+                      ) : (
+                        <input type="date" value={formLanc.dataFim}
+                          onChange={e => setFormLanc(f => ({ ...f, dataFim: e.target.value }))} />
+                      )}
                     </div>
                   ) : (
                     <div className="form-group">
@@ -1361,6 +1480,13 @@ export function Financeiro() {
                   <label className="form-label">Descrição</label>
                   <input value={formEditItemCartao.descricao} onChange={e => setFormEditItemCartao(f => ({ ...f, descricao: e.target.value }))} />
                 </div>
+                <div className="form-group">
+                  <label className="form-label">Categoria</label>
+                  <select value={formEditItemCartao.categoriaId} onChange={e => setFormEditItemCartao(f => ({ ...f, categoriaId: e.target.value }))}>
+                    <option value="">Sem categoria</option>
+                    {categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
+                  </select>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group">
                     <label className="form-label">Valor (R$)</label>
@@ -1461,6 +1587,10 @@ export function Financeiro() {
                 <div className="form-group">
                   <label className="form-label">Descrição *</label>
                   <input value={formEdit.descricao} onChange={e => setFormEdit(f => ({ ...f, descricao: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Observação</label>
+                  <input value={formEdit.observacao} onChange={e => setFormEdit(f => ({ ...f, observacao: e.target.value }))} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group">
