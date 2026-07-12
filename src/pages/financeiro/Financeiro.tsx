@@ -54,6 +54,8 @@ interface LinhaPagar {
   id: string;
   descricao: string;
   categoriaNome: string | null;
+  categoriaId: string | null;
+  contaBancariaId: string | null;
   modo: string;
   valor: number;
   vencimento: string;
@@ -114,6 +116,10 @@ export function Financeiro() {
   const [modalCategorias, setModalCategorias] = useState(false);
   const [modalAjuste, setModalAjuste] = useState<Conta | null>(null);
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
+  const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
+  const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '' });
+  const [salvandoEdit, setSalvandoEdit] = useState(false);
+  const [escopoEdit, setEscopoEdit] = useState<'unica' | 'todas' | null>(null);
 
   const [formLanc, setFormLanc] = useState({
     modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
@@ -252,6 +258,44 @@ export function Financeiro() {
       sucesso('Lançamento excluído');
     } catch (e) {
       erro((e as Error).message);
+    }
+  }
+
+  function abrirEditarLancamento(l: LinhaPagar) {
+    setEditandoLancamento(l);
+    setEscopoEdit(null);
+    setFormEdit({
+      contaBancariaId: l.contaBancariaId ?? '',
+      categoriaId: l.categoriaId ?? '',
+      descricao: l.descricao,
+      valor: String(l.valor),
+      vencimento: l.vencimento ? l.vencimento.slice(0, 10) : '',
+    });
+  }
+
+  async function salvarEdicaoLancamento(modo: 'unica' | 'todas') {
+    if (!editandoLancamento) return;
+    if (!formEdit.descricao.trim() || !formEdit.valor || !formEdit.contaBancariaId) {
+      erro('Preencha descrição, valor e conta.');
+      return;
+    }
+    setSalvandoEdit(true);
+    try {
+      await api.put(`/api/financeiro/lancamentos/${editandoLancamento.id}?modo=${modo}`, {
+        descricao: formEdit.descricao.trim(),
+        categoriaId: formEdit.categoriaId || null,
+        contaBancariaId: formEdit.contaBancariaId,
+        valor: parseFloat(formEdit.valor),
+        vencimento: formEdit.vencimento,
+      });
+      setEditandoLancamento(null);
+      carregarLancamentos();
+      carregarResumo();
+      sucesso('Lançamento atualizado!');
+    } catch (e) {
+      erro((e as Error).message);
+    } finally {
+      setSalvandoEdit(false);
     }
   }
 
@@ -537,7 +581,10 @@ export function Financeiro() {
                                 ? <button className="btn-ghost" style={{ fontSize: 11 }} onClick={desfazer}>Desfazer</button>
                                 : <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={pagar}><Check size={13} /> Pagar</button>}
                               {l.origem === 'avulso' && (
-                                <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmExcluir(l as any)}><Trash2 size={13} /></button>
+                                <>
+                                  <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarLancamento(l)}>Editar</button>
+                                  <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmExcluir(l as any)}><Trash2 size={13} /></button>
+                                </>
                               )}
                             </div>
                           </td>
@@ -576,7 +623,10 @@ export function Financeiro() {
                             ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={desfazer}>Desfazer</button>
                             : <button className="btn-primary" style={{ fontSize: 12 }} onClick={pagar}>Pagar</button>}
                           {l.origem === 'avulso' && (
-                            <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(l as any)}><Trash2 size={14} /></button>
+                            <>
+                              <button className="btn-ghost" onClick={() => abrirEditarLancamento(l)}>Editar</button>
+                              <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(l as any)}><Trash2 size={14} /></button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -614,6 +664,7 @@ export function Financeiro() {
                               {l.status === 'pago'
                                 ? <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => marcarPagamento(l, false)}>Desfazer</button>
                                 : <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => marcarPagamento(l, true)}><Check size={13} /> Receber</button>}
+                              <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarLancamento(l)}>Editar</button>
                               <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmExcluir(l)}><Trash2 size={13} /></button>
                             </div>
                           ) : (
@@ -642,6 +693,7 @@ export function Financeiro() {
                           {l.status === 'pago'
                             ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => marcarPagamento(l, false)}>Desfazer</button>
                             : <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => marcarPagamento(l, true)}>Receber</button>}
+                          <button className="btn-ghost" onClick={() => abrirEditarLancamento(l)}>Editar</button>
                           <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(l)}><Trash2 size={14} /></button>
                         </div>
                       ) : (
@@ -1028,6 +1080,71 @@ export function Financeiro() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setFaturaAberta(null)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar lançamento */}
+      {editandoLancamento && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditandoLancamento(null)}>
+          <div className="modal" style={{ maxWidth: 460 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar lançamento</h2>
+              <button className="btn-ghost" onClick={() => setEditandoLancamento(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Conta bancária *</label>
+                  <select value={formEdit.contaBancariaId} onChange={e => setFormEdit(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Categoria</label>
+                  <select value={formEdit.categoriaId} onChange={e => setFormEdit(f => ({ ...f, categoriaId: e.target.value }))}>
+                    <option value="">Sem categoria</option>
+                    {categorias.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Descrição *</label>
+                  <input value={formEdit.descricao} onChange={e => setFormEdit(f => ({ ...f, descricao: e.target.value }))} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="form-group">
+                    <label className="form-label">Valor (R$) *</label>
+                    <input type="number" min={0} step={0.01} value={formEdit.valor} onChange={e => setFormEdit(f => ({ ...f, valor: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Vencimento</label>
+                    <input type="date" value={formEdit.vencimento} onChange={e => setFormEdit(f => ({ ...f, vencimento: e.target.value }))} />
+                  </div>
+                </div>
+
+                {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') && (
+                  <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                    {editandoLancamento.modo === 'fixa'
+                      ? 'Esse é um lançamento fixo. Você pode alterar só este mês, ou aplicar a mudança nos próximos meses também.'
+                      : 'Essa é uma parcela. Você pode alterar só esta, ou aplicar a mudança nas demais parcelas ainda não pagas.'}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setEditandoLancamento(null)}>Cancelar</button>
+              {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') ? (
+                <>
+                  <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('unica')}>Só esta</button>
+                  <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('todas')}>
+                    {editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('unica')}>Salvar</button>
+              )}
             </div>
           </div>
         </div>
