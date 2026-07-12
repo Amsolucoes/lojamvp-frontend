@@ -1,4 +1,4 @@
-import { Wallet, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, CreditCard, Clock } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, CreditCard, Clock, ArrowUp, ArrowDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import './Dashboard.css';
@@ -62,11 +62,22 @@ export function DashboardFinanceiro() {
     api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }, []);
 
+  const agoraInicial = new Date();
+  const [mesResumo, setMesResumo] = useState(agoraInicial.getMonth());
+  const [anoResumo, setAnoResumo] = useState(agoraInicial.getFullYear());
+
   useEffect(() => {
-    const agora = new Date();
-    api.get<any>(`/api/financeiro/resumo-mensal?ano=${agora.getFullYear()}&mes=${agora.getMonth() + 1}`)
+    api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoResumo}&mes=${mesResumo + 1}`)
       .then(setResumo).catch(() => {});
-  }, []);
+  }, [mesResumo, anoResumo]);
+
+  function navResumoMes(delta: number) {
+    let nm = mesResumo + delta, na = anoResumo;
+    if (nm < 0) { nm = 11; na--; }
+    if (nm > 11) { nm = 0; na++; }
+    setMesResumo(nm);
+    setAnoResumo(na);
+  }
 
   useEffect(() => {
     api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {});
@@ -86,6 +97,38 @@ export function DashboardFinanceiro() {
         <div>
           <h1 className="page-title">Financeiro</h1>
           <p className="page-subtitle" style={{ textTransform: 'capitalize' }}>{mesAtualLabel}</p>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16, textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 14 }}>
+          <button className="btn-secondary" onClick={() => navResumoMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+          <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES_ABREV[mesResumo]} {anoResumo}</span>
+          <button className="btn-secondary" onClick={() => navResumoMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+        </div>
+
+        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Saldo do mês</div>
+        <div style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>
+          {fmt((resumo as any)?.previsao?.saldoPrevisto ?? 0)}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginTop: 16 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--green)', fontSize: 12 }}>
+              <ArrowUp size={14} /> Receita
+            </div>
+            <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 19, marginTop: 2 }}>
+              {fmt((resumo as any)?.previsao?.receitaPrevista ?? 0)}
+            </div>
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--red)', fontSize: 12 }}>
+              <ArrowDown size={14} /> Despesas
+            </div>
+            <div style={{ fontWeight: 700, color: 'var(--red)', fontSize: 19, marginTop: 2 }}>
+              {fmt((resumo as any)?.previsao?.despesaPrevista ?? 0)}
+            </div>
+          </div>
         </div>
       </div>
 
