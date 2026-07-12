@@ -696,7 +696,13 @@ export function Financeiro() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <div className="cx-tipo-toggle">
             <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
-            <button className={periodoTipo === 'personalizado' ? 'active' : ''} onClick={() => setPeriodoTipo('personalizado')}>Personalizado</button>
+            <button className={periodoTipo === 'personalizado' ? 'active' : ''} onClick={() => {
+              setPeriodoTipo('personalizado');
+              const primeiroDia = new Date(anoRef, mesRef, 1).toISOString().slice(0, 10);
+              const ultimoDia = new Date(anoRef, mesRef + 1, 0).toISOString().slice(0, 10);
+              setPeriodoDe(primeiroDia);
+              setPeriodoAte(ultimoDia);
+            }}>Personalizado</button>
           </div>
           {periodoTipo === 'mes' ? (
             <>
@@ -771,6 +777,7 @@ export function Financeiro() {
                               {l.descricao}
                             </div>
                             {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
+                            {l.observacao && <div style={{ fontSize: 11, color: 'var(--accent)', fontStyle: 'italic' }}>💬 {l.observacao}</div>}
                           </td>
                           <td style={{ fontSize: 13, color: 'var(--text-2)' }}>
                             {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'}
