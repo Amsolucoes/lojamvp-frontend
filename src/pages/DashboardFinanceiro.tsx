@@ -1,9 +1,34 @@
-import { Wallet, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, CreditCard, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import './Dashboard.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+interface Alerta {
+  id: string;
+  descricao: string;
+  tipo: string;
+  valor: number;
+  vencimento: string;
+  origem: string;
+}
+
+interface CartaoResumo {
+  id: string;
+  nome: string;
+  limite: number;
+  usado: number;
+  disponivel: number;
+  vencimentoAtual: string;
+  status: string;
+}
+
+function diasAte(dataStr: string) {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const data = new Date(dataStr); data.setHours(0,0,0,0);
+  return Math.round((data.getTime() - hoje.getTime()) / 86400000);
+}
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -30,6 +55,8 @@ export function DashboardFinanceiro() {
   const [resumo, setResumo] = useState<{ pagar: ResumoTipo; receber: ResumoTipo } | null>(null);
   const [anoRef, setAnoRef] = useState(new Date().getFullYear());
   const [resumoAnual, setResumoAnual] = useState<{ mes: number; pagar: number; receber: number; saldo: number }[]>([]);
+  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [cartoesResumo, setCartoesResumo] = useState<CartaoResumo[]>([]);
 
   useEffect(() => {
     api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
@@ -44,6 +71,11 @@ export function DashboardFinanceiro() {
   useEffect(() => {
     api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {});
   }, [anoRef]);
+
+  useEffect(() => {
+    api.get<Alerta[]>('/api/financeiro/alertas-vencimento?dias=7').then(setAlertas).catch(() => {});
+    api.get<CartaoResumo[]>('/api/financeiro/cartoes-resumo').then(setCartoesResumo).catch(() => {});
+  }, []);
 
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
   const mesAtualLabel = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -97,6 +129,27 @@ export function DashboardFinanceiro() {
             <button className="btn-secondary" onClick={() => setAnoRef(a => a + 1)} style={{ padding: '4px 8px' }}><ChevronRight size={14} /></button>
           </div>
         </div>
+
+        {/* Gráfico de barras — receita x despesa por mês */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 140, padding: '16px 8px 8px', overflowX: 'auto' }}>
+          {(() => {
+            const max = Math.max(...resumoAnual.map(m => Math.max(m.pagar, m.receber)), 1);
+            return resumoAnual.map(m => (
+              <div key={m.mes} style={{ flex: '1 0 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 100 }}>
+                  <div title={`Receitas: ${fmt(m.receber)}`} style={{ width: 10, borderRadius: '3px 3px 0 0', background: 'var(--green)', height: `${(m.receber / max) * 100}%`, minHeight: m.receber > 0 ? 3 : 0 }} />
+                  <div title={`Despesas: ${fmt(m.pagar)}`} style={{ width: 10, borderRadius: '3px 3px 0 0', background: 'var(--red)', height: `${(m.pagar / max) * 100}%`, minHeight: m.pagar > 0 ? 3 : 0 }} />
+                </div>
+                <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{MESES_ABREV[m.mes - 1]}</span>
+              </div>
+            ));
+          })()}
+        </div>
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>
+          <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--green)', marginRight: 4 }} />Receitas</span>
+          <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--red)', marginRight: 4 }} />Despesas</span>
+        </div>
+
         <div className="table-wrap">
           <table>
             <thead>
@@ -117,6 +170,56 @@ export function DashboardFinanceiro() {
           </table>
         </div>
       </div>
+
+      {alertas.length > 0 && (
+        <div className="card" style={{ marginBottom: 16, borderColor: 'rgba(251,191,36,0.3)' }}>
+          <div className="dash-card-header">
+            <div className="dash-card-title" style={{ color: 'var(--yellow, #d97706)' }}><Clock size={15} /> Vencendo em breve</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {alertas.map(a => {
+              const d = diasAte(a.vencimento);
+              return (
+                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px', borderBottom: '1px solid var(--border)' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{a.descricao}</div>
+                    <div style={{ fontSize: 11, color: d <= 1 ? 'var(--red)' : 'var(--text-3)' }}>
+                      {d === 0 ? 'Vence hoje' : d === 1 ? 'Vence amanhã' : `Vence em ${d} dias`}
+                    </div>
+                  </div>
+                  <span style={{ fontWeight: 600, color: a.tipo === 'pagar' ? 'var(--red)' : 'var(--green)' }}>{fmt(a.valor)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {cartoesResumo.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="dash-card-header">
+            <div className="dash-card-title"><CreditCard size={15} /> Cartões de crédito</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            {cartoesResumo.map(c => {
+              const pct = c.limite > 0 ? Math.min(100, (c.usado / c.limite) * 100) : 0;
+              return (
+                <div key={c.id} className="stat-card">
+                  <div className="stat-label">{c.nome}</div>
+                  <div className="stat-value" style={{ fontSize: 16 }}>{fmt(c.usado)} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-3)' }}>/ {fmt(c.limite)}</span></div>
+                  <div style={{ height: 5, background: 'var(--bg-3)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: pct > 85 ? 'var(--red)' : pct > 60 ? 'var(--yellow, #d97706)' : 'var(--green)', borderRadius: 3 }} />
+                  </div>
+                  <div className="stat-sub" style={{ marginTop: 6 }}>
+                    Fatura atual vence {new Date(c.vencimentoAtual).toLocaleDateString('pt-BR')}
+                    {c.status === 'pago' && <span style={{ color: 'var(--green)' }}> · Paga</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="dash-card-header">
