@@ -2,13 +2,59 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../context/ToastContext';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { api } from '../../services/api';
 import './Layout.css';
+
+// Trava o scroll do body sempre que existir algum modal (.modal-overlay) aberto
+// em qualquer tela do sistema — sem precisar mexer em cada modal individualmente.
+function useTravaScrollModal() {
+  const scrollYRef = useRef(0);
+
+  useEffect(() => {
+    function atualizar() {
+      const temModalAberto = document.querySelector('.modal-overlay') !== null;
+
+      if (temModalAberto && document.body.style.position !== 'fixed') {
+        scrollYRef.current = window.scrollY;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollYRef.current}px`;
+        document.body.style.left = '0';
+        document.body.style.right = '0';
+        document.body.style.overflow = 'hidden';
+      } else if (!temModalAberto && document.body.style.position === 'fixed') {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollYRef.current);
+      }
+    }
+
+    const observer = new MutationObserver(atualizar);
+    observer.observe(document.body, { childList: true, subtree: true });
+    atualizar();
+
+    return () => {
+      observer.disconnect();
+      // Garante que não fica travado se o componente desmontar com modal aberto
+      if (document.body.style.position === 'fixed') {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.overflow = '';
+      }
+    };
+  }, []);
+}
 
 export function Layout() {
   const { loading, erro, recarregar, fase, nomeLoja, temFinanceiro } = useApp();
   const { aviso } = useToast();
+
+  useTravaScrollModal();
 
   useEffect(() => {
     if (!temFinanceiro) return;
