@@ -972,77 +972,6 @@ export function Financeiro() {
         </div>
       )}
 
-      {/* Modal escolher forma de pagar a fatura */}
-      {modalPagarFatura && faturaAberta && faturaDados && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalPagarFatura(false)}>
-          <div className="modal" style={{ maxWidth: 420 }}>
-            <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Pagar fatura — {fmt(faturaDados.total)}</h2>
-              <button className="btn-ghost" onClick={() => setModalPagarFatura(false)}><X size={16} /></button>
-            </div>
-            <div className="modal-body">
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                {[
-                  { v: 'total', t: 'Pagar tudo' },
-                  { v: 'parcial', t: 'Parcial' },
-                  { v: 'parcelado', t: 'Parcelar' },
-                ].map(op => (
-                  <button key={op.v} type="button"
-                    className={op.v === formPagFatura.modo ? 'btn-primary' : 'btn-secondary'}
-                    style={{ flex: 1, fontSize: 12, padding: '8px 0' }}
-                    onClick={() => setFormPagFatura(f => ({ ...f, modo: op.v as any }))}>
-                    {op.t}
-                  </button>
-                ))}
-              </div>
-
-              {formPagFatura.modo === 'total' && (
-                <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
-                  Vai debitar {fmt(faturaDados.total)} da conta vinculada ao cartão agora.
-                </p>
-              )}
-
-              {formPagFatura.modo === 'parcial' && (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">Quanto vai pagar agora (R$)</label>
-                    <input type="number" min={0.01} max={faturaDados.total - 0.01} step={0.01}
-                      value={formPagFatura.valorPago}
-                      onChange={e => setFormPagFatura(f => ({ ...f, valorPago: e.target.value }))} />
-                  </div>
-                  <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
-                    O restante (com os juros do cartão) entra automaticamente na próxima fatura.
-                  </p>
-                </>
-              )}
-
-              {formPagFatura.modo === 'parcelado' && (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">Em quantas parcelas</label>
-                    <input type="number" min={2} max={24} value={formPagFatura.totalParcelas}
-                      onChange={e => setFormPagFatura(f => ({ ...f, totalParcelas: e.target.value }))} />
-                  </div>
-                  <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
-                    Gera parcelas mensais em Contas a Pagar, já com os juros do cartão aplicados. Nenhum valor é debitado agora.
-                  </p>
-                </>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setModalPagarFatura(false)}>Cancelar</button>
-              <button className="btn-primary" onClick={() => {
-                if (formPagFatura.modo === 'total') pagarFaturaModal('total');
-                else if (formPagFatura.modo === 'parcial') pagarFaturaModal('parcial', { valorPago: parseFloat(formPagFatura.valorPago) || 0 });
-                else pagarFaturaModal('parcelado', { totalParcelas: parseInt(formPagFatura.totalParcelas) || 3 });
-              }}>
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal categorias */}
       {modalCategorias && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCategorias(false)}>
@@ -1232,6 +1161,77 @@ export function Financeiro() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setFaturaAberta(null)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+            {/* Modal escolher forma de pagar a fatura */}
+      {modalPagarFatura && faturaAberta && faturaDados && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalPagarFatura(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Pagar fatura — {fmt(faturaDados.total)}</h2>
+              <button className="btn-ghost" onClick={() => setModalPagarFatura(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                {[
+                  { v: 'total', t: 'Pagar tudo' },
+                  { v: 'parcial', t: 'Parcial' },
+                  { v: 'parcelado', t: 'Parcelar' },
+                ].map(op => (
+                  <button key={op.v} type="button"
+                    className={op.v === formPagFatura.modo ? 'btn-primary' : 'btn-secondary'}
+                    style={{ flex: 1, fontSize: 12, padding: '8px 0' }}
+                    onClick={() => setFormPagFatura(f => ({ ...f, modo: op.v as any }))}>
+                    {op.t}
+                  </button>
+                ))}
+              </div>
+
+              {formPagFatura.modo === 'total' && (
+                <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+                  Vai debitar {fmt(faturaDados.total)} da conta vinculada ao cartão agora.
+                </p>
+              )}
+
+              {formPagFatura.modo === 'parcial' && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Quanto vai pagar agora (R$)</label>
+                    <input type="number" min={0.01} max={faturaDados.total - 0.01} step={0.01}
+                      value={formPagFatura.valorPago}
+                      onChange={e => setFormPagFatura(f => ({ ...f, valorPago: e.target.value }))} />
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+                    O restante (com os juros do cartão) entra automaticamente na próxima fatura.
+                  </p>
+                </>
+              )}
+
+              {formPagFatura.modo === 'parcelado' && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Em quantas parcelas</label>
+                    <input type="number" min={2} max={24} value={formPagFatura.totalParcelas}
+                      onChange={e => setFormPagFatura(f => ({ ...f, totalParcelas: e.target.value }))} />
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+                    Gera parcelas mensais em Contas a Pagar, já com os juros do cartão aplicados. Nenhum valor é debitado agora.
+                  </p>
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalPagarFatura(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={() => {
+                if (formPagFatura.modo === 'total') pagarFaturaModal('total');
+                else if (formPagFatura.modo === 'parcial') pagarFaturaModal('parcial', { valorPago: parseFloat(formPagFatura.valorPago) || 0 });
+                else pagarFaturaModal('parcelado', { totalParcelas: parseInt(formPagFatura.totalParcelas) || 3 });
+              }}>
+                Confirmar
+              </button>
             </div>
           </div>
         </div>
