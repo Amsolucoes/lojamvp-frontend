@@ -133,6 +133,7 @@ export function Financeiro() {
   const [editandoConta, setEditandoConta] = useState<Conta | null>(null);
 
   const [formCat, setFormCat] = useState({ nome: '', tipo: 'ambos', icone: '' });
+  const [filtroCatModal, setFiltroCatModal] = useState<'todas' | 'pagar' | 'receber' | 'ambos'>('todas');
 
   const [formAjuste, setFormAjuste] = useState({ tipo: 'entrada' as 'entrada' | 'saida' | 'ajuste', valor: '', novoSaldo: '', observacao: '' });
 
@@ -181,7 +182,11 @@ export function Financeiro() {
   }
 
   const listaPagar = linhasPagar.filter(l => catFiltro === 'todas' || l.categoriaNome === catFiltro);
-  const listaReceber = receberUnificado; // sem filtro de categoria (planos não têm categoria própria ainda)
+  const listaReceber = receberUnificado.filter((l: any) => {
+    if (catFiltro === 'todas') return true;
+    if (catFiltro === '__plano__') return l.origem === 'plano';
+    return l.origem === 'avulso' && l.categoriaNome === catFiltro;
+  });
 
   const resumoAba = resumo ? resumo[aba] : null;
 
@@ -521,7 +526,7 @@ export function Financeiro() {
           <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesRef]} {anoRef}</span>
           <button className="btn-secondary" onClick={() => navMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
         </div>
-        {aba === 'pagar' && (
+        {aba === 'pagar' ? (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <div className="cx-tipo-toggle">
               <button className={modoPagar === 'agrupado' ? 'active' : ''} onClick={() => setModoPagar('agrupado')}>Agrupado</button>
@@ -536,6 +541,16 @@ export function Financeiro() {
               </select>
             )}
           </div>
+        ) : (
+          categoriasDaAba.length > 0 && (
+            <select value={catFiltro} onChange={e => setCatFiltro(e.target.value)} style={{ width: 'auto', minWidth: 160 }}>
+              <option value="todas">Todas as categorias</option>
+              <option value="__plano__">💳 Mensalidades (Planos)</option>
+              {categoriasDaAba.map(c => (
+                <option key={c.id} value={c.nome}>{c.icone} {c.nome}</option>
+              ))}
+            </select>
+          )
         )}
       </div>
 
@@ -930,8 +945,16 @@ export function Financeiro() {
                   Usar categorias padrão
                 </button>
               )}
+              {categorias.length > 0 && (
+                <div className="cat-tabs" style={{ marginBottom: 12 }}>
+                  <button className={`cat-tab${filtroCatModal === 'todas' ? ' active' : ''}`} onClick={() => setFiltroCatModal('todas')}>Todas</button>
+                  <button className={`cat-tab${filtroCatModal === 'pagar' ? ' active' : ''}`} onClick={() => setFiltroCatModal('pagar')}>A pagar</button>
+                  <button className={`cat-tab${filtroCatModal === 'receber' ? ' active' : ''}`} onClick={() => setFiltroCatModal('receber')}>A receber</button>
+                  <button className={`cat-tab${filtroCatModal === 'ambos' ? ' active' : ''}`} onClick={() => setFiltroCatModal('ambos')}>Ambos</button>
+                </div>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-                {categorias.map(c => (
+                {categorias.filter(c => filtroCatModal === 'todas' || c.tipo === filtroCatModal).map(c => (
                   <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
                     <span style={{ fontSize: 13 }}>{c.icone} {c.nome} <span style={{ color: 'var(--text-3)', fontSize: 11 }}>({c.tipo})</span></span>
                     <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => excluirCategoria(c)}><Trash2 size={13} /></button>
