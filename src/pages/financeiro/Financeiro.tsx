@@ -811,6 +811,11 @@ export function Financeiro() {
                               {l.descricao}
                             </div>
                             {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
+                            {l.observacao && (
+                              <span className="badge badge-accent" style={{ fontSize: 10, marginTop: 4, display: 'inline-block' }}>
+                                💬 {l.observacao}
+                              </span>
+                            )}
                           </td>
                           <td style={{ fontSize: 13, color: 'var(--text-2)' }}>
                             {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'}
@@ -909,7 +914,14 @@ export function Financeiro() {
                         </tr>
                         {itens.map((l: any) => (
                       <tr key={l.id}>
-                        <td style={{ fontWeight: 500 }}>{l.descricao}</td>
+                        <td>
+                          <div style={{ fontWeight: 500 }}>{l.descricao}</div>
+                          {l.observacao && (
+                            <span className="badge badge-accent" style={{ fontSize: 10, marginTop: 4, display: 'inline-block' }}>
+                              💬 {l.observacao}
+                            </span>
+                          )}
+                        </td>
                         <td style={{ fontSize: 13 }}>{new Date(l.vencimento).toLocaleDateString('pt-BR')}</td>
                         <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
                         <td>
