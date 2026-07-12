@@ -74,6 +74,7 @@ interface ItemFaturaDetalhe {
   valor: number;
   dataCompra: string;
   categoriaNome: string | null;
+  modo: string;
 }
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -111,7 +112,11 @@ export function Financeiro() {
   const [faturaDados, setFaturaDados] = useState<{ vencimento: string; total: number; status: string; itens: ItemFaturaDetalhe[] } | null>(null);
   const [faturaAno, setFaturaAno] = useState(new Date().getFullYear());
   const [faturaMes, setFaturaMes] = useState(new Date().getMonth() + 1);
-  const [formCompra, setFormCompra] = useState({ descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '' });
+  const [formCompra, setFormCompra] = useState({
+    modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
+    descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10),
+    categoriaId: '', totalParcelas: '2',
+  });
 
   const [modalLancamento, setModalLancamento] = useState(false);
   const [modalContas, setModalContas] = useState(false);
@@ -391,13 +396,29 @@ export function Financeiro() {
     if (!faturaAberta) return;
     if (!formCompra.descricao.trim() || !formCompra.valor) { erro('Preencha descrição e valor.'); return; }
     try {
-      await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/lancamentos`, {
-        descricao: formCompra.descricao.trim(),
-        valor: parseFloat(formCompra.valor),
-        dataCompra: formCompra.dataCompra,
-        categoriaId: formCompra.categoriaId || null,
-      });
-      setFormCompra({ descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '' });
+      if (formCompra.modo === 'avulsa') {
+        await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/lancamentos`, {
+          descricao: formCompra.descricao.trim(),
+          valor: parseFloat(formCompra.valor),
+          dataCompra: formCompra.dataCompra,
+          categoriaId: formCompra.categoriaId || null,
+        });
+      } else if (formCompra.modo === 'parcelada') {
+        await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/lancamentos/parcelado`, {
+          descricao: formCompra.descricao.trim(),
+          valorParcela: parseFloat(formCompra.valor),
+          totalParcelas: parseInt(formCompra.totalParcelas) || 2,
+          dataCompra: formCompra.dataCompra,
+          categoriaId: formCompra.categoriaId || null,
+        });
+      } else {
+        await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/fixos`, {
+          descricao: formCompra.descricao.trim(),
+          valor: parseFloat(formCompra.valor),
+          categoriaId: formCompra.categoriaId || null,
+        });
+      }
+      setFormCompra({ modo: 'avulsa', descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '', totalParcelas: '2' });
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarLancamentos();
       sucesso('Compra lançada!');
@@ -1135,7 +1156,10 @@ export function Financeiro() {
                 ) : faturaDados?.itens.map(i => (
                   <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                     <div>
-                      <div>{i.descricao}</div>
+                      <div>
+                        {i.descricao}
+                        {i.modo === 'fixa' && <span className="badge badge-accent" style={{ fontSize: 9, marginLeft: 6 }}>Fixo</span>}
+                      </div>
                       <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{new Date(i.dataCompra).toLocaleDateString('pt-BR')}{i.categoriaNome ? ` · ${i.categoriaNome}` : ''}</div>
                     </div>
                     <span style={{ fontWeight: 600 }}>{fmt(i.valor)}</span>
@@ -1146,16 +1170,56 @@ export function Financeiro() {
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Lançar compra</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <input value={formCompra.descricao} onChange={e => setFormCompra(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Netflix" />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))} placeholder="Valor" />
-                    <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[
+                      { v: 'avulsa', t: 'Avulsa' },
+                      { v: 'parcelada', t: 'Parcelada' },
+                      { v: 'fixa', t: 'Fixa/mensal' },
+                    ].map(op => (
+                      <button key={op.v} type="button"
+                        className={op.v === formCompra.modo ? 'btn-primary' : 'btn-secondary'}
+                        style={{ flex: 1, fontSize: 12, padding: '8px 0' }}
+                        onClick={() => setFormCompra(f => ({ ...f, modo: op.v as any }))}>
+                        {op.t}
+                      </button>
+                    ))}
                   </div>
+
+                  <input value={formCompra.descricao} onChange={e => setFormCompra(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Netflix" />
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))}
+                      placeholder={formCompra.modo === 'parcelada' ? 'Valor da parcela' : 'Valor'} />
+
+                    {formCompra.modo === 'parcelada' ? (
+                      <input type="number" min={2} max={24} value={formCompra.totalParcelas}
+                        onChange={e => setFormCompra(f => ({ ...f, totalParcelas: e.target.value }))} placeholder="Parcelas" />
+                    ) : formCompra.modo === 'avulsa' ? (
+                      <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', fontSize: 11, color: 'var(--text-3)' }}>Repete todo mês</div>
+                    )}
+                  </div>
+
+                  {formCompra.modo === 'parcelada' && (
+                    <div className="form-group">
+                      <label className="form-label">Data da 1ª parcela</label>
+                      <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
+                    </div>
+                  )}
+
                   <select value={formCompra.categoriaId} onChange={e => setFormCompra(f => ({ ...f, categoriaId: e.target.value }))}>
                     <option value="">Sem categoria</option>
                     {categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
                   </select>
-                  <button className="btn-primary" onClick={lancarCompra}>Adicionar compra</button>
+
+                  {formCompra.modo === 'fixa' && (
+                    <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                      Esse valor entra automaticamente em todas as faturas futuras, até você desativar.
+                    </p>
+                  )}
+
+                  <button className="btn-primary" onClick={lancarCompra}>Adicionar</button>
                 </div>
               </div>
             </div>
