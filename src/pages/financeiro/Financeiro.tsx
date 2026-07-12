@@ -1001,46 +1001,58 @@ export function Financeiro() {
                   <input value={formLanc.observacao} onChange={e => setFormLanc(f => ({ ...f, observacao: e.target.value }))} placeholder="Notas internas" />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                  <div className="form-group">
-                    <label className="form-label">{formLanc.modo === 'parcelada' ? 'Valor da parcela' : 'Valor'} (R$) *</label>
-                    <input type="number" min={0} step={0.01} value={formLanc.valor}
-                      onChange={e => setFormLanc(f => ({ ...f, valor: e.target.value }))} />
-                  </div>
-
-                  {formLanc.modo === 'fixa' ? (
+                <div style={{ display: formLanc.modo === 'parcelada' ? 'block' : 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  {formLanc.modo === 'parcelada' ? (
                     <div className="form-group">
-                      <label className="form-label">Dia do vencimento</label>
-                      <input type="number" min={1} max={28} value={formLanc.diaVencimento}
-                        onChange={e => setFormLanc(f => ({ ...f, diaVencimento: e.target.value }))} />
-                    </div>
-                  ) : formLanc.modo === 'parcelada' ? (
-                    <div className="form-group">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <label className="form-label" style={{ margin: 0 }}>
-                          {formLanc.tipoParcelamento === 'quantidade' ? 'Total de parcelas' : 'Até quando'}
-                        </label>
-                        <button type="button" className="btn-ghost" style={{ fontSize: 11, padding: '2px 6px' }}
-                          onClick={() => setFormLanc(f => ({ ...f, tipoParcelamento: f.tipoParcelamento === 'quantidade' ? 'dataFim' : 'quantidade' }))}>
-                          {formLanc.tipoParcelamento === 'quantidade' ? 'usar data fim' : 'usar quantidade'}
-                        </button>
-                      </div>
-                      {formLanc.tipoParcelamento === 'quantidade' ? (
-                        <input type="number" min={2} max={120} value={formLanc.totalParcelas}
-                          onChange={e => setFormLanc(f => ({ ...f, totalParcelas: e.target.value }))} />
-                      ) : (
-                        <input type="date" value={formLanc.dataFim}
-                          onChange={e => setFormLanc(f => ({ ...f, dataFim: e.target.value }))} />
-                      )}
+                      <label className="form-label">Valor da parcela (R$) *</label>
+                      <input type="number" min={0} step={0.01} value={formLanc.valor}
+                        onChange={e => setFormLanc(f => ({ ...f, valor: e.target.value }))} />
                     </div>
                   ) : (
-                    <div className="form-group">
-                      <label className="form-label">Vencimento</label>
-                      <input type="date" value={formLanc.vencimento}
-                        onChange={e => setFormLanc(f => ({ ...f, vencimento: e.target.value }))} />
-                    </div>
+                    <>
+                      <div className="form-group">
+                        <label className="form-label">Valor (R$) *</label>
+                        <input type="number" min={0} step={0.01} value={formLanc.valor}
+                          onChange={e => setFormLanc(f => ({ ...f, valor: e.target.value }))} />
+                      </div>
+
+                      {formLanc.modo === 'fixa' ? (
+                        <div className="form-group">
+                          <label className="form-label">Dia do vencimento</label>
+                          <input type="number" min={1} max={28} value={formLanc.diaVencimento}
+                            onChange={e => setFormLanc(f => ({ ...f, diaVencimento: e.target.value }))} />
+                        </div>
+                      ) : (
+                        <div className="form-group">
+                          <label className="form-label">Vencimento</label>
+                          <input type="date" value={formLanc.vencimento}
+                            onChange={e => setFormLanc(f => ({ ...f, vencimento: e.target.value }))} />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
+
+                {formLanc.modo === 'parcelada' && (
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <label className="form-label" style={{ margin: 0 }}>
+                        {formLanc.tipoParcelamento === 'quantidade' ? 'Total de parcelas' : 'Até quando'}
+                      </label>
+                      <button type="button" className="btn-ghost" style={{ fontSize: 11, padding: '2px 6px' }}
+                        onClick={() => setFormLanc(f => ({ ...f, tipoParcelamento: f.tipoParcelamento === 'quantidade' ? 'dataFim' : 'quantidade' }))}>
+                        {formLanc.tipoParcelamento === 'quantidade' ? 'usar data fim' : 'usar quantidade'}
+                      </button>
+                    </div>
+                    {formLanc.tipoParcelamento === 'quantidade' ? (
+                      <input type="number" min={2} max={120} value={formLanc.totalParcelas}
+                        onChange={e => setFormLanc(f => ({ ...f, totalParcelas: e.target.value }))} />
+                    ) : (
+                      <input type="date" value={formLanc.dataFim}
+                        onChange={e => setFormLanc(f => ({ ...f, dataFim: e.target.value }))} />
+                    )}
+                  </div>
+                )}
 
                 {formLanc.modo === 'parcelada' && (
                   <div className="form-group">
