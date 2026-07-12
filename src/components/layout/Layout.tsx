@@ -1,10 +1,31 @@
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { useApp } from '../../context/AppContext';
+import { useToast } from '../../context/ToastContext';
+import { useEffect } from 'react';
+import { api } from '../../services/api';
 import './Layout.css';
 
 export function Layout() {
-  const { loading, erro, recarregar, fase, nomeLoja } = useApp();
+  const { loading, erro, recarregar, fase, nomeLoja, temFinanceiro } = useApp();
+  const { aviso } = useToast();
+
+  useEffect(() => {
+    if (!temFinanceiro) return;
+    const jaAvisouHoje = sessionStorage.getItem('financeiro:avisoVencimento');
+    if (jaAvisouHoje) return;
+
+    api.get<any[]>('/api/financeiro/alertas-vencimento?dias=3').then(alertas => {
+      if (alertas.length === 0) return;
+      const total = alertas.reduce((s, a) => s + a.valor, 0);
+      const primeiro = alertas[0];
+      const msg = alertas.length === 1
+        ? `💰 "${primeiro.descricao}" vence em breve — ${primeiro.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+        : `💰 ${alertas.length} conta(s) vencendo nos próximos dias — total ${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+      aviso(msg);
+      sessionStorage.setItem('financeiro:avisoVencimento', '1');
+    }).catch(() => {});
+  }, [temFinanceiro]);
 
   if (loading) {
     return (

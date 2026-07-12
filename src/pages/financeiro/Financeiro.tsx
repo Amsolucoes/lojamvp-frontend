@@ -671,6 +671,14 @@ export function Financeiro() {
               <div className="stat-label">Pendente</div>
               <div className="stat-value" style={{ color: 'var(--yellow, #d97706)', fontSize: 20 }}>{fmt(resumoAba.totalPendente)}</div>
               <div className="stat-sub">{resumoAba.qtdPendente} lançamento(s)</div>
+              {aba === 'pagar' && (resumo as any)?.detalhePagar && (
+                <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>
+                  Contas: {fmt((resumo as any).detalhePagar.lancamentos)}
+                  {(resumo as any).detalhePagar.cartoes.map((c: any) => (
+                    <span key={c.nome}> · {c.nome}: {fmt(c.valor)}</span>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="stat-card" style={resumoAba.qtdVencido > 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
               <div className="stat-label">Vencido</div>

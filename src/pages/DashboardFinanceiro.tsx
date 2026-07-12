@@ -117,6 +117,14 @@ export function DashboardFinanceiro() {
             {fmt((resumo?.pagar.totalPendente ?? 0) + (resumo?.pagar.totalVencido ?? 0))}
           </div>
           <div className="stat-sub">{(resumo?.pagar.qtdPendente ?? 0) + (resumo?.pagar.qtdVencido ?? 0)} pendente(s)</div>
+          {(resumo as any)?.detalhePagar && (
+            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>
+              Contas: {fmt((resumo as any).detalhePagar.lancamentos)}
+              {(resumo as any).detalhePagar.cartoes.map((c: any) => (
+                <span key={c.nome}> · {c.nome}: {fmt(c.valor)}</span>
+              ))}
+            </div>
+          )}
         </div>
         {((resumo?.pagar.qtdVencido ?? 0) + (resumo?.receber.qtdVencido ?? 0)) > 0 && (
           <div className="stat-card" style={{ borderColor: 'rgba(248,113,113,0.3)' }}>
