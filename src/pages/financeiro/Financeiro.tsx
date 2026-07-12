@@ -739,6 +739,15 @@ export function Financeiro() {
             <option value="pago">Só pagos</option>
             <option value="pendente">Só pendentes</option>
           </select>
+          {(catFiltro !== 'todas' || statusFiltro !== 'todos' || periodoTipo === 'personalizado') && (
+            <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => {
+              setCatFiltro('todas');
+              setStatusFiltro('todos');
+              setPeriodoTipo('mes');
+            }}>
+              Limpar filtros
+            </button>
+          )}
         </div>
       </div>
 
@@ -774,10 +783,10 @@ export function Financeiro() {
                           <td>
                             <div style={{ fontWeight: 500 }}>
                               {l.origem === 'cartao_fatura' && <CreditCard size={12} style={{ verticalAlign: -1, marginRight: 4, color: 'var(--accent)' }} />}
+                              {l.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
                               {l.descricao}
                             </div>
                             {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
-                            {l.observacao && <div style={{ fontSize: 11, color: 'var(--accent)', fontStyle: 'italic' }}>💬 {l.observacao}</div>}
                           </td>
                           <td style={{ fontSize: 13, color: 'var(--text-2)' }}>
                             {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'}
@@ -1007,13 +1016,15 @@ export function Financeiro() {
                     </div>
                   ) : formLanc.modo === 'parcelada' ? (
                     <div className="form-group">
-                      <label className="form-label">
-                        {formLanc.tipoParcelamento === 'quantidade' ? 'Total de parcelas' : 'Até quando'}
-                        <button type="button" className="btn-ghost" style={{ fontSize: 10, marginLeft: 8, padding: '2px 6px' }}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <label className="form-label" style={{ margin: 0 }}>
+                          {formLanc.tipoParcelamento === 'quantidade' ? 'Total de parcelas' : 'Até quando'}
+                        </label>
+                        <button type="button" className="btn-ghost" style={{ fontSize: 11, padding: '2px 6px' }}
                           onClick={() => setFormLanc(f => ({ ...f, tipoParcelamento: f.tipoParcelamento === 'quantidade' ? 'dataFim' : 'quantidade' }))}>
                           {formLanc.tipoParcelamento === 'quantidade' ? 'usar data fim' : 'usar quantidade'}
                         </button>
-                      </label>
+                      </div>
                       {formLanc.tipoParcelamento === 'quantidade' ? (
                         <input type="number" min={2} max={120} value={formLanc.totalParcelas}
                           onChange={e => setFormLanc(f => ({ ...f, totalParcelas: e.target.value }))} />
