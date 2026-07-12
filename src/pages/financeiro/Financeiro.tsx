@@ -75,7 +75,8 @@ interface ItemFaturaDetalhe {
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const ICONES_CATEGORIA = ['🏷️','🏠','💧','💡','📶','📦','👤','🧾','💳','🛒','📁','🍽️','🚗','🎓','🏥','🎮','✈️','🐾','🎁','📱','💊','⛽','🧹','🎬'];
+const ICONES_CATEGORIA = ['🏷️','💵','💰','🤑','$','🏠','💧','💡','📶','📦','👤','🧾','💳','🛒','📁','🍽️','🚗','🎓','🏥','🎮'
+    ,'✈️','🐾','🎁','📱','💊','⛽','🧹','🎬','📈','📉','🔧','🛠️','🎉','👶','💇','🐶'];
 
 function ehVencido(l: { status: string; vencimento: string }) {
   if (!l.vencimento) return false;
@@ -240,10 +241,10 @@ export function Financeiro() {
     }
   }
 
-  async function excluirLancamento() {
+  async function excluirLancamento(modo: 'unica' | 'todas' = 'unica') {
     if (!confirmExcluir) return;
     try {
-      await api.delete(`/api/financeiro/lancamentos/${confirmExcluir.id}`);
+      await api.delete(`/api/financeiro/lancamentos/${confirmExcluir.id}?modo=${modo}`);
       setConfirmExcluir(null);
       carregarLancamentos();
       carregarResumo();
@@ -482,14 +483,12 @@ export function Financeiro() {
               <button className={modoPagar === 'detalhado' ? 'active' : ''} onClick={() => setModoPagar('detalhado')}>Detalhado</button>
             </div>
             {categoriasDaAba.length > 0 && (
-              <div className="cat-tabs">
-                <button className={`cat-tab${catFiltro === 'todas' ? ' active' : ''}`} onClick={() => setCatFiltro('todas')}>Todas</button>
+              <select value={catFiltro} onChange={e => setCatFiltro(e.target.value)} style={{ width: 'auto', minWidth: 160 }}>
+                <option value="todas">Todas as categorias</option>
                 {categoriasDaAba.map(c => (
-                  <button key={c.id} className={`cat-tab${catFiltro === c.nome ? ' active' : ''}`} onClick={() => setCatFiltro(c.nome)}>
-                    {c.icone} {c.nome}
-                  </button>
+                  <option key={c.id} value={c.nome}>{c.icone} {c.nome}</option>
                 ))}
-              </div>
+              </select>
             )}
           </div>
         )}
@@ -1036,19 +1035,35 @@ export function Financeiro() {
       {/* Confirmar exclusão */}
       {confirmExcluir && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluir(null)}>
-          <div className="modal" style={{ maxWidth: 380 }}>
+          <div className="modal" style={{ maxWidth: 400 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir lançamento</h2>
               <button className="btn-ghost" onClick={() => setConfirmExcluir(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
-                Tem certeza que deseja excluir <strong style={{ color: 'var(--text-1)' }}>{confirmExcluir.descricao}</strong>?
+                Excluir <strong style={{ color: 'var(--text-1)' }}>{confirmExcluir.descricao}</strong>?
               </p>
+              {(confirmExcluir.modo === 'fixa' || confirmExcluir.modo === 'parcelada') && (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>
+                  {confirmExcluir.modo === 'fixa'
+                    ? 'Esse é um lançamento fixo (recorrente). Você pode excluir só este mês, ou parar de gerar os próximos.'
+                    : 'Essa é uma parcela. Você pode excluir só esta, ou todas as parcelas futuras ainda não pagas.'}
+                </p>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setConfirmExcluir(null)}>Cancelar</button>
-              <button className="btn-danger" onClick={excluirLancamento}>Excluir</button>
+              {(confirmExcluir.modo === 'fixa' || confirmExcluir.modo === 'parcelada') ? (
+                <>
+                  <button className="btn-secondary" onClick={() => excluirLancamento('unica')}>Só esta</button>
+                  <button className="btn-danger" onClick={() => excluirLancamento('todas')}>
+                    {confirmExcluir.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-danger" onClick={() => excluirLancamento('unica')}>Excluir</button>
+              )}
             </div>
           </div>
         </div>

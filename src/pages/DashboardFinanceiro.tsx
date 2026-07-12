@@ -1,7 +1,9 @@
-import { Wallet, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import './Dashboard.css';
+
+const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -26,6 +28,8 @@ interface ResumoTipo {
 export function DashboardFinanceiro() {
   const [contas, setContas] = useState<Conta[]>([]);
   const [resumo, setResumo] = useState<{ pagar: ResumoTipo; receber: ResumoTipo } | null>(null);
+  const [anoRef, setAnoRef] = useState(new Date().getFullYear());
+  const [resumoAnual, setResumoAnual] = useState<{ mes: number; pagar: number; receber: number; saldo: number }[]>([]);
 
   useEffect(() => {
     api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
@@ -36,6 +40,10 @@ export function DashboardFinanceiro() {
     api.get<any>(`/api/financeiro/resumo-mensal?ano=${agora.getFullYear()}&mes=${agora.getMonth() + 1}`)
       .then(setResumo).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {});
+  }, [anoRef]);
 
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
   const mesAtualLabel = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -78,6 +86,36 @@ export function DashboardFinanceiro() {
             <div className="stat-sub">conta(s) atrasada(s)</div>
           </div>
         )}
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="dash-card-header" style={{ justifyContent: 'space-between' }}>
+          <div className="dash-card-title"><TrendingUp size={15} /> Resumo do ano</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button className="btn-secondary" onClick={() => setAnoRef(a => a - 1)} style={{ padding: '4px 8px' }}><ChevronLeft size={14} /></button>
+            <span style={{ fontWeight: 600 }}>{anoRef}</span>
+            <button className="btn-secondary" onClick={() => setAnoRef(a => a + 1)} style={{ padding: '4px 8px' }}><ChevronRight size={14} /></button>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Mês</th><th>Receitas</th><th>Despesas</th><th>Saldo</th></tr>
+            </thead>
+            <tbody>
+              {resumoAnual.map(m => (
+                <tr key={m.mes}>
+                  <td>{MESES_ABREV[m.mes - 1]}</td>
+                  <td style={{ color: 'var(--green)' }}>{fmt(m.receber)}</td>
+                  <td style={{ color: 'var(--red)' }}>{fmt(m.pagar)}</td>
+                  <td style={{ fontWeight: 600, color: m.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                    {m.saldo >= 0 ? '+' : ''}{fmt(m.saldo)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="card">

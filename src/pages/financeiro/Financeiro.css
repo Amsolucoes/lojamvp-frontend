@@ -17,3 +17,9 @@
   .fin-table-desktop { display: none; }
   .fin-cards-mobile { display: block; }
 }
+
+@media (max-width: 480px) {
+  .fin-stats {
+    grid-template-columns: 1fr;
+  }
+}
