@@ -120,7 +120,7 @@ export function DashboardFinanceiro() {
         )}
         <div className="stat-card" style={(resumo?.receber.qtdVencido ?? 0) > 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
           <div className="stat-label"><TrendingUp size={12} style={{ verticalAlign: -1 }} /> A receber (mês)</div>
-          <div className="stat-value" style={{ color: 'var(--yellow, #d97706)', fontSize: 20 }}>
+          <div className="stat-value" style={{ color: 'var(--green)', fontSize: 20 }}>
             {fmt((resumo?.receber.totalPendente ?? 0) + (resumo?.receber.totalVencido ?? 0))}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
@@ -137,7 +137,7 @@ export function DashboardFinanceiro() {
 
         <div className="stat-card" style={(resumo?.pagar.qtdVencido ?? 0) > 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
           <div className="stat-label"><TrendingDown size={12} style={{ verticalAlign: -1 }} /> A pagar (mês)</div>
-          <div className="stat-value" style={{ color: 'var(--yellow, #d97706)', fontSize: 20 }}>
+          <div className="stat-value" style={{ color: 'var(--red)', fontSize: 20 }}>
             {fmt((resumo?.pagar.totalPendente ?? 0) + (resumo?.pagar.totalVencido ?? 0))}
           </div>
           {(resumo as any)?.detalhePagar && (

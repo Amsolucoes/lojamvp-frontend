@@ -685,7 +685,7 @@ export function Financeiro() {
         {resumoAba && (
           <div className="stat-card" style={resumoAba.qtdVencido > 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
             <div className="stat-label">{aba === 'pagar' ? 'A pagar' : 'A receber'}</div>
-            <div className="stat-value" style={{ color: 'var(--yellow, #d97706)', fontSize: 22 }}>
+            <div className="stat-value" style={{ color: aba === 'pagar' ? 'var(--red)' : 'var(--green)', fontSize: 22 }}>
               {fmt(resumoAba.totalPendente + resumoAba.totalVencido)}
             </div>
 
