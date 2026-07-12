@@ -282,6 +282,7 @@ export function Financeiro() {
           contaBancariaId: formLanc.contaBancariaId, tipo: aba,
           descricao: formLanc.descricao.trim(),
           categoriaId: formLanc.categoriaId || null,
+          observacao: formLanc.observacao || null,
           valor: parseFloat(formLanc.valor), vencimento: formLanc.vencimento,
         });
       } else if (formLanc.modo === 'parcelada') {
@@ -300,6 +301,7 @@ export function Financeiro() {
           contaBancariaId: formLanc.contaBancariaId, tipo: aba,
           descricao: formLanc.descricao.trim(),
           categoriaId: formLanc.categoriaId || null,
+          observacao: formLanc.observacao || null,
           valor: parseFloat(formLanc.valor),
           diaVencimento: parseInt(formLanc.diaVencimento) || 10,
         });
@@ -367,6 +369,7 @@ export function Financeiro() {
         contaBancariaId: formEdit.contaBancariaId,
         valor: parseFloat(formEdit.valor),
         vencimento: formEdit.vencimento,
+        observacao: formEdit.observacao || null,
       });
       setEditandoLancamento(null);
       carregarLancamentos();
