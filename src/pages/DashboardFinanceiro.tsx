@@ -175,14 +175,14 @@ export function DashboardFinanceiro() {
         </div>
 
         {/* Gráfico de barras — receita x despesa por mês */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 140, padding: '16px 8px 8px', overflowX: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 140, padding: '16px 4px 8px' }}>
           {(() => {
             const max = Math.max(...resumoAnual.map(m => Math.max(m.pagar, m.receber)), 1);
             return resumoAnual.map(m => (
-              <div key={m.mes} style={{ flex: '1 0 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 100 }}>
-                  <div title={`Receitas: ${fmt(m.receber)}`} style={{ width: 10, borderRadius: '3px 3px 0 0', background: 'var(--green)', height: `${(m.receber / max) * 100}%`, minHeight: m.receber > 0 ? 3 : 0 }} />
-                  <div title={`Despesas: ${fmt(m.pagar)}`} style={{ width: 10, borderRadius: '3px 3px 0 0', background: 'var(--red)', height: `${(m.pagar / max) * 100}%`, minHeight: m.pagar > 0 ? 3 : 0 }} />
+              <div key={m.mes} style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 100, width: '100%', justifyContent: 'center' }}>
+                  <div title={`Receitas: ${fmt(m.receber)}`} style={{ flex: 1, maxWidth: 10, borderRadius: '3px 3px 0 0', background: 'var(--green)', height: `${(m.receber / max) * 100}%`, minHeight: m.receber > 0 ? 3 : 0 }} />
+                  <div title={`Despesas: ${fmt(m.pagar)}`} style={{ flex: 1, maxWidth: 10, borderRadius: '3px 3px 0 0', background: 'var(--red)', height: `${(m.pagar / max) * 100}%`, minHeight: m.pagar > 0 ? 3 : 0 }} />
                 </div>
                 <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{MESES_ABREV[m.mes - 1]}</span>
               </div>
@@ -194,7 +194,7 @@ export function DashboardFinanceiro() {
           <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--red)', marginRight: 4 }} />Despesas</span>
         </div>
 
-        <div className="table-wrap">
+        <div className="table-wrap dash-resumo-desktop">
           <table>
             <thead>
               <tr><th>Mês</th><th>Receitas</th><th>Despesas</th><th>Saldo</th></tr>
@@ -212,6 +212,23 @@ export function DashboardFinanceiro() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="dash-resumo-mobile">
+          {resumoAnual.map(m => (
+            <div key={m.mes} style={{ padding: '10px 4px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ fontSize: 13 }}>{MESES_ABREV[m.mes - 1]}</strong>
+                <span style={{ fontWeight: 700, fontSize: 14, color: m.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                  {m.saldo >= 0 ? '+' : ''}{fmt(m.saldo)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 4 }}>
+                <span style={{ color: 'var(--green)' }}>↑ {fmt(m.receber)}</span>
+                <span style={{ color: 'var(--red)' }}>↓ {fmt(m.pagar)}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
