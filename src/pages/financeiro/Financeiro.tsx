@@ -109,6 +109,8 @@ export function Financeiro() {
 
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
   const [faturaDados, setFaturaDados] = useState<{ vencimento: string; total: number; status: string; itens: ItemFaturaDetalhe[] } | null>(null);
+  const [faturaAno, setFaturaAno] = useState(new Date().getFullYear());
+  const [faturaMes, setFaturaMes] = useState(new Date().getMonth() + 1);
   const [formCompra, setFormCompra] = useState({ descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '' });
 
   const [modalLancamento, setModalLancamento] = useState(false);
@@ -353,15 +355,34 @@ export function Financeiro() {
     }
   }
 
-  async function abrirFatura(c: Cartao) {
-    setFaturaAberta(c);
+  async function carregarFatura(cartaoId: string, ano: number, mes: number) {
     setFaturaDados(null);
     try {
-      const res = await api.get<any>(`/api/financeiro/cartoes/${c.id}/fatura?ano=${anoRef}&mes=${mesRef + 1}`);
+      const res = await api.get<any>(`/api/financeiro/cartoes/${cartaoId}/fatura?ano=${ano}&mes=${mes}`);
       setFaturaDados(res);
     } catch {
       setFaturaDados({ vencimento: '', total: 0, status: 'pendente', itens: [] });
     }
+  }
+
+  function abrirFatura(c: Cartao) {
+    const agora = new Date();
+    const ano = agora.getFullYear();
+    const mes = agora.getMonth() + 1;
+    setFaturaAberta(c);
+    setFaturaAno(ano);
+    setFaturaMes(mes);
+    carregarFatura(c.id, ano, mes);
+  }
+
+  function navFaturaMes(delta: number) {
+    if (!faturaAberta) return;
+    let novoMes = faturaMes + delta, novoAno = faturaAno;
+    if (novoMes < 1) { novoMes = 12; novoAno--; }
+    if (novoMes > 12) { novoMes = 1; novoAno++; }
+    setFaturaMes(novoMes);
+    setFaturaAno(novoAno);
+    carregarFatura(faturaAberta.id, novoAno, novoMes);
   }
 
   async function lancarCompra() {
@@ -375,9 +396,23 @@ export function Financeiro() {
         categoriaId: formCompra.categoriaId || null,
       });
       setFormCompra({ descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '' });
-      abrirFatura(faturaAberta);
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarLancamentos();
       sucesso('Compra lançada!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function pagarFaturaModal(pago: boolean) {
+    if (!faturaAberta) return;
+    try {
+      await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/fatura/pagamento?ano=${faturaAno}&mes=${faturaMes}`, { pago });
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarLancamentos();
+      carregarResumo();
+      carregarContas();
+      sucesso(pago ? 'Fatura marcada como paga' : 'Fatura marcada como pendente');
     } catch (e) {
       erro((e as Error).message);
     }
@@ -1059,15 +1094,28 @@ export function Financeiro() {
               <button className="btn-ghost" onClick={() => setFaturaAberta(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 14 }}>
+                <button className="btn-secondary" onClick={() => navFaturaMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+                <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{MESES[faturaMes - 1]} {faturaAno}</span>
+                <button className="btn-secondary" onClick={() => navFaturaMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+              </div>
+
               {faturaDados && (
                 <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 12, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Total do ciclo</div>
                     <div style={{ fontWeight: 700, fontSize: 18 }}>{fmt(faturaDados.total)}</div>
                   </div>
-                  <span className={`badge ${faturaDados.status === 'pago' ? 'badge-green' : 'badge-accent'}`}>
-                    {faturaDados.status === 'pago' ? 'Fatura paga' : 'Pendente'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className={`badge ${faturaDados.status === 'pago' ? 'badge-green' : 'badge-accent'}`}>
+                      {faturaDados.status === 'pago' ? 'Fatura paga' : 'Pendente'}
+                    </span>
+                    {faturaDados.total > 0 && (
+                      faturaDados.status === 'pago'
+                        ? <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => pagarFaturaModal(false)}>Desfazer</button>
+                        : <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => pagarFaturaModal(true)}>Pagar</button>
+                    )}
+                  </div>
                 </div>
               )}
 
