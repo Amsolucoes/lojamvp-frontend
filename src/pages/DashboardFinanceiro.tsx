@@ -95,6 +95,15 @@ export function DashboardFinanceiro() {
           <div className="stat-value" style={{ color: saldoTotal >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(saldoTotal)}</div>
           <div className="stat-sub">{contas.filter(c => c.ativa).length} conta(s) ativa(s)</div>
         </div>
+        {(resumo as any)?.previsao && (
+          <div className="stat-card" style={{ borderColor: (resumo as any).previsao.saldoPrevisto >= 0 ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)' }}>
+            <div className="stat-label">Previsão do mês</div>
+            <div className="stat-value" style={{ color: (resumo as any).previsao.saldoPrevisto >= 0 ? 'var(--green)' : 'var(--red)' }}>
+              {(resumo as any).previsao.saldoPrevisto >= 0 ? '+' : ''}{fmt((resumo as any).previsao.saldoPrevisto)}
+            </div>
+            <div className="stat-sub">se tudo for pago/recebido</div>
+          </div>
+        )}
         <div className="stat-card">
           <div className="stat-label"><TrendingUp size={12} style={{ verticalAlign: -1 }} /> A receber (mês)</div>
           <div className="stat-value" style={{ color: 'var(--green)', fontSize: 20 }}>
