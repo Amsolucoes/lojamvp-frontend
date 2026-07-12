@@ -54,6 +54,7 @@ interface LinhaPagar {
   id: string;
   descricao: string;
   categoriaNome: string | null;
+  modo: string;
   valor: number;
   vencimento: string;
   status: string;
@@ -112,7 +113,7 @@ export function Financeiro() {
   const [modalContas, setModalContas] = useState(false);
   const [modalCategorias, setModalCategorias] = useState(false);
   const [modalAjuste, setModalAjuste] = useState<Conta | null>(null);
-  const [confirmExcluir, setConfirmExcluir] = useState<Lancamento | null>(null);
+  const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
 
   const [formLanc, setFormLanc] = useState({
     modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
