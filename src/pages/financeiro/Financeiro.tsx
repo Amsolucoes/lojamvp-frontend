@@ -1151,17 +1151,6 @@ export function Financeiro() {
                     Esse lançamento se repete todo mês automaticamente, até você desativar em "Contas" ou nas configurações fixas.
                   </p>
                 )}
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={formLanc.jaPago}
-                    style={{ width: 16, height: 16, margin: 0 }}
-                    onChange={e => setFormLanc(f => ({ ...f, jaPago: e.target.checked }))} />
-                  <span>
-                    {aba === 'pagar' ? 'Já paguei' : 'Já recebi'}
-                    {formLanc.modo === 'parcelada' && <span style={{ color: 'var(--text-3)' }}> (marca só a 1ª parcela)</span>}
-                    {formLanc.modo === 'fixa' && <span style={{ color: 'var(--text-3)' }}> (marca só este mês)</span>}
-                  </span>
-                </label>
               </div>
             </div>
             <div className="modal-footer">
