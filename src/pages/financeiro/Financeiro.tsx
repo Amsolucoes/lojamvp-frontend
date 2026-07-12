@@ -310,7 +310,9 @@ export function Financeiro() {
   async function marcarPagamentoCartaoFatura(l: LinhaPagar, pago: boolean) {
     if (!l.cartaoId) return;
     try {
-      await api.post(`/api/financeiro/cartoes/${l.cartaoId}/fatura/pagamento?ano=${anoRef}&mes=${mesRef + 1}`, { pago });
+      await api.post(`/api/financeiro/cartoes/${l.cartaoId}/fatura/pagamento?ano=${anoRef}&mes=${mesRef + 1}`, {
+        modo: pago ? 'total' : 'desfazer',
+      });
       carregarLancamentos();
       carregarResumo();
       carregarContas();
