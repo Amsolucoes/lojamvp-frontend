@@ -91,9 +91,23 @@ export function DashboardFinanceiro() {
 
       <div className="dash-stats">
         <div className="stat-card">
-          <div className="stat-label"><Wallet size={12} style={{ verticalAlign: -1 }} /> Saldo total</div>
-          <div className="stat-value" style={{ color: saldoTotal >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(saldoTotal)}</div>
-          <div className="stat-sub">{contas.filter(c => c.ativa).length} conta(s) ativa(s)</div>
+          <div className="stat-label"><Wallet size={12} style={{ verticalAlign: -1 }} /> Saldo por conta</div>
+          {contas.filter(c => c.ativa).length > 0 ? (
+            <div style={{ marginTop: 4 }}>
+              {contas.filter(c => c.ativa).map(c => (
+                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 2 }}>
+                  <span style={{ color: 'var(--text-2)' }}>{c.nome}</span>
+                  <strong style={{ color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
+                </div>
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text-3)' }}>Total</span>
+                <strong style={{ color: saldoTotal >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(saldoTotal)}</strong>
+              </div>
+            </div>
+          ) : (
+            <div className="stat-value" style={{ fontSize: 20 }}>{fmt(0)}</div>
+          )}
         </div>
         {(resumo as any)?.previsao && (
           <div className="stat-card" style={{ borderColor: (resumo as any).previsao.saldoPrevisto >= 0 ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)' }}>
