@@ -113,17 +113,30 @@ export function DashboardFinanceiro() {
         </div>
         <div className="stat-card">
           <div className="stat-label"><TrendingDown size={12} style={{ verticalAlign: -1 }} /> A pagar (mês)</div>
-          <div className="stat-value" style={{ color: 'var(--yellow, #d97706)', fontSize: 20 }}>
-            {fmt((resumo?.pagar.totalPendente ?? 0) + (resumo?.pagar.totalVencido ?? 0))}
-          </div>
-          <div className="stat-sub">{(resumo?.pagar.qtdPendente ?? 0) + (resumo?.pagar.qtdVencido ?? 0)} pendente(s)</div>
-          {(resumo as any)?.detalhePagar && (
-            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>
-              Contas: {fmt((resumo as any).detalhePagar.lancamentos)}
+          {(resumo as any)?.detalhePagar ? (
+            <div style={{ marginTop: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                <span style={{ color: 'var(--text-2)' }}>Contas</span>
+                <strong style={{ color: 'var(--yellow, #d97706)' }}>{fmt((resumo as any).detalhePagar.lancamentos)}</strong>
+              </div>
               {(resumo as any).detalhePagar.cartoes.map((c: any) => (
-                <span key={c.nome}> · {c.nome}: {fmt(c.valor)}</span>
+                <div key={c.nome} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginTop: 2 }}>
+                  <span style={{ color: 'var(--text-2)' }}>💳 {c.nome}</span>
+                  <strong style={{ color: 'var(--yellow, #d97706)' }}>{fmt(c.valor)}</strong>
+                </div>
               ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text-3)' }}>Total</span>
+                <strong>{fmt((resumo?.pagar.totalPendente ?? 0) + (resumo?.pagar.totalVencido ?? 0))}</strong>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="stat-value" style={{ color: 'var(--yellow, #d97706)', fontSize: 20 }}>
+                {fmt((resumo?.pagar.totalPendente ?? 0) + (resumo?.pagar.totalVencido ?? 0))}
+              </div>
+              <div className="stat-sub">{(resumo?.pagar.qtdPendente ?? 0) + (resumo?.pagar.qtdVencido ?? 0)} pendente(s)</div>
+            </>
           )}
         </div>
         {((resumo?.pagar.qtdVencido ?? 0) + (resumo?.receber.qtdVencido ?? 0)) > 0 && (

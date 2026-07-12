@@ -669,15 +669,28 @@ export function Financeiro() {
             </div>
             <div className="stat-card">
               <div className="stat-label">Pendente</div>
-              <div className="stat-value" style={{ color: 'var(--yellow, #d97706)', fontSize: 20 }}>{fmt(resumoAba.totalPendente)}</div>
-              <div className="stat-sub">{resumoAba.qtdPendente} lançamento(s)</div>
-              {aba === 'pagar' && (resumo as any)?.detalhePagar && (
-                <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>
-                  Contas: {fmt((resumo as any).detalhePagar.lancamentos)}
+              {aba === 'pagar' && (resumo as any)?.detalhePagar ? (
+                <div style={{ marginTop: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                    <span style={{ color: 'var(--text-2)' }}>Contas</span>
+                    <strong style={{ color: 'var(--yellow, #d97706)' }}>{fmt((resumo as any).detalhePagar.lancamentos)}</strong>
+                  </div>
                   {(resumo as any).detalhePagar.cartoes.map((c: any) => (
-                    <span key={c.nome}> · {c.nome}: {fmt(c.valor)}</span>
+                    <div key={c.nome} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginTop: 2 }}>
+                      <span style={{ color: 'var(--text-2)' }}>💳 {c.nome}</span>
+                      <strong style={{ color: 'var(--yellow, #d97706)' }}>{fmt(c.valor)}</strong>
+                    </div>
                   ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text-3)' }}>Total</span>
+                    <strong>{fmt(resumoAba.totalPendente)}</strong>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <div className="stat-value" style={{ color: 'var(--yellow, #d97706)', fontSize: 20 }}>{fmt(resumoAba.totalPendente)}</div>
+                  <div className="stat-sub">{resumoAba.qtdPendente} lançamento(s)</div>
+                </>
               )}
             </div>
             <div className="stat-card" style={resumoAba.qtdVencido > 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
