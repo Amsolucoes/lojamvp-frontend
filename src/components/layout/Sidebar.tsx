@@ -60,6 +60,7 @@ export function Sidebar() {
   const soFinanceiro = tipoPlano === 'financeiro';
   const temFinanceiro = modulos.includes('financeiro') || soFinanceiro;
   const temTurmas = modulos.includes('turmas');
+  const temProdutos = !soServicos && !soFinanceiro;
 
   const NAV = soFinanceiro
     ? [
@@ -69,6 +70,7 @@ export function Sidebar() {
     : [
         { to: '/',           icon: LayoutDashboard, label: 'Dashboard'      },
         ...(!soServicos ? [{ to: '/produtos', icon: Package, label: 'Produtos' }] : []),
+        { to: '/clientes',   icon: Users,           label: 'Clientes'       },
         ...(temProdutos || temServicos ? [{ to: '/caixa', icon: ShoppingCart, label: 'Caixa' }] : []),
         ...(temServicos ? [{ to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
         ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
