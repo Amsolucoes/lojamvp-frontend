@@ -216,10 +216,14 @@ export function Financeiro() {
     if (novo === 'pagar' || novo === 'receber') {
       setAba(novo);
       abrirNovoLancamento();
-      setSearchParams({}, { replace: true });
+
+      // Limpa só o "novo" (pra não reabrir o modal se recarregar a página),
+      // mas preserva o "aba" (necessário pro botão Voltar continuar aparecendo).
+      const abaAtual = searchParams.get('aba');
+      const novosParams: Record<string, string> = {};
+      if (abaAtual) novosParams.aba = abaAtual;
+      setSearchParams(novosParams, { replace: true });
     }
-    // Não limpa "aba" — ele precisa continuar na URL para veioComAbaEspecifica
-    // e para o botão "Voltar" saberem que a pessoa chegou aqui com destino específico.
   }, []);
 
   function navMes(delta: number) {
