@@ -65,7 +65,7 @@ export function Sidebar() {
   const NAV = [
     { to: '/',           icon: LayoutDashboard, label: 'Dashboard'      },
     ...(temProdutos ? [{ to: '/produtos', icon: Package, label: 'Produtos' }] : []),
-    ...(temProdutos || temServicos || temTurmas ? [{ to: '/clientes', icon: Users, label: 'Clientes' }] : []),
+    ...(temProdutos || temServicos || temTurmas ? [{ to: '/clientes', icon: Users, label: temTurmas && !temProdutos && !temServicos ? 'Alunos' : 'Clientes' }] : []),
     ...(temProdutos || temServicos ? [{ to: '/caixa', icon: ShoppingCart, label: 'Caixa' }] : []),
     ...(temServicos ? [{ to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
     ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),

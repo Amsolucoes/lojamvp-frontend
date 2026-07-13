@@ -521,14 +521,14 @@ export function Turmas() {
             </div>
             <div className="modal-body">
               <div style={{ position: 'relative', marginBottom: 16 }}>
-                <input placeholder="Buscar cliente para matricular..." value={buscaCliente}
+                <input placeholder="Buscar aluno para matricular..." value={buscaCliente}
                   onChange={e => { setBuscaCliente(e.target.value); setShowBuscaCliente(true); }}
                   onFocus={() => setShowBuscaCliente(true)}
                   onBlur={() => setTimeout(() => setShowBuscaCliente(false), 150)} />
                 {showBuscaCliente && buscaCliente && (
                   <div className="cx-dropdown">
                     {clientesFiltrados.length === 0 ? (
-                      <div className="cx-dropdown-empty">Nenhum cliente encontrado</div>
+                      <div className="cx-dropdown-empty">Nenhum aluno encontrado</div>
                     ) : clientesFiltrados.slice(0, 6).map(c => (
                       <button key={c.id} className="cx-dropdown-item" onMouseDown={() => matricular(c.id)}>
                         <div className="cx-drop-nome">{c.nome}</div>
