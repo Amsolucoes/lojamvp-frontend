@@ -52,9 +52,14 @@
   .fin-header-actions {
     width: 100%;
   }
-  .fin-header-actions button {
-    flex: 1 1 calc(50% - 4px);
+  .fin-novo-lanc-desktop {
+    display: none;
+  }
+  .fin-header-actions button:not(.fin-novo-lanc-desktop) {
+    flex: 1 1 calc(33.333% - 6px);
     justify-content: center;
+    padding-left: 4px;
+    padding-right: 4px;
   }
   .fin-fab-mobile-only { display: flex; }
   .fin-abas-desktop { display: none; }

@@ -681,7 +681,7 @@ export function Financeiro() {
           <button className="btn-secondary" onClick={() => setModalContas(true)}><Wallet size={14} /> Contas</button>
           <button className="btn-secondary" onClick={() => setModalCartoes(true)}><CreditCard size={14} /> Cartões</button>
           <button className="btn-secondary" onClick={() => setModalCategorias(true)}><Tag size={14} /> Categorias</button>
-          <button className="btn-primary" onClick={abrirNovoLancamento}><Plus size={15} /> Novo lançamento</button>
+          <button className="btn-primary fin-novo-lanc-desktop" onClick={abrirNovoLancamento}><Plus size={15} /> Novo lançamento</button>
         </div>
       </div>
 
