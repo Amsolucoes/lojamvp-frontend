@@ -151,6 +151,7 @@ export function Financeiro() {
     tipoParcelamento: 'quantidade' as 'quantidade' | 'dataFim',
     dataFim: new Date().toISOString().slice(0, 10),
     jaPago: false,
+    dataInicio: new Date().toISOString().slice(0, 10),
   });
 
   const [salvandoLanc, setSalvandoLanc] = useState(false);
@@ -289,6 +290,7 @@ export function Financeiro() {
       totalParcelas: '2', diaVencimento: '10',
       tipoParcelamento: 'quantidade', dataFim: new Date().toISOString().slice(0, 10),
       jaPago: false,
+      dataInicio: new Date().toISOString().slice(0, 10),
     });
     setModalLancamento(true);
   }
@@ -328,6 +330,7 @@ export function Financeiro() {
           valor: parseFloat(formLanc.valor),
           diaVencimento: parseInt(formLanc.diaVencimento) || 10,
           jaPago: formLanc.jaPago,
+          dataInicio: formLanc.dataInicio || null,
         });
       }
       setModalLancamento(false);
@@ -1183,9 +1186,16 @@ export function Financeiro() {
                   </div>
                 )}
                 {formLanc.modo === 'fixa' && (
-                  <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                    Esse lançamento se repete todo mês automaticamente, até você desativar em "Contas" ou nas configurações fixas.
-                  </p>
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Data de início <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                      <input type="date" value={formLanc.dataInicio}
+                        onChange={e => setFormLanc(f => ({ ...f, dataInicio: e.target.value }))} />
+                    </div>
+                    <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                      Se deixar em branco, começa a partir deste mês. Esse lançamento se repete todo mês automaticamente, até você desativar em "Contas" ou nas configurações fixas.
+                    </p>
+                  </>
                 )}
               </div>
             </div>
