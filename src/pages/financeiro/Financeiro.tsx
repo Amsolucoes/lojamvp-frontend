@@ -1849,7 +1849,7 @@ export function Financeiro() {
           </div>
         </div>
       )}
-      {!modalLancamento && !modalContas && !modalCartoes && !modalCategorias && !editandoLancamento && !confirmExcluir && !historicoAssinante && (
+      {!modalLancamento && !modalContas && !modalCartoes && !modalCategorias && !editandoLancamento && !confirmExcluir && (
       <div className="fin-fab-mobile-only" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
         <button onClick={abrirNovoLancamento} style={{
           width: 56, height: 56, borderRadius: '50%',
