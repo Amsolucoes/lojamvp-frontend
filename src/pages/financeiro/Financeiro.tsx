@@ -677,15 +677,18 @@ export function Financeiro() {
   return (
     <div className="page">
       {veioComAbaEspecifica && (
-        <button className="fin-voltar-mobile" onClick={() => navigate('/')} style={{
-          alignItems: 'center', gap: 6,
-          background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 8,
-          color: 'var(--text-1)', fontSize: 14, fontWeight: 500,
-          padding: '8px 14px', marginBottom: 12, cursor: 'pointer',
-        }}>
-          <ChevronLeft size={18} /> Voltar
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <button className="fin-voltar-mobile" onClick={() => navigate('/')} style={{
+            alignItems: 'center', gap: 6, justifyContent: 'center',
+            background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 8,
+            color: 'var(--text-1)', fontSize: 14, fontWeight: 500,
+            padding: '8px 20px', marginBottom: 12, cursor: 'pointer',
+          }}>
+            <ChevronLeft size={18} /> Voltar
+          </button>
+        </div>
       )}
+      <div style={{ height: 4, borderRadius: 4, background: aba === 'pagar' ? 'var(--red)' : 'var(--green)', marginBottom: 16, opacity: 0.7 }} />
       <div className="page-header">
         <div>
           <h1 className="page-title">Financeiro</h1>
@@ -837,7 +840,7 @@ export function Financeiro() {
       </div>
 
       {/* Lista */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card" style={{ borderLeft: `3px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
         {aba === 'pagar' ? (
           listaPagar.length === 0 ? (
             <div className="empty" style={{ padding: '40px 0' }}><p>Nenhuma conta a pagar neste mês.</p></div>
