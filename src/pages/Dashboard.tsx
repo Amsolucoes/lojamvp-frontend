@@ -1,4 +1,4 @@
-import { ShoppingCart, Package, TrendingUp, AlertTriangle, Clock } from 'lucide-react';
+import { ShoppingCart, Package, TrendingUp, AlertTriangle, Clock, Store, Wallet } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Produto, Venda, ItemVenda } from '../types';
 import { useState, useEffect } from 'react';
@@ -11,9 +11,32 @@ function fmt(n: number) {
 }
 
 export function Dashboard() {
-  const { produtos, clientes, vendas, temServicos, soFinanceiro } = useApp();
+  const { produtos, clientes, vendas, temServicos, soFinanceiro, temFinanceiro } = useApp();
+  const [abaDash, setAbaDash] = useState<'loja' | 'financeiro'>('loja');
 
   if (soFinanceiro) return <DashboardFinanceiro />;
+
+  if (temFinanceiro) {
+    return (
+      <div className="page">
+        <div className="planos-tabs" style={{ marginBottom: 20 }}>
+          <button className={`planos-tab${abaDash === 'loja' ? ' ativo' : ''}`} onClick={() => setAbaDash('loja')}>
+            <Store size={15} /> Loja
+          </button>
+          <button className={`planos-tab${abaDash === 'financeiro' ? ' ativo' : ''}`} onClick={() => setAbaDash('financeiro')}>
+            <Wallet size={15} /> Financeiro
+          </button>
+        </div>
+        {abaDash === 'loja' ? <DashboardLoja /> : <DashboardFinanceiro />}
+      </div>
+    );
+  }
+
+  return <DashboardLoja />;
+}
+
+function DashboardLoja() {
+  const { produtos, clientes, vendas, temServicos } = useApp();
 
   const hoje = new Date().toDateString();
   const vendasHoje = vendas.filter(v => new Date(v.criadaEm).toDateString() === hoje);
