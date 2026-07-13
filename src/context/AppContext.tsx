@@ -22,6 +22,7 @@ interface AppCtx {
   soServicos:    boolean;
   soFinanceiro: boolean;
   temFinanceiro: boolean;
+  temTurmas: boolean;
 
   addProduto:    (p: Omit<Produto, 'id' | 'criadoEm'>) => Promise<void>;
   updateProduto: (id: string, p: Partial<Produto>)       => Promise<void>;
@@ -111,6 +112,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const soServicos  = tipoPlano === 'servicos';
   const soFinanceiro = tipoPlano === 'financeiro';
   const temFinanceiro = modulosAtivos.includes('financeiro') || soFinanceiro;
+  const temTurmas = modulosAtivos.includes('turmas');
   const temProdutos = !soServicos && !soFinanceiro;
 
   async function recarregar() {
@@ -264,7 +266,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{
       produtos, clientes, vendas, movimentos, loading, erro, trocas,
       modulosAtivos, tipoPlano, temProdutos, temServicos, soServicos,
-      soFinanceiro, temFinanceiro,
+      soFinanceiro, temFinanceiro,temTurmas,
       fase, nomeLoja,
       addProduto, updateProduto, deleteProduto,
       addCliente, updateCliente, deleteCliente,

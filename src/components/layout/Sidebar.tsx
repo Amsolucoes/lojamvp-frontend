@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
+  TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -58,6 +59,7 @@ export function Sidebar() {
   const soServicos = tipoPlano === 'servicos';
   const soFinanceiro = tipoPlano === 'financeiro';
   const temFinanceiro = modulos.includes('financeiro') || soFinanceiro;
+  const temTurmas = modulos.includes('turmas');
 
   const NAV = soFinanceiro
     ? [
@@ -74,6 +76,7 @@ export function Sidebar() {
         ...(temServicos ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
         ...(!soServicos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
         ...(temFinanceiro ? [{ to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
+        ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
         { to: '/relatorios', icon: BarChart2,       label: 'Relatórios'     },
         { to: '/fluxo',      icon: TrendingUp,      label: 'Fluxo de Caixa' },
       ];
