@@ -113,7 +113,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const soFinanceiro = tipoPlano === 'financeiro';
   const temFinanceiro = modulosAtivos.includes('financeiro') || soFinanceiro;
   const temTurmas = modulosAtivos.includes('turmas');
-  const temProdutos = !soServicos && !soFinanceiro;
+  const temProdutos = tipoPlano === 'loja' || tipoPlano === 'loja_modulos';
 
   async function recarregar() {
     setLoading(true);

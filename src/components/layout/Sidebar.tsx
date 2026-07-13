@@ -60,27 +60,22 @@ export function Sidebar() {
   const soFinanceiro = tipoPlano === 'financeiro';
   const temFinanceiro = modulos.includes('financeiro') || soFinanceiro;
   const temTurmas = modulos.includes('turmas');
-  const temProdutos = !soServicos && !soFinanceiro;
+  const temProdutos = tipoPlano === 'loja' || tipoPlano === 'loja_modulos';
 
-  const NAV = soFinanceiro
-    ? [
-        { to: '/',           icon: LayoutDashboard, label: 'Dashboard'   },
-        { to: '/financeiro', icon: Wallet,          label: 'Financeiro' },
-      ]
-    : [
-        { to: '/',           icon: LayoutDashboard, label: 'Dashboard'      },
-        ...(!soServicos ? [{ to: '/produtos', icon: Package, label: 'Produtos' }] : []),
-        { to: '/clientes',   icon: Users,           label: 'Clientes'       },
-        ...(temProdutos || temServicos ? [{ to: '/caixa', icon: ShoppingCart, label: 'Caixa' }] : []),
-        ...(temServicos ? [{ to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
-        ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
-        ...(temServicos || temTurmas ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
-        ...(!soServicos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
-        ...(temFinanceiro ? [{ to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
-        ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
-        { to: '/relatorios', icon: BarChart2,       label: 'Relatórios'     },
-        { to: '/fluxo',      icon: TrendingUp,      label: 'Fluxo de Caixa' },
-      ];
+  const NAV = [
+    { to: '/',           icon: LayoutDashboard, label: 'Dashboard'      },
+    ...(temProdutos ? [{ to: '/produtos', icon: Package, label: 'Produtos' }] : []),
+    { to: '/clientes',   icon: Users,           label: 'Clientes'       },
+    ...(temProdutos || temServicos ? [{ to: '/caixa', icon: ShoppingCart, label: 'Caixa' }] : []),
+    ...(temServicos ? [{ to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
+    ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
+    ...(temServicos || temTurmas ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
+    ...(temProdutos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
+    ...(temFinanceiro ? [{ to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
+    ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
+    { to: '/relatorios', icon: BarChart2,       label: 'Relatórios'     },
+    { to: '/fluxo',      icon: TrendingUp,      label: 'Fluxo de Caixa' },
+  ];
 
   return (
     <>
