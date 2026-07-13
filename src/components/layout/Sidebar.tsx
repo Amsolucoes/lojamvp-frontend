@@ -73,8 +73,8 @@ export function Sidebar() {
     ...(temProdutos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
     ...(temFinanceiro ? [{ to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
     ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
-    { to: '/relatorios', icon: BarChart2,       label: 'Relatórios'     },
-    { to: '/fluxo',      icon: TrendingUp,      label: 'Fluxo de Caixa' },
+    ...(temProdutos || temServicos ? [{ to: '/relatorios', icon: BarChart2, label: 'Relatórios' }] : []),
+    ...(temProdutos || temServicos ? [{ to: '/fluxo', icon: TrendingUp, label: 'Fluxo de Caixa' }] : []),
   ];
 
   return (
