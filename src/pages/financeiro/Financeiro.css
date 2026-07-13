@@ -62,7 +62,7 @@
     padding-right: 4px;
   }
   .fin-fab-mobile-only { display: flex; }
-  .fin-abas-desktop { display: none; }
+  /* .fin-abas-desktop { display: none; } */
   .fin-voltar-mobile { display: flex !important; }
 }
 

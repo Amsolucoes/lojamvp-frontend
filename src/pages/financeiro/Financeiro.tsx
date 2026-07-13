@@ -766,7 +766,8 @@ export function Financeiro() {
       </div>
 
       {/* Abas */}
-      <div className="planos-tabs fin-abas-desktop">
+      {!veioComAbaEspecifica && (
+      <div className="planos-tabs">
         <button className={`planos-tab${aba === 'pagar' ? ' ativo' : ''}`}
           style={aba === 'pagar' ? { color: 'var(--red)', borderBottomColor: 'var(--red)' } : {}}
           onClick={() => setAba('pagar')}>
@@ -778,6 +779,7 @@ export function Financeiro() {
           <TrendingUp size={15} /> A Receber
         </button>
       </div>
+      )}
 
       {/* Navegação de mês */}
       <div className="card fin-filtros-wrap" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
