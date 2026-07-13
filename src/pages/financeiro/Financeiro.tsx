@@ -1023,7 +1023,9 @@ export function Financeiro() {
                               <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmExcluir(l)}><Trash2 size={13} /></button>
                             </div>
                           ) : (
-                            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Gerenciado em Planos</span>
+                            <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => navigate('/planos?aba=assinantes')}>
+                              Ver em Planos →
+                            </button>
                           )}
                         </td>
                       </tr>
@@ -1069,7 +1071,9 @@ export function Financeiro() {
                           <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(l)}><Trash2 size={14} /></button>
                         </div>
                       ) : (
-                        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Ver em Planos</span>
+                        <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => navigate('/planos?aba=assinantes')}>
+                          Ver em Planos
+                        </button>
                       )}
                     </div>
                   </div>
