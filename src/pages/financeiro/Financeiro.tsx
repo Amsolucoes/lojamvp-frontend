@@ -668,7 +668,7 @@ export function Financeiro() {
   return (
     <div className="page">
       {veioComAbaEspecifica && (
-        <button className="fin-voltar-mobile" onClick={() => navigate('/')} style={{ display: 'none', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-2)', fontSize: 13, padding: '8px 0', cursor: 'pointer' }}>
+        <button className="fin-voltar-mobile" onClick={() => navigate('/')} style={{ alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-2)', fontSize: 13, padding: '8px 0', cursor: 'pointer' }}>
           <ChevronLeft size={16} /> Voltar
         </button>
       )}
@@ -1053,8 +1053,10 @@ export function Financeiro() {
       {modalLancamento && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalLancamento(false)}>
           <div className="modal" style={{ maxWidth: 460 }}>
-            <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Novo lançamento — {aba === 'pagar' ? 'a pagar' : 'a receber'}</h2>
+            <div className="modal-header" style={{ borderBottom: `2px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: aba === 'pagar' ? 'var(--red)' : 'var(--green)' }}>
+                {aba === 'pagar' ? '↓ Nova conta a pagar' : '↑ Nova conta a receber'}
+              </h2>
               <button className="btn-ghost" onClick={() => setModalLancamento(false)}><X size={16} /></button>
             </div>
             <div className="modal-body">
@@ -1847,6 +1849,7 @@ export function Financeiro() {
           </div>
         </div>
       )}
+      {!modalLancamento && !modalContas && !modalCartoes && !modalCategorias && !editandoLancamento && !confirmExcluir && !historicoAssinante && (
       <div className="fin-fab-mobile-only" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
         <button onClick={abrirNovoLancamento} style={{
           width: 56, height: 56, borderRadius: '50%',
@@ -1857,6 +1860,7 @@ export function Financeiro() {
           <Plus size={26} />
         </button>
       </div>
+      )}
     </div>
   );
 }
