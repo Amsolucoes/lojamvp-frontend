@@ -73,7 +73,7 @@ export function Sidebar() {
         { to: '/caixa',      icon: ShoppingCart,    label: 'Caixa'          },
         ...(temServicos ? [{ to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
         ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
-        ...(temServicos ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
+        ...(temServicos || temTurmas ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
         ...(!soServicos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
         ...(temFinanceiro ? [{ to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
         ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
