@@ -69,8 +69,7 @@ export function Sidebar() {
     : [
         { to: '/',           icon: LayoutDashboard, label: 'Dashboard'      },
         ...(!soServicos ? [{ to: '/produtos', icon: Package, label: 'Produtos' }] : []),
-        { to: '/clientes',   icon: Users,           label: 'Clientes'       },
-        { to: '/caixa',      icon: ShoppingCart,    label: 'Caixa'          },
+        ...(temProdutos || temServicos ? [{ to: '/caixa', icon: ShoppingCart, label: 'Caixa' }] : []),
         ...(temServicos ? [{ to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
         ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
         ...(temServicos || temTurmas ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
