@@ -39,6 +39,14 @@
   .fin-filtros-wrap .cx-tipo-toggle button {
     flex: 1;
   }
+  .fin-mes-linha {
+    width: 100%;
+    justify-content: center;
+  }
+  .fin-mes-linha > span {
+    flex: 1;
+    text-align: center;
+  }
 }
 
 @media (max-width: 480px) {

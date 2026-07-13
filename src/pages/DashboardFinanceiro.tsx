@@ -1,6 +1,8 @@
-import { Wallet, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, CreditCard, Clock, ArrowUp, ArrowDown } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, CreditCard, Clock, ArrowUp, ArrowDown, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { BANCOS, BankBadge } from '../utils/bancos';
 import './Dashboard.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -39,6 +41,7 @@ interface Conta {
   nome: string;
   saldoAtual: number;
   ativa: boolean;
+  banco?: string | null;
 }
 
 interface ResumoTipo {
@@ -51,6 +54,8 @@ interface ResumoTipo {
 }
 
 export function DashboardFinanceiro() {
+  const navigate = useNavigate();
+  const [fabAberto, setFabAberto] = useState(false);
   const [contas, setContas] = useState<Conta[]>([]);
   const [resumo, setResumo] = useState<{ pagar: ResumoTipo; receber: ResumoTipo } | null>(null);
   const [anoRef, setAnoRef] = useState(new Date().getFullYear());
@@ -138,8 +143,10 @@ export function DashboardFinanceiro() {
           {contas.filter(c => c.ativa).length > 0 ? (
             <div style={{ marginTop: 4 }}>
               {contas.filter(c => c.ativa).map(c => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 2 }}>
-                  <span style={{ color: 'var(--text-2)' }}>{c.nome}</span>
+                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, marginTop: 2, gap: 6 }}>
+                  <span style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <BankBadge bancoId={c.banco} tamanho={16} /> {c.nome}
+                  </span>
                   <strong style={{ color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
                 </div>
               ))}
@@ -292,22 +299,31 @@ export function DashboardFinanceiro() {
           <div className="dash-card-header">
             <div className="dash-card-title" style={{ color: 'var(--yellow, #d97706)' }}><Clock size={15} /> Vencendo em breve</div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {alertas.map(a => {
-              const d = diasAte(a.vencimento);
-              return (
-                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px', borderBottom: '1px solid var(--border)' }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{a.descricao}</div>
-                    <div style={{ fontSize: 11, color: d <= 1 ? 'var(--red)' : 'var(--text-3)' }}>
-                      {d === 0 ? 'Vence hoje' : d === 1 ? 'Vence amanhã' : `Vence em ${d} dias`}
-                    </div>
-                  </div>
-                  <span style={{ fontWeight: 600, color: a.tipo === 'pagar' ? 'var(--red)' : 'var(--green)' }}>{fmt(a.valor)}</span>
+          {(['pagar', 'receber'] as const).map(tipo => {
+            const doTipo = alertas.filter(a => a.tipo === tipo);
+            if (doTipo.length === 0) return null;
+            return (
+              <div key={tipo} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: tipo === 'pagar' ? 'var(--red)' : 'var(--green)', marginBottom: 4, textTransform: 'uppercase' }}>
+                  {tipo === 'pagar' ? '↓ A Pagar' : '↑ A Receber'}
                 </div>
-              );
-            })}
-          </div>
+                {doTipo.map(a => {
+                  const d = diasAte(a.vencimento);
+                  return (
+                    <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px', borderBottom: '1px solid var(--border)' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>{a.descricao}</div>
+                        <div style={{ fontSize: 11, color: d <= 1 ? 'var(--red)' : 'var(--text-3)' }}>
+                          {d === 0 ? 'Vence hoje' : d === 1 ? 'Vence amanhã' : `Vence em ${d} dias`}
+                        </div>
+                      </div>
+                      <span style={{ fontWeight: 600, color: tipo === 'pagar' ? 'var(--red)' : 'var(--green)' }}>{fmt(a.valor)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -359,6 +375,31 @@ export function DashboardFinanceiro() {
             ))}
           </div>
         )}
+      </div>
+      {fabAberto && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setFabAberto(false)} />
+      )}
+
+      <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        {fabAberto && (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn-secondary" style={{ borderColor: 'var(--red)', color: 'var(--red)', boxShadow: 'var(--shadow-lg)' }}
+              onClick={() => navigate('/financeiro?novo=pagar')}>
+              A Pagar
+            </button>
+            <button className="btn-secondary" style={{ borderColor: 'var(--green)', color: 'var(--green)', boxShadow: 'var(--shadow-lg)' }}
+              onClick={() => navigate('/financeiro?novo=receber')}>
+              A Receber
+            </button>
+          </div>
+        )}
+        <button onClick={() => setFabAberto(v => !v)} style={{
+          width: 56, height: 56, borderRadius: '50%', background: 'var(--accent)', color: '#fff',
+          border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: 'var(--shadow-lg)', cursor: 'pointer', transform: fabAberto ? 'rotate(45deg)' : 'none', transition: 'transform 0.15s',
+        }}>
+          <Plus size={26} />
+        </button>
       </div>
     </div>
   );

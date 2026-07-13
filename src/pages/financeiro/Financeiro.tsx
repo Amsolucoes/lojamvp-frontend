@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { BANCOS, BankBadge } from '../../utils/bancos';
 import './Financeiro.css';
 
 interface Conta {
@@ -10,6 +12,7 @@ interface Conta {
   saldoInicial: number;
   saldoAtual: number;
   ativa: boolean;
+  banco?: string | null;
 }
 
 interface Categoria {
@@ -91,7 +94,8 @@ function ehVencido(l: { status: string; vencimento: string }) {
 
 export function Financeiro() {
   const { sucesso, erro } = useToast();
-  const [aba, setAba] = useState<'pagar' | 'receber'>('pagar');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [aba, setAba] = useState<'pagar' | 'receber'>(() => (searchParams.get('novo') === 'receber' ? 'receber' : 'pagar'));
   const hoje = new Date();
   const [mesRef, setMesRef] = useState(hoje.getMonth());
   const [anoRef, setAnoRef] = useState(hoje.getFullYear());
@@ -146,11 +150,12 @@ export function Financeiro() {
 
   const [salvandoLanc, setSalvandoLanc] = useState(false);
 
-  const [formConta, setFormConta] = useState({ nome: '', saldoInicial: '' });
+  const [formConta, setFormConta] = useState({ nome: '', saldoInicial: '', banco: '' });
   const [editandoConta, setEditandoConta] = useState<Conta | null>(null);
 
   const [formCat, setFormCat] = useState({ nome: '', tipo: 'ambos', icone: '' });
   const [filtroCatModal, setFiltroCatModal] = useState<'todas' | 'pagar' | 'receber' | 'ambos'>('todas');
+  const [paginaCat, setPaginaCat] = useState(1);
 
   const [formAjuste, setFormAjuste] = useState({ tipo: 'entrada' as 'entrada' | 'saida' | 'ajuste', valor: '', novoSaldo: '', observacao: '' });
 
@@ -199,6 +204,15 @@ export function Financeiro() {
   useEffect(() => { carregarContas(); carregarCategorias(); carregarCartoes(); }, []);
   useEffect(() => { carregarLancamentos(); carregarResumo(); }, [aba, mesRef, anoRef, modoPagar, periodoTipo, periodoDe, periodoAte]);
   useEffect(() => { setCatFiltro('todas'); }, [aba]);
+  useEffect(() => { setPaginaCat(1); }, [filtroCatModal]);
+  useEffect(() => {
+    const novo = searchParams.get('novo');
+    if (novo === 'pagar' || novo === 'receber') {
+      setAba(novo);
+      abrirNovoLancamento();
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
 
   function navMes(delta: number) {
     let nm = mesRef + delta, na = anoRef;
@@ -566,20 +580,20 @@ export function Financeiro() {
   // ── Contas bancárias ────────────────────────────────────────────
   function abrirNovaConta() {
     setEditandoConta(null);
-    setFormConta({ nome: '', saldoInicial: '' });
+    setFormConta({ nome: '', saldoInicial: '', banco: '' });
   }
   function abrirEditarConta(c: Conta) {
     setEditandoConta(c);
-    setFormConta({ nome: c.nome, saldoInicial: String(c.saldoInicial) });
+    setFormConta({ nome: c.nome, saldoInicial: String(c.saldoInicial), banco: c.banco ?? '' });
   }
   async function salvarConta() {
     if (!formConta.nome.trim()) { erro('Digite o nome da conta.'); return; }
     try {
-      const payload = { nome: formConta.nome.trim(), saldoInicial: parseFloat(formConta.saldoInicial) || 0 };
+      const payload = { nome: formConta.nome.trim(), saldoInicial: parseFloat(formConta.saldoInicial) || 0, banco: formConta.banco || null };
       if (editandoConta) await api.put(`/api/financeiro/contas/${editandoConta.id}`, payload);
       else await api.post('/api/financeiro/contas', payload);
       setEditandoConta(null);
-      setFormConta({ nome: '', saldoInicial: '' });
+      setFormConta({ nome: '', saldoInicial: '', banco: '' });
       carregarContas();
       sucesso('Conta salva!');
     } catch (e) {
@@ -668,8 +682,10 @@ export function Financeiro() {
           {contas.filter(c => c.ativa).length > 0 ? (
             <div style={{ marginTop: 4 }}>
               {contas.filter(c => c.ativa).map(c => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 2 }}>
-                  <span style={{ color: 'var(--text-2)' }}>{c.nome}</span>
+                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, marginTop: 2, gap: 6 }}>
+                  <span style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <BankBadge bancoId={c.banco} tamanho={16} /> {c.nome}
+                  </span>
                   <strong style={{ color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
                 </div>
               ))}
@@ -714,23 +730,31 @@ export function Financeiro() {
                 <strong style={{ color: 'var(--red)' }}>{fmt(resumoAba.totalVencido)}</strong>
               </div>
             )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 4, paddingTop: 4 }}>
+              <span style={{ color: 'var(--text-3)' }}>Total do mês</span>
+              <strong>{fmt(resumoAba.totalPago + resumoAba.totalPendente + resumoAba.totalVencido)}</strong>
+            </div>
           </div>
         )}
       </div>
 
       {/* Abas */}
       <div className="planos-tabs">
-        <button className={`planos-tab${aba === 'pagar' ? ' ativo' : ''}`} onClick={() => setAba('pagar')}>
+        <button className={`planos-tab${aba === 'pagar' ? ' ativo' : ''}`}
+          style={aba === 'pagar' ? { color: 'var(--red)', borderBottomColor: 'var(--red)' } : {}}
+          onClick={() => setAba('pagar')}>
           <TrendingDown size={15} /> A Pagar
         </button>
-        <button className={`planos-tab${aba === 'receber' ? ' ativo' : ''}`} onClick={() => setAba('receber')}>
+        <button className={`planos-tab${aba === 'receber' ? ' ativo' : ''}`}
+          style={aba === 'receber' ? { color: 'var(--green)', borderBottomColor: 'var(--green)' } : {}}
+          onClick={() => setAba('receber')}>
           <TrendingUp size={15} /> A Receber
         </button>
       </div>
 
       {/* Navegação de mês */}
       <div className="card fin-filtros-wrap" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="fin-mes-linha" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <div className="cx-tipo-toggle">
             <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
             <button className={periodoTipo === 'personalizado' ? 'active' : ''} onClick={() => {
@@ -1177,9 +1201,12 @@ export function Financeiro() {
                   <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma conta cadastrada.</p>
                 ) : contas.map(c => (
                   <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, opacity: c.ativa ? 1 : 0.5 }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>{c.nome}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <BankBadge bancoId={c.banco} />
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{c.nome}</div>
                       <div style={{ fontSize: 13, color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</div>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
                       <button className="btn-ghost" title="Ajustar saldo" onClick={() => abrirAjuste(c)}><Settings size={14} /></button>
@@ -1195,12 +1222,19 @@ export function Financeiro() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 10 }}>
                   <div className="form-group">
                     <label className="form-label">Nome</label>
-                    <input value={formConta.nome} onChange={e => setFormConta(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Itaú" />
+                    <input value={formConta.nome} onChange={e => setFormConta(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Conta corrente" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Saldo inicial</label>
                     <input type="number" step={0.01} value={formConta.saldoInicial} onChange={e => setFormConta(f => ({ ...f, saldoInicial: e.target.value }))} />
                   </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Banco</label>
+                  <select value={formConta.banco} onChange={e => setFormConta(f => ({ ...f, banco: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {BANCOS.map(b => <option key={b.id} value={b.id}>{b.nome}</option>)}
+                  </select>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                   <button className="btn-primary" onClick={salvarConta}>{editandoConta ? 'Salvar' : 'Adicionar conta'}</button>
@@ -1288,14 +1322,31 @@ export function Financeiro() {
                   <button className={`cat-tab${filtroCatModal === 'ambos' ? ' active' : ''}`} onClick={() => setFiltroCatModal('ambos')}>Ambos</button>
                 </div>
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-                {categorias.filter(c => filtroCatModal === 'todas' || c.tipo === filtroCatModal).map(c => (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
-                    <span style={{ fontSize: 13 }}>{c.icone} {c.nome} <span style={{ color: 'var(--text-3)', fontSize: 11 }}>({c.tipo})</span></span>
-                    <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => excluirCategoria(c)}><Trash2 size={13} /></button>
-                  </div>
-                ))}
-              </div>
+              {(() => {
+                const listaCat = categorias.filter(c => filtroCatModal === 'todas' || c.tipo === filtroCatModal);
+                const totalPagCat = Math.max(1, Math.ceil(listaCat.length / 15));
+                const pagAtualCat = Math.min(paginaCat, totalPagCat);
+                const catPaginadas = listaCat.slice((pagAtualCat - 1) * 15, pagAtualCat * 15);
+                return (
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                      {catPaginadas.map(c => (
+                        <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
+                          <span style={{ fontSize: 13 }}>{c.icone} {c.nome} <span style={{ color: 'var(--text-3)', fontSize: 11 }}>({c.tipo})</span></span>
+                          <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => excluirCategoria(c)}><Trash2 size={13} /></button>
+                        </div>
+                      ))}
+                    </div>
+                    {listaCat.length > 15 && (
+                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                        <button className="btn-secondary" disabled={pagAtualCat <= 1} onClick={() => setPaginaCat(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{pagAtualCat} / {totalPagCat}</span>
+                        <button className="btn-secondary" disabled={pagAtualCat >= totalPagCat} onClick={() => setPaginaCat(p => Math.min(totalPagCat, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Nova categoria</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
