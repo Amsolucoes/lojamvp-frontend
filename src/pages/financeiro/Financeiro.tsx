@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -93,9 +93,14 @@ function ehVencido(l: { status: string; vencimento: string }) {
 }
 
 export function Financeiro() {
+  const navigate = useNavigate();
   const { sucesso, erro } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [aba, setAba] = useState<'pagar' | 'receber'>(() => (searchParams.get('novo') === 'receber' ? 'receber' : 'pagar'));
+  const veioComAbaEspecifica = searchParams.get('aba') === 'pagar' || searchParams.get('aba') === 'receber' || searchParams.get('novo');
+  const [aba, setAba] = useState<'pagar' | 'receber'>(() => {
+    const p = searchParams.get('aba') || searchParams.get('novo');
+    return p === 'receber' ? 'receber' : 'pagar';
+  });
   const hoje = new Date();
   const [mesRef, setMesRef] = useState(hoje.getMonth());
   const [anoRef, setAnoRef] = useState(hoje.getFullYear());
@@ -662,12 +667,17 @@ export function Financeiro() {
 
   return (
     <div className="page">
+      {veioComAbaEspecifica && (
+        <button className="fin-voltar-mobile" onClick={() => navigate('/')} style={{ display: 'none', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-2)', fontSize: 13, padding: '8px 0', cursor: 'pointer' }}>
+          <ChevronLeft size={16} /> Voltar
+        </button>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title">Financeiro</h1>
           <p className="page-subtitle">Contas a pagar e a receber</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="fin-header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn-secondary" onClick={() => setModalContas(true)}><Wallet size={14} /> Contas</button>
           <button className="btn-secondary" onClick={() => setModalCartoes(true)}><CreditCard size={14} /> Cartões</button>
           <button className="btn-secondary" onClick={() => setModalCategorias(true)}><Tag size={14} /> Categorias</button>
@@ -739,7 +749,7 @@ export function Financeiro() {
       </div>
 
       {/* Abas */}
-      <div className="planos-tabs">
+      <div className="planos-tabs fin-abas-desktop">
         <button className={`planos-tab${aba === 'pagar' ? ' ativo' : ''}`}
           style={aba === 'pagar' ? { color: 'var(--red)', borderBottomColor: 'var(--red)' } : {}}
           onClick={() => setAba('pagar')}>
@@ -1231,10 +1241,19 @@ export function Financeiro() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Banco</label>
-                  <select value={formConta.banco} onChange={e => setFormConta(f => ({ ...f, banco: e.target.value }))}>
-                    <option value="">Selecione...</option>
-                    {BANCOS.map(b => <option key={b.id} value={b.id}>{b.nome}</option>)}
-                  </select>
+                  <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+                    <button type="button" onClick={() => setFormConta(f => ({ ...f, banco: '' }))}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: formConta.banco === '' ? 'var(--accent-bg)' : 'transparent', border: 'none', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
+                      Nenhum / não informar
+                    </button>
+                    {BANCOS.map(b => (
+                      <button key={b.id} type="button" onClick={() => setFormConta(f => ({ ...f, banco: b.id }))}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: formConta.banco === b.id ? 'var(--accent-bg)' : 'transparent', border: 'none', borderTop: '1px solid var(--border)', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
+                        <BankBadge bancoId={b.id} tamanho={18} />
+                        {b.nome}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                   <button className="btn-primary" onClick={salvarConta}>{editandoConta ? 'Salvar' : 'Adicionar conta'}</button>
@@ -1828,6 +1847,16 @@ export function Financeiro() {
           </div>
         </div>
       )}
+      <div className="fin-fab-mobile-only" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
+        <button onClick={abrirNovoLancamento} style={{
+          width: 56, height: 56, borderRadius: '50%',
+          background: aba === 'pagar' ? 'var(--red)' : 'var(--green)',
+          color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: 'var(--shadow-lg)', cursor: 'pointer',
+        }}>
+          <Plus size={26} />
+        </button>
+      </div>
     </div>
   );
 }

@@ -118,7 +118,7 @@ export function DashboardFinanceiro() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginTop: 16 }}>
-          <div>
+          <div onClick={() => navigate('/financeiro?aba=receber')} style={{ cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--green)', fontSize: 12 }}>
               <ArrowUp size={14} /> Receita
             </div>
@@ -126,7 +126,7 @@ export function DashboardFinanceiro() {
               {fmt((resumo as any)?.previsao?.receitaPrevista ?? 0)}
             </div>
           </div>
-          <div>
+          <div onClick={() => navigate('/financeiro?aba=pagar')} style={{ cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--red)', fontSize: 12 }}>
               <ArrowDown size={14} /> Despesas
             </div>
@@ -380,7 +380,7 @@ export function DashboardFinanceiro() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setFabAberto(false)} />
       )}
 
-      <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      <div className="fin-fab-mobile-only" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
         {fabAberto && (
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn-secondary" style={{ borderColor: 'var(--red)', color: 'var(--red)', boxShadow: 'var(--shadow-lg)' }}

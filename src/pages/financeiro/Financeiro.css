@@ -13,6 +13,8 @@
 }
 .fin-card-mobile:last-child { border-bottom: none; }
 
+.fin-fab-mobile-only { display: none; }
+
 @media (max-width: 768px) {
   .fin-table-desktop { display: none; }
   .fin-cards-mobile { display: block; }
@@ -47,6 +49,16 @@
     flex: 1;
     text-align: center;
   }
+  .fin-header-actions {
+    width: 100%;
+  }
+  .fin-header-actions button {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+  }
+  .fin-fab-mobile-only { display: flex; }
+  .fin-abas-desktop { display: none; }
+  .fin-voltar-mobile { display: flex !important; }
 }
 
 @media (max-width: 480px) {
