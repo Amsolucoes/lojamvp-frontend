@@ -218,6 +218,8 @@ export function Financeiro() {
       abrirNovoLancamento();
       setSearchParams({}, { replace: true });
     }
+    // Não limpa "aba" — ele precisa continuar na URL para veioComAbaEspecifica
+    // e para o botão "Voltar" saberem que a pessoa chegou aqui com destino específico.
   }, []);
 
   function navMes(delta: number) {
@@ -671,8 +673,13 @@ export function Financeiro() {
   return (
     <div className="page">
       {veioComAbaEspecifica && (
-        <button className="fin-voltar-mobile" onClick={() => navigate('/')} style={{ alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-2)', fontSize: 13, padding: '8px 0', cursor: 'pointer' }}>
-          <ChevronLeft size={16} /> Voltar
+        <button className="fin-voltar-mobile" onClick={() => navigate('/')} style={{
+          alignItems: 'center', gap: 6,
+          background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 8,
+          color: 'var(--text-1)', fontSize: 14, fontWeight: 500,
+          padding: '8px 14px', marginBottom: 12, cursor: 'pointer',
+        }}>
+          <ChevronLeft size={18} /> Voltar
         </button>
       )}
       <div className="page-header">
@@ -975,7 +982,14 @@ export function Financeiro() {
                         {itens.map((l: any) => (
                       <tr key={l.id}>
                         <td>
-                          <div style={{ fontWeight: 500 }}>{l.descricao}</div>
+                          <div style={{ fontWeight: 500 }}>
+                            {l.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
+                            {l.descricao}
+                          </div>
+                          {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
+                          {l.categoriaNome && (
+                            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</div>
+                          )}
                           {l.observacao && (
                             <span className="badge badge-accent" style={{ fontSize: 10, marginTop: 4, display: 'inline-block' }}>
                               💬 {l.observacao}
@@ -1023,8 +1037,15 @@ export function Financeiro() {
                       <div key={l.id} className="fin-card-mobile">
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <div>
-                        <div style={{ fontWeight: 500 }}>{l.descricao}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR')}</div>
+                        <div style={{ fontWeight: 500 }}>
+                        {l.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
+                        {l.descricao}
+                      </div>
+                      {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
+                      {l.categoriaNome && (
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</div>
+                      )}
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR')}</div>
                       </div>
                       <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
                     </div>

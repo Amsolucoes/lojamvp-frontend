@@ -384,11 +384,11 @@ export function DashboardFinanceiro() {
         {fabAberto && (
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn-secondary" style={{ borderColor: 'var(--red)', color: 'var(--red)', boxShadow: 'var(--shadow-lg)' }}
-              onClick={() => navigate('/financeiro?novo=pagar')}>
+              onClick={() => navigate('/financeiro?aba=pagar&novo=pagar')}>
               A Pagar
             </button>
             <button className="btn-secondary" style={{ borderColor: 'var(--green)', color: 'var(--green)', boxShadow: 'var(--shadow-lg)' }}
-              onClick={() => navigate('/financeiro?novo=receber')}>
+              onClick={() => navigate('/financeiro?aba=receber&novo=receber')}>
               A Receber
             </button>
           </div>
