@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
-  TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2 } from 'lucide-react';
+  TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, FileText } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -60,12 +60,13 @@ export function Sidebar() {
   const soFinanceiro = tipoPlano === 'financeiro';
   const temFinanceiro = modulos.includes('financeiro') || soFinanceiro;
   const temTurmas = modulos.includes('turmas');
+  const temCorretora = modulos.includes('corretora');
   const temProdutos = tipoPlano === 'loja' || tipoPlano === 'loja_modulos';
 
   const NAV = [
     { to: '/',           icon: LayoutDashboard, label: 'Dashboard'      },
     ...(temProdutos ? [{ to: '/produtos', icon: Package, label: 'Produtos' }] : []),
-    ...(temProdutos || temServicos || temTurmas ? [{ to: '/clientes', icon: Users, label: temTurmas && !temProdutos && !temServicos ? 'Alunos' : 'Clientes' }] : []),
+    ...(temProdutos || temServicos || temTurmas || temCorretora ? [{ to: '/clientes', icon: Users, label: temTurmas && !temProdutos && !temServicos ? 'Alunos' : 'Clientes' }] : []),
     ...(temProdutos || temServicos ? [{ to: '/caixa', icon: ShoppingCart, label: 'Caixa' }] : []),
     ...(temServicos ? [{ to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
     ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
@@ -73,6 +74,8 @@ export function Sidebar() {
     ...(temProdutos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
     ...(temFinanceiro ? [{ to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
     ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
+    ...(temCorretora ? [{ to: '/funil', icon: Filter, label: 'Funil de Vendas' }] : []),
+    ...(temCorretora ? [{ to: '/apolices', icon: FileText, label: 'Apólices' }] : []),
     ...(temProdutos || temServicos ? [{ to: '/relatorios', icon: BarChart2, label: 'Relatórios' }] : []),
     ...(temProdutos || temServicos ? [{ to: '/fluxo', icon: TrendingUp, label: 'Fluxo de Caixa' }] : []),
   ];
