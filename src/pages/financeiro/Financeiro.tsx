@@ -535,10 +535,12 @@ export function Financeiro() {
           categoriaId: formCompra.categoriaId || null,
         });
       } else {
+        const diaEscolhido = formCompra.dataCompra ? parseInt(formCompra.dataCompra.split('-')[2]) : 1;
         await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/fixos`, {
           descricao: formCompra.descricao.trim(),
           valor: parseFloat(formCompra.valor),
           categoriaId: formCompra.categoriaId || null,
+          diaCompra: diaEscolhido,
         });
       }
       setFormCompra({ modo: 'avulsa', descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '', totalParcelas: '2', observacao: '' });
