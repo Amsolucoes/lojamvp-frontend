@@ -49,6 +49,10 @@ export function Funil() {
   const [modalNova, setModalNova] = useState(false);
   const [modalSeguradora, setModalSeguradora] = useState(false);
   const [novaSeguradora, setNovaSeguradora] = useState('');
+  const [modalGerenciarSeguradoras, setModalGerenciarSeguradoras] = useState(false);
+  const [seguradorasTodas, setSeguradorasTodas] = useState<{ id: string; nome: string; ativa: boolean }[]>([]);
+  const [editandoSeguradoraId, setEditandoSeguradoraId] = useState<string | null>(null);
+  const [nomeEditSeguradora, setNomeEditSeguradora] = useState('');
   const [buscaCliente, setBuscaCliente] = useState('');
   const [showBuscaCliente, setShowBuscaCliente] = useState(false);
   const [formOp, setFormOp] = useState({ clienteId: '', clienteNome: '', seguradoraId: '', planoDesejado: '', valorEstimado: '' });
@@ -113,6 +117,45 @@ export function Funil() {
     }
   }
 
+  function carregarSeguradorasTodas() {
+    api.get<{ id: string; nome: string; ativa: boolean }[]>('/api/corretora/seguradoras?todas=true')
+      .then(setSeguradorasTodas)
+      .catch(() => {});
+  }
+
+  function abrirGerenciarSeguradoras() {
+    carregarSeguradorasTodas();
+    setModalGerenciarSeguradoras(true);
+  }
+
+  function iniciarEdicaoSeguradora(s: { id: string; nome: string }) {
+    setEditandoSeguradoraId(s.id);
+    setNomeEditSeguradora(s.nome);
+  }
+
+  async function salvarEdicaoSeguradora() {
+    if (!editandoSeguradoraId || !nomeEditSeguradora.trim()) return;
+    try {
+      await api.put(`/api/corretora/seguradoras/${editandoSeguradoraId}`, { nome: nomeEditSeguradora.trim() });
+      setEditandoSeguradoraId(null);
+      carregarSeguradorasTodas();
+      api.get<Seguradora[]>('/api/corretora/seguradoras').then(setSeguradoras).catch(() => {});
+      sucesso('Seguradora atualizada!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function alternarSeguradora(id: string) {
+    try {
+      await api.patch(`/api/corretora/seguradoras/${id}/ativo`, {});
+      carregarSeguradorasTodas();
+      api.get<Seguradora[]>('/api/corretora/seguradoras').then(setSeguradoras).catch(() => {});
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
   async function moverEtapa(op: Oportunidade, novaEtapa: string, motivo?: string) {
     const novaOrdem = oportunidades.filter(o => o.etapa === novaEtapa).length;
     try {
@@ -167,7 +210,10 @@ export function Funil() {
           <h1 className="page-title">Funil de Vendas</h1>
           <p className="page-subtitle">Acompanhe suas oportunidades do lead ao fechamento</p>
         </div>
-        <button className="btn-primary" onClick={abrirNova}><Plus size={15} /> Nova oportunidade</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-secondary" onClick={abrirGerenciarSeguradoras}><Building2 size={14} /> Seguradoras</button>
+          <button className="btn-primary" onClick={abrirNova}><Plus size={15} /> Nova oportunidade</button>
+        </div>
       </div>
 
       <div className="funil-board funil-board-desktop">
@@ -396,6 +442,64 @@ export function Funil() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalSeguradora(false)}>Cancelar</button>
               <button className="btn-primary" onClick={salvarSeguradora}>Adicionar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal gerenciar seguradoras */}
+      {modalGerenciarSeguradoras && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalGerenciarSeguradoras(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Seguradoras</h2>
+              <button className="btn-ghost" onClick={() => setModalGerenciarSeguradoras(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+                {seguradorasTodas.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma seguradora cadastrada.</p>
+                ) : seguradorasTodas.map(s => (
+                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, opacity: s.ativa ? 1 : 0.5 }}>
+                    {editandoSeguradoraId === s.id ? (
+                      <input value={nomeEditSeguradora} onChange={e => setNomeEditSeguradora(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && salvarEdicaoSeguradora()}
+                        style={{ flex: 1, marginRight: 8 }} autoFocus />
+                    ) : (
+                      <span style={{ fontSize: 13 }}>{s.nome}{!s.ativa && <span style={{ color: 'var(--text-3)', fontSize: 11 }}> (inativa)</span>}</span>
+                    )}
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      {editandoSeguradoraId === s.id ? (
+                        <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={salvarEdicaoSeguradora}>Salvar</button>
+                      ) : (
+                        <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => iniciarEdicaoSeguradora(s)}>Editar</button>
+                      )}
+                      <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => alternarSeguradora(s.id)}>{s.ativa ? 'Desativar' : 'Ativar'}</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Nova seguradora</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input value={novaSeguradora} onChange={e => setNovaSeguradora(e.target.value)} placeholder="Nome da seguradora" />
+                  <button className="btn-primary" onClick={async () => {
+                    if (!novaSeguradora.trim()) return;
+                    try {
+                      const nova = await api.post<Seguradora>('/api/corretora/seguradoras', { nome: novaSeguradora.trim() });
+                      setSeguradoras(prev => [...prev, nova]);
+                      setNovaSeguradora('');
+                      carregarSeguradorasTodas();
+                      sucesso('Seguradora adicionada!');
+                    } catch (e) {
+                      erro((e as Error).message);
+                    }
+                  }}>Adicionar</button>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalGerenciarSeguradoras(false)}>Fechar</button>
             </div>
           </div>
         </div>
