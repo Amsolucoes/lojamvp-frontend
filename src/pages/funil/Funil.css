@@ -48,8 +48,36 @@
   cursor: grabbing;
 }
 
+.funil-mobile { display: none; }
+
+.funil-abas-mobile {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+.funil-aba-mobile {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.funil-aba-mobile.ativa {
+  font-weight: 600;
+}
+
+.funil-cards-mobile-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 @media (max-width: 768px) {
-  .funil-coluna {
-    flex: 0 0 220px;
-  }
+  .funil-board-desktop { display: none; }
+  .funil-mobile { display: block; }
 }

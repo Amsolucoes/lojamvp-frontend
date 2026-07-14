@@ -47,6 +47,8 @@ export function Funil() {
   const [seguradoras, setSeguradoras] = useState<Seguradora[]>([]);
 
   const [modalNova, setModalNova] = useState(false);
+  const [modalSeguradora, setModalSeguradora] = useState(false);
+  const [novaSeguradora, setNovaSeguradora] = useState('');
   const [buscaCliente, setBuscaCliente] = useState('');
   const [showBuscaCliente, setShowBuscaCliente] = useState(false);
   const [formOp, setFormOp] = useState({ clienteId: '', clienteNome: '', seguradoraId: '', planoDesejado: '', valorEstimado: '' });
@@ -58,6 +60,7 @@ export function Funil() {
   const [confirmExcluir, setConfirmExcluir] = useState<Oportunidade | null>(null);
 
   const [dragId, setDragId] = useState<string | null>(null);
+  const [etapaMobile, setEtapaMobile] = useState('lead');
   const [dragOverEtapa, setDragOverEtapa] = useState<string | null>(null);
 
   function carregar() {
@@ -93,6 +96,20 @@ export function Funil() {
       erro((e as Error).message);
     } finally {
       setSalvando(false);
+    }
+  }
+
+  async function salvarSeguradora() {
+    if (!novaSeguradora.trim()) return;
+    try {
+      const nova = await api.post<Seguradora>('/api/corretora/seguradoras', { nome: novaSeguradora.trim() });
+      setSeguradoras(prev => [...prev, nova]);
+      setFormOp(f => ({ ...f, seguradoraId: nova.id }));
+      setNovaSeguradora('');
+      setModalSeguradora(false);
+      sucesso('Seguradora adicionada!');
+    } catch (e) {
+      erro((e as Error).message);
     }
   }
 
@@ -153,7 +170,7 @@ export function Funil() {
         <button className="btn-primary" onClick={abrirNova}><Plus size={15} /> Nova oportunidade</button>
       </div>
 
-      <div className="funil-board">
+      <div className="funil-board funil-board-desktop">
         {ETAPAS.map(etapa => {
           const cardsDaEtapa = oportunidades.filter(o => o.etapa === etapa.chave).sort((a, b) => a.ordem - b.ordem);
           const totalEtapa = cardsDaEtapa.reduce((s, o) => s + (o.valorEstimado ?? 0), 0);
@@ -212,6 +229,59 @@ export function Funil() {
         </div>
       </div>
 
+      {/* Versão mobile: abas por etapa, sem scroll lateral */}
+      <div className="funil-mobile">
+        <div className="funil-abas-mobile">
+          {[...ETAPAS, { chave: 'perdido', label: 'Perdido', cor: 'var(--red)' }].map(etapa => {
+            const qtd = oportunidades.filter(o => o.etapa === etapa.chave).length;
+            return (
+              <button key={etapa.chave}
+                className={`funil-aba-mobile${etapaMobile === etapa.chave ? ' ativa' : ''}`}
+                style={etapaMobile === etapa.chave ? { borderColor: etapa.cor, color: etapa.cor } : {}}
+                onClick={() => setEtapaMobile(etapa.chave)}>
+                {etapa.label} {qtd > 0 && `(${qtd})`}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="funil-cards-mobile-lista">
+          {oportunidades.filter(o => o.etapa === etapaMobile).sort((a, b) => a.ordem - b.ordem).map(op => (
+            <div key={op.id} className="funil-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{op.clienteNome}</div>
+                <button className="btn-ghost" style={{ padding: 2, color: 'var(--red)' }} onClick={() => setConfirmExcluir(op)}><Trash2 size={12} /></button>
+              </div>
+              {op.seguradoraNome && (
+                <div style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <Building2 size={11} /> {op.seguradoraNome}
+                </div>
+              )}
+              {op.planoDesejado && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{op.planoDesejado}</div>}
+              {op.valorEstimado && <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', marginTop: 6 }}>{fmt(op.valorEstimado)}</div>}
+
+              {etapaMobile !== 'perdido' && etapaMobile !== 'ganho' && (
+                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                  {(() => {
+                    const idx = ETAPAS.findIndex(e => e.chave === etapaMobile);
+                    const proxima = ETAPAS[idx + 1];
+                    return proxima ? (
+                      <button className="btn-primary" style={{ fontSize: 12, flex: 1 }} onClick={() => moverEtapa(op, proxima.chave)}>
+                        Avançar → {proxima.label}
+                      </button>
+                    ) : null;
+                  })()}
+                  <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--red)' }} onClick={() => setModalPerda(op)}>Perdido</button>
+                </div>
+              )}
+            </div>
+          ))}
+          {oportunidades.filter(o => o.etapa === etapaMobile).length === 0 && (
+            <div style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nenhuma oportunidade nesta etapa.</div>
+          )}
+        </div>
+      </div>
+
       {/* Modal nova oportunidade */}
       {modalNova && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNova(false)}>
@@ -253,10 +323,13 @@ export function Funil() {
 
                 <div className="form-group">
                   <label className="form-label">Seguradora</label>
-                  <select value={formOp.seguradoraId} onChange={e => setFormOp(f => ({ ...f, seguradoraId: e.target.value }))}>
-                    <option value="">Selecione...</option>
-                    {seguradoras.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-                  </select>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select value={formOp.seguradoraId} onChange={e => setFormOp(f => ({ ...f, seguradoraId: e.target.value }))} style={{ flex: 1 }}>
+                      <option value="">Selecione...</option>
+                      {seguradoras.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                    </select>
+                    <button type="button" className="btn-secondary" onClick={() => setModalSeguradora(true)}>+ Nova</button>
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -300,6 +373,29 @@ export function Funil() {
               <button className="btn-danger" onClick={() => { moverEtapa(modalPerda, 'perdido', motivoPerda); setModalPerda(null); setMotivoPerda(''); }}>
                 Marcar como perdido
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal nova seguradora */}
+      {modalSeguradora && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalSeguradora(false)}>
+          <div className="modal" style={{ maxWidth: 360 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Nova seguradora</h2>
+              <button className="btn-ghost" onClick={() => setModalSeguradora(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Nome</label>
+                <input value={novaSeguradora} onChange={e => setNovaSeguradora(e.target.value)}
+                  placeholder="Ex: Bradesco Saúde" onKeyDown={e => e.key === 'Enter' && salvarSeguradora()} autoFocus />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalSeguradora(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarSeguradora}>Adicionar</button>
             </div>
           </div>
         </div>
