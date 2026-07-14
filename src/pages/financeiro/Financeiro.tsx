@@ -80,6 +80,7 @@ interface ItemFaturaDetalhe {
   categoriaNome: string | null;
   categoriaId: string | null;
   modo: string;
+  observacao: string | null;
 }
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -137,7 +138,7 @@ export function Financeiro() {
   const [formCompra, setFormCompra] = useState({
     modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
     descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10),
-    categoriaId: '', totalParcelas: '2',
+    categoriaId: '', totalParcelas: '2', observacao: '',
   });
 
   const [modalLancamento, setModalLancamento] = useState(false);
@@ -540,7 +541,7 @@ export function Financeiro() {
           categoriaId: formCompra.categoriaId || null,
         });
       }
-      setFormCompra({ modo: 'avulsa', descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '', totalParcelas: '2' });
+      setFormCompra({ modo: 'avulsa', descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '', totalParcelas: '2', observacao: '' });
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarLancamentos();
       sucesso('Compra lançada!');
@@ -556,6 +557,7 @@ export function Financeiro() {
       valor: String(item.valor),
       dataCompra: item.dataCompra.slice(0, 10),
       categoriaId: item.categoriaId ?? '',
+      observacao: item.observacao ?? '',
     });
   }
 
@@ -567,6 +569,7 @@ export function Financeiro() {
         valor: parseFloat(formEditItemCartao.valor),
         dataCompra: formEditItemCartao.dataCompra,
         categoriaId: formEditItemCartao.categoriaId || null,
+        observacao: formEditItemCartao.observacao || null,
       });
       setEditandoItemCartao(null);
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
@@ -591,7 +594,7 @@ export function Financeiro() {
   const [modalPagarFatura, setModalPagarFatura] = useState(false);
   const [formPagFatura, setFormPagFatura] = useState({ modo: 'total' as 'total' | 'parcial' | 'parcelado', valorPago: '', totalParcelas: '3' });
   const [editandoItemCartao, setEditandoItemCartao] = useState<ItemFaturaDetalhe | null>(null);
-  const [formEditItemCartao, setFormEditItemCartao] = useState({ descricao: '', valor: '', dataCompra: '', categoriaId: '' });
+  const [formEditItemCartao, setFormEditItemCartao] = useState({ descricao: '', valor: '', dataCompra: '', categoriaId: '', observacao: '' });
   const [confirmExcluirItemCartao, setConfirmExcluirItemCartao] = useState<ItemFaturaDetalhe | null>(null);
 
   async function pagarFaturaModal(modo: string, extra?: any) {
@@ -1652,25 +1655,44 @@ export function Financeiro() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
                 {faturaDados?.itens.length === 0 ? (
                   <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma compra neste ciclo.</p>
-                ) : faturaDados?.itens.map(i => (
-                  <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)', gap: 8 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div>
-                        {i.descricao}
-                        {i.modo === 'fixa' && <span className="badge badge-accent" style={{ fontSize: 9, marginLeft: 6 }}>Fixo</span>}
+                ) : (
+                  agruparPorData(faturaDados?.itens.map(i => ({ ...i, vencimento: i.dataCompra })) ?? []).map(([dia, itens]) => (
+                    <div key={dia}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 6, padding: '4px 8px', marginBottom: 6 }}>
+                        <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
+                        <span>{fmt(itens.reduce((s, i: any) => s + i.valor, 0))}</span>
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{new Date(i.dataCompra).toLocaleDateString('pt-BR')}{i.categoriaNome ? ` · ${i.categoriaNome}` : ''}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {itens.map((i: any) => (
+                          <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)', gap: 8 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div>
+                                {i.descricao}
+                                {i.modo === 'fixa' && <span className="badge badge-accent" style={{ fontSize: 9, marginLeft: 6 }}>🔁 Fixo</span>}
+                              </div>
+                              {i.categoriaNome && (
+                                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{iconeCategoria(i.categoriaNome)} {i.categoriaNome}</div>
+                              )}
+                              {i.observacao && (
+                                <span className="badge badge-accent" style={{ fontSize: 10, marginTop: 4, display: 'inline-block' }}>
+                                  💬 {i.observacao}
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontWeight: 600, flexShrink: 0 }}>{fmt(i.valor)}</span>
+                            <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                              <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditarItemCartao(i)}>✎</button>
+                              <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluirItemCartao(i)}><Trash2 size={13} /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <span style={{ fontWeight: 600, flexShrink: 0 }}>{fmt(i.valor)}</span>
-                    <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                      <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditarItemCartao(i)}>✎</button>
-                      <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluirItemCartao(i)}><Trash2 size={13} /></button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
@@ -1718,6 +1740,7 @@ export function Financeiro() {
                     <option value="">Sem categoria</option>
                     {categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
                   </select>
+                  <input value={formCompra.observacao} onChange={e => setFormCompra(f => ({ ...f, observacao: e.target.value }))} placeholder="Observação (opcional)" />
 
                   {formCompra.modo === 'fixa' && (
                     <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
@@ -1827,6 +1850,10 @@ export function Financeiro() {
                     <option value="">Sem categoria</option>
                     {categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
                   </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Observação</label>
+                  <input value={formEditItemCartao.observacao} onChange={e => setFormEditItemCartao(f => ({ ...f, observacao: e.target.value }))} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group">
