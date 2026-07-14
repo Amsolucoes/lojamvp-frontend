@@ -12,6 +12,8 @@ interface Oportunidade {
   seguradoraNome: string | null;
   planoDesejado: string | null;
   valorEstimado: number | null;
+  observacao: string;
+  quantidadeVidas: number;
   etapa: string;
   ordem: number;
   criadoEm: string;
@@ -47,6 +49,7 @@ export function Funil() {
   const [seguradoras, setSeguradoras] = useState<Seguradora[]>([]);
 
   const [modalNova, setModalNova] = useState(false);
+  const [editandoOp, setEditandoOp] = useState<Oportunidade | null>(null);
   const [modalSeguradora, setModalSeguradora] = useState(false);
   const [novaSeguradora, setNovaSeguradora] = useState('');
   const [modalGerenciarSeguradoras, setModalGerenciarSeguradoras] = useState(false);
@@ -83,7 +86,23 @@ export function Funil() {
   }, []);
 
   function abrirNova() {
+    setEditandoOp(null);
     setFormOp({ clienteId: '', clienteNome: '', seguradoraId: '', planoDesejado: '', valorEstimado: '', observacao: '', quantidadeVidas: '' });
+    setBuscaCliente('');
+    setModalNova(true);
+  }
+
+  function abrirEditar(op: Oportunidade) {
+    setEditandoOp(op);
+    setFormOp({
+      clienteId: op.clienteId,
+      clienteNome: op.clienteNome,
+      seguradoraId: seguradoras.find(s => s.nome === op.seguradoraNome)?.id ?? '',
+      planoDesejado: op.planoDesejado ?? '',
+      valorEstimado: op.valorEstimado ? String(op.valorEstimado) : '',
+      observacao: op.observacao ?? '',
+      quantidadeVidas: op.quantidadeVidas ? String(op.quantidadeVidas) : '',
+    });
     setBuscaCliente('');
     setModalNova(true);
   }
@@ -92,15 +111,24 @@ export function Funil() {
     if (!formOp.clienteId) { erro('Selecione um cliente.'); return; }
     setSalvando(true);
     try {
-      await api.post('/api/corretora/oportunidades', {
+      const payload = {
         clienteId: formOp.clienteId,
         seguradoraId: formOp.seguradoraId || null,
         planoDesejado: formOp.planoDesejado || null,
         valorEstimado: formOp.valorEstimado ? parseFloat(formOp.valorEstimado) : null,
-      });
+        observacao: formOp.observacao || null,
+        quantidadeVidas: formOp.quantidadeVidas ? parseInt(formOp.quantidadeVidas) : null,
+      };
+      if (editandoOp) {
+        await api.put(`/api/corretora/oportunidades/${editandoOp.id}`, payload);
+        sucesso('Oportunidade atualizada!');
+      } else {
+        await api.post('/api/corretora/oportunidades', payload);
+        sucesso('Oportunidade criada!');
+      }
       setModalNova(false);
+      setEditandoOp(null);
       carregar();
-      sucesso('Oportunidade criada!');
     } catch (e) {
       erro((e as Error).message);
     } finally {
@@ -264,8 +292,11 @@ export function Funil() {
                 {cardsDaEtapa.map(op => (
                   <div key={op.id} className="funil-card" draggable onDragStart={() => handleDragStart(op.id)}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{op.clienteNome}</div>
-                      <button className="btn-ghost" style={{ padding: 2, color: 'var(--red)' }} onClick={() => setConfirmExcluir(op)}><Trash2 size={12} /></button>
+                      <div style={{ fontWeight: 600, fontSize: 13, cursor: 'pointer' }} onClick={() => abrirEditar(op)}>{op.clienteNome}</div>
+                      <div style={{ display: 'flex', gap: 2 }}>
+                        <button className="btn-ghost" style={{ padding: 2 }} onClick={() => abrirEditar(op)}>✎</button>
+                        <button className="btn-ghost" style={{ padding: 2, color: 'var(--red)' }} onClick={() => setConfirmExcluir(op)}><Trash2 size={12} /></button>
+                      </div>
                     </div>
                     {op.seguradoraNome && (
                       <div style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
@@ -321,7 +352,10 @@ export function Funil() {
             <div key={op.id} className="funil-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{op.clienteNome}</div>
-                <button className="btn-ghost" style={{ padding: 2, color: 'var(--red)' }} onClick={() => setConfirmExcluir(op)}><Trash2 size={12} /></button>
+                <div style={{ display: 'flex', gap: 2 }}>
+                  <button className="btn-ghost" style={{ padding: 2 }} onClick={() => abrirEditar(op)}>✎</button>
+                  <button className="btn-ghost" style={{ padding: 2, color: 'var(--red)' }} onClick={() => setConfirmExcluir(op)}><Trash2 size={12} /></button>
+                </div>
               </div>
               {op.seguradoraNome && (
                 <div style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
@@ -359,8 +393,8 @@ export function Funil() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNova(false)}>
           <div className="modal" style={{ maxWidth: 440 }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Nova oportunidade</h2>
-              <button className="btn-ghost" onClick={() => setModalNova(false)}><X size={16} /></button>
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>{editandoOp ? 'Editar oportunidade' : 'Nova oportunidade'}</h2>
+              <button className="btn-ghost" onClick={() => { setModalNova(false); setEditandoOp(null); }}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -422,9 +456,9 @@ export function Funil() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setModalNova(false)}>Cancelar</button>
+              <button className="btn-secondary" onClick={() => { setModalNova(false); setEditandoOp(null); }}>Cancelar</button>
               <button className="btn-primary" onClick={salvarNova} disabled={salvando}>
-                {salvando ? 'Salvando...' : 'Criar oportunidade'}
+                {salvando ? 'Salvando...' : (editandoOp ? 'Salvar alterações' : 'Criar oportunidade')}
               </button>
             </div>
           </div>
