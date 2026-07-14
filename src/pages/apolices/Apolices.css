@@ -1,0 +1,19 @@
+.apolices-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.apolices-cards-mobile { display: none; }
+
+.apolice-card-mobile {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.apolice-card-mobile:last-child { border-bottom: none; }
+
+@media (max-width: 768px) {
+  .apolices-desktop { display: none; }
+  .apolices-cards-mobile { display: block; }
+}

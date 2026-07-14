@@ -19,6 +19,7 @@ import { Planos } from './pages/planos/Planos';
 import { Financeiro } from './pages/financeiro/Financeiro';
 import { Turmas } from './pages/turmas/Turmas';
 import { Funil } from './pages/funil/Funil';
+import { Apolices } from './pages/apolices/Apolices';
 import { ToastProvider } from './context/ToastContext';
 
 function Rotas() {
@@ -66,6 +67,7 @@ function Rotas() {
           <Route path="financeiro" element={<Financeiro />} />
           <Route path="turmas"     element={<Turmas />} />
           <Route path="funil"      element={<Funil />} />
+          <Route path="apolices"   element={<Apolices />} />
           <Route path="*"          element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
