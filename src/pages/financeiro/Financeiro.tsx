@@ -1722,10 +1722,8 @@ export function Financeiro() {
                     {formCompra.modo === 'parcelada' ? (
                       <input type="number" min={2} max={24} value={formCompra.totalParcelas}
                         onChange={e => setFormCompra(f => ({ ...f, totalParcelas: e.target.value }))} placeholder="Parcelas" />
-                    ) : formCompra.modo === 'avulsa' ? (
-                      <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', fontSize: 11, color: 'var(--text-3)' }}>Repete todo mês</div>
+                      <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
                     )}
                   </div>
 
@@ -1744,7 +1742,7 @@ export function Financeiro() {
 
                   {formCompra.modo === 'fixa' && (
                     <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                      Esse valor entra automaticamente em todas as faturas futuras, até você desativar.
+                      Repete todo mês no dia escolhido, até você desativar.
                     </p>
                   )}
 
