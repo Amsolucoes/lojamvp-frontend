@@ -211,7 +211,7 @@ export function Funil() {
   async function moverEtapa(op: Oportunidade, novaEtapa: string, motivo?: string, valor?: number, contaBancariaId?: string) {
     const novaOrdem = oportunidades.filter(o => o.etapa === novaEtapa).length;
     try {
-      await api.patch(`/api/corretora/oportunidades/${op.id}/etapa`, {
+      const res = await api.patch<any>(`/api/corretora/oportunidades/${op.id}/etapa`, {
         etapa: novaEtapa,
         ordem: novaOrdem,
         motivoPerda: motivo || null,
@@ -220,7 +220,10 @@ export function Funil() {
       });
       carregar();
       if (novaEtapa === 'perdido') sucesso('Marcado como perdido.');
-      if (novaEtapa === 'ganho') sucesso('Fechado! Comissão lançada no Financeiro.');
+      if (novaEtapa === 'ganho') {
+        if (res.comissaoLancada) sucesso('Fechado! Comissão lançada no Financeiro.');
+        else sucesso('Oportunidade fechada. (Sem conta selecionada, comissão não foi lançada no Financeiro.)');
+      }
     } catch (e) {
       erro((e as Error).message);
     }
@@ -640,7 +643,9 @@ export function Funil() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalGanho(null)}>Cancelar</button>
-              <button className="btn-primary" onClick={confirmarGanho}>Fechar venda</button>
+              <button className="btn-primary" onClick={confirmarGanho} disabled={contas.length > 0 && !contaGanho}>
+                Fechar venda
+              </button>
             </div>
           </div>
         </div>
