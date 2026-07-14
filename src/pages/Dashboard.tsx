@@ -22,6 +22,12 @@ export function Dashboard() {
 
   const [abaDash, setAbaDash] = useState(abasDisponiveis[0]?.chave ?? 'loja');
 
+  useEffect(() => {
+    if (abasDisponiveis.length > 0 && !abasDisponiveis.some(a => a.chave === abaDash)) {
+      setAbaDash(abasDisponiveis[0].chave);
+    }
+  }, [temProdutos, temServicos, temTurmas, temCorretora, temFinanceiro]);
+
   // Só existe 1 dashboard aplicável — renderiza direto, sem abas
   if (abasDisponiveis.length <= 1) {
     const unica = abasDisponiveis[0]?.chave ?? 'loja';
