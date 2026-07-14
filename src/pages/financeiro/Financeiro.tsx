@@ -137,6 +137,8 @@ export function Financeiro() {
   const [modalContas, setModalContas] = useState(false);
   const [modalCategorias, setModalCategorias] = useState(false);
   const [modalAjuste, setModalAjuste] = useState<Conta | null>(null);
+  const [modalTransferencia, setModalTransferencia] = useState(false);
+  const [formTransf, setFormTransf] = useState({ contaOrigemId: '', contaDestinoId: '', valor: '', registrar: true, observacao: '' });
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
   const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '', observacao: '' });
@@ -636,6 +638,27 @@ export function Financeiro() {
       setModalAjuste(null);
       carregarContas();
       sucesso('Saldo ajustado!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function salvarTransferencia() {
+    if (!formTransf.contaOrigemId || !formTransf.contaDestinoId) { erro('Escolha as duas contas.'); return; }
+    if (formTransf.contaOrigemId === formTransf.contaDestinoId) { erro('Escolha contas diferentes.'); return; }
+    if (!formTransf.valor || parseFloat(formTransf.valor) <= 0) { erro('Informe um valor válido.'); return; }
+    try {
+      await api.post('/api/financeiro/contas/transferencia', {
+        contaOrigemId: formTransf.contaOrigemId,
+        contaDestinoId: formTransf.contaDestinoId,
+        valor: parseFloat(formTransf.valor),
+        registrar: formTransf.registrar,
+        observacao: formTransf.observacao || null,
+      });
+      setModalTransferencia(false);
+      setFormTransf({ contaOrigemId: '', contaDestinoId: '', valor: '', registrar: true, observacao: '' });
+      carregarContas();
+      sucesso('Transferência realizada!');
     } catch (e) {
       erro((e as Error).message);
     }
@@ -1273,6 +1296,13 @@ export function Financeiro() {
                 ))}
               </div>
 
+              {contas.filter(c => c.ativa).length >= 2 && (
+                <button className="btn-secondary" style={{ width: '100%', marginBottom: 16 }}
+                  onClick={() => setModalTransferencia(true)}>
+                  🔁 Transferir entre contas
+                </button>
+              )}
+
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoConta ? 'Editar conta' : 'Nova conta'}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 10 }}>
@@ -1360,6 +1390,60 @@ export function Financeiro() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalAjuste(null)}>Cancelar</button>
               <button className="btn-primary" onClick={salvarAjuste}>Salvar ajuste</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal transferência entre contas */}
+      {modalTransferencia && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalTransferencia(false)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Transferir entre contas</h2>
+              <button className="btn-ghost" onClick={() => setModalTransferencia(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">De</label>
+                  <select value={formTransf.contaOrigemId} onChange={e => setFormTransf(f => ({ ...f, contaOrigemId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome} ({fmt(c.saldoAtual)})</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Para</label>
+                  <select value={formTransf.contaDestinoId} onChange={e => setFormTransf(f => ({ ...f, contaDestinoId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa && c.id !== formTransf.contaOrigemId).map(c => <option key={c.id} value={c.id}>{c.nome} ({fmt(c.saldoAtual)})</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Valor (R$)</label>
+                  <input type="number" min={0.01} step={0.01} value={formTransf.valor} onChange={e => setFormTransf(f => ({ ...f, valor: e.target.value }))} />
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={formTransf.registrar} style={{ width: 16, height: 16, margin: 0 }}
+                    onChange={e => setFormTransf(f => ({ ...f, registrar: e.target.checked }))} />
+                  Registrar esta transferência (fica visível no histórico das contas)
+                </label>
+                {formTransf.registrar && (
+                  <div className="form-group">
+                    <label className="form-label">Observação <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                    <input value={formTransf.observacao} onChange={e => setFormTransf(f => ({ ...f, observacao: e.target.value }))} placeholder="Ex: repasse mensal" />
+                  </div>
+                )}
+                {!formTransf.registrar && (
+                  <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                    Sem registro: os saldos mudam, mas não fica nenhum rastro no histórico de ajustes.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalTransferencia(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarTransferencia}>Transferir</button>
             </div>
           </div>
         </div>
