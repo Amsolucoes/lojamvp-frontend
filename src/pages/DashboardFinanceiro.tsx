@@ -263,7 +263,7 @@ export function DashboardFinanceiro() {
             </thead>
             <tbody>
               {resumoAnual.map(m => (
-                <tr key={m.mes}>
+                <tr key={m.mes} style={{ cursor: 'pointer' }} onClick={() => navigate(`/financeiro?ano=${anoRef}&mes=${m.mes}`)}>
                   <td>{MESES_ABREV[m.mes - 1]}</td>
                   <td style={{ color: 'var(--green)' }}>{fmt(m.receber)}</td>
                   <td style={{ color: 'var(--red)' }}>{fmt(m.pagar)}</td>
@@ -278,7 +278,7 @@ export function DashboardFinanceiro() {
 
         <div className="dash-resumo-mobile">
           {resumoAnual.map(m => (
-            <div key={m.mes} style={{ padding: '10px 4px', borderBottom: '1px solid var(--border)' }}>
+            <div key={m.mes} style={{ padding: '10px 4px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => navigate(`/financeiro?ano=${anoRef}&mes=${m.mes}`)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <strong style={{ fontSize: 13 }}>{MESES_ABREV[m.mes - 1]}</strong>
                 <span style={{ fontWeight: 700, fontSize: 14, color: m.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>

@@ -102,8 +102,14 @@ export function Financeiro() {
     return p === 'receber' ? 'receber' : 'pagar';
   });
   const hoje = new Date();
-  const [mesRef, setMesRef] = useState(hoje.getMonth());
-  const [anoRef, setAnoRef] = useState(hoje.getFullYear());
+  const [mesRef, setMesRef] = useState(() => {
+    const m = searchParams.get('mes');
+    return m ? parseInt(m) - 1 : hoje.getMonth();
+  });
+  const [anoRef, setAnoRef] = useState(() => {
+    const a = searchParams.get('ano');
+    return a ? parseInt(a) : hoje.getFullYear();
+  });
 
   const [contas, setContas] = useState<Conta[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -112,6 +118,7 @@ export function Financeiro() {
   const [resumo, setResumo] = useState<{ pagar: Resumo; receber: Resumo } | null>(null);
   const [catFiltro, setCatFiltro] = useState('todas');
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pago' | 'pendente'>('todos');
+  const [modoFiltro, setModoFiltro] = useState<'todos' | 'avulsa' | 'parcelada' | 'fixa'>('todos');
   const [periodoTipo, setPeriodoTipo] = useState<'mes' | 'personalizado'>('mes');
   const [periodoDe, setPeriodoDe] = useState(new Date().toISOString().slice(0, 10));
   const [periodoAte, setPeriodoAte] = useState(new Date().toISOString().slice(0, 10));
@@ -257,9 +264,13 @@ export function Financeiro() {
     if (statusFiltro === 'todos') return true;
     return status === statusFiltro;
   }
+  function passaModo(modo: string | undefined) {
+    if (modoFiltro === 'todos') return true;
+    return modo === modoFiltro;
+  }
 
   const listaPagar = linhasPagar.filter(l =>
-    (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaStatus(l.status)
+    (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaStatus(l.status) && passaModo(l.modo)
   );
   const listaReceber = receberUnificado.filter((l: any) => {
     const catOk = catFiltro === 'todas'
@@ -267,7 +278,7 @@ export function Financeiro() {
       : catFiltro === '__plano__'
       ? l.origem === 'plano'
       : l.origem === 'avulso' && l.categoriaNome === catFiltro;
-    return catOk && passaStatus(l.status);
+    return catOk && passaStatus(l.status) && passaModo(l.modo);
   });
 
   // Quando algum filtro (categoria ou status) está ativo, recalcula os totais
@@ -857,10 +868,17 @@ export function Financeiro() {
             <option value="pago">Só pagos</option>
             <option value="pendente">Só pendentes</option>
           </select>
-          {(catFiltro !== 'todas' || statusFiltro !== 'todos' || periodoTipo === 'personalizado') && (
+          <select value={modoFiltro} onChange={e => setModoFiltro(e.target.value as any)} style={{ width: 'auto', minWidth: 130 }}>
+            <option value="todos">Todos os tipos</option>
+            <option value="avulsa">Avulsa</option>
+            <option value="parcelada">Parcelada</option>
+            <option value="fixa">Fixa</option>
+          </select>
+          {(catFiltro !== 'todas' || statusFiltro !== 'todos' || modoFiltro !== 'todos' || periodoTipo === 'personalizado') && (
             <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => {
               setCatFiltro('todas');
               setStatusFiltro('todos');
+              setModoFiltro('todos');
               setPeriodoTipo('mes');
             }}>
               Limpar filtros
