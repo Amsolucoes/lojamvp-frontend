@@ -69,6 +69,7 @@ export function Funil() {
   const [contas, setContas] = useState<{ id: string; nome: string; ativa: boolean }[]>([]);
 
   const [confirmExcluir, setConfirmExcluir] = useState<Oportunidade | null>(null);
+  const [avisoClienteDuplicado, setAvisoClienteDuplicado] = useState<string | null>(null);
 
   const [dragId, setDragId] = useState<string | null>(null);
   const [etapaMobile, setEtapaMobile] = useState('lead');
@@ -89,6 +90,7 @@ export function Funil() {
     setEditandoOp(null);
     setFormOp({ clienteId: '', clienteNome: '', seguradoraId: '', planoDesejado: '', valorEstimado: '', observacao: '', quantidadeVidas: '' });
     setBuscaCliente('');
+    setAvisoClienteDuplicado(null);
     setModalNova(true);
   }
 
@@ -105,6 +107,23 @@ export function Funil() {
     });
     setBuscaCliente('');
     setModalNova(true);
+  }
+
+  async function selecionarClienteNoForm(c: Cliente) {
+    setFormOp(f => ({ ...f, clienteId: c.id, clienteNome: c.nome }));
+    setBuscaCliente('');
+    setAvisoClienteDuplicado(null);
+
+    if (editandoOp) return; // não checa duplicado se está editando a própria
+
+    try {
+      const res = await api.get<any>(`/api/corretora/oportunidades/verificar-cliente/${c.id}`);
+      if (res.existe) {
+        const nomesEtapas: Record<string, string> = { lead: 'Lead', contato: 'Contato', proposta: 'Proposta Enviada', negociacao: 'Negociação' };
+        const lista = res.oportunidades.map((o: any) => `${o.planoDesejado || 'oportunidade'} (${nomesEtapas[o.etapa] || o.etapa})`).join(', ');
+        setAvisoClienteDuplicado(`${c.nome} já tem ${res.quantidade} oportunidade(s) em aberto: ${lista}`);
+      }
+    } catch {}
   }
 
   async function salvarNova() {
@@ -304,7 +323,11 @@ export function Funil() {
                       </div>
                     )}
                     {op.planoDesejado && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{op.planoDesejado}</div>}
-                    {op.valorEstimado && <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', marginTop: 6 }}>{fmt(op.valorEstimado)}</div>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                      {op.valorEstimado && <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>{fmt(op.valorEstimado)}</span>}
+                      {op.quantidadeVidas && <span className="badge badge-accent" style={{ fontSize: 10 }}>👤 {op.quantidadeVidas} vida{op.quantidadeVidas > 1 ? 's' : ''}</span>}
+                    </div>
+                    {op.observacao && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, fontStyle: 'italic', borderTop: '1px solid var(--border)', paddingTop: 6 }}>💬 {op.observacao}</div>}
                   </div>
                 ))}
                 {cardsDaEtapa.length === 0 && (
@@ -363,7 +386,11 @@ export function Funil() {
                 </div>
               )}
               {op.planoDesejado && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{op.planoDesejado}</div>}
-              {op.valorEstimado && <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', marginTop: 6 }}>{fmt(op.valorEstimado)}</div>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                {op.valorEstimado && <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>{fmt(op.valorEstimado)}</span>}
+                {op.quantidadeVidas && <span className="badge badge-accent" style={{ fontSize: 10 }}>👤 {op.quantidadeVidas} vida{op.quantidadeVidas > 1 ? 's' : ''}</span>}
+              </div>
+              {op.observacao && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, fontStyle: 'italic', borderTop: '1px solid var(--border)', paddingTop: 6 }}>💬 {op.observacao}</div>}
 
               {etapaMobile !== 'perdido' && etapaMobile !== 'ganho' && (
                 <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
@@ -403,7 +430,7 @@ export function Funil() {
                   {formOp.clienteId ? (
                     <div className="cx-cliente-sel">
                       <div style={{ fontWeight: 500, fontSize: 13 }}>{formOp.clienteNome}</div>
-                      <button className="btn-ghost" onClick={() => setFormOp(f => ({ ...f, clienteId: '', clienteNome: '' }))}><X size={13} /></button>
+                      <button className="btn-ghost" onClick={() => { setFormOp(f => ({ ...f, clienteId: '', clienteNome: '' })); setAvisoClienteDuplicado(null); }}><X size={13} /></button>
                     </div>
                   ) : (
                     <>
@@ -416,7 +443,7 @@ export function Funil() {
                           {clientesFiltrados.length === 0 ? (
                             <div className="cx-dropdown-empty">Nenhum cliente encontrado</div>
                           ) : clientesFiltrados.slice(0, 6).map(c => (
-                            <button key={c.id} className="cx-dropdown-item" onMouseDown={() => { setFormOp(f => ({ ...f, clienteId: c.id, clienteNome: c.nome })); setBuscaCliente(''); }}>
+                            <button key={c.id} className="cx-dropdown-item" onMouseDown={() => selecionarClienteNoForm(c)}>
                               <div className="cx-drop-nome">{c.nome}</div>
                               <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{c.telefone}</div>
                             </button>
@@ -426,6 +453,12 @@ export function Funil() {
                     </>
                   )}
                 </div>
+
+                {avisoClienteDuplicado && (
+                  <div style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#d97706' }}>
+                    ⚠️ {avisoClienteDuplicado}
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label className="form-label">Seguradora</label>
@@ -452,6 +485,12 @@ export function Funil() {
                     <label className="form-label">Nº de vidas</label>
                     <input type="number" min={1} value={formOp.quantidadeVidas} onChange={e => setFormOp(f => ({ ...f, quantidadeVidas: e.target.value }))} />
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Observação <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(regras de comissão, nº de vidas, etc.)</span></label>
+                  <textarea value={formOp.observacao} onChange={e => setFormOp(f => ({ ...f, observacao: e.target.value }))}
+                    rows={3} placeholder="Ex: HapVida Alter, 5 vidas, 2ª parcela dia 20/08" style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }} />
                 </div>
               </div>
             </div>
