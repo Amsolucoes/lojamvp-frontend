@@ -16,8 +16,8 @@ export function Dashboard() {
 
   const abasDisponiveis = [
     ...(temProdutos || temServicos || temTurmas ? [{ chave: 'loja' as const, label: 'Loja', Icon: Store }] : []),
-    ...(temFinanceiro ? [{ chave: 'financeiro' as const, label: 'Financeiro', Icon: Wallet }] : []),
     ...(temCorretora ? [{ chave: 'corretora' as const, label: 'Corretora', Icon: Filter }] : []),
+    ...(temFinanceiro ? [{ chave: 'financeiro' as const, label: 'Financeiro', Icon: Wallet }] : []),
   ];
 
   const [abaDash, setAbaDash] = useState(abasDisponiveis[0]?.chave ?? 'loja');
