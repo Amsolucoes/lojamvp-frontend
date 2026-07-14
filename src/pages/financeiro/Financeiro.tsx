@@ -154,6 +154,7 @@ export function Financeiro() {
     dataFim: new Date().toISOString().slice(0, 10),
     jaPago: false,
     dataInicio: new Date().toISOString().slice(0, 10),
+    avisar: true,
   });
 
   const [salvandoLanc, setSalvandoLanc] = useState(false);
@@ -299,6 +300,7 @@ export function Financeiro() {
       tipoParcelamento: 'quantidade', dataFim: new Date().toISOString().slice(0, 10),
       jaPago: false,
       dataInicio: new Date().toISOString().slice(0, 10),
+      avisar: true,
     });
     setModalLancamento(true);
   }
@@ -316,6 +318,7 @@ export function Financeiro() {
           observacao: formLanc.observacao || null,
           valor: parseFloat(formLanc.valor), vencimento: formLanc.vencimento,
           jaPago: formLanc.jaPago,
+          avisar: formLanc.avisar,
         });
       } else if (formLanc.modo === 'parcelada') {
         await api.post('/api/financeiro/lancamentos/parcelado', {
@@ -328,6 +331,7 @@ export function Financeiro() {
           dataFim: formLanc.tipoParcelamento === 'dataFim' ? formLanc.dataFim : null,
           primeiroVencimento: formLanc.vencimento,
           jaPago: formLanc.jaPago,
+          avisar: formLanc.avisar,
         });
       } else {
         await api.post('/api/financeiro/fixos', {
@@ -339,6 +343,7 @@ export function Financeiro() {
           diaVencimento: parseInt(formLanc.diaVencimento) || 10,
           jaPago: formLanc.jaPago,
           dataInicio: formLanc.dataInicio || null,
+          avisar: formLanc.avisar,
         });
       }
       setModalLancamento(false);
@@ -1128,6 +1133,12 @@ export function Financeiro() {
                   {aba === 'pagar' ? '✓ Já paguei' : '✓ Já recebi'}
                 </button>
               </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', marginBottom: 14 }}>
+                <input type="checkbox" checked={formLanc.avisar} style={{ width: 16, height: 16, margin: 0 }}
+                  onChange={e => setFormLanc(f => ({ ...f, avisar: e.target.checked }))} />
+                🔔 Me avisar por e-mail no dia do vencimento
+              </label>
               {formLanc.jaPago && (formLanc.modo === 'parcelada' || formLanc.modo === 'fixa') && (
                 <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: -8, marginBottom: 14 }}>
                   {formLanc.modo === 'parcelada' ? 'Marca só a 1ª parcela como paga.' : 'Marca só este mês como pago.'}
