@@ -1,9 +1,10 @@
-import { ShoppingCart, Package, TrendingUp, AlertTriangle, Clock, Store, Wallet } from 'lucide-react';
+import { ShoppingCart, Package, TrendingUp, AlertTriangle, Clock, Store, Wallet, Filter } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Produto, Venda, ItemVenda } from '../types';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { DashboardFinanceiro } from './DashboardFinanceiro';
+import { DashboardCorretora } from './DashboardCorretora';
 import './Dashboard.css';
 
 function fmt(n: number) {
@@ -11,28 +12,38 @@ function fmt(n: number) {
 }
 
 export function Dashboard() {
-  const { produtos, clientes, vendas, temServicos, soFinanceiro, temFinanceiro } = useApp();
-  const [abaDash, setAbaDash] = useState<'loja' | 'financeiro'>('loja');
+  const { temProdutos, temServicos, temTurmas, temFinanceiro, temCorretora } = useApp();
 
-  if (soFinanceiro) return <DashboardFinanceiro />;
+  const abasDisponiveis = [
+    ...(temProdutos || temServicos || temTurmas ? [{ chave: 'loja' as const, label: 'Loja', Icon: Store }] : []),
+    ...(temFinanceiro ? [{ chave: 'financeiro' as const, label: 'Financeiro', Icon: Wallet }] : []),
+    ...(temCorretora ? [{ chave: 'corretora' as const, label: 'Corretora', Icon: Filter }] : []),
+  ];
 
-  if (temFinanceiro) {
-    return (
-      <div className="page">
-        <div className="planos-tabs" style={{ marginBottom: 20 }}>
-          <button className={`planos-tab${abaDash === 'loja' ? ' ativo' : ''}`} onClick={() => setAbaDash('loja')}>
-            <Store size={15} /> Loja
-          </button>
-          <button className={`planos-tab${abaDash === 'financeiro' ? ' ativo' : ''}`} onClick={() => setAbaDash('financeiro')}>
-            <Wallet size={15} /> Financeiro
-          </button>
-        </div>
-        {abaDash === 'loja' ? <DashboardLoja /> : <DashboardFinanceiro />}
-      </div>
-    );
+  const [abaDash, setAbaDash] = useState(abasDisponiveis[0]?.chave ?? 'loja');
+
+  // Só existe 1 dashboard aplicável — renderiza direto, sem abas
+  if (abasDisponiveis.length <= 1) {
+    const unica = abasDisponiveis[0]?.chave ?? 'loja';
+    if (unica === 'financeiro') return <DashboardFinanceiro />;
+    if (unica === 'corretora') return <DashboardCorretora />;
+    return <DashboardLoja />;
   }
 
-  return <DashboardLoja />;
+  return (
+    <div className="page">
+      <div className="planos-tabs" style={{ marginBottom: 20 }}>
+        {abasDisponiveis.map(a => (
+          <button key={a.chave} className={`planos-tab${abaDash === a.chave ? ' ativo' : ''}`} onClick={() => setAbaDash(a.chave)}>
+            <a.Icon size={15} /> {a.label}
+          </button>
+        ))}
+      </div>
+      {abaDash === 'loja' && <DashboardLoja />}
+      {abaDash === 'financeiro' && <DashboardFinanceiro />}
+      {abaDash === 'corretora' && <DashboardCorretora />}
+    </div>
+  );
 }
 
 function DashboardLoja() {

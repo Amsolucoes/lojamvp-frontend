@@ -55,7 +55,7 @@ export function Funil() {
   const [nomeEditSeguradora, setNomeEditSeguradora] = useState('');
   const [buscaCliente, setBuscaCliente] = useState('');
   const [showBuscaCliente, setShowBuscaCliente] = useState(false);
-  const [formOp, setFormOp] = useState({ clienteId: '', clienteNome: '', seguradoraId: '', planoDesejado: '', valorEstimado: '' });
+  const [formOp, setFormOp] = useState({ clienteId: '', clienteNome: '', seguradoraId: '', planoDesejado: '', valorEstimado: '', observacao: '', quantidadeVidas: '' });
   const [salvando, setSalvando] = useState(false);
 
   const [modalPerda, setModalPerda] = useState<Oportunidade | null>(null);
@@ -83,7 +83,7 @@ export function Funil() {
   }, []);
 
   function abrirNova() {
-    setFormOp({ clienteId: '', clienteNome: '', seguradoraId: '', planoDesejado: '', valorEstimado: '' });
+    setFormOp({ clienteId: '', clienteNome: '', seguradoraId: '', planoDesejado: '', valorEstimado: '', observacao: '', quantidadeVidas: '' });
     setBuscaCliente('');
     setModalNova(true);
   }
@@ -409,9 +409,15 @@ export function Funil() {
                   <input value={formOp.planoDesejado} onChange={e => setFormOp(f => ({ ...f, planoDesejado: e.target.value }))} placeholder="Ex: Plano Familiar Premium" />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Valor estimado (R$)</label>
-                  <input type="number" min={0} step={0.01} value={formOp.valorEstimado} onChange={e => setFormOp(f => ({ ...f, valorEstimado: e.target.value }))} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="form-group">
+                    <label className="form-label">Valor estimado (R$)</label>
+                    <input type="number" min={0} step={0.01} value={formOp.valorEstimado} onChange={e => setFormOp(f => ({ ...f, valorEstimado: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Nº de vidas</label>
+                    <input type="number" min={1} value={formOp.quantidadeVidas} onChange={e => setFormOp(f => ({ ...f, quantidadeVidas: e.target.value }))} />
+                  </div>
                 </div>
               </div>
             </div>
