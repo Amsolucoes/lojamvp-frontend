@@ -1,0 +1,55 @@
+.funil-board {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.funil-coluna {
+  flex: 0 0 260px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.15s;
+}
+.funil-coluna.drag-over {
+  background: var(--accent-bg);
+}
+.funil-coluna-perdido {
+  flex: 0 0 180px;
+  opacity: 0.7;
+}
+
+.funil-coluna-header {
+  padding: 10px 12px;
+  border-top: 3px solid;
+  border-bottom: 1px solid var(--border);
+}
+
+.funil-cards {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.funil-card {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: grab;
+}
+.funil-card:active {
+  cursor: grabbing;
+}
+
+@media (max-width: 768px) {
+  .funil-coluna {
+    flex: 0 0 220px;
+  }
+}

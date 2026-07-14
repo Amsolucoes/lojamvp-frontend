@@ -18,6 +18,7 @@ import { AgendamentoPublico } from './pages/publico/AgendamentoPublico';
 import { Planos } from './pages/planos/Planos';
 import { Financeiro } from './pages/financeiro/Financeiro';
 import { Turmas } from './pages/turmas/Turmas';
+import { Funil } from './pages/funil/Funil';
 import { ToastProvider } from './context/ToastContext';
 
 function Rotas() {
@@ -63,7 +64,8 @@ function Rotas() {
           <Route path="agenda"     element={<Agenda />} />
           <Route path="planos"     element={<Planos />} />
           <Route path="financeiro" element={<Financeiro />} />
-          <Route path="turmas" element={<Turmas />} />
+          <Route path="turmas"     element={<Turmas />} />
+          <Route path="funil"      element={<Funil />} />
           <Route path="*"          element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
