@@ -302,22 +302,37 @@ export function DashboardFinanceiro() {
           {(['pagar', 'receber'] as const).map(tipo => {
             const doTipo = alertas.filter(a => a.tipo === tipo);
             if (doTipo.length === 0) return null;
+
+            const porDia: Record<string, Alerta[]> = {};
+            doTipo.forEach(a => {
+              const dia = a.vencimento.slice(0, 10);
+              if (!porDia[dia]) porDia[dia] = [];
+              porDia[dia].push(a);
+            });
+            const diasOrdenados = Object.keys(porDia).sort();
+
             return (
               <div key={tipo} style={{ marginBottom: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: tipo === 'pagar' ? 'var(--red)' : 'var(--green)', marginBottom: 4, textTransform: 'uppercase' }}>
                   {tipo === 'pagar' ? '↓ A Pagar' : '↑ A Receber'}
                 </div>
-                {doTipo.map(a => {
-                  const d = diasAte(a.vencimento);
+                {diasOrdenados.map(dia => {
+                  const itensDoDia = porDia[dia];
+                  const totalDia = itensDoDia.reduce((s, a) => s + a.valor, 0);
+                  const d = diasAte(itensDoDia[0].vencimento);
+                  const labelDia = d === 0 ? 'Hoje' : d === 1 ? 'Amanhã' : `Em ${d} dias`;
                   return (
-                    <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px', borderBottom: '1px solid var(--border)' }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>{a.descricao}</div>
-                        <div style={{ fontSize: 11, color: d <= 1 ? 'var(--red)' : 'var(--text-3)' }}>
-                          {d === 0 ? 'Vence hoje' : d === 1 ? 'Vence amanhã' : `Vence em ${d} dias`}
-                        </div>
+                    <div key={dia} style={{ marginBottom: 6 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: d <= 1 ? 'var(--red)' : 'var(--text-3)', fontWeight: 600, padding: '4px 4px 2px' }}>
+                        <span>{labelDia}</span>
+                        <span>{fmt(totalDia)}</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: tipo === 'pagar' ? 'var(--red)' : 'var(--green)' }}>{fmt(a.valor)}</span>
+                      {itensDoDia.map(a => (
+                        <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 4px', borderBottom: '1px solid var(--border)' }}>
+                          <div style={{ fontSize: 13 }}>{a.descricao}</div>
+                          <span style={{ fontWeight: 600, fontSize: 13, color: tipo === 'pagar' ? 'var(--red)' : 'var(--green)' }}>{fmt(a.valor)}</span>
+                        </div>
+                      ))}
                     </div>
                   );
                 })}
