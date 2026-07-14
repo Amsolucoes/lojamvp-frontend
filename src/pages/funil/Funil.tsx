@@ -60,6 +60,10 @@ export function Funil() {
 
   const [modalPerda, setModalPerda] = useState<Oportunidade | null>(null);
   const [motivoPerda, setMotivoPerda] = useState('');
+  const [modalGanho, setModalGanho] = useState<Oportunidade | null>(null);
+  const [valorGanho, setValorGanho] = useState('');
+  const [contaGanho, setContaGanho] = useState('');
+  const [contas, setContas] = useState<{ id: string; nome: string; ativa: boolean }[]>([]);
 
   const [confirmExcluir, setConfirmExcluir] = useState<Oportunidade | null>(null);
 
@@ -75,6 +79,7 @@ export function Funil() {
     carregar();
     api.get<Cliente[]>('/api/clientes').then(setClientes).catch(() => {});
     api.get<Seguradora[]>('/api/corretora/seguradoras').then(setSeguradoras).catch(() => {});
+    api.get<{ id: string; nome: string; ativa: boolean }[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }, []);
 
   function abrirNova() {
@@ -156,16 +161,19 @@ export function Funil() {
     }
   }
 
-  async function moverEtapa(op: Oportunidade, novaEtapa: string, motivo?: string) {
+  async function moverEtapa(op: Oportunidade, novaEtapa: string, motivo?: string, valor?: number, contaBancariaId?: string) {
     const novaOrdem = oportunidades.filter(o => o.etapa === novaEtapa).length;
     try {
       await api.patch(`/api/corretora/oportunidades/${op.id}/etapa`, {
         etapa: novaEtapa,
         ordem: novaOrdem,
         motivoPerda: motivo || null,
+        valor: valor ?? null,
+        contaBancariaId: contaBancariaId || null,
       });
       carregar();
       if (novaEtapa === 'perdido') sucesso('Marcado como perdido.');
+      if (novaEtapa === 'ganho') sucesso('Fechado! Comissão lançada no Financeiro.');
     } catch (e) {
       erro((e as Error).message);
     }
@@ -197,8 +205,25 @@ export function Funil() {
       setDragId(null);
       return;
     }
+    if (etapaDestino === 'ganho') {
+      abrirModalGanho(op);
+      setDragId(null);
+      return;
+    }
     moverEtapa(op, etapaDestino);
     setDragId(null);
+  }
+
+  function abrirModalGanho(op: Oportunidade) {
+    setModalGanho(op);
+    setValorGanho(op.valorEstimado ? String(op.valorEstimado) : '');
+    setContaGanho(contas.find(c => c.ativa)?.id ?? '');
+  }
+
+  function confirmarGanho() {
+    if (!modalGanho) return;
+    moverEtapa(modalGanho, 'ganho', undefined, parseFloat(valorGanho) || 0, contaGanho || undefined);
+    setModalGanho(null);
   }
 
   const clientesFiltrados = clientes.filter(c => c.nome.toLowerCase().includes(buscaCliente.toLowerCase()));
@@ -312,7 +337,8 @@ export function Funil() {
                     const idx = ETAPAS.findIndex(e => e.chave === etapaMobile);
                     const proxima = ETAPAS[idx + 1];
                     return proxima ? (
-                      <button className="btn-primary" style={{ fontSize: 12, flex: 1 }} onClick={() => moverEtapa(op, proxima.chave)}>
+                      <button className="btn-primary" style={{ fontSize: 12, flex: 1 }}
+                        onClick={() => proxima.chave === 'ganho' ? abrirModalGanho(op) : moverEtapa(op, proxima.chave)}>
                         Avançar → {proxima.label}
                       </button>
                     ) : null;
@@ -500,6 +526,42 @@ export function Funil() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalGerenciarSeguradoras(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal fechar venda (mover para Ganho) */}
+      {modalGanho && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalGanho(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--green)' }}>🎉 Fechar venda</h2>
+              <button className="btn-ghost" onClick={() => setModalGanho(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 14 }}>{modalGanho.clienteNome}</p>
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label className="form-label">Valor da comissão (R$)</label>
+                <input type="number" min={0} step={0.01} value={valorGanho} onChange={e => setValorGanho(e.target.value)} autoFocus />
+              </div>
+              {contas.length > 0 ? (
+                <div className="form-group">
+                  <label className="form-label">Conta de recebimento</label>
+                  <select value={contaGanho} onChange={e => setContaGanho(e.target.value)}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+              ) : (
+                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                  Nenhuma conta bancária cadastrada — a oportunidade fecha, mas o valor não entra no Financeiro. Cadastre uma conta em Financeiro → Contas.
+                </p>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalGanho(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={confirmarGanho}>Fechar venda</button>
             </div>
           </div>
         </div>
