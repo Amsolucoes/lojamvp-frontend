@@ -137,6 +137,9 @@ export function Financeiro() {
   const [faturaDados, setFaturaDados] = useState<{ vencimento: string; total: number; status: string; itens: ItemFaturaDetalhe[] } | null>(null);
   const [faturaAno, setFaturaAno] = useState(new Date().getFullYear());
   const [faturaMes, setFaturaMes] = useState(new Date().getMonth() + 1);
+  const [buscaFatura, setBuscaFatura] = useState('');
+  const [paginaFatura, setPaginaFatura] = useState(1);
+  const [referenciasFatura, setReferenciasFatura] = useState<{ aberta: { ano: number; mes: number }; fechada: { ano: number; mes: number; total: number; status: string } } | null>(null);
   const [formCompra, setFormCompra] = useState({
     modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
     descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10),
@@ -508,7 +511,10 @@ export function Financeiro() {
     setFaturaAberta(c);
     setFaturaAno(ano);
     setFaturaMes(mes);
+    setBuscaFatura('');
+    setPaginaFatura(1);
     carregarFatura(c.id, ano, mes);
+    api.get<any>(`/api/financeiro/cartoes/${c.id}/faturas-referencia`).then(setReferenciasFatura).catch(() => {});
   }
 
   function navFaturaMes(delta: number) {
@@ -518,7 +524,17 @@ export function Financeiro() {
     if (novoMes > 12) { novoMes = 1; novoAno++; }
     setFaturaMes(novoMes);
     setFaturaAno(novoAno);
+    setPaginaFatura(1);
     carregarFatura(faturaAberta.id, novoAno, novoMes);
+  }
+
+  function irParaReferencia(tipo: 'aberta' | 'fechada') {
+    if (!faturaAberta || !referenciasFatura) return;
+    const ref = referenciasFatura[tipo];
+    setFaturaAno(ref.ano);
+    setFaturaMes(ref.mes);
+    setPaginaFatura(1);
+    carregarFatura(faturaAberta.id, ref.ano, ref.mes);
   }
 
   async function lancarCompra() {
@@ -1648,6 +1664,21 @@ export function Financeiro() {
                 <button className="btn-secondary" onClick={() => navFaturaMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
               </div>
 
+              {referenciasFatura && (
+                <div className="cx-tipo-toggle" style={{ marginBottom: 12 }}>
+                  <button
+                    className={faturaAno === referenciasFatura.fechada.ano && faturaMes === referenciasFatura.fechada.mes ? 'active' : ''}
+                    onClick={() => irParaReferencia('fechada')}>
+                    Fechada {referenciasFatura.fechada.status === 'pago' ? '(paga)' : '(a pagar)'}
+                  </button>
+                  <button
+                    className={faturaAno === referenciasFatura.aberta.ano && faturaMes === referenciasFatura.aberta.mes ? 'active' : ''}
+                    onClick={() => irParaReferencia('aberta')}>
+                    Aberta (em andamento)
+                  </button>
+                </div>
+              )}
+
               {faturaDados && (
                 <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 12, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -1667,11 +1698,23 @@ export function Financeiro() {
                 </div>
               )}
 
+              {faturaDados && faturaDados.itens.length > 0 && (
+                <input placeholder="Buscar por descrição..." value={buscaFatura}
+                  onChange={e => { setBuscaFatura(e.target.value); setPaginaFatura(1); }}
+                  style={{ marginBottom: 12 }} />
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
                 {faturaDados?.itens.length === 0 ? (
                   <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma compra neste ciclo.</p>
                 ) : (
-                  agruparPorData(faturaDados?.itens.map(i => ({ ...i, vencimento: i.dataCompra })) ?? []).map(([dia, itens]) => (
+                  (() => {
+                    const itensFiltrados = (faturaDados?.itens ?? []).filter(i => !buscaFatura || i.descricao.toLowerCase().includes(buscaFatura.toLowerCase()));
+                    const totalPagFatura = Math.max(1, Math.ceil(itensFiltrados.length / 15));
+                    const pagAtualFatura = Math.min(paginaFatura, totalPagFatura);
+                    const itensPaginados = itensFiltrados.slice((pagAtualFatura - 1) * 15, pagAtualFatura * 15);
+                    return agruparPorData(itensPaginados.map(i => ({ ...i, vencimento: i.dataCompra })));
+                  })().map(([dia, itens]) => (
                     <div key={dia}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 6, padding: '4px 8px', marginBottom: 6 }}>
                         <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
@@ -1706,6 +1749,20 @@ export function Financeiro() {
                   ))
                 )}
               </div>
+
+              {(() => {
+                const itensFiltrados = (faturaDados?.itens ?? []).filter(i => !buscaFatura || i.descricao.toLowerCase().includes(buscaFatura.toLowerCase()));
+                const totalPagFatura = Math.max(1, Math.ceil(itensFiltrados.length / 15));
+                const pagAtualFatura = Math.min(paginaFatura, totalPagFatura);
+                if (itensFiltrados.length <= 15) return null;
+                return (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <button className="btn-secondary" disabled={pagAtualFatura <= 1} onClick={() => setPaginaFatura(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{pagAtualFatura} / {totalPagFatura}</span>
+                    <button className="btn-secondary" disabled={pagAtualFatura >= totalPagFatura} onClick={() => setPaginaFatura(p => Math.min(totalPagFatura, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+                  </div>
+                );
+              })()}
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Lançar compra</p>
