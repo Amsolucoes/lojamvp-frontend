@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { aplicarTema, carregarTemaSalvo } from './utils/tema';
 import { AppProvider } from './context/AppContext';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/login/Login';
@@ -17,6 +19,7 @@ import { Suporte } from './pages/login/Suporte';
 import { AgendamentoPublico } from './pages/publico/AgendamentoPublico';
 import { Planos } from './pages/planos/Planos';
 import { Financeiro } from './pages/financeiro/Financeiro';
+import { Configuracoes } from './pages/configuracoes/Configuracoes';
 import { Turmas } from './pages/turmas/Turmas';
 import { Funil } from './pages/funil/Funil';
 import { Apolices } from './pages/apolices/Apolices';
@@ -65,6 +68,7 @@ function Rotas() {
           <Route path="agenda"     element={<Agenda />} />
           <Route path="planos"     element={<Planos />} />
           <Route path="financeiro" element={<Financeiro />} />
+          <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="turmas"     element={<Turmas />} />
           <Route path="funil"      element={<Funil />} />
           <Route path="apolices"   element={<Apolices />} />
@@ -76,6 +80,9 @@ function Rotas() {
 }
 
 export default function App() {
+  useEffect(() => {
+    aplicarTema(carregarTemaSalvo());
+  }, []);
   return (
      <ToastProvider>
       <AuthProvider>
