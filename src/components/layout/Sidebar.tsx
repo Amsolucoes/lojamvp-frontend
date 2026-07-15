@@ -75,7 +75,6 @@ export function Sidebar() {
     ...(temFinanceiro ? [{ to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
     ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
     ...(temCorretora ? [{ to: '/funil', icon: Filter, label: 'Funil de Vendas' }] : []),
-    ...(temCorretora ? [{ to: '/apolices', icon: FileText, label: 'Apólices' }] : []),
     ...(temProdutos || temServicos ? [{ to: '/relatorios', icon: BarChart2, label: 'Relatórios' }] : []),
     ...(temProdutos || temServicos ? [{ to: '/fluxo', icon: TrendingUp, label: 'Fluxo de Caixa' }] : []),
   ];
