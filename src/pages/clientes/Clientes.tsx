@@ -29,7 +29,7 @@ function iniciais(nome: string) {
 }
 
 export function Clientes() {
-  const { clientes, vendas, trocas, soServicos, addCliente, updateCliente, deleteCliente } = useApp();
+  const { clientes, vendas, trocas, soServicos, addCliente, updateCliente, deleteCliente, temCorretora } = useApp();
   const [busca, setBusca]    = useState('');
   const [modal, setModal]    = useState<'novo' | 'editar' | 'ver' | null>(null);
   const [editId, setEditId]  = useState<string | null>(null);
@@ -219,7 +219,7 @@ export function Clientes() {
                 )}
                 <div className="cli-divider" />
                 <div className="cli-stats">
-                  {!soServicos && (
+                  {!soServicos && !temCorretora && (
                     <div>
                       <div className="cli-stat-val" style={{ color: 'var(--green)' }}>{fmt(gasto)}</div>
                       <div className="cli-stat-label">{compras} compra(s)</div>
@@ -232,7 +232,7 @@ export function Clientes() {
                     </div>
                   )}
                 </div>
-                {ultima && (
+                {ultima && !temCorretora && (
                   <div className="cli-ultima">
                     Última compra: {new Date(ultima.criadaEm).toLocaleDateString('pt-BR')}
                   </div>
