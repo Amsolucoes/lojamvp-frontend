@@ -52,6 +52,7 @@ interface Cartao {
   diaVencimento: number;
   contaBancariaId: string;
   ativo: boolean;
+  taxaJurosMensal: number;
 }
 
 interface LinhaPagar {
@@ -129,7 +130,7 @@ export function Financeiro() {
 
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [modalCartoes, setModalCartoes] = useState(false);
-  const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '' });
+  const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
   const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
 
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
@@ -454,16 +455,19 @@ export function Financeiro() {
   // ── Cartões de crédito ──────────────────────────────────────────
   function abrirNovoCartao() {
     setEditandoCartao(null);
-    setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: contas[0]?.id ?? '' });
+    setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: contas[0]?.id ?? '', taxaJurosMensal: '' });
   }
+
   function abrirEditarCartao(c: Cartao) {
     setEditandoCartao(c);
     setFormCartao({
       nome: c.nome, limite: String(c.limite),
       diaFechamento: String(c.diaFechamento), diaVencimento: String(c.diaVencimento),
       contaBancariaId: c.contaBancariaId,
+      taxaJurosMensal: String(c.taxaJurosMensal ?? 0),
     });
   }
+
   async function salvarCartao() {
     if (!formCartao.nome.trim() || !formCartao.contaBancariaId) { erro('Preencha nome e conta vinculada.'); return; }
     try {
@@ -473,11 +477,12 @@ export function Financeiro() {
         diaFechamento: parseInt(formCartao.diaFechamento) || 10,
         diaVencimento: parseInt(formCartao.diaVencimento) || 15,
         contaBancariaId: formCartao.contaBancariaId,
+        taxaJurosMensal: parseFloat(formCartao.taxaJurosMensal) || 0,
       };
       if (editandoCartao) await api.put(`/api/financeiro/cartoes/${editandoCartao.id}`, payload);
       else await api.post('/api/financeiro/cartoes', payload);
       setEditandoCartao(null);
-      setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '' });
+      setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
       carregarCartoes();
       carregarLancamentos();
       sucesso('Cartão salvo!');
@@ -1611,7 +1616,7 @@ export function Financeiro() {
                     </div>
                     <div className="form-group">
                       <label className="form-label">Taxa de juros (% ao mês)</label>
-                      <input type="number" min={0} step={0.01} value={(formCartao as any).taxaJurosMensal ?? ''} onChange={e => setFormCartao(f => ({ ...(f as any), taxaJurosMensal: e.target.value }))} placeholder="Ex: 12.5" />
+                      <input type="number" min={0} step={0.01} value={formCartao.taxaJurosMensal} onChange={e => setFormCartao(f => ({ ...f, taxaJurosMensal: e.target.value }))} placeholder="Ex: 12.5" />
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
