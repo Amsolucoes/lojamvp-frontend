@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
+import { carregarTemaSalvo } from '../../utils/tema';
 import './Sidebar.css';
 
 function iniciais(nome: string) {
@@ -24,6 +25,14 @@ export function Sidebar() {
   
   const [nomeLoja, setNomeLoja]     = useState('Minha Loja');
   const [corPrimaria, setCorPrimaria] = useState('#e8945a');
+  const [temaPessoal, setTemaPessoal] = useState(carregarTemaSalvo());
+
+  useEffect(() => {
+    function ouvirMudancaDeTema() { setTemaPessoal(carregarTemaSalvo()); }
+    window.addEventListener('temaAlterado', ouvirMudancaDeTema);
+    return () => window.removeEventListener('temaAlterado', ouvirMudancaDeTema);
+  }, []);
+
   const [logoUrl, setLogoUrl]       = useState('');
   const [aberto, setAberto]         = useState(false);
   const [tipoPlano, setTipoPlano]   = useState('loja');
@@ -45,11 +54,21 @@ export function Sidebar() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--accent',        corPrimaria);
-    document.documentElement.style.setProperty('--accent-2',      corPrimaria + 'cc');
-    document.documentElement.style.setProperty('--accent-bg',     corPrimaria + '1a');
-    document.documentElement.style.setProperty('--accent-border', corPrimaria + '40');
-  }, [corPrimaria]);
+    const html = document.documentElement;
+    if (temaPessoal === 'escuro') {
+      // Tema padrão — usa a cor de marca da loja
+      html.style.setProperty('--accent',        corPrimaria);
+      html.style.setProperty('--accent-2',      corPrimaria + 'cc');
+      html.style.setProperty('--accent-bg',     corPrimaria + '1a');
+      html.style.setProperty('--accent-border', corPrimaria + '40');
+    } else {
+      // Tema claro escolhido pelo usuário — deixa a classe CSS do tema vencer
+      html.style.removeProperty('--accent');
+      html.style.removeProperty('--accent-2');
+      html.style.removeProperty('--accent-bg');
+      html.style.removeProperty('--accent-border');
+    }
+  }, [corPrimaria, temaPessoal]);
 
   const logoEl = logoUrl
     ? <img src={logoUrl} alt="Logo" style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', objectFit: 'contain' }} />

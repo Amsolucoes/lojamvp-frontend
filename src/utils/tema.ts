@@ -14,6 +14,7 @@ export function aplicarTema(tema: Tema) {
   TODAS_CLASSES.forEach(c => html.classList.remove(c));
   if (tema !== 'escuro') html.classList.add(tema);
   localStorage.setItem('loja:tema', tema);
+  window.dispatchEvent(new Event('temaAlterado'));
 }
 
 export function carregarTemaSalvo(): Tema {
