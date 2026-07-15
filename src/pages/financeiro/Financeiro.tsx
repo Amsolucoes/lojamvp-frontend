@@ -13,6 +13,7 @@ interface Conta {
   saldoAtual: number;
   ativa: boolean;
   banco?: string | null;
+  limite: number;
 }
 
 interface Categoria {
@@ -167,7 +168,7 @@ export function Financeiro() {
 
   const [salvandoLanc, setSalvandoLanc] = useState(false);
 
-  const [formConta, setFormConta] = useState({ nome: '', saldoInicial: '', banco: '' });
+  const [formConta, setFormConta] = useState({ nome: '', saldoInicial: '', banco: '', limite: '' });
   const [editandoConta, setEditandoConta] = useState<Conta | null>(null);
 
   const [formCat, setFormCat] = useState({ nome: '', tipo: 'ambos', icone: '' });
@@ -617,20 +618,20 @@ export function Financeiro() {
   // ── Contas bancárias ────────────────────────────────────────────
   function abrirNovaConta() {
     setEditandoConta(null);
-    setFormConta({ nome: '', saldoInicial: '', banco: '' });
+    setFormConta({ nome: '', saldoInicial: '', banco: '', limite: '' });
   }
   function abrirEditarConta(c: Conta) {
     setEditandoConta(c);
-    setFormConta({ nome: c.nome, saldoInicial: String(c.saldoInicial), banco: c.banco ?? '' });
+    setFormConta({ nome: c.nome, saldoInicial: String(c.saldoInicial), banco: c.banco ?? '', limite: String(c.limite ?? '') });
   }
   async function salvarConta() {
     if (!formConta.nome.trim()) { erro('Digite o nome da conta.'); return; }
     try {
-      const payload = { nome: formConta.nome.trim(), saldoInicial: parseFloat(formConta.saldoInicial) || 0, banco: formConta.banco || null };
+      const payload = { nome: formConta.nome.trim(), saldoInicial: parseFloat(formConta.saldoInicial) || 0, banco: formConta.banco || null, limite: parseFloat(formConta.limite) || 0 };
       if (editandoConta) await api.put(`/api/financeiro/contas/${editandoConta.id}`, payload);
       else await api.post('/api/financeiro/contas', payload);
       setEditandoConta(null);
-      setFormConta({ nome: '', saldoInicial: '', banco: '' });
+      setFormConta({ nome: '', saldoInicial: '', banco: '', limite: '' });
       carregarContas();
       sucesso('Conta salva!');
     } catch (e) {
@@ -1348,6 +1349,10 @@ export function Financeiro() {
                     <label className="form-label">Saldo inicial</label>
                     <input type="number" step={0.01} value={formConta.saldoInicial} onChange={e => setFormConta(f => ({ ...f, saldoInicial: e.target.value }))} />
                   </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Limite (cheque especial) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <input type="number" min={0} step={0.01} value={formConta.limite} onChange={e => setFormConta(f => ({ ...f, limite: e.target.value }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Banco</label>
