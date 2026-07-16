@@ -11,6 +11,15 @@ type ModuloPreco = {
   disponivelParaAtivar: boolean;
 };
 
+const MODULOS_DESCRICAO: Record<string, string> = {
+  financeiro: 'Controle de contas a pagar e receber, lançamentos, cartão de crédito, transferências e dashboard financeiro.',
+  servicos:   'Agenda de atendimentos, catálogo de serviços, controle de planos e mensalidades de clientes.',
+  turmas:     'Aulas em grupo com matrícula fixa, chamada, controle de faltas e remarcações.',
+  corretora:  'Funil de vendas (kanban), cadastro de seguradoras, apólices e lançamento automático de comissões.',
+  nf:         'Importação de notas fiscais em XML com match automático por GTIN e revisão manual.',
+  etiquetas:  'Impressão de etiquetas de produtos com código de barras.',
+};
+
 type SessaoLoja = {
   modulosAtivos: string;
   tipoPlano: string;
@@ -154,11 +163,26 @@ export function Configuracoes() {
                   onChange={e => handleToggle(mod, e.target.checked)}
                 />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{mod.nome}</div>
-                  {!mod.disponivelParaAtivar && (
-                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Em breve</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>{mod.nome}</span>
+                  {MODULOS_DESCRICAO[mod.chave] && (
+                    <span
+                      title={MODULOS_DESCRICAO[mod.chave]}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 15, height: 15, borderRadius: '50%',
+                        border: '1px solid var(--text-3)', color: 'var(--text-3)',
+                        fontSize: 10, fontWeight: 600, cursor: 'default', flexShrink: 0,
+                        lineHeight: 1, userSelect: 'none',
+                      }}>
+                      ?
+                    </span>
                   )}
                 </div>
+                {!mod.disponivelParaAtivar && (
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Em breve</div>
+                )}
+              </div>
                 {mod.valor > 0 && (
                   <span style={{
                     fontSize: 12, fontWeight: 500,
