@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { aplicarTema, carregarTemaSalvo, TEMAS, Tema } from '../../utils/tema';
 import { api } from '../../services/api';
 import { X } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
 
 type ModuloPreco = {
   id: string;
@@ -39,6 +40,7 @@ function getSessao(): SessaoLoja | null {
 
 export function Configuracoes() {
   const [temaAtual, setTemaAtual] = useState<Tema>(carregarTemaSalvo());
+  const { erro: toastErro } = useToast();
   const [modulosPreco, setModulosPreco] = useState<ModuloPreco[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
   const [mensalidadeAtual, setMensalidadeAtual] = useState(0);
@@ -108,7 +110,7 @@ export function Configuracoes() {
       window.dispatchEvent(new Event('modulosAlterados'));
       setModalModulo(null);
     } catch (e: any) {
-      alert(e?.message ?? 'Erro ao salvar.');
+      toastErro(e?.message ?? 'Erro ao salvar.');
     } finally {
       setSaving(false);
     }
