@@ -42,6 +42,7 @@ export function Configuracoes() {
   const [modulosPreco, setModulosPreco] = useState<ModuloPreco[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
   const [mensalidadeAtual, setMensalidadeAtual] = useState(0);
+  const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
 
   // modal de confirmação
   const [modalModulo, setModalModulo] = useState<{
@@ -55,11 +56,19 @@ export function Configuracoes() {
   useEffect(() => {
     api.get<ModuloPreco[]>('/api/modulos-preco').then(setModulosPreco).catch(() => {});
     api.get<any>('/api/loja/situacao').then(res => {
-      if (res?.modulosAtivos && Array.isArray(res.modulosAtivos)) {
+      if (res?.modulosAtivos && Array.isArray(res.modulosAtivos))
         setModulosAtivos(res.modulosAtivos);
-      }
-      if (res?.mensalidadeValor) {
+      if (res?.mensalidadeValor)
         setMensalidadeAtual(res.mensalidadeValor);
+      if (res?.modulosAlteradoEm) {
+        // calcula diasRestantes de cooldown para cada módulo
+        const agora = new Date();
+        const cd: Record<string, number> = {};
+        for (const [chave, dataStr] of Object.entries(res.modulosAlteradoEm as Record<string, string>)) {
+          const dias = 30 - Math.floor((agora.getTime() - new Date(dataStr).getTime()) / 86400000);
+          if (dias > 0) cd[chave] = dias;
+        }
+        setCooldowns(cd);
       }
     }).catch(() => {});
   }, []);
@@ -98,8 +107,8 @@ export function Configuracoes() {
       }
       window.dispatchEvent(new Event('modulosAlterados'));
       setModalModulo(null);
-    } catch (e) {
-      alert((e as Error).message);
+    } catch (e: any) {
+      alert(e?.message ?? 'Erro ao salvar.');
     } finally {
       setSaving(false);
     }
@@ -145,11 +154,12 @@ export function Configuracoes() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {modulosPreco.map(mod => {
             const ativo = modulosAtivos.includes(mod.chave);
+            const emCooldown = !!cooldowns[mod.chave];
             return (
-              <label key={mod.chave} style={{
+            <label key={mod.chave} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
-                cursor: mod.disponivelParaAtivar ? 'pointer' : 'not-allowed',
-                opacity: mod.disponivelParaAtivar ? 1 : 0.45,
+                cursor: (mod.disponivelParaAtivar && !emCooldown) ? 'pointer' : 'not-allowed',
+                opacity: (mod.disponivelParaAtivar && !emCooldown) ? 1 : 0.55,
                 background: 'var(--bg-3)',
                 border: '1px solid var(--border)',
                 borderRadius: 'var(--radius-sm)',
@@ -158,7 +168,7 @@ export function Configuracoes() {
                 <input
                   type="checkbox"
                   checked={ativo}
-                  disabled={!mod.disponivelParaAtivar}
+                  disabled={!mod.disponivelParaAtivar || emCooldown}
                   style={{ width: 16, height: 16, margin: 0, flexShrink: 0 }}
                   onChange={e => handleToggle(mod, e.target.checked)}
                 />
@@ -181,6 +191,11 @@ export function Configuracoes() {
                 </div>
                 {!mod.disponivelParaAtivar && (
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Em breve</div>
+                )}
+                {mod.disponivelParaAtivar && emCooldown && (
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                    Disponível para alterar em {cooldowns[mod.chave]}d
+                  </div>
                 )}
               </div>
                 {mod.valor > 0 && (
