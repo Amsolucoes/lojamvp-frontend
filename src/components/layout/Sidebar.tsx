@@ -47,10 +47,15 @@ export function Sidebar() {
   }, []);
 
   useEffect(() => {
-    api.get<any>('/api/loja/situacao').then(res => {
-      if (res?.tipoPlano) setTipoPlano(res.tipoPlano);
-      if (Array.isArray(res?.modulosAtivos)) setModulos(res.modulosAtivos);
-    }).catch(() => {});
+    function carregarSituacao() {
+      api.get<any>('/api/loja/situacao').then(res => {
+        if (res?.tipoPlano) setTipoPlano(res.tipoPlano);
+        if (Array.isArray(res?.modulosAtivos)) setModulos(res.modulosAtivos);
+      }).catch(() => {});
+    }
+    carregarSituacao();
+    window.addEventListener('modulosAlterados', carregarSituacao);
+    return () => window.removeEventListener('modulosAlterados', carregarSituacao);
   }, []);
 
   useEffect(() => {
