@@ -60,14 +60,9 @@ export function Configuracoes() {
       ? [...modulosAtivos, mod.chave]
       : modulosAtivos.filter(m => m !== mod.chave);
 
-    // calcula novo valor localmente (igual ao admin)
-    const somaModulos = modulosPreco
-      .filter(m => novaLista.includes(m.chave))
-      .reduce((s, m) => s + m.valor, 0);
-
-    const sessao = getSessao();
-    const base = { loja: 89.90, loja_modulos: 89.90, servicos: 79.90, financeiro: 39.90 }[sessao?.tipoPlano ?? ''] ?? 0;
-    const novaMensalidade = Math.round((base + somaModulos) * 100) / 100;
+    const novaMensalidade = marcado
+      ? Math.round((mensalidadeAtual + mod.valor) * 100) / 100
+      : Math.round(Math.max(0, mensalidadeAtual - mod.valor) * 100) / 100;
 
     setModalModulo({ modulo: mod, ativando: marcado, novaMensalidade, novaLista });
   }
