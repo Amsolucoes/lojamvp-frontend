@@ -45,13 +45,14 @@ export function Configuracoes() {
 
   useEffect(() => {
     api.get<ModuloPreco[]>('/api/modulos-preco').then(setModulosPreco).catch(() => {});
-    const sessao = getSessao();
-    if (sessao) {
-      const ativos = (sessao.modulosAtivos ?? '')
-        .split(',').map(m => m.trim()).filter(Boolean);
-      setModulosAtivos(ativos);
-      setMensalidadeAtual(sessao.mensalidadeValor ?? 0);
-    }
+    api.get<any>('/api/loja/situacao').then(res => {
+      if (res?.modulosAtivos && Array.isArray(res.modulosAtivos)) {
+        setModulosAtivos(res.modulosAtivos);
+      }
+      if (res?.mensalidadeValor) {
+        setMensalidadeAtual(res.mensalidadeValor);
+      }
+    }).catch(() => {});
   }, []);
 
   function handleToggle(mod: ModuloPreco, marcado: boolean) {
@@ -75,20 +76,20 @@ export function Configuracoes() {
     if (!modalModulo) return;
     setSaving(true);
     try {
-      const res = await api.patch<{ modulosAtivos: string; novaMensalidade: number }>(
+      const res = await api.patch<{ modulosAtivos: string; mensalidadeValor: number }>(
         '/api/loja/modulos',
-        { modulosAtivos: modalModulo.novaLista.join(',') }
+        { chave: modalModulo.modulo.chave, ativar: modalModulo.ativando }
       );
       // atualiza estado local
       const ativos = res.modulosAtivos.split(',').map(m => m.trim()).filter(Boolean);
       setModulosAtivos(ativos);
-      setMensalidadeAtual(res.novaMensalidade);
+      setMensalidadeAtual(res.mensalidadeValor);
       const sessao = getSessao();
       if (sessao) {
         localStorage.setItem('loja:sessao', JSON.stringify({
           ...sessao,
           modulosAtivos: res.modulosAtivos,
-          mensalidadeValor: res.novaMensalidade,
+          mensalidadeValor: res.mensalidadeValor,
         }));
       }
       window.dispatchEvent(new Event('modulosAlterados'));
