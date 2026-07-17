@@ -22,6 +22,15 @@
 }
 
 @media (max-width: 640px) {
+  .fin-header-actions {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg);
+    padding: 10px 16px;
+    margin: 0 -16px;
+    border-bottom: 1px solid var(--border);
+  }
   .fin-filtros-wrap {
     flex-direction: column;
     align-items: stretch;
