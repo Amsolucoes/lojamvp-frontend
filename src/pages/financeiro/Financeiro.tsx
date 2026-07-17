@@ -788,7 +788,7 @@ export function Financeiro() {
 
       {/* Saldo geral */}
       <div className="fin-stats">
-        <div className="stat-card">
+        <div className="stat-card fin-saldo-conta-card">
           <div className="stat-label"><Wallet size={12} style={{ verticalAlign: -1 }} /> Saldo por conta</div>
           {contas.filter(c => c.ativa).length > 0 ? (
             <div style={{ marginTop: 4 }}>
@@ -829,14 +829,14 @@ export function Financeiro() {
           )}
         </div>
         {resumoAba && (
-          <div className="stat-card" style={resumoAba.qtdVencido > 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
-            <div className="stat-label">{aba === 'pagar' ? 'A pagar' : 'A receber'}</div>
-            <div className="stat-value" style={{ color: aba === 'pagar' ? 'var(--red)' : 'var(--green)', fontSize: 22 }}>
+          <div className="stat-card fin-resumo-card" style={resumoAba.qtdVencido > 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
+            <div className="stat-label" style={{ textAlign: 'center' }}>{aba === 'pagar' ? 'A pagar' : 'A receber'}</div>
+            <div className="stat-value" style={{ color: aba === 'pagar' ? 'var(--red)' : 'var(--green)', fontSize: 22, textAlign: 'center' }}>
               {fmt(resumoAba.totalPendente + resumoAba.totalVencido)}
             </div>
 
             {aba === 'pagar' && (resumo as any)?.detalhePagar && (
-              <div style={{ marginTop: 6 }}>
+              <div className="fin-resumo-detalhe-cartoes" style={{ marginTop: 6 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                   <span style={{ color: 'var(--text-3)' }}>Contas</span>
                   <span style={{ color: 'var(--text-2)' }}>{fmt((resumo as any).detalhePagar.lancamentos)}</span>
@@ -850,18 +850,20 @@ export function Financeiro() {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <span style={{ color: 'var(--green)' }}>{aba === 'pagar' ? 'Pago' : 'Recebido'}</span>
-              <strong style={{ color: 'var(--green)' }}>{fmt(resumoAba.totalPago)}</strong>
-            </div>
-            {resumoAba.qtdVencido > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 4 }}>
-                <span style={{ color: 'var(--red)' }}>Vencido</span>
-                <strong style={{ color: 'var(--red)' }}>{fmt(resumoAba.totalVencido)}</strong>
+            <div className="fin-resumo-pago-vencido" style={{ display: 'flex', justifyContent: 'center', gap: 28, fontSize: 13, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--green)' }}>{aba === 'pagar' ? 'Pago' : 'Recebido'}</div>
+                <strong style={{ color: 'var(--green)' }}>{fmt(resumoAba.totalPago)}</strong>
               </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 4, paddingTop: 4 }}>
-              <span style={{ color: 'var(--text-3)' }}>Total do mês</span>
+              {resumoAba.qtdVencido > 0 && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ color: 'var(--red)' }}>Vencido</div>
+                  <strong style={{ color: 'var(--red)' }}>{fmt(resumoAba.totalVencido)}</strong>
+                </div>
+              )}
+            </div>
+            <div style={{ textAlign: 'center', fontSize: 13, marginTop: 8, paddingTop: 8 }}>
+              <div style={{ color: 'var(--text-3)' }}>Total do mês</div>
               <strong>{fmt(resumoAba.totalPago + resumoAba.totalPendente + resumoAba.totalVencido)}</strong>
             </div>
           </div>

@@ -22,6 +22,12 @@
 }
 
 @media (max-width: 640px) {
+  .fin-stats {
+    grid-template-columns: 1fr;
+  }
+  .fin-saldo-conta-card {
+    display: none;
+  }
   .fin-header-actions {
     position: sticky;
     top: 56px;
