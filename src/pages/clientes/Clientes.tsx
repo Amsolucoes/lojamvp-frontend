@@ -29,7 +29,11 @@ function iniciais(nome: string) {
 }
 
 export function Clientes() {
-  const { clientes, vendas, trocas, soServicos, addCliente, updateCliente, deleteCliente, temCorretora } = useApp();
+  const { clientes, vendas, trocas, soServicos, addCliente, updateCliente, deleteCliente, temCorretora, temTurmas, temProdutos, temServicos: temServicosCtx } = useApp();
+  const ehAluno = temTurmas && !temProdutos && !temServicosCtx;
+  const label = ehAluno ? 'aluno' : 'cliente';
+  const labelCap = ehAluno ? 'Aluno' : 'Cliente';
+  const labelPlural = ehAluno ? 'Alunos' : 'Clientes';
   const [busca, setBusca]    = useState('');
   const [modal, setModal]    = useState<'novo' | 'editar' | 'ver' | null>(null);
   const [editId, setEditId]  = useState<string | null>(null);
@@ -89,10 +93,10 @@ export function Clientes() {
       if (modal === 'novo') await addCliente(form);
       else if (editId) await updateCliente(editId, form);
       setModal(null);
-      setToast(modal === 'novo' ? 'Cliente cadastrado!' : 'Cliente atualizado!');
+      setToast(modal === 'novo' ? `${labelCap} cadastrado!` : `${labelCap} atualizado!`);
       setTimeout(() => setToast(null), 2500);
     } catch (e) {
-      setToast('Erro ao salvar cliente');
+      setToast(`Erro ao salvar ${label}`);
       setTimeout(() => setToast(null), 2500);
     }
   }
@@ -157,11 +161,11 @@ export function Clientes() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Clientes</h1>
-          <p className="page-subtitle">{clientes.length} cliente(s) cadastrado(s)</p>
+          <h1 className="page-title">{labelPlural}</h1>
+          <p className="page-subtitle">{clientes.length} {label}(s) cadastrado(s)</p>
         </div>
         <button className="btn-primary" onClick={abrirNovo}>
-          <Plus size={15} style={{ verticalAlign: -2 }} /> Novo cliente
+          <Plus size={15} style={{ verticalAlign: -2 }} /> Novo {label}
         </button>
       </div>
 
@@ -183,7 +187,7 @@ export function Clientes() {
         <div className="card">
           <div className="empty">
             <Users size={36} />
-            <p>Nenhum cliente encontrado.</p>
+            <p>Nenhum {label} encontrado.</p>
           </div>
         </div>
       ) : (
@@ -269,7 +273,7 @@ export function Clientes() {
           <div className="modal">
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>
-                {modal === 'novo' ? 'Novo cliente' : 'Editar cliente'}
+                {modal === 'novo' ? `Novo ${label}` : `Editar ${label}`}
               </h2>
               <button className="btn-ghost" onClick={() => setModal(null)}><X size={16} /></button>
             </div>
@@ -337,7 +341,7 @@ export function Clientes() {
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 600 }}>{clienteAtivo.nome}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                    Cliente desde {new Date(clienteAtivo.criadoEm).toLocaleDateString('pt-BR')}
+                    {labelCap} desde {new Date(clienteAtivo.criadoEm).toLocaleDateString('pt-BR')}
                   </div>
                 </div>
               </div>
@@ -557,14 +561,14 @@ export function Clientes() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDel(null)}>
           <div className="modal" style={{ maxWidth: 380 }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir cliente</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir {label}</h2>
               <button className="btn-ghost" onClick={() => setDel(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
                 Tem certeza que deseja excluir <strong style={{ color: 'var(--text-1)' }}>
                   {clientes.find(c => c.id === confirmDel)?.nome}
-                </strong>? O histórico de compras será mantido.
+                </strong>? O histórico será mantido.
               </p>
             </div>
             <div className="modal-footer">
