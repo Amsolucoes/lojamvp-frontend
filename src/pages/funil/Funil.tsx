@@ -69,6 +69,7 @@ export function Funil() {
   const [contas, setContas] = useState<{ id: string; nome: string; ativa: boolean }[]>([]);
 
   const [confirmExcluir, setConfirmExcluir] = useState<Oportunidade | null>(null);
+  const [confirmExcluirSeguradora, setConfirmExcluirSeguradora] = useState<{ id: string; nome: string } | null>(null);
   const [avisoClienteDuplicado, setAvisoClienteDuplicado] = useState<string | null>(null);
 
   const [dragId, setDragId] = useState<string | null>(null);
@@ -203,6 +204,17 @@ export function Funil() {
       await api.patch(`/api/corretora/seguradoras/${id}/ativo`, {});
       carregarSeguradorasTodas();
       api.get<Seguradora[]>('/api/corretora/seguradoras').then(setSeguradoras).catch(() => {});
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function excluirSeguradora(id: string) {
+    try {
+      const res = await api.delete<any>(`/api/corretora/seguradoras/${id}`);
+      carregarSeguradorasTodas();
+      api.get<Seguradora[]>('/api/corretora/seguradoras').then(setSeguradoras).catch(() => {});
+      sucesso(res?.mensagem ?? 'Seguradora removida.');
     } catch (e) {
       erro((e as Error).message);
     }
@@ -583,6 +595,9 @@ export function Funil() {
                         <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => iniciarEdicaoSeguradora(s)}>Editar</button>
                       )}
                       <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => alternarSeguradora(s.id)}>{s.ativa ? 'Desativar' : 'Ativar'}</button>
+                      <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmExcluirSeguradora({ id: s.id, nome: s.nome })}>
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -608,6 +623,32 @@ export function Funil() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalGerenciarSeguradoras(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar exclusão de seguradora */}
+      {confirmExcluirSeguradora && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirSeguradora(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir seguradora</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluirSeguradora(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir <strong style={{ color: 'var(--text-1)' }}>{confirmExcluirSeguradora.nome}</strong>?
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+                Se ela já tiver oportunidades ou apólices vinculadas, será apenas desativada em vez de excluída.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluirSeguradora(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={() => { excluirSeguradora(confirmExcluirSeguradora.id); setConfirmExcluirSeguradora(null); }}>
+                Excluir
+              </button>
             </div>
           </div>
         </div>
