@@ -350,13 +350,13 @@ export function Clientes() {
             <div className="modal-body">
               {/* Stats */}
               <div className="cli-modal-stats">
-                {!soServicos && (
+                {!soServicos && !temCorretora && (
                   <div className="stat-card" style={{ flex: 1 }}>
                     <div className="stat-label">Compras</div>
                     <div className="stat-value">{qtdCompras(clienteAtivo.id)}</div>
                   </div>
                 )}
-                {!soServicos && (
+                {!soServicos && !temCorretora && (
                   <div className="stat-card" style={{ flex: 1 }}>
                     <div className="stat-label">Total gasto</div>
                     <div className="stat-value" style={{ fontSize: 18, color: 'var(--green)' }}>
@@ -400,7 +400,7 @@ export function Clientes() {
               </div>
 
               {/* Histórico de compras */}
-              {qtdCompras(clienteAtivo.id) > 0 && (
+              {!temCorretora && qtdCompras(clienteAtivo.id) > 0 && (
                 <>
                   <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 8px' }}>
                     Histórico de compras
