@@ -160,8 +160,11 @@ export function DashboardFinanceiro() {
                           background: Math.abs(c.saldoAtual) >= c.limite ? 'var(--red)' : 'var(--yellow, #d97706)',
                         }} />
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
-                        {fmt(Math.abs(c.saldoAtual))} de {fmt(c.limite)} do limite usado
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
+                        <span>{fmt(Math.abs(c.saldoAtual))} de {fmt(c.limite)} usado</span>
+                        <strong style={{ color: c.limite - Math.abs(c.saldoAtual) <= c.limite * 0.1 ? 'var(--red)' : 'var(--text-2)' }}>
+                          {fmt(Math.max(0, c.limite - Math.abs(c.saldoAtual)))} livre
+                        </strong>
                       </div>
                     </div>
                   )}
