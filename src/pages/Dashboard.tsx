@@ -1,10 +1,11 @@
-import { ShoppingCart, Package, TrendingUp, AlertTriangle, Clock, Store, Wallet, Filter } from 'lucide-react';
+import { ShoppingCart, Package, TrendingUp, AlertTriangle, Clock, Store, Wallet, Filter, Users2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Produto, Venda, ItemVenda } from '../types';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { DashboardFinanceiro } from './DashboardFinanceiro';
 import { DashboardCorretora } from './DashboardCorretora';
+import { DashboardTurmas } from './DashboardTurmas';
 import './Dashboard.css';
 
 function fmt(n: number) {
@@ -15,7 +16,8 @@ export function Dashboard() {
   const { temProdutos, temServicos, temTurmas, temFinanceiro, temCorretora } = useApp();
 
   const abasDisponiveis = [
-    ...(temProdutos || temServicos || temTurmas ? [{ chave: 'loja' as const, label: 'Loja', Icon: Store }] : []),
+    ...(temProdutos || temServicos ? [{ chave: 'loja' as const, label: 'Loja', Icon: Store }] : []),
+    ...(temTurmas && !temProdutos && !temServicos ? [{ chave: 'turmas' as const, label: 'Turmas', Icon: Users2 }] : []),
     ...(temCorretora ? [{ chave: 'corretora' as const, label: 'Corretora', Icon: Filter }] : []),
     ...(temFinanceiro ? [{ chave: 'financeiro' as const, label: 'Financeiro', Icon: Wallet }] : []),
   ];
@@ -33,6 +35,7 @@ export function Dashboard() {
     const unica = abasDisponiveis[0]?.chave ?? 'loja';
     if (unica === 'financeiro') return <DashboardFinanceiro />;
     if (unica === 'corretora') return <DashboardCorretora />;
+    if (unica === 'turmas') return <DashboardTurmas />;
     return <DashboardLoja />;
   }
 
@@ -48,6 +51,7 @@ export function Dashboard() {
       {abaDash === 'loja' && <DashboardLoja />}
       {abaDash === 'financeiro' && <DashboardFinanceiro />}
       {abaDash === 'corretora' && <DashboardCorretora />}
+      {abaDash === 'turmas' && <DashboardTurmas />}
     </div>
   );
 }
