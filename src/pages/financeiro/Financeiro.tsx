@@ -122,6 +122,8 @@ export function Financeiro() {
   const [catFiltro, setCatFiltro] = useState('todas');
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pago' | 'pendente'>('todos');
   const [modoFiltro, setModoFiltro] = useState<'todos' | 'avulsa' | 'parcelada' | 'fixa'>('todos');
+  const [paginaLista, setPaginaLista] = useState(1);
+  const [itensPorPagina, setItensPorPagina] = useState(15);
   const [periodoTipo, setPeriodoTipo] = useState<'mes' | 'personalizado'>('mes');
   const [periodoDe, setPeriodoDe] = useState(new Date().toISOString().slice(0, 10));
   const [periodoAte, setPeriodoAte] = useState(new Date().toISOString().slice(0, 10));
@@ -226,6 +228,7 @@ export function Financeiro() {
   useEffect(() => { carregarContas(); carregarCategorias(); carregarCartoes(); }, []);
   useEffect(() => { carregarLancamentos(); carregarResumo(); }, [aba, mesRef, anoRef, modoPagar, periodoTipo, periodoDe, periodoAte]);
   useEffect(() => { setCatFiltro('todas'); }, [aba]);
+  useEffect(() => { setPaginaLista(1); }, [aba, mesRef, anoRef, catFiltro, statusFiltro, modoFiltro, periodoTipo, periodoDe, periodoAte, itensPorPagina]);
   useEffect(() => { setPaginaCat(1); }, [filtroCatModal]);
   useEffect(() => {
     const novo = searchParams.get('novo');
@@ -275,10 +278,10 @@ export function Financeiro() {
     return modo === modoFiltro;
   }
 
-  const listaPagar = linhasPagar.filter(l =>
+  const listaPagarCompleta = linhasPagar.filter(l =>
     (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaStatus(l.status) && passaModo(l.modo)
   );
-  const listaReceber = receberUnificado.filter((l: any) => {
+  const listaReceberCompleta = receberUnificado.filter((l: any) => {
     const catOk = catFiltro === 'todas'
       ? true
       : catFiltro === '__plano__'
@@ -286,6 +289,14 @@ export function Financeiro() {
       : l.origem === 'avulso' && l.categoriaNome === catFiltro;
     return catOk && passaStatus(l.status) && passaModo(l.modo);
   });
+
+  const listaCompletaAtual = aba === 'pagar' ? listaPagarCompleta : listaReceberCompleta;
+  const totalPaginas = Math.max(1, Math.ceil(listaCompletaAtual.length / itensPorPagina));
+  const paginaAtual = Math.min(paginaLista, totalPaginas);
+  const inicioSlice = (paginaAtual - 1) * itensPorPagina;
+
+  const listaPagar = (aba === 'pagar' ? listaPagarCompleta : []).slice(inicioSlice, inicioSlice + itensPorPagina);
+  const listaReceber = (aba === 'receber' ? listaReceberCompleta : []).slice(inicioSlice, inicioSlice + itensPorPagina);
 
   // Quando algum filtro (categoria ou status) está ativo, recalcula os totais
   // com base na lista já filtrada, em vez do resumo geral do backend.
@@ -304,7 +315,7 @@ export function Financeiro() {
   }
 
   const resumoAba = filtroAtivo
-    ? resumoDaLista(aba === 'pagar' ? listaPagar : listaReceber)
+    ? resumoDaLista(aba === 'pagar' ? listaPagarCompleta : listaReceberCompleta)
     : (resumo ? resumo[aba] : null);
 
   // ── Lançamento ──────────────────────────────────────────────────
@@ -914,6 +925,30 @@ export function Financeiro() {
           )}
         </div>
       </div>
+
+      {/* Controles de paginação */}
+      {listaCompletaAtual.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+            {listaCompletaAtual.length} lançamento{listaCompletaAtual.length !== 1 ? 's' : ''}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <select value={itensPorPagina} onChange={e => setItensPorPagina(parseInt(e.target.value))} style={{ width: 'auto', fontSize: 12, padding: '4px 8px' }}>
+              <option value={15}>15 por página</option>
+              <option value={30}>30 por página</option>
+              <option value={50}>50 por página</option>
+              <option value={100}>100 por página</option>
+            </select>
+            {totalPaginas > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaLista(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
+                <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaLista(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Lista */}
       <div className="card" style={{ borderLeft: `3px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
@@ -2101,6 +2136,14 @@ export function Financeiro() {
           </div>
         </div>
       )}
+      {listaCompletaAtual.length > 0 && totalPaginas > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 16 }}>
+          <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaLista(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
+          <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaLista(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+        </div>
+      )}
+
       {!modalLancamento && !modalContas && !modalCartoes && !modalCategorias && !editandoLancamento && !confirmExcluir && (
       <div className="fin-fab-mobile-only" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
         <button onClick={abrirNovoLancamento} style={{
