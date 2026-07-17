@@ -803,10 +803,10 @@ export function Financeiro() {
                           background: Math.abs(c.saldoAtual) >= c.limite ? 'var(--red)' : 'var(--yellow, #d97706)',
                         }} />
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
-                        <span>{fmt(Math.abs(c.saldoAtual))} de {fmt(c.limite)} usado</span>
-                        <strong style={{ color: c.limite - Math.abs(c.saldoAtual) <= c.limite * 0.1 ? 'var(--red)' : 'var(--text-2)' }}>
-                          {fmt(Math.max(0, c.limite - Math.abs(c.saldoAtual)))} livre
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4 }}>
+                        <span style={{ color: 'var(--text-3)' }}>Disponível</span>
+                        <strong style={{ color: c.limite - Math.abs(c.saldoAtual) <= c.limite * 0.1 ? 'var(--red)' : 'var(--green)' }}>
+                          {fmt(Math.max(0, c.limite - Math.abs(c.saldoAtual)))}
                         </strong>
                       </div>
                     </div>
