@@ -51,7 +51,10 @@ interface ConsumoServico {
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export function Planos() {
-  const { clientes, recarregar } = useApp();
+  export function Planos() {
+  const { clientes, recarregar, temTurmas, temProdutos, temServicos } = useApp();
+  const ehTurma = temTurmas && !temProdutos && !temServicos;
+  const placeholderPlano = ehTurma ? 'Ex: Pilates 2x por semana' : 'Ex: Cabelo + Barba';
   const [aba, setAba] = useState<'planos' | 'assinantes'>('planos');
 
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -604,7 +607,7 @@ export function Planos() {
               <div className="form-group" style={{ marginBottom: 14 }}>
                 <label className="form-label">Nome do plano *</label>
                 <input value={formPlano.nome} onChange={e => setFormPlano(f => ({ ...f, nome: e.target.value }))}
-                  placeholder="Ex: Cabelo + Barba" autoFocus />
+                  placeholder={placeholderPlano} autoFocus />
               </div>
               <div className="form-group" style={{ marginBottom: 14 }}>
                 <label className="form-label">Valor mensal (R$) *</label>
