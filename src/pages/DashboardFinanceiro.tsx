@@ -374,6 +374,10 @@ export function DashboardFinanceiro() {
                   <div style={{ height: 5, background: 'var(--bg-3)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: pct > 85 ? 'var(--red)' : pct > 60 ? 'var(--yellow, #d97706)' : 'var(--green)', borderRadius: 3 }} />
                   </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Disponível</span>
+                    <strong style={{ fontSize: 13, color: c.disponivel >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.disponivel)}</strong>
+                  </div>
                   <div className="stat-sub" style={{ marginTop: 6 }}>
                     Fatura atual vence {new Date(c.vencimentoAtual).toLocaleDateString('pt-BR')}
                     {c.status === 'pago' && <span style={{ color: 'var(--green)' }}> · Paga</span>}
