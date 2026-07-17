@@ -9,13 +9,19 @@ interface ItemPreview {
   codigoFornecedor: string;
   gtin: string | null;
   descricao: string;
+  nomeBase: string;
+  cor: string | null;
+  tamanho: string | null;
   quantidade: number;
   valorUnitario: number;
   valorTotal: number;
-  statusMatch: 'gtin' | 'mapeamento' | 'sugestao' | 'novo';
+  statusMatch: 'gtin' | 'mapeamento' | 'nome_exato' | 'sugestao' | 'novo';
   produtoSugeridoId: string | null;
   produtoSugeridoNome: string | null;
-  produtoSugeridoEstoqueAtual: number | null;
+  variacaoJaExiste: boolean;
+  estoqueVariacaoAtual: number | null;
+  categoriaSugerida: string;
+  categoriaJaExiste: boolean;
 }
 
 interface Preview {
@@ -29,11 +35,13 @@ interface DecisaoItem {
   acao: 'existente' | 'novo';
   produtoId: string | null;
   precoVenda: number | null;
+  categoriaNome: string;
 }
 
 const STATUS_LABEL: Record<ItemPreview['statusMatch'], { txt: string; cor: string; icone: any }> = {
   gtin:       { txt: 'Match por código de barras', cor: 'var(--green)', icone: Check },
   mapeamento: { txt: 'Reconhecido de nota anterior', cor: 'var(--green)', icone: Check },
+  nome_exato: { txt: 'Produto já cadastrado', cor: 'var(--green)', icone: Check },
   sugestao:   { txt: 'Sugestão (revisar)', cor: 'var(--yellow, #d97706)', icone: Package },
   novo:       { txt: 'Produto novo', cor: 'var(--accent)', icone: PackagePlus },
 };
@@ -66,8 +74,8 @@ export function ImportarNf() {
       const decIni: Record<number, DecisaoItem> = {};
       data.itens.forEach((it: ItemPreview, i: number) => {
         decIni[i] = it.produtoSugeridoId
-          ? { acao: 'existente', produtoId: it.produtoSugeridoId, precoVenda: null }
-          : { acao: 'novo',       produtoId: null, precoVenda: it.valorUnitario };
+          ? { acao: 'existente', produtoId: it.produtoSugeridoId, precoVenda: null, categoriaNome: it.categoriaSugerida }
+          : { acao: 'novo',       produtoId: null, precoVenda: it.valorUnitario, categoriaNome: it.categoriaSugerida };
       });
       setDecisoes(decIni);
     } catch (e) {
@@ -86,12 +94,15 @@ export function ImportarNf() {
         return {
           codigoFornecedor: it.codigoFornecedor,
           gtin: it.gtin,
-          descricao: it.descricao,
+          nomeBase: it.nomeBase,
+          cor: it.cor,
+          tamanho: it.tamanho,
           quantidade: it.quantidade,
           valorUnitario: it.valorUnitario,
           acao: dec.acao,
           produtoId: dec.acao === 'existente' ? dec.produtoId : null,
           precoVenda: dec.acao === 'novo' ? dec.precoVenda : null,
+          categoriaNome: dec.acao === 'novo' ? dec.categoriaNome : null,
         };
       });
 
@@ -100,7 +111,7 @@ export function ImportarNf() {
         numeroNf: preview.numeroNf,
         itens,
       });
-      sucesso(`${res.mensagem} (${res.produtosNovos} novos, ${res.produtosAtualizados} atualizados)`);
+      sucesso(`${res.mensagem} (${res.produtosNovos} novos, ${res.produtosAtualizados} atualizados${res.categoriasCriadas > 0 ? `, ${res.categoriasCriadas} categoria(s) nova(s)` : ''})`);
       setPreview(null);
       setArquivo(null);
       setDecisoes({});
@@ -163,8 +174,10 @@ export function ImportarNf() {
                     <Icon size={14} style={{ color: status.cor }} />
                     <span style={{ fontSize: 11, color: status.cor, fontWeight: 500 }}>{status.txt}</span>
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{it.descricao}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>{it.nomeBase}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                    {it.cor && `Cor: ${it.cor}`}{it.cor && it.tamanho && ' · '}{it.tamanho && `Tamanho: ${it.tamanho}`}
+                    {(it.cor || it.tamanho) && ' · '}
                     Cód. fornecedor: {it.codigoFornecedor}
                     {it.gtin && ` · GTIN: ${it.gtin}`}
                     {' · '}Qtd: {it.quantidade}
@@ -190,21 +203,39 @@ export function ImportarNf() {
                     </button>
                   </div>
 
-                  {dec.acao === 'existente' && it.produtoSugeridoEstoqueAtual != null && (
+                  {dec.acao === 'existente' && (
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
-                      Estoque atual: {it.produtoSugeridoEstoqueAtual} → após entrada: <strong>{Number(it.produtoSugeridoEstoqueAtual) + it.quantidade}</strong>
+                      {it.variacaoJaExiste
+                        ? <>Variação {it.cor ?? ''} {it.tamanho ?? ''} já existe — estoque atual: {it.estoqueVariacaoAtual} → após entrada: <strong>{(it.estoqueVariacaoAtual ?? 0) + it.quantidade}</strong></>
+                        : (it.cor || it.tamanho)
+                          ? <>Vai criar uma nova variação {it.cor ?? ''} {it.tamanho ?? ''} neste produto, com estoque inicial {it.quantidade}</>
+                          : <>Entrada de {it.quantidade} unidade(s) no estoque</>
+                      }
                     </div>
                   )}
 
                   {dec.acao === 'novo' && (
-                    <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Preço de venda:</span>
-                      <input
-                        type="number" step="0.01" min={0}
-                        value={dec.precoVenda ?? ''}
-                        onChange={e => alterarDecisao(i, { precoVenda: parseFloat(e.target.value) || 0 })}
-                        style={{ width: 120, fontSize: 13 }}
-                      />
+                    <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Preço de venda:</span>
+                        <input
+                          type="number" step="0.01" min={0}
+                          value={dec.precoVenda ?? ''}
+                          onChange={e => alterarDecisao(i, { precoVenda: parseFloat(e.target.value) || 0 })}
+                          style={{ width: 120, fontSize: 13 }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Categoria:</span>
+                        <input
+                          value={dec.categoriaNome}
+                          onChange={e => alterarDecisao(i, { categoriaNome: e.target.value })}
+                          style={{ width: 140, fontSize: 13 }}
+                        />
+                        {!it.categoriaJaExiste && (
+                          <span className="badge badge-accent" style={{ fontSize: 10 }}>nova categoria</span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
