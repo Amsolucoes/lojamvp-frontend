@@ -3,8 +3,18 @@
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 8px;
+  scrollbar-width: auto;
 }
-
+.funil-board::-webkit-scrollbar {
+  height: 10px;
+}
+.funil-board::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 6px;
+}
+.funil-board::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
 .funil-coluna {
   flex: 0 0 260px;
   background: var(--bg-2);
@@ -80,4 +90,13 @@
 @media (max-width: 768px) {
   .funil-board-desktop { display: none; }
   .funil-mobile { display: block; }
+}
+
+@media (max-width: 1500px) and (min-width: 769px) {
+  .funil-coluna {
+    flex: 0 0 200px;
+  }
+  .funil-coluna-perdido {
+    flex: 0 0 140px;
+  }
 }
