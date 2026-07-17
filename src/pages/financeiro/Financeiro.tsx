@@ -787,11 +787,30 @@ export function Financeiro() {
           {contas.filter(c => c.ativa).length > 0 ? (
             <div style={{ marginTop: 4 }}>
               {contas.filter(c => c.ativa).map(c => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, marginTop: 2, gap: 6 }}>
-                  <span style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <BankBadge bancoId={c.banco} tamanho={16} /> {c.nome}
-                  </span>
-                  <strong style={{ color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
+                <div key={c.id} style={{ marginTop: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, gap: 6 }}>
+                    <span style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <BankBadge bancoId={c.banco} tamanho={16} /> {c.nome}
+                    </span>
+                    <strong style={{ color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
+                  </div>
+                  {c.limite > 0 && c.saldoAtual < 0 && (
+                    <div style={{ marginTop: 3 }}>
+                      <div style={{ height: 4, background: 'var(--bg-3)', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: 3,
+                          width: `${Math.min(100, (Math.abs(c.saldoAtual) / c.limite) * 100)}%`,
+                          background: Math.abs(c.saldoAtual) >= c.limite ? 'var(--red)' : 'var(--yellow, #d97706)',
+                        }} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
+                        <span>{fmt(Math.abs(c.saldoAtual))} de {fmt(c.limite)} usado</span>
+                        <strong style={{ color: c.limite - Math.abs(c.saldoAtual) <= c.limite * 0.1 ? 'var(--red)' : 'var(--text-2)' }}>
+                          {fmt(Math.max(0, c.limite - Math.abs(c.saldoAtual)))} livre
+                        </strong>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
