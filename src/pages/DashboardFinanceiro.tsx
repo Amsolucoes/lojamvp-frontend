@@ -408,6 +408,7 @@ export function DashboardFinanceiro() {
           </div>
         )}
       </div>
+      <div className="dash-fab-spacer" />
       {fabAberto && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setFabAberto(false)} />
       )}

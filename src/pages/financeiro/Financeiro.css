@@ -14,6 +14,7 @@
 .fin-card-mobile:last-child { border-bottom: none; }
 
 .fin-fab-mobile-only { display: none; }
+.fin-fab-spacer { display: none; }
 
 @media (max-width: 768px) {
   .fin-table-desktop { display: none; }
@@ -62,6 +63,7 @@
     padding-right: 4px;
   }
   .fin-fab-mobile-only { display: flex; }
+  .fin-fab-spacer { display: block; height: 90px; }
   /* .fin-abas-desktop { display: none; } */
   .fin-voltar-mobile { display: flex !important; }
 }

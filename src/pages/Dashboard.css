@@ -61,6 +61,7 @@
 .dash-venda-card:last-child { border-bottom: none; }
 
 .fin-fab-mobile-only { display: none; }
+.dash-fab-spacer { display: none; }
 
 @media (max-width: 768px) {
   .dash-grid { grid-template-columns: 1fr !important; }
@@ -75,6 +76,7 @@
   .dash-resumo-desktop { display: none; }
   .dash-resumo-mobile { display: block; }
   .fin-fab-mobile-only { display: flex; }
+  .dash-fab-spacer { display: block; height: 90px; }
 }
 
 @media (max-width: 1100px) {

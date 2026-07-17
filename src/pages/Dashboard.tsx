@@ -273,6 +273,7 @@ function DashboardLoja() {
           </div>
         </div>
       </div>
+      <div className="dash-fab-spacer" />
     </div>
   );
 }
