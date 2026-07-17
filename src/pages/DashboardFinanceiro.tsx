@@ -24,6 +24,7 @@ interface CartaoResumo {
   disponivel: number;
   vencimentoAtual: string;
   status: string;
+  qtdCompras: number;
 }
 
 function diasAte(dataStr: string) {
@@ -371,10 +372,17 @@ export function DashboardFinanceiro() {
             {cartoesResumo.map(c => {
               const pct = c.limite > 0 ? Math.min(100, (c.usado / c.limite) * 100) : 0;
               return (
-                <div key={c.id} className="stat-card">
-                  <div className="stat-label">{c.nome}</div>
-                  <div className="stat-value" style={{ fontSize: 16 }}>{fmt(c.usado)} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-3)' }}>/ {fmt(c.limite)}</span></div>
-                  <div style={{ height: 5, background: 'var(--bg-3)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
+                <div key={c.id} className="stat-card" style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : 'var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="stat-label">{c.nome}</div>
+                    {c.qtdCompras > 0 && (
+                      <span className="badge badge-accent" style={{ fontSize: 10 }}>{c.qtdCompras} compra{c.qtdCompras > 1 ? 's' : ''}</span>
+                    )}
+                  </div>
+                  <div className="stat-value" style={{ fontSize: 20, color: pct > 85 ? 'var(--red)' : 'var(--text-1)', fontWeight: 700 }}>
+                    {fmt(c.usado)} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-3)' }}>/ {fmt(c.limite)}</span>
+                  </div>
+                  <div style={{ height: 6, background: 'var(--bg-3)', borderRadius: 3, marginTop: 8, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: pct > 85 ? 'var(--red)' : pct > 60 ? 'var(--yellow, #d97706)' : 'var(--green)', borderRadius: 3 }} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
