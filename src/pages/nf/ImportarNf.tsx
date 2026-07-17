@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Upload, Check, X, FileText, Package, PackagePlus } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { useApp } from '../../context/AppContext';
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -48,6 +49,7 @@ const STATUS_LABEL: Record<ItemPreview['statusMatch'], { txt: string; cor: strin
 
 export function ImportarNf() {
   const { sucesso, erro } = useToast();
+  const { recarregar } = useApp();
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [decisoes, setDecisoes] = useState<Record<number, DecisaoItem>>({});
@@ -115,6 +117,7 @@ export function ImportarNf() {
       setPreview(null);
       setArquivo(null);
       setDecisoes({});
+      recarregar();
     } catch (e) {
       erro((e as Error).message);
     } finally {
