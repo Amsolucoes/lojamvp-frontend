@@ -75,7 +75,7 @@ export function BalancoMensal() {
       </div>
 
       {/* Toggle categoria / conta */}
-      <div className="cx-tipo-toggle" style={{ marginBottom: 20, maxWidth: 320 }}>
+      <div className="cx-tipo-toggle" style={{ marginBottom: 20, maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>
         <button className={aba === 'categoria' ? 'active' : ''} onClick={() => setAba('categoria')}>Balanço por categoria</button>
         <button className={aba === 'conta' ? 'active' : ''} onClick={() => setAba('conta')}>Saldo por conta</button>
       </div>
@@ -110,7 +110,7 @@ export function BalancoMensal() {
             </div>
 
             {/* Categorias lado a lado */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} className="balanco-cat-grid">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, maxWidth: 700, marginLeft: 'auto', marginRight: 'auto' }} className="balanco-cat-grid">
               <div>
                 {balanco.receitas.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Sem receitas no mês.</p>}
                 {balanco.receitas.map(r => (
