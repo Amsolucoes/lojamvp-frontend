@@ -131,6 +131,7 @@ export function Financeiro() {
   const [linhasPagar, setLinhasPagar] = useState<LinhaPagar[]>([]);
 
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
+  const [cartoesResumo, setCartoesResumo] = useState<Record<string, { usado: number; disponivel: number; qtdCompras: number; status: string }>>({});
   const [modalCartoes, setModalCartoes] = useState(false);
   const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
   const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
@@ -218,6 +219,11 @@ export function Financeiro() {
 
   function carregarCartoes() {
     api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {});
+    api.get<any[]>('/api/financeiro/cartoes-resumo').then(lista => {
+      const mapa: Record<string, any> = {};
+      lista.forEach(c => { mapa[c.id] = { usado: c.usado, disponivel: c.disponivel, qtdCompras: c.qtdCompras, status: c.status }; });
+      setCartoesResumo(mapa);
+    }).catch(() => {});
   }
 
   async function carregarResumo() {
@@ -1648,18 +1654,44 @@ export function Financeiro() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
                 {cartoes.length === 0 ? (
                   <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhum cartão cadastrado.</p>
-                ) : cartoes.map(c => (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>{c.nome}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Limite {fmt(c.limite)} · Fecha dia {c.diaFechamento} · Vence dia {c.diaVencimento}</div>
+                ) : cartoes.map(c => {
+                  const r = cartoesResumo[c.id];
+                  const pct = r && c.limite > 0 ? Math.min(100, (r.usado / c.limite) * 100) : 0;
+                  return (
+                  <div key={c.id} style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : 'var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 600, fontSize: 14 }}>{c.nome}</span>
+                          {r && r.qtdCompras > 0 && (
+                            <span className="badge badge-accent" style={{ fontSize: 10 }}>{r.qtdCompras} compra{r.qtdCompras > 1 ? 's' : ''}</span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Fecha dia {c.diaFechamento} · Vence dia {c.diaVencimento}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => { setModalCartoes(false); abrirFatura(c); }}>Ver fatura</button>
+                        <button className="btn-ghost" onClick={() => abrirEditarCartao(c)}>Editar</button>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => { setModalCartoes(false); abrirFatura(c); }}>Ver fatura</button>
-                      <button className="btn-ghost" onClick={() => abrirEditarCartao(c)}>Editar</button>
-                    </div>
+                    {r && (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}>
+                          <strong style={{ fontSize: 16, color: pct > 85 ? 'var(--red)' : 'var(--text-1)' }}>{fmt(r.usado)}</strong>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>/ {fmt(c.limite)}</span>
+                        </div>
+                        <div style={{ height: 6, background: 'var(--bg-3)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: pct > 85 ? 'var(--red)' : pct > 60 ? 'var(--yellow, #d97706)' : 'var(--green)', borderRadius: 3 }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Disponível</span>
+                          <strong style={{ fontSize: 13, color: r.disponivel >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(r.disponivel)}</strong>
+                        </div>
+                      </>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoCartao ? 'Editar cartão' : 'Novo cartão'}</p>
