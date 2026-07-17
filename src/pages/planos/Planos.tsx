@@ -51,7 +51,6 @@ interface ConsumoServico {
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export function Planos() {
-  export function Planos() {
   const { clientes, recarregar, temTurmas, temProdutos, temServicos } = useApp();
   const ehTurma = temTurmas && !temProdutos && !temServicos;
   const placeholderPlano = ehTurma ? 'Ex: Pilates 2x por semana' : 'Ex: Cabelo + Barba';
