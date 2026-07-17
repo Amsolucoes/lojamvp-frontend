@@ -19,6 +19,7 @@ import { Suporte } from './pages/login/Suporte';
 import { AgendamentoPublico } from './pages/publico/AgendamentoPublico';
 import { Planos } from './pages/planos/Planos';
 import { Financeiro } from './pages/financeiro/Financeiro';
+import { BalancoMensal } from './pages/financeiro/BalancoMensal';
 import { Configuracoes } from './pages/configuracoes/Configuracoes';
 import { Turmas } from './pages/turmas/Turmas';
 import { Funil } from './pages/funil/Funil';
@@ -68,6 +69,7 @@ function Rotas() {
           <Route path="agenda"     element={<Agenda />} />
           <Route path="planos"     element={<Planos />} />
           <Route path="financeiro" element={<Financeiro />} />
+          <Route path="financeiro/balanco" element={<BalancoMensal />} />
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="turmas"     element={<Turmas />} />
           <Route path="funil"      element={<Funil />} />

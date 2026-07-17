@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard } from 'lucide-react';
+import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { BANCOS, BankBadge } from '../../utils/bancos';
@@ -764,6 +764,7 @@ export function Financeiro() {
           <button className="btn-secondary" onClick={() => setModalContas(true)}><Wallet size={14} /> Contas</button>
           <button className="btn-secondary" onClick={() => setModalCartoes(true)}><CreditCard size={14} /> Cartões</button>
           <button className="btn-secondary" onClick={() => setModalCategorias(true)}><Tag size={14} /> Categorias</button>
+          <button className="btn-secondary" onClick={() => navigate('/financeiro/balanco')}><BarChart3 size={14} /> Balanço mensal</button>
           <button className="btn-primary fin-novo-lanc-desktop" onClick={abrirNovoLancamento}><Plus size={15} /> Novo lançamento</button>
         </div>
       </div>
