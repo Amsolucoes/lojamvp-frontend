@@ -24,6 +24,7 @@ import { Configuracoes } from './pages/configuracoes/Configuracoes';
 import { Turmas } from './pages/turmas/Turmas';
 import { Funil } from './pages/funil/Funil';
 import { Apolices } from './pages/apolices/Apolices';
+import { ImportarNf } from './pages/nf/ImportarNf';
 import { ToastProvider } from './context/ToastContext';
 
 function Rotas() {
@@ -74,6 +75,7 @@ function Rotas() {
           <Route path="turmas"     element={<Turmas />} />
           <Route path="funil"      element={<Funil />} />
           <Route path="apolices"   element={<Apolices />} />
+          <Route path="nf"         element={<ImportarNf />} />
           <Route path="*"          element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
