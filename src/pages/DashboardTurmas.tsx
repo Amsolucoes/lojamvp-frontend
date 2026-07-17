@@ -55,7 +55,7 @@ export function DashboardTurmas() {
         </div>
       </div>
 
-      <div className="dash-stats">
+      <div className="dash-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="stat-card">
           <div className="stat-label"><Users size={12} style={{ verticalAlign: -1 }} /> Alunos cadastrados</div>
           <div className="stat-value">{clientes.length}</div>
