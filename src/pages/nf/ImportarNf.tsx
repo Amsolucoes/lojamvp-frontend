@@ -29,6 +29,7 @@ interface Preview {
   cnpjFornecedor: string;
   nomeFornecedor: string;
   numeroNf: string;
+  chaveAcesso: string;
   itens: ItemPreview[];
 }
 
@@ -111,8 +112,11 @@ export function ImportarNf() {
       const res = await api.post<any>('/api/nf-importacao/confirmar', {
         cnpjFornecedor: preview.cnpjFornecedor,
         numeroNf: preview.numeroNf,
+        chaveAcesso: preview.chaveAcesso,
+        nomeFornecedor: preview.nomeFornecedor,
         itens,
       });
+      
       sucesso(`${res.mensagem} (${res.produtosNovos} novos, ${res.produtosAtualizados} atualizados${res.categoriasCriadas > 0 ? `, ${res.categoriasCriadas} categoria(s) nova(s)` : ''})`);
       setPreview(null);
       setArquivo(null);
