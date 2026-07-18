@@ -72,7 +72,7 @@ export function Cadastro() {
         <div className="login-logo">
           <div className="login-logo-icon">✦</div>
           <div>
-            <div className="login-logo-nome">AlSoluções</div>
+            <div className="login-logo-nome">Al DevSoftware</div>
             <div className="login-logo-sub">Criar conta grátis</div>
           </div>
         </div>

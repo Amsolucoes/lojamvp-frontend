@@ -113,6 +113,11 @@ export function Agenda() {
   const [carregandoFaixa, setCarregandoFaixa] = useState(true);
   const [visao, setVisao] = useState<'dia' | 'semana' | 'mes'>('dia');
   const [pendentes, setPendentes] = useState<Agendamento[]>([]);
+  const [modalPausa, setModalPausa] = useState(false);
+  const [pausaAte, setPausaAte] = useState('');
+  const [pausaMensagem, setPausaMensagem] = useState('');
+  const [pausaAtiva, setPausaAtiva] = useState<{ pausaAte: string | null; pausaMensagem: string | null }>({ pausaAte: null, pausaMensagem: null });
+  const [salvandoPausa, setSalvandoPausa] = useState(false);
 
   useEffect(() => {
     api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
@@ -122,8 +127,33 @@ export function Agenda() {
     api.get<any>('/api/loja/situacao').then(res => {
       if (typeof res?.agendaHoraInicio === 'number') setHoraInicio(res.agendaHoraInicio);
       if (typeof res?.agendaHoraFim === 'number') setHoraFim(res.agendaHoraFim);
+      setPausaAtiva({ pausaAte: res?.pausaAte ?? null, pausaMensagem: res?.pausaMensagem ?? null });
     }).catch(() => {}).finally(() => setCarregandoFaixa(false));
   }, []);
+
+  function abrirModalPausa() {
+    setPausaAte(pausaAtiva.pausaAte ? pausaAtiva.pausaAte.slice(0, 10) : '');
+    setPausaMensagem(pausaAtiva.pausaMensagem ?? 'Estamos temporariamente fechados. Voltamos em breve!');
+    setModalPausa(true);
+  }
+
+  async function salvarPausa(ativar: boolean) {
+    setSalvandoPausa(true);
+    try {
+      const res = await api.patch<any>('/api/loja/pausa-agendamento', {
+        ativar,
+        pausaAte: ativar ? pausaAte : null,
+        mensagem: ativar ? pausaMensagem : null,
+      });
+      setPausaAtiva({ pausaAte: res.pausaAte, pausaMensagem: res.pausaMensagem });
+      sucesso(ativar ? 'Agendamentos pausados até a data escolhida.' : 'Pausa removida — agendamentos liberados.');
+      setModalPausa(false);
+    } catch (e) {
+      erro((e as Error).message);
+    } finally {
+      setSalvandoPausa(false);
+    }
+  }
 
   useEffect(() => { carregar(); }, [dia, visao]);
   useEffect(() => { carregarPendentes(); }, []);
@@ -317,11 +347,31 @@ export function Agenda() {
             <button className={`cat-tab${visao === 'semana' ? ' active' : ''}`} onClick={() => setVisao('semana')}>Semana</button>
             <button className={`cat-tab${visao === 'mes' ? ' active' : ''}`} onClick={() => setVisao('mes')}>Mês</button>
           </div>
+          <button className={pausaAtiva.pausaAte ? 'btn-secondary' : 'btn-secondary'}
+            style={pausaAtiva.pausaAte ? { color: 'var(--red)', borderColor: 'rgba(248,113,113,0.3)' } : {}}
+            onClick={abrirModalPausa}>
+            <Ban size={14} style={{ verticalAlign: -2 }} /> {pausaAtiva.pausaAte ? 'Pausa ativa' : 'Pausar agendamento'}
+          </button>
           <button className="btn-primary" onClick={() => abrirNovo()}>
             <Plus size={15} style={{ verticalAlign: -2 }} /> Novo agendamento
           </button>
         </div>
       </div>
+
+      {pausaAtiva.pausaAte && (
+        <div className="card" style={{ marginBottom: 16, borderColor: 'rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Ban size={16} style={{ color: 'var(--red)' }} />
+            <strong style={{ fontSize: 14 }}>Agendamentos online pausados</strong>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 6 }}>
+            "{pausaAtiva.pausaMensagem}" — até {new Date(pausaAtiva.pausaAte).toLocaleDateString('pt-BR')}
+          </p>
+          <button className="btn-secondary" style={{ fontSize: 12, marginTop: 8 }} onClick={() => salvarPausa(false)}>
+            Reativar agendamentos agora
+          </button>
+        </div>
+      )}
 
       {/* Banner de pendentes de aprovação (agendamentos online) */}
       {pendentes.length > 0 && (
@@ -643,6 +693,39 @@ export function Agenda() {
               <button className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
               <button className="btn-primary" onClick={salvar} disabled={saving}>
                 {saving ? 'Salvando...' : editId ? 'Salvar' : 'Agendar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pausa de agendamento */}
+      {modalPausa && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalPausa(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Pausar agendamento online</h2>
+              <button className="btn-ghost" onClick={() => setModalPausa(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>
+                Enquanto ativo, clientes não conseguem marcar novos horários pelo link público. Os agendamentos já existentes não são afetados.
+              </p>
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label className="form-label">Volta a funcionar em</label>
+                <input type="date" value={pausaAte} onChange={e => setPausaAte(e.target.value)} min={new Date().toISOString().slice(0, 10)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Mensagem para o cliente</label>
+                <textarea rows={3} value={pausaMensagem} onChange={e => setPausaMensagem(e.target.value)}
+                  placeholder="Ex: Estamos fechados temporariamente por motivo de força maior. Voltamos em breve!"
+                  style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }} />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalPausa(false)}>Cancelar</button>
+              <button className="btn-primary" disabled={!pausaAte || salvandoPausa} onClick={() => salvarPausa(true)}>
+                {salvandoPausa ? 'Salvando...' : 'Ativar pausa'}
               </button>
             </div>
           </div>

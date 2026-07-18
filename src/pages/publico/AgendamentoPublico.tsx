@@ -17,6 +17,9 @@ interface DadosLoja {
   corPrimaria: string;
   confirmacao: string; // automatico | aprovacao
   servicos: Servico[];
+  pausado?: boolean;
+  pausaAte?: string | null;
+  pausaMensagem?: string | null;
 }
 
 function fmt(n: number) {
@@ -211,8 +214,22 @@ export function AgendamentoPublico() {
           ))}
         </div>
 
+        {/* Aviso de pausa temporária */}
+        {loja.pausado && (
+          <div className="ag-card" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>⏸️</div>
+            <h2 className="ag-secao-titulo" style={{ marginBottom: 8 }}>Agendamentos pausados</h2>
+            <p className="ag-sub" style={{ margin: '0 auto 12px' }}>{loja.pausaMensagem}</p>
+            {loja.pausaAte && (
+              <p style={{ fontSize: 13, color: 'var(--loja-cor, #999)', fontWeight: 600 }}>
+                Voltamos em {new Date(loja.pausaAte).toLocaleDateString('pt-BR')}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* PASSO 1 — Escolher serviço */}
-        {passo === 1 && (
+        {!loja.pausado && passo === 1 && (
           <div className="ag-card">
             <h2 className="ag-secao-titulo">Escolha o serviço</h2>
             <div className="ag-servicos">
