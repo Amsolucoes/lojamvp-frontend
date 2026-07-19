@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, Check, X, FileText, Package, PackagePlus } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -36,6 +36,7 @@ interface Preview {
 interface DecisaoItem {
   acao: 'existente' | 'novo';
   produtoId: string | null;
+  precoCusto: number | null;
   precoVenda: number | null;
   categoriaNome: string;
 }
@@ -48,6 +49,15 @@ const STATUS_LABEL: Record<ItemPreview['statusMatch'], { txt: string; cor: strin
   novo:       { txt: 'Produto novo', cor: 'var(--accent)', icone: PackagePlus },
 };
 
+interface NfHistorico {
+  id: string;
+  numeroNf: string;
+  nomeFornecedor: string;
+  qtdItens: number;
+  importadoEm: string;
+  desfeita: boolean;
+}
+
 export function ImportarNf() {
   const { sucesso, erro } = useToast();
   const { recarregar } = useApp();
@@ -56,6 +66,29 @@ export function ImportarNf() {
   const [decisoes, setDecisoes] = useState<Record<number, DecisaoItem>>({});
   const [carregando, setCarregando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
+  const [historico, setHistorico] = useState<NfHistorico[]>([]);
+  const [confirmDesfazer, setConfirmDesfazer] = useState<NfHistorico | null>(null);
+  const [desfazendo, setDesfazendo] = useState(false);
+
+  function carregarHistorico() {
+    api.get<NfHistorico[]>('/api/nf-importacao/historico').then(setHistorico).catch(() => {});
+  }
+
+  async function desfazer() {
+    if (!confirmDesfazer) return;
+    setDesfazendo(true);
+    try {
+      await api.post(`/api/nf-importacao/${confirmDesfazer.id}/desfazer`, {});
+      sucesso('Importação desfeita. Você já pode reimportar esta nota.');
+      setConfirmDesfazer(null);
+      carregarHistorico();
+      recarregar();
+    } catch (e) {
+      erro((e as Error).message);
+    } finally {
+      setDesfazendo(false);
+    }
+  }
 
   async function enviarArquivo() {
     if (!arquivo) return;
@@ -77,8 +110,8 @@ export function ImportarNf() {
       const decIni: Record<number, DecisaoItem> = {};
       data.itens.forEach((it: ItemPreview, i: number) => {
         decIni[i] = it.produtoSugeridoId
-          ? { acao: 'existente', produtoId: it.produtoSugeridoId, precoVenda: null, categoriaNome: it.categoriaSugerida }
-          : { acao: 'novo',       produtoId: null, precoVenda: it.valorUnitario, categoriaNome: it.categoriaSugerida };
+          ? { acao: 'existente', produtoId: it.produtoSugeridoId, precoCusto: null, precoVenda: null, categoriaNome: it.categoriaSugerida }
+          : { acao: 'novo',       produtoId: null, precoCusto: it.valorUnitario, precoVenda: it.valorUnitario, categoriaNome: it.categoriaSugerida };
       });
       setDecisoes(decIni);
     } catch (e) {
@@ -104,6 +137,7 @@ export function ImportarNf() {
           valorUnitario: it.valorUnitario,
           acao: dec.acao,
           produtoId: dec.acao === 'existente' ? dec.produtoId : null,
+          precoCusto: dec.acao === 'novo' ? dec.precoCusto : null,
           precoVenda: dec.acao === 'novo' ? dec.precoVenda : null,
           categoriaNome: dec.acao === 'novo' ? dec.categoriaNome : null,
         };
@@ -122,12 +156,15 @@ export function ImportarNf() {
       setArquivo(null);
       setDecisoes({});
       recarregar();
+      carregarHistorico();
     } catch (e) {
       erro((e as Error).message);
     } finally {
       setConfirmando(false);
     }
   }
+
+  useEffect(() => { carregarHistorico(); }, []);
 
   function alterarDecisao(i: number, dec: Partial<DecisaoItem>) {
     setDecisoes(d => ({ ...d, [i]: { ...d[i], ...dec } }));
@@ -143,17 +180,74 @@ export function ImportarNf() {
       </div>
 
       {!preview && (
-        <div className="card" style={{ maxWidth: 520 }}>
-          <div style={{ fontSize: 14, marginBottom: 12, color: 'var(--text-2)' }}>
-            Envie o arquivo XML da NF-e emitida pelo seu fornecedor:
+        <>
+          <div className="card" style={{ maxWidth: 520, marginBottom: 24 }}>
+            <div style={{ fontSize: 14, marginBottom: 12, color: 'var(--text-2)' }}>
+              Envie o arquivo XML da NF-e emitida pelo seu fornecedor:
+            </div>
+            <input type="file" accept=".xml,text/xml,application/xml"
+              onChange={e => setArquivo(e.target.files?.[0] ?? null)}
+              style={{ marginBottom: 12 }} />
+            <div>
+              <button className="btn-primary" disabled={!arquivo || carregando} onClick={enviarArquivo}>
+                <Upload size={14} style={{ verticalAlign: -2 }} /> {carregando ? 'Analisando...' : 'Analisar nota'}
+              </button>
+            </div>
           </div>
-          <input type="file" accept=".xml,text/xml,application/xml"
-            onChange={e => setArquivo(e.target.files?.[0] ?? null)}
-            style={{ marginBottom: 12 }} />
-          <div>
-            <button className="btn-primary" disabled={!arquivo || carregando} onClick={enviarArquivo}>
-              <Upload size={14} style={{ verticalAlign: -2 }} /> {carregando ? 'Analisando...' : 'Analisar nota'}
-            </button>
+
+          {historico.length > 0 && (
+            <div className="card" style={{ maxWidth: 720 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Notas importadas</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {historico.map(h => (
+                  <div key={h.id} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
+                    opacity: h.desfeita ? 0.5 : 1,
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>
+                        NF {h.numeroNf} — {h.nomeFornecedor}
+                        {h.desfeita && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 8 }}>Desfeita</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                        {h.qtdItens} item(ns) · {new Date(h.importadoEm).toLocaleString('pt-BR')}
+                      </div>
+                    </div>
+                    {!h.desfeita && (
+                      <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--red)' }} onClick={() => setConfirmDesfazer(h)}>
+                        Desfazer
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {confirmDesfazer && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmDesfazer(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Desfazer importação</h2>
+              <button className="btn-ghost" onClick={() => setConfirmDesfazer(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Desfazer a NF <strong style={{ color: 'var(--text-1)' }}>{confirmDesfazer.numeroNf}</strong> de {confirmDesfazer.nomeFornecedor}?
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+                Isso vai remover o estoque adicionado e excluir produtos/variações criados exclusivamente por essa importação (produtos já vendidos não são removidos, só têm o estoque ajustado). Depois disso você pode reimportar a mesma nota.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmDesfazer(null)}>Cancelar</button>
+              <button className="btn-danger" disabled={desfazendo} onClick={desfazer}>
+                {desfazendo ? 'Desfazendo...' : 'Desfazer importação'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -223,6 +317,15 @@ export function ImportarNf() {
 
                   {dec.acao === 'novo' && (
                     <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Preço de custo:</span>
+                        <input
+                          type="number" step="0.01" min={0}
+                          value={dec.precoCusto ?? ''}
+                          onChange={e => alterarDecisao(i, { precoCusto: parseFloat(e.target.value) || 0 })}
+                          style={{ width: 120, fontSize: 13 }}
+                        />
+                      </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Preço de venda:</span>
                         <input
