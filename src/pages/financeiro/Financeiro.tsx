@@ -1007,7 +1007,8 @@ export function Financeiro() {
                           </td>
                         </tr>
                         {itens.map(l => {
-                          const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item';
+                          const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
+                          const ehFinanciada = l.origem === 'cartao_fatura_financiada';
                           const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
                           const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
                           return (
@@ -1031,13 +1032,16 @@ export function Financeiro() {
                           <td style={{ fontSize: 13 }}>{l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}</td>
                           <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
                           <td>
-                            {l.status === 'pago' ? <span className="badge badge-green">Pago</span>
+                            {ehFinanciada ? <span className="badge badge-blue">Financiada</span>
+                              : l.status === 'pago' ? <span className="badge badge-green">Pago</span>
                               : ehVencido(l as any) ? <span className="badge badge-red">Vencido</span>
                               : <span className="badge badge-accent">Pendente</span>}
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                              {l.status === 'pago'
+                              {ehFinanciada
+                                ? <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={desfazer}>Desfazer</button>
+                                : l.status === 'pago'
                                 ? <button className="btn-ghost" style={{ fontSize: 11 }} onClick={desfazer}>Desfazer</button>
                                 : <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={pagar}><Check size={13} /> Pagar</button>}
                               {l.origem === 'avulso' && (
@@ -1066,7 +1070,8 @@ export function Financeiro() {
                       </span>
                     </div>
                     {itens.map(l => {
-                      const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item';
+                      const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
+                      const ehFinanciada = l.origem === 'cartao_fatura_financiada';
                       const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
                       const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
                       return (
@@ -1086,11 +1091,14 @@ export function Financeiro() {
                         <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                        {l.status === 'pago' ? <span className="badge badge-green">Pago</span>
+                        {ehFinanciada ? <span className="badge badge-blue">Financiada</span>
+                          : l.status === 'pago' ? <span className="badge badge-green">Pago</span>
                           : ehVencido(l as any) ? <span className="badge badge-red">Vencido</span>
                           : <span className="badge badge-accent">Pendente</span>}
                         <div style={{ display: 'flex', gap: 6 }}>
-                          {l.status === 'pago'
+                          {ehFinanciada
+                            ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={desfazer}>Desfazer</button>
+                            : l.status === 'pago'
                             ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={desfazer}>Desfazer</button>
                             : <button className="btn-primary" style={{ fontSize: 12 }} onClick={pagar}>Pagar</button>}
                           {l.origem === 'avulso' && (
@@ -1781,8 +1789,16 @@ export function Financeiro() {
                     <div style={{ fontWeight: 700, fontSize: 18 }}>{fmt(faturaDados.total)}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className={`badge ${faturaDados.status === 'pago' ? 'badge-green' : 'badge-accent'}`}>
-                      {faturaDados.status === 'pago' ? 'Fatura paga' : 'Pendente'}
+                    <span className={`badge ${
+                      faturaDados.status === 'pago' ? 'badge-green'
+                      : faturaDados.status === 'financiada' ? 'badge-blue'
+                      : faturaDados.status === 'parcial' ? 'badge-yellow'
+                      : 'badge-accent'
+                    }`}>
+                      {faturaDados.status === 'pago' ? 'Fatura paga'
+                        : faturaDados.status === 'financiada' ? 'Parcelada'
+                        : faturaDados.status === 'parcial' ? 'Paga parcialmente'
+                        : 'Pendente'}
                     </span>
                     {faturaDados.total > 0 && (
                       faturaDados.status === 'pendente'
