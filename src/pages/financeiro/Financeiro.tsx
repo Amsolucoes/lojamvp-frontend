@@ -137,7 +137,10 @@ export function Financeiro() {
   const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
 
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
-  const [faturaDados, setFaturaDados] = useState<{ vencimento: string; total: number; status: string; itens: ItemFaturaDetalhe[] } | null>(null);
+  const [faturaDados, setFaturaDados] = useState<{
+    vencimento: string; total: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
+    parcelasFinanciamento?: { id: string; descricao: string; valor: number; vencimento: string; status: string; numeroParcela: number; totalParcelas: number }[];
+  } | null>(null);
   const [faturaAno, setFaturaAno] = useState(new Date().getFullYear());
   const [faturaMes, setFaturaMes] = useState(new Date().getMonth() + 1);
   const [buscaFatura, setBuscaFatura] = useState('');
@@ -633,7 +636,10 @@ export function Financeiro() {
   }
 
   const [modalPagarFatura, setModalPagarFatura] = useState(false);
-  const [formPagFatura, setFormPagFatura] = useState({ modo: 'total' as 'total' | 'parcial' | 'parcelado', valorPago: '', totalParcelas: '3' });
+  const [formPagFatura, setFormPagFatura] = useState({
+    modo: 'total' as 'total' | 'parcial' | 'parcelado', valorPago: '', totalParcelas: '3',
+    valorEntrada: '', primeiraParcela: '',
+  });
   const [editandoItemCartao, setEditandoItemCartao] = useState<ItemFaturaDetalhe | null>(null);
   const [formEditItemCartao, setFormEditItemCartao] = useState({ descricao: '', valor: '', dataCompra: '', categoriaId: '', observacao: '' });
   const [confirmExcluirItemCartao, setConfirmExcluirItemCartao] = useState<ItemFaturaDetalhe | null>(null);
@@ -1787,6 +1793,28 @@ export function Financeiro() {
                 </div>
               )}
 
+              {faturaDados?.parcelasFinanciamento && faturaDados.parcelasFinanciamento.length > 0 && (
+                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>
+                    💳 Esta fatura foi parcelada
+                    {faturaDados.valorEntrada ? ` — entrada de ${fmt(faturaDados.valorEntrada)} paga` : ''}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {faturaDados.parcelasFinanciamento.map(p => (
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                        <span>Parcela {p.numeroParcela}/{p.totalParcelas} — vence {new Date(p.vencimento).toLocaleDateString('pt-BR')}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {fmt(p.valor)}
+                          <span className={`badge ${p.status === 'pago' ? 'badge-green' : 'badge-accent'}`} style={{ fontSize: 9 }}>
+                            {p.status === 'pago' ? 'Paga' : 'Pendente'}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {faturaDados && faturaDados.itens.length > 0 && (
                 <input placeholder="Buscar por descrição..." value={buscaFatura}
                   onChange={e => { setBuscaFatura(e.target.value); setPaginaFatura(1); }}
@@ -1962,12 +1990,25 @@ export function Financeiro() {
               {formPagFatura.modo === 'parcelado' && (
                 <>
                   <div className="form-group">
+                    <label className="form-label">Valor de entrada (R$) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional, paga agora)</span></label>
+                    <input type="number" min={0} step={0.01} value={formPagFatura.valorEntrada}
+                      onChange={e => setFormPagFatura(f => ({ ...f, valorEntrada: e.target.value }))} placeholder="0,00" />
+                  </div>
+                  <div className="form-group">
                     <label className="form-label">Em quantas parcelas</label>
                     <input type="number" min={2} max={24} value={formPagFatura.totalParcelas}
                       onChange={e => setFormPagFatura(f => ({ ...f, totalParcelas: e.target.value }))} />
                   </div>
+                  <div className="form-group">
+                    <label className="form-label">Data da 1ª parcela</label>
+                    <input type="date" value={formPagFatura.primeiraParcela}
+                      onChange={e => setFormPagFatura(f => ({ ...f, primeiraParcela: e.target.value }))} />
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                      Padrão: mês seguinte ao vencimento desta fatura. Ajuste se precisar.
+                    </p>
+                  </div>
                   <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
-                    Gera parcelas mensais em Contas a Pagar, já com os juros do cartão aplicados. Nenhum valor é debitado agora.
+                    Gera parcelas mensais em Contas a Pagar, já com os juros do cartão aplicados sobre o valor restante (após entrada).
                   </p>
                 </>
               )}
@@ -1977,7 +2018,11 @@ export function Financeiro() {
               <button className="btn-primary" onClick={() => {
                 if (formPagFatura.modo === 'total') pagarFaturaModal('total');
                 else if (formPagFatura.modo === 'parcial') pagarFaturaModal('parcial', { valorPago: parseFloat(formPagFatura.valorPago) || 0 });
-                else pagarFaturaModal('parcelado', { totalParcelas: parseInt(formPagFatura.totalParcelas) || 3 });
+                else pagarFaturaModal('parcelado', {
+                  totalParcelas: parseInt(formPagFatura.totalParcelas) || 3,
+                  valorEntrada: parseFloat(formPagFatura.valorEntrada) || 0,
+                  primeiraParcela: formPagFatura.primeiraParcela || null,
+                });
               }}>
                 Confirmar
               </button>
