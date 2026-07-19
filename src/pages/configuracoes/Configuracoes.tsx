@@ -160,8 +160,8 @@ export function Configuracoes() {
             .filter(mod => {
               // NF só faz sentido pra loja com produtos físicos
               if (mod.chave === 'nf' && !temProdutos) return false;
-              // Financeiro puro já inclui o módulo — não precisa reativar
-              if (mod.chave === 'financeiro' && soFinanceiro) return false;
+              // Módulos ainda não disponíveis (em breve) ficam escondidos por completo
+              if (!mod.disponivelParaAtivar) return false;
               // Corretora e Turmas não fazem sentido pra loja com produtos (retail) —
               // só aparecem se por algum motivo já estiverem ativos nela
               if ((mod.chave === 'corretora' || mod.chave === 'turmas') && temProdutos && !modulosAtivos.includes(mod.chave)) {
@@ -179,10 +179,11 @@ export function Configuracoes() {
             .map(mod => {
             const ativo = modulosAtivos.includes(mod.chave);
             const emCooldown = !!cooldowns[mod.chave];
+            const travadoPeloPlano = mod.chave === 'financeiro' && soFinanceiro;
             return (
             <label key={mod.chave} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
-                cursor: (mod.disponivelParaAtivar && !emCooldown) ? 'pointer' : 'not-allowed',
+                cursor: (mod.disponivelParaAtivar && !emCooldown && !travadoPeloPlano) ? 'pointer' : 'not-allowed',
                 opacity: (mod.disponivelParaAtivar && !emCooldown) ? 1 : 0.55,
                 background: 'var(--bg-3)',
                 border: '1px solid var(--border)',
@@ -191,8 +192,8 @@ export function Configuracoes() {
               }}>
                 <input
                   type="checkbox"
-                  checked={ativo}
-                  disabled={!mod.disponivelParaAtivar || emCooldown}
+                  checked={ativo || travadoPeloPlano}
+                  disabled={!mod.disponivelParaAtivar || emCooldown || travadoPeloPlano}
                   style={{ width: 16, height: 16, margin: 0, flexShrink: 0 }}
                   onChange={e => handleToggle(mod, e.target.checked)}
                 />
@@ -219,6 +220,11 @@ export function Configuracoes() {
                 {mod.disponivelParaAtivar && emCooldown && (
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
                     Disponível para alterar em {cooldowns[mod.chave]}d
+                  </div>
+                )}
+                {travadoPeloPlano && (
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                    Incluído no seu plano Financeiro Puro
                   </div>
                 )}
               </div>
