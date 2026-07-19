@@ -3,6 +3,7 @@ import { aplicarTema, carregarTemaSalvo, TEMAS, Tema } from '../../utils/tema';
 import { api } from '../../services/api';
 import { X } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { useApp } from '../../context/AppContext';
 
 type ModuloPreco = {
   id: string;
@@ -40,11 +41,12 @@ function getSessao(): SessaoLoja | null {
 
 export function Configuracoes() {
   const [temaAtual, setTemaAtual] = useState<Tema>(carregarTemaSalvo());
-  const { erro: toastErro } = useToast();
   const [modulosPreco, setModulosPreco] = useState<ModuloPreco[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
-  const [mensalidadeAtual, setMensalidadeAtual] = useState(0);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+  const { temCorretora, temProdutos } = useApp();
+  const [mensalidadeAtual, setMensalidadeAtual] = useState(0);
+  const { erro: toastErro } = useToast();
 
   // modal de confirmação
   const [modalModulo, setModalModulo] = useState<{
@@ -154,7 +156,17 @@ export function Configuracoes() {
           Mensalidade atual: <strong>{fmt(mensalidadeAtual)}/mês</strong>
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {modulosPreco.map(mod => {
+          {modulosPreco
+            .filter(mod => {
+              // NF só faz sentido pra loja com produtos físicos
+              if (mod.chave === 'nf' && !temProdutos) return false;
+              // Turmas não se aplica a lojas do tipo Corretora
+              if (mod.chave === 'turmas' && temCorretora) return false;
+              // Serviços/Agenda não se aplica a lojas do tipo Corretora
+              if (mod.chave === 'servicos' && temCorretora) return false;
+              return true;
+            })
+            .map(mod => {
             const ativo = modulosAtivos.includes(mod.chave);
             const emCooldown = !!cooldowns[mod.chave];
             return (
