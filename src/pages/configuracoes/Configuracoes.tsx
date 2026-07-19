@@ -162,8 +162,13 @@ export function Configuracoes() {
               if (mod.chave === 'nf' && !temProdutos) return false;
               // Financeiro puro já inclui o módulo — não precisa reativar
               if (mod.chave === 'financeiro' && soFinanceiro) return false;
+              // Corretora e Turmas não fazem sentido pra loja com produtos (retail) —
+              // só aparecem se por algum motivo já estiverem ativos nela
+              if ((mod.chave === 'corretora' || mod.chave === 'turmas') && temProdutos && !modulosAtivos.includes(mod.chave)) {
+                return false;
+              }
               // Corretora, Serviços e Turmas são um grupo mutuamente exclusivo:
-              // mostra os 3 até um ser ativado, depois esconde os outros dois
+              // mostra os disponíveis até um ser ativado, depois esconde os outros
               const grupoExclusivo = ['corretora', 'servicos', 'turmas'];
               if (grupoExclusivo.includes(mod.chave)) {
                 const algumAtivo = grupoExclusivo.find(chave => modulosAtivos.includes(chave));
