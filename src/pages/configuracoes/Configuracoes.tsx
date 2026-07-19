@@ -44,7 +44,7 @@ export function Configuracoes() {
   const [modulosPreco, setModulosPreco] = useState<ModuloPreco[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-  const { temCorretora, temProdutos } = useApp();
+  const { temCorretora, temProdutos, soFinanceiro } = useApp();
   const [mensalidadeAtual, setMensalidadeAtual] = useState(0);
   const { erro: toastErro } = useToast();
 
@@ -160,10 +160,15 @@ export function Configuracoes() {
             .filter(mod => {
               // NF só faz sentido pra loja com produtos físicos
               if (mod.chave === 'nf' && !temProdutos) return false;
-              // Turmas não se aplica a lojas do tipo Corretora
-              if (mod.chave === 'turmas' && temCorretora) return false;
-              // Serviços/Agenda não se aplica a lojas do tipo Corretora
-              if (mod.chave === 'servicos' && temCorretora) return false;
+              // Financeiro puro já inclui o módulo — não precisa reativar
+              if (mod.chave === 'financeiro' && soFinanceiro) return false;
+              // Corretora, Serviços e Turmas são um grupo mutuamente exclusivo:
+              // mostra os 3 até um ser ativado, depois esconde os outros dois
+              const grupoExclusivo = ['corretora', 'servicos', 'turmas'];
+              if (grupoExclusivo.includes(mod.chave)) {
+                const algumAtivo = grupoExclusivo.find(chave => modulosAtivos.includes(chave));
+                if (algumAtivo && algumAtivo !== mod.chave) return false;
+              }
               return true;
             })
             .map(mod => {
