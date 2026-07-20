@@ -70,7 +70,7 @@ export function Cadastro() {
 
       <div className="login-box" style={{ maxWidth: 640 }}>
         <div className="login-logo">
-          <div className="login-logo-icon">✦</div>
+          <img src="/logo-aldevsoftware-padrao.png" alt="AlDevSoftware" className="login-logo-icon" style={{ objectFit: 'contain' }} />
           <div>
             <div className="login-logo-nome">Al DevSoftware</div>
             <div className="login-logo-sub">Criar conta grátis</div>

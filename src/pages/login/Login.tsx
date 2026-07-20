@@ -40,7 +40,7 @@ export function Login() {
       <div className="login-box">
         {/* Logo */}
         <div className="login-logo">
-          <div className="login-logo-icon">✦</div>
+          <img src="/logo-aldevsoftware-padrao.png" alt="AlDevSoftware" className="login-logo-icon" style={{ objectFit: 'contain' }} />
           <div>
             <div className="login-logo-nome">{nomeLoja}</div>
             <div className="login-logo-sub">Sistema de Gestão</div>
