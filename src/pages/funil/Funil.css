@@ -19,6 +19,16 @@
   align-items: stretch;
 }
 
+.funil-scroll-topo {
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 14px;
+  margin-bottom: 8px;
+}
+.funil-scroll-topo-inner {
+  height: 1px;
+}
+
 .funil-coluna {
   flex: 0 0 260px;
   background: var(--bg-2);

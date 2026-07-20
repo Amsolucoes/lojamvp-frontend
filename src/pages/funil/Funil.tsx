@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Trash2, Building2 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -45,6 +45,10 @@ function fmt(n: number) {
 export function Funil() {
   const { sucesso, erro } = useToast();
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const scrollTopoRef = useRef<HTMLDivElement>(null);
+  const [larguraConteudo, setLarguraConteudo] = useState(0);
+  const sincronizando = useRef(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [seguradoras, setSeguradoras] = useState<Seguradora[]>([]);
 
@@ -78,6 +82,30 @@ export function Funil() {
 
   function carregar() {
     api.get<Oportunidade[]>('/api/corretora/oportunidades').then(setOportunidades).catch(() => {});
+  }
+
+  useEffect(() => {
+    function medir() {
+      if (boardRef.current) setLarguraConteudo(boardRef.current.scrollWidth);
+    }
+    medir();
+    const ro = new ResizeObserver(medir);
+    if (boardRef.current) ro.observe(boardRef.current);
+    return () => ro.disconnect();
+  }, [oportunidades]);
+
+  function scrollTopoMudou() {
+    if (sincronizando.current || !scrollTopoRef.current || !boardRef.current) return;
+    sincronizando.current = true;
+    boardRef.current.scrollLeft = scrollTopoRef.current.scrollLeft;
+    sincronizando.current = false;
+  }
+
+  function boardScrollMudou() {
+    if (sincronizando.current || !scrollTopoRef.current || !boardRef.current) return;
+    sincronizando.current = true;
+    scrollTopoRef.current.scrollLeft = boardRef.current.scrollLeft;
+    sincronizando.current = false;
   }
 
   useEffect(() => {
@@ -303,7 +331,11 @@ export function Funil() {
         </div>
       </div>
 
-      <div className="funil-board funil-board-desktop">
+      <div className="funil-scroll-topo funil-board-desktop" ref={scrollTopoRef} onScroll={scrollTopoMudou}>
+        <div className="funil-scroll-topo-inner" style={{ width: larguraConteudo }} />
+      </div>
+
+      <div className="funil-board funil-board-desktop" ref={boardRef} onScroll={boardScrollMudou}>
         {ETAPAS.map(etapa => {
           const cardsDaEtapa = oportunidades.filter(o => o.etapa === etapa.chave).sort((a, b) => a.ordem - b.ordem);
           const totalEtapa = cardsDaEtapa.reduce((s, o) => s + (o.valorEstimado ?? 0), 0);
