@@ -76,7 +76,7 @@ export function Sidebar() {
   }, [corPrimaria, temaPessoal]);
 
   const logoEl = logoUrl
-    ? <img src={logoUrl} alt="Logo" style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', objectFit: 'contain' }} />
+    ? <img src={logoUrl} alt="Logo" style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', objectFit: 'contain' }} />
     : <div className="sidebar-logo-icon">✦</div>;
 
   const temServicos = modulos.includes('servicos');
