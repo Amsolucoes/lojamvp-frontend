@@ -164,7 +164,7 @@ export function Funil() {
       setFormOp(f => ({ ...f, seguradoraId: nova.id }));
       setNovaSeguradora('');
       setModalSeguradora(false);
-      sucesso('Seguradora adicionada!');
+      sucesso('Operadora adicionada!');
     } catch (e) {
       erro((e as Error).message);
     }
@@ -193,7 +193,7 @@ export function Funil() {
       setEditandoSeguradoraId(null);
       carregarSeguradorasTodas();
       api.get<Seguradora[]>('/api/corretora/seguradoras').then(setSeguradoras).catch(() => {});
-      sucesso('Seguradora atualizada!');
+      sucesso('Operadora atualizada!');
     } catch (e) {
       erro((e as Error).message);
     }
@@ -298,7 +298,7 @@ export function Funil() {
           <p className="page-subtitle">Acompanhe suas oportunidades do lead ao fechamento</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn-secondary" onClick={abrirGerenciarSeguradoras}><Building2 size={14} /> Seguradoras</button>
+          <button className="btn-secondary" onClick={abrirGerenciarSeguradoras}><Building2 size={14} /> Operadoras</button>
           <button className="btn-primary" onClick={abrirNova}><Plus size={15} /> Nova oportunidade</button>
         </div>
       </div>
@@ -476,7 +476,7 @@ export function Funil() {
                 )}
 
                 <div className="form-group">
-                  <label className="form-label">Seguradora</label>
+                  <label className="form-label">Operadora</label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <select value={formOp.seguradoraId} onChange={e => setFormOp(f => ({ ...f, seguradoraId: e.target.value }))} style={{ flex: 1 }}>
                       <option value="">Selecione...</option>
@@ -549,7 +549,7 @@ export function Funil() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalSeguradora(false)}>
           <div className="modal" style={{ maxWidth: 360 }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Nova seguradora</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Nova operadora</h2>
               <button className="btn-ghost" onClick={() => setModalSeguradora(false)}><X size={16} /></button>
             </div>
             <div className="modal-body">
@@ -572,13 +572,13 @@ export function Funil() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalGerenciarSeguradoras(false)}>
           <div className="modal" style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Seguradoras</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Operadoras</h2>
               <button className="btn-ghost" onClick={() => setModalGerenciarSeguradoras(false)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
                 {seguradorasTodas.length === 0 ? (
-                  <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma seguradora cadastrada.</p>
+                  <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma operadora cadastrada.</p>
                 ) : seguradorasTodas.map(s => (
                   <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, opacity: s.ativa ? 1 : 0.5 }}>
                     {editandoSeguradoraId === s.id ? (
@@ -603,9 +603,9 @@ export function Funil() {
                 ))}
               </div>
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Nova seguradora</p>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Nova operadora</p>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input value={novaSeguradora} onChange={e => setNovaSeguradora(e.target.value)} placeholder="Nome da seguradora" />
+                  <input value={novaSeguradora} onChange={e => setNovaSeguradora(e.target.value)} placeholder="Nome da operadora" />
                   <button className="btn-primary" onClick={async () => {
                     if (!novaSeguradora.trim()) return;
                     try {
@@ -613,7 +613,7 @@ export function Funil() {
                       setSeguradoras(prev => [...prev, nova]);
                       setNovaSeguradora('');
                       carregarSeguradorasTodas();
-                      sucesso('Seguradora adicionada!');
+                      sucesso('Operadora adicionada!');
                     } catch (e) {
                       erro((e as Error).message);
                     }
@@ -633,7 +633,7 @@ export function Funil() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirSeguradora(null)}>
           <div className="modal" style={{ maxWidth: 380 }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir seguradora</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir operadora</h2>
               <button className="btn-ghost" onClick={() => setConfirmExcluirSeguradora(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
