@@ -77,7 +77,7 @@ export function Sidebar() {
 
   const logoEl = logoUrl
     ? <img src={logoUrl} alt="Logo" style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', objectFit: 'contain' }} />
-    : <div className="sidebar-logo-icon">✦</div>;
+    : <img src="/logo-aldevsoftware-padrao.png" alt="AlDevSoftware" style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', objectFit: 'contain' }} />;
 
   const temServicos = modulos.includes('servicos');
   const soServicos = tipoPlano === 'servicos';
