@@ -15,12 +15,17 @@
 .funil-board::-webkit-scrollbar-thumb:hover {
   background: var(--accent);
 }
+.funil-board {
+  align-items: stretch;
+}
+
 .funil-coluna {
   flex: 0 0 260px;
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   min-height: 400px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   transition: background 0.15s;
