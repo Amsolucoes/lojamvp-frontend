@@ -19,6 +19,7 @@ function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>) {
     if (!el) return;
 
     function onTouchStart(e: TouchEvent) {
+      console.log('touchstart, scrollTop:', el!.scrollTop);
       if (el!.scrollTop <= 0) {
         startY.current = e.touches[0].clientY;
         puxando.current = true;
