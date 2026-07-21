@@ -14,13 +14,19 @@ function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>) {
   const puxando = useRef(false);
   const pullAtual = useRef(0);
 
+  // Considera "no topo" tanto se o próprio elemento rolou (scrollTop)
+  // quanto se quem rolou foi a janela/página inteira (window.scrollY) —
+  // depende de como o layout se comporta em cada tela/resolução.
+  function estaNoTopo(el: HTMLElement) {
+    return el.scrollTop <= 0 && window.scrollY <= 0;
+  }
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     function onTouchStart(e: TouchEvent) {
-      console.log('touchstart, scrollTop:', el!.scrollTop);
-      if (el!.scrollTop <= 0) {
+      if (estaNoTopo(el!)) {
         startY.current = e.touches[0].clientY;
         puxando.current = true;
       }
@@ -28,7 +34,7 @@ function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>) {
     function onTouchMove(e: TouchEvent) {
       if (!puxando.current) return;
       const delta = e.touches[0].clientY - startY.current;
-      if (delta > 0 && el!.scrollTop <= 0) {
+      if (delta > 0 && estaNoTopo(el!)) {
         const novoPull = Math.min(delta * 0.5, 90);
         pullAtual.current = novoPull;
         setPull(novoPull);
@@ -50,13 +56,21 @@ function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>) {
       }
     }
 
+    // Escuta tanto no elemento quanto na janela, pois em algumas telas
+    // (mobile, conteúdo mais alto que a viewport) quem rola é a página, não o elemento.
     el.addEventListener('touchstart', onTouchStart, { passive: true });
     el.addEventListener('touchmove', onTouchMove, { passive: true });
     el.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd);
     return () => {
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
     };
   }, [containerRef]);
 

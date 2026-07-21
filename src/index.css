@@ -291,7 +291,8 @@ input, select, textarea {
 /* ── Responsivo ──────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   :root { --sidebar-w: 0px; }
-  .layout { flex-direction: column; }
+  .layout { flex-direction: column; height: 100vh; }
+  .layout-main { overflow-y: auto; height: 100%; }
   .page { padding: 16px; }
   .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
   .page-header .btn-primary { width: 100%; justify-content: center; }
