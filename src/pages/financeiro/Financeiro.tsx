@@ -1033,13 +1033,14 @@ export function Financeiro() {
                           <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
                           <td>
                             {ehFinanciada ? <span className="badge badge-blue">Financiada</span>
+                              : l.status === 'parcial' ? <span className="badge badge-yellow">Pago parcialmente</span>
                               : l.status === 'pago' ? <span className="badge badge-green">Pago</span>
                               : ehVencido(l as any) ? <span className="badge badge-red">Vencido</span>
                               : <span className="badge badge-accent">Pendente</span>}
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                              {ehFinanciada
+                              {(ehFinanciada || l.status === 'parcial')
                                 ? <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={desfazer}>Desfazer</button>
                                 : l.status === 'pago'
                                 ? <button className="btn-ghost" style={{ fontSize: 11 }} onClick={desfazer}>Desfazer</button>
@@ -1092,11 +1093,12 @@ export function Financeiro() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                         {ehFinanciada ? <span className="badge badge-blue">Financiada</span>
+                          : l.status === 'parcial' ? <span className="badge badge-yellow">Pago parcialmente</span>
                           : l.status === 'pago' ? <span className="badge badge-green">Pago</span>
                           : ehVencido(l as any) ? <span className="badge badge-red">Vencido</span>
                           : <span className="badge badge-accent">Pendente</span>}
                         <div style={{ display: 'flex', gap: 6 }}>
-                          {ehFinanciada
+                          {(ehFinanciada || l.status === 'parcial')
                             ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={desfazer}>Desfazer</button>
                             : l.status === 'pago'
                             ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={desfazer}>Desfazer</button>
