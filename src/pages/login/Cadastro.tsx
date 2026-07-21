@@ -36,6 +36,7 @@ export function Cadastro() {
   const grupoBranco = perfis.filter(p => p.nome === 'Começar do zero');
   const grupoLojas = perfis.filter(p => p.tipoPlano === 'loja' && p.nome !== 'Começar do zero');
   const grupoServicos = perfis.filter(p => p.tipoPlano === 'servicos' || p.tipoPlano === 'loja_modulos');
+  const grupoFinanceiro = perfis.filter(p => p.tipoPlano === 'financeiro');
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -120,7 +121,7 @@ export function Cadastro() {
             </div>
 
             <div className="cad-grupo-titulo">✂️ Serviços e agendamentos</div>
-            <div className="cad-perfis">
+            <div className="cad-perfis" style={{ marginBottom: 12 }}>
               {grupoServicos.map(p => (
                 <button type="button" key={p.id}
                   className={`cad-perfil${perfilId === p.id ? ' active' : ''}`}
@@ -132,6 +133,24 @@ export function Cadastro() {
                 </button>
               ))}
             </div>
+
+            {grupoFinanceiro.length > 0 && (
+              <>
+                <div className="cad-grupo-titulo">💰 Só controle financeiro</div>
+                <div className="cad-perfis">
+                  {grupoFinanceiro.map(p => (
+                    <button type="button" key={p.id}
+                      className={`cad-perfil${perfilId === p.id ? ' active' : ''}`}
+                      onClick={() => setPerfilId(p.id)} disabled={loading}>
+                      <span className="cad-perfil-icone">{p.icone}</span>
+                      <span className="cad-perfil-nome">{p.nome}</span>
+                      <span className="cad-perfil-desc">{p.desc} — R$ 39,90/mês</span>
+                      {perfilId === p.id && <span className="cad-perfil-check"><Check size={13} /></span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <div className="form-group">
