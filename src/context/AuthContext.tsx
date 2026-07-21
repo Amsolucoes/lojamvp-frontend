@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api } from '../services/api';
 
 interface Usuario {
@@ -29,6 +29,14 @@ function carregarSessao(): Usuario | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(() => carregarSessao());
+
+  // Ao abrir o app com uma sessão já salva (sem passar pelo login), registra o acesso mesmo assim
+  useEffect(() => {
+    if (usuario) {
+      api.get('/api/auth/me').catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function login(email: string, senha: string) {
     try {
