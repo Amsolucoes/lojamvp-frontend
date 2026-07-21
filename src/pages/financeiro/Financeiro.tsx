@@ -1759,7 +1759,13 @@ export function Financeiro() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setFaturaAberta(null)}>
           <div className="modal" style={{ maxWidth: 480 }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Fatura — {faturaAberta.nome}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button className="btn-ghost" style={{ padding: 4 }} title="Voltar para Cartões"
+                  onClick={() => { setFaturaAberta(null); setModalCartoes(true); }}>
+                  <ChevronLeft size={18} />
+                </button>
+                <h2 style={{ fontSize: 16, fontWeight: 600 }}>Fatura — {faturaAberta.nome}</h2>
+              </div>
               <button className="btn-ghost" onClick={() => setFaturaAberta(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
