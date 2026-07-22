@@ -27,6 +27,7 @@ export function Cadastro() {
   const [email, setEmail]         = useState('');
   const [telefone, setTelefone]   = useState('');
   const [senha, setSenha]         = useState('');
+  const [modulosExtras, setModulosExtras] = useState<string[]>([]);
   const [mostraSenha, setMostra]  = useState(false);
   const [erro, setErro]           = useState('');
   const [loading, setLoading]     = useState(false);
@@ -69,7 +70,7 @@ export function Cadastro() {
     try {
       const res = await api.post<{ token: string; nome: string; email: string; role: string }>(
         '/api/auth/signup',
-        { nomeLoja, perfilId, nomeResponsavel: nome, email, senha, telefone }
+        { nomeLoja, perfilId, nomeResponsavel: nome, email, senha, telefone, modulosExtras }
       );
       // Loga direto com a sessão retornada
       setSessao({ nome: res.nome, email: res.email, role: res.role as 'admin' | 'operador', token: res.token });
@@ -186,6 +187,30 @@ export function Cadastro() {
               </>
             )}
           </div>
+
+          {perfilId && !grupoFinanceiro.some(p => p.id === perfilId) && (
+            <div className="form-group">
+              <label className="form-label">Módulos extras <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional — pode ativar depois também)</span></label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  { chave: 'financeiro', label: 'Financeiro (contas, cartão de crédito)', valor: 29.90 },
+                  { chave: 'nf', label: 'Importação de NF via XML', valor: 29.90 },
+                  { chave: 'turmas', label: 'Turmas (aulas em grupo)', valor: 39.90 },
+                ].map(mod => (
+                  <label key={mod.chave} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                    <input type="checkbox"
+                      checked={modulosExtras.includes(mod.chave)}
+                      style={{ width: 16, height: 16, margin: 0, flexShrink: 0 }}
+                      onChange={e => setModulosExtras(prev =>
+                        e.target.checked ? [...prev, mod.chave] : prev.filter(m => m !== mod.chave)
+                      )}
+                      disabled={loading} />
+                    <span>{mod.label} — +R$ {mod.valor.toFixed(2).replace('.', ',')}/mês</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="form-group">
             <label className="form-label">Seu nome *</label>
