@@ -5,6 +5,17 @@ import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import './Login.css';
 
+function fmtTelefone(v: string) {
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+function emailValido(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
 export function Cadastro() {
   const navigate = useNavigate();
   const { setSessao } = useAuth();
@@ -43,6 +54,10 @@ export function Cadastro() {
     e.preventDefault();
     if (!nomeLoja.trim() || !nome.trim() || !email.trim() || !senha.trim()) {
       setErro('Preencha todos os campos obrigatórios.');
+      return;
+    }
+    if (!emailValido(email)) {
+      setErro('Informe um e-mail válido.');
       return;
     }
     if (senha.length < 6) {
@@ -181,13 +196,14 @@ export function Cadastro() {
           <div className="form-group">
             <label className="form-label">E-mail *</label>
             <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErro(''); }}
+              onBlur={() => { if (email.trim() && !emailValido(email)) setErro('Informe um e-mail válido.'); }}
               placeholder="seu@email.com" autoComplete="email" disabled={loading} />
           </div>
 
           <div className="form-group">
             <label className="form-label">Telefone / WhatsApp</label>
-            <input value={telefone} onChange={e => setTelefone(e.target.value)}
-              placeholder="(67) 99999-9999" disabled={loading} />
+            <input value={telefone} onChange={e => setTelefone(fmtTelefone(e.target.value))}
+              placeholder="(67) 99999-9999" inputMode="tel" maxLength={16} disabled={loading} />
           </div>
 
           <div className="form-group">
