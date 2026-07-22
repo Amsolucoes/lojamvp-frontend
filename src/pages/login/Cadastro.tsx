@@ -188,29 +188,55 @@ export function Cadastro() {
             )}
           </div>
 
-          {perfilId && !grupoFinanceiro.some(p => p.id === perfilId) && (
-            <div className="form-group">
-              <label className="form-label">Módulos extras <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional — pode ativar depois também)</span></label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
-                  { chave: 'financeiro', label: 'Financeiro (contas, cartão de crédito)', valor: 29.90 },
-                  { chave: 'nf', label: 'Importação de NF via XML', valor: 29.90 },
-                  { chave: 'turmas', label: 'Turmas (aulas em grupo)', valor: 39.90 },
-                ].map(mod => (
-                  <label key={mod.chave} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-                    <input type="checkbox"
-                      checked={modulosExtras.includes(mod.chave)}
-                      style={{ width: 16, height: 16, margin: 0, flexShrink: 0 }}
-                      onChange={e => setModulosExtras(prev =>
-                        e.target.checked ? [...prev, mod.chave] : prev.filter(m => m !== mod.chave)
-                      )}
-                      disabled={loading} />
-                    <span>{mod.label} — +R$ {mod.valor.toFixed(2).replace('.', ',')}/mês</span>
-                  </label>
-                ))}
+          {(() => {
+            if (!perfilId) return null;
+            const ehFinanceiro = grupoFinanceiro.some(p => p.id === perfilId);
+            if (ehFinanceiro) return null; // financeiro puro não tem extras
+
+            const ehLoja = grupoBranco.some(p => p.id === perfilId) || grupoLojas.some(p => p.id === perfilId);
+            const ehServicos = grupoServicos.some(p => p.id === perfilId);
+            const ehOutros = grupoOutros.some(p => p.id === perfilId); // Corretora / Turmas
+
+            let opcoes: { chave: string; label: string; valor: number }[] = [];
+            if (ehLoja) {
+              opcoes = [
+                { chave: 'servicos', label: 'Serviços e Agenda', valor: 0 },
+                { chave: 'nf', label: 'Importação de NF via XML', valor: 29.90 },
+                { chave: 'financeiro', label: 'Financeiro (contas, cartão de crédito)', valor: 29.90 },
+              ];
+            } else if (ehServicos) {
+              opcoes = [
+                { chave: 'nf', label: 'Importação de NF via XML', valor: 29.90 },
+                { chave: 'financeiro', label: 'Financeiro (contas, cartão de crédito)', valor: 29.90 },
+              ];
+            } else if (ehOutros) {
+              opcoes = [
+                { chave: 'financeiro', label: 'Financeiro (contas, cartão de crédito)', valor: 29.90 },
+              ];
+            }
+
+            if (opcoes.length === 0) return null;
+
+            return (
+              <div className="form-group">
+                <label className="form-label">Módulos extras <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional — pode ativar depois também)</span></label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {opcoes.map(mod => (
+                    <label key={mod.chave} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                      <input type="checkbox"
+                        checked={modulosExtras.includes(mod.chave)}
+                        style={{ width: 16, height: 16, margin: 0, flexShrink: 0 }}
+                        onChange={e => setModulosExtras(prev =>
+                          e.target.checked ? [...prev, mod.chave] : prev.filter(m => m !== mod.chave)
+                        )}
+                        disabled={loading} />
+                      <span>{mod.label}{mod.valor > 0 ? ` — +R$ ${mod.valor.toFixed(2).replace('.', ',')}/mês` : ' (incluso)'}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div className="form-group">
             <label className="form-label">Seu nome *</label>
