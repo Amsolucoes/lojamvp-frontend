@@ -93,11 +93,11 @@ export function SiteChacara() {
   const mapaUrl = `https://www.google.com/maps?q=${encodeURIComponent(dados.endereco)}&output=embed`;
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px', fontFamily: 'inherit' }}>
+    <div style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px', fontFamily: 'inherit', background: '#fff', color: '#222', minHeight: '100vh' }}>
       {/* Cabeçalho */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         {dados.logoUrl && <img src={dados.logoUrl} alt={dados.nome} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain' }} />}
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{dados.nome}</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: '#222' }}>{dados.nome}</h1>
       </div>
 
       {/* Galeria */}
@@ -122,13 +122,13 @@ export function SiteChacara() {
       {/* Comodidades */}
       {(dados.comodidades.length > 0 || dados.comodidadesExtras.length > 0) && (
         <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10 }}>O que a chácara oferece</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10, color: '#222' }}>O que a chácara oferece</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {dados.comodidades.map(c => (
-              <span key={c.chave} style={{ fontSize: 13, background: '#f0f0f0', padding: '6px 12px', borderRadius: 20 }}>{c.label}</span>
+              <span key={c.chave} style={{ fontSize: 13, background: '#f0f0f0', color: '#333', padding: '6px 12px', borderRadius: 20 }}>{c.label}</span>
             ))}
             {dados.comodidadesExtras.map((c, i) => (
-              <span key={i} style={{ fontSize: 13, background: '#f0f0f0', padding: '6px 12px', borderRadius: 20 }}>{c}</span>
+              <span key={i} style={{ fontSize: 13, background: '#f0f0f0', color: '#333', padding: '6px 12px', borderRadius: 20 }}>{c}</span>
             ))}
           </div>
         </div>
@@ -137,7 +137,7 @@ export function SiteChacara() {
       {/* Localização */}
       {dados.endereco && (
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10 }}>Localização</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10, color: '#222' }}>Localização</h2>
           <p style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>{dados.endereco}</p>
           <iframe title="Mapa" src={mapaUrl} width="100%" height="240" style={{ border: 0, borderRadius: 12 }} loading="lazy" />
         </div>
@@ -145,21 +145,21 @@ export function SiteChacara() {
 
       {/* Reserva */}
       <div style={{ border: '1px solid #e0e0e0', borderRadius: 12, padding: 20 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14 }}>Reservar</h2>
+        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: '#222' }}>Reservar</h2>
 
         {etapa === 'datas' && (
           <>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
               <div>
-                <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Data início</label>
+                <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Data início</label>
                 <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
               </div>
               <div>
-                <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Data fim</label>
+                <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Data fim</label>
                 <input type="date" value={dataFim} min={dataInicio} onChange={e => setDataFim(e.target.value)} />
               </div>
               <div>
-                <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Pessoas</label>
+                <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Pessoas</label>
                 <input type="number" min={1} value={pessoas} onChange={e => setPessoas(Number(e.target.value))} style={{ width: 70 }} />
               </div>
             </div>
