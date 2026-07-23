@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HelpCircle, Play } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface Video {
   titulo: string;
@@ -18,15 +19,28 @@ const VIDEOS: Record<string, Video[]> = {
   'Clientes': [],
   'Financeiro': [],
   'Agenda': [],
+  'Planos': [],
   'Turmas': [],
   'Corretora': [],
-  'Planos': [],
+  'Importação de NF': [],
 };
 
-const CATEGORIAS = Object.keys(VIDEOS);
-
 export function CentralAjuda() {
-  const [categoria, setCategoria] = useState(CATEGORIAS[0]);
+  const { temProdutos, temServicos, temFinanceiro, temTurmas, temCorretora, temNf } = useApp();
+
+  // Só mostra categorias que fazem sentido pro que a loja realmente usa
+  const categoriasDisponiveis = [
+    ...(temProdutos ? ['Produtos', 'Caixa', 'Estoque'] : []),
+    ...(temProdutos || temServicos || temTurmas || temCorretora ? ['Clientes'] : []),
+    ...(temServicos ? ['Agenda'] : []),
+    ...(temServicos || temTurmas ? ['Planos'] : []),
+    ...(temFinanceiro ? ['Financeiro'] : []),
+    ...(temTurmas ? ['Turmas'] : []),
+    ...(temCorretora ? ['Corretora'] : []),
+    ...(temNf ? ['Importação de NF'] : []),
+  ].filter(cat => VIDEOS[cat] !== undefined);
+
+  const [categoria, setCategoria] = useState(categoriasDisponiveis[0] ?? '');
   const [aberto, setAberto] = useState<number | null>(null);
 
   const videos = VIDEOS[categoria] ?? [];
@@ -41,7 +55,7 @@ export function CentralAjuda() {
       </div>
 
       <div className="cat-tabs" style={{ marginBottom: 20, flexWrap: 'wrap' }}>
-        {CATEGORIAS.map(cat => (
+        {categoriasDisponiveis.map(cat => (
           <button key={cat} className={`cat-tab${categoria === cat ? ' active' : ''}`}
             onClick={() => { setCategoria(cat); setAberto(null); }}>
             {cat}
@@ -49,7 +63,14 @@ export function CentralAjuda() {
         ))}
       </div>
 
-      {videos.length === 0 ? (
+      {categoriasDisponiveis.length === 0 ? (
+        <div className="card">
+          <div className="empty">
+            <HelpCircle size={36} />
+            <p>Nenhum vídeo disponível ainda.</p>
+          </div>
+        </div>
+      ) : videos.length === 0 ? (
         <div className="card">
           <div className="empty">
             <HelpCircle size={36} />
