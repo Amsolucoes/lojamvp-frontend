@@ -8,7 +8,7 @@ const CLOUDINARY_PRESET = 'chacara-fotos';
 const LIMITE_FOTOS = 30;
 
 type Foto = { id: number; url: string; ordem: number };
-type Info = { descricao: string; endereco: string; comodidades: string; comodidadesExtras: string | null };
+type Info = { descricao: string; endereco: string; comodidades: string; comodidadesExtras: string | null; mapaEmbedUrl: string | null };
 
 const COMODIDADES_OPCOES: { chave: string; label: string }[] = [
   { chave: 'piscina', label: 'Piscina' },
@@ -26,7 +26,7 @@ const COMODIDADES_OPCOES: { chave: string; label: string }[] = [
 export function GerenciarChacara() {
   const [fotos, setFotos] = useState<Foto[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [info, setInfo] = useState<Info>({ descricao: '', endereco: '', comodidades: '', comodidadesExtras: '' });
+  const [info, setInfo] = useState<Info>({ descricao: '', endereco: '', comodidades: '', comodidadesExtras: '', mapaEmbedUrl: '' });
   const [salvandoInfo, setSalvandoInfo] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -72,6 +72,16 @@ export function GerenciarChacara() {
     } catch (e) {
       toastErro((e as Error).message);
     }
+  }
+
+  function definirComoCapa(index: number) {
+    const novaLista = [...fotos];
+    const [escolhida] = novaLista.splice(index, 1);
+    novaLista.unshift(escolhida);
+    setFotos(novaLista);
+    api.put('/api/chacara/fotos/ordem', { ids: novaLista.map(f => f.id) }).catch(() => {
+      toastErro('Erro ao definir capa.');
+    });
   }
 
   function moverFoto(index: number, direcao: -1 | 1) {
@@ -137,6 +147,9 @@ export function GerenciarChacara() {
               <div style={{ position: 'absolute', bottom: 4, left: 4, display: 'flex', gap: 4 }}>
                 <button onClick={() => moverFoto(i, -1)} disabled={i === 0} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: 'none', cursor: 'pointer' }}>◀</button>
                 <button onClick={() => moverFoto(i, 1)} disabled={i === fotos.length - 1} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: 'none', cursor: 'pointer' }}>▶</button>
+                {i !== 0 && (
+                  <button onClick={() => definirComoCapa(i)} title="Definir como capa" style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: 'none', cursor: 'pointer' }}>★</button>
+                )}
               </div>
               {i === 0 && (
                 <span style={{ position: 'absolute', top: 4, left: 4, background: 'var(--accent)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4 }}>Capa</span>
@@ -169,7 +182,17 @@ export function GerenciarChacara() {
               onChange={e => setInfo(i => ({ ...i, endereco: e.target.value }))}
               placeholder="Rua, número, bairro, cidade - UF" />
             <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-              Usado para gerar o mapa no site público.
+              Texto simples (não cole link aqui). Usado só como referência visual no site.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Link do mapa (opcional)</label>
+            <input value={info.mapaEmbedUrl ?? ''}
+              onChange={e => setInfo(i => ({ ...i, mapaEmbedUrl: e.target.value }))}
+              placeholder="https://www.google.com/maps/embed?..." />
+            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+              No Google Maps: encontre o local → Compartilhar → aba "Incorporar um mapa" → copie só o link dentro de <code>src="..."</code> do código gerado. Se deixar em branco, o mapa é gerado automaticamente a partir do endereço acima.
             </p>
           </div>
 

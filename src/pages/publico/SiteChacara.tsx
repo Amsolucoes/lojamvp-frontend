@@ -4,7 +4,7 @@ import { api } from '../../services/api';
 
 type DadosChacara = {
   nome: string; logoUrl: string | null; corPrimaria: string;
-  descricao: string; endereco: string;
+  descricao: string; endereco: string; mapaEmbedUrl: string | null;
   fotos: string[];
   comodidades: { chave: string; label: string }[];
   comodidadesExtras: string[];
@@ -37,6 +37,7 @@ export function SiteChacara() {
   const [carregando, setCarregando] = useState(true);
   const [naoEncontrada, setNaoEncontrada] = useState(false);
   const [fotoAtiva, setFotoAtiva] = useState(0);
+  const [autoplayPausado, setAutoplayPausado] = useState(false);
 
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
@@ -62,9 +63,18 @@ export function SiteChacara() {
   }, [slug]);
 
   useEffect(() => {
+    if (!dados || dados.fotos.length <= 1 || autoplayPausado) return;
+    const intervalo = setInterval(() => {
+      setFotoAtiva(f => (f + 1) % dados.fotos.length);
+    }, 5000);
+    return () => clearInterval(intervalo);
+  }, [dados, autoplayPausado]);
+
+  useEffect(() => {
     if (!slug || !dataInicio || !dataFim || pessoas <= 0) { setDisponivel(null); setValor(null); return; }
     if (pessoas < dados!.precificacao.minimoPessoas) { setDisponivel(null); setValor(null); return; }
     if (dataFim < dataInicio) return;
+    if ((new Date(dataFim).getTime() - new Date(dataInicio).getTime()) / 86400000 > 29) { setDisponivel(null); setValor(null); return; }
 
     setVerificando(true);
     Promise.all([
@@ -107,7 +117,7 @@ export function SiteChacara() {
   if (naoEncontrada || !dados) return <div style={{ padding: 40, textAlign: 'center' }}>Página não encontrada.</div>;
 
   const cor = dados.corPrimaria || '#2f7d4f';
-  const mapaUrl = `https://www.google.com/maps?q=${encodeURIComponent(dados.endereco)}&output=embed`;
+  const mapaUrl = dados.mapaEmbedUrl || `https://www.google.com/maps?q=${encodeURIComponent(dados.endereco)}&output=embed`;
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px', fontFamily: 'inherit', background: '#fff', color: '#222', minHeight: '100vh' }}>
@@ -123,7 +133,7 @@ export function SiteChacara() {
           <img src={dados.fotos[fotoAtiva]} alt="" style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 12 }} />
           <div style={{ display: 'flex', gap: 6, marginTop: 8, overflowX: 'auto' }}>
             {dados.fotos.map((f, i) => (
-              <img key={i} src={f} alt="" onClick={() => setFotoAtiva(i)}
+              <img key={i} src={f} alt="" onClick={() => { setFotoAtiva(i); setAutoplayPausado(true); }}
                 style={{
                   width: 60, height: 60, objectFit: 'cover', borderRadius: 6, cursor: 'pointer', flexShrink: 0,
                   border: i === fotoAtiva ? `2px solid ${cor}` : '2px solid transparent',
@@ -173,7 +183,9 @@ export function SiteChacara() {
               </div>
               <div>
                 <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Data fim</label>
-                <input type="date" value={dataFim} min={dataInicio} onChange={e => setDataFim(e.target.value)} />
+                <input type="date" value={dataFim} min={dataInicio}
+                  max={dataInicio ? new Date(new Date(dataInicio).getTime() + 29 * 86400000).toISOString().slice(0, 10) : undefined}
+                  onChange={e => setDataFim(e.target.value)} />
               </div>
               <div>
                 <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Pessoas</label>
@@ -183,6 +195,10 @@ export function SiteChacara() {
 
             {pessoas > 0 && pessoas < dados.precificacao.minimoPessoas && (
               <p style={{ fontSize: 13, color: '#c0392b' }}>O mínimo é de {dados.precificacao.minimoPessoas} pessoas.</p>
+            )}
+
+            {dataInicio && dataFim && (new Date(dataFim).getTime() - new Date(dataInicio).getTime()) / 86400000 > 29 && (
+              <p style={{ fontSize: 13, color: '#c0392b' }}>O período máximo por reserva é de 30 dias.</p>
             )}
 
             {verificando && <p style={{ fontSize: 13, color: '#888' }}>Verificando disponibilidade...</p>}
