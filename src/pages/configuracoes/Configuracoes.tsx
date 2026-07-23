@@ -20,6 +20,7 @@ const MODULOS_DESCRICAO: Record<string, string> = {
   corretora:  'Funil de vendas (kanban), cadastro de seguradoras, apólices e lançamento automático de comissões.',
   nf:         'Importação de notas fiscais em XML com match automático por GTIN e revisão manual.',
   etiquetas:  'Impressão de etiquetas de produtos com código de barras.',
+  chacara_reservas: 'Agenda de reservas com pagamento online, contrato automático e aviso de check-out.',
 };
 
 type SessaoLoja = {
