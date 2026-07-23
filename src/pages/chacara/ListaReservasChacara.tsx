@@ -203,20 +203,20 @@ export function ListaReservasChacara() {
                     )}
                   </div>
 
-                  {r.status === 'pendente_pagamento' && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn-ghost" title="Editar" onClick={() => abrirEdicao(r)}>
-                        <Pencil size={14} />
-                      </button>
-                      <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setModalExcluir(r)}>
-                        <Trash2 size={14} />
-                      </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn-ghost" title="Editar" onClick={() => abrirEdicao(r)}>
+                      <Pencil size={14} />
+                    </button>
+                    <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setModalExcluir(r)}>
+                      <Trash2 size={14} />
+                    </button>
+                    {r.status === 'pendente_pagamento' && (
                       <button className="btn-primary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
                         onClick={() => confirmar(r.id)} disabled={confirmando === r.id}>
                         <Check size={13} /> {confirmando === r.id ? 'Confirmando...' : 'Confirmar pagamento manual'}
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -361,6 +361,11 @@ export function ListaReservasChacara() {
                 Tem certeza que deseja excluir a reserva de <strong style={{ color: 'var(--text-1)' }}>{modalExcluir.clienteNome}</strong>?
                 Essa ação não pode ser desfeita.
               </p>
+              {modalExcluir.status === 'confirmada' && (
+                <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10, fontWeight: 600 }}>
+                  ⚠️ Esta reserva já está confirmada. Se o cliente já pagou de verdade, excluir aqui não desfaz o pagamento — apenas libera as datas no sistema.
+                </p>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalExcluir(null)}>Cancelar</button>
