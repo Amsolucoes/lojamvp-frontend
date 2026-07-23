@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X } from 'lucide-react';
+import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -45,6 +45,11 @@ export function ListaReservasChacara() {
 
   const [modalExcluir, setModalExcluir] = useState<Reserva | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+
+  const [modalNova, setModalNova] = useState(false);
+  const [formNova, setFormNova] = useState({ dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '', valor: 0 });
+  const [salvandoNova, setSalvandoNova] = useState(false);
+  const [erroNova, setErroNova] = useState('');
 
   useEffect(() => {
     carregar();
@@ -116,6 +121,31 @@ export function ListaReservasChacara() {
     }
   }
 
+  function abrirNova() {
+    setFormNova({ dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '', valor: 0 });
+    setErroNova('');
+    setModalNova(true);
+  }
+
+  async function salvarNova() {
+    if (!formNova.dataInicio || !formNova.dataFim || !formNova.clienteNome.trim()) {
+      setErroNova('Preencha datas e nome do cliente.');
+      return;
+    }
+    setSalvandoNova(true);
+    setErroNova('');
+    try {
+      await api.post('/api/chacara/reservas', formNova);
+      sucesso('Reserva criada como confirmada.');
+      setModalNova(false);
+      carregar();
+    } catch (e) {
+      setErroNova((e as Error).message);
+    } finally {
+      setSalvandoNova(false);
+    }
+  }
+
   const lista = reservas.filter(r => filtro === 'todas' || r.status === filtro);
 
   if (carregando) return <div className="page"><p>Carregando...</p></div>;
@@ -127,6 +157,9 @@ export function ListaReservasChacara() {
           <h1 className="page-title">Reservas</h1>
           <p className="page-subtitle">Acompanhe e confirme as reservas da chácara</p>
         </div>
+        <button className="btn-primary" onClick={abrirNova}>
+          <Plus size={15} style={{ verticalAlign: -2 }} /> Nova reserva manual
+        </button>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -243,6 +276,72 @@ export function ListaReservasChacara() {
               <button className="btn-secondary" onClick={() => setModalEditar(null)}>Cancelar</button>
               <button className="btn-primary" onClick={salvarEdicao} disabled={salvandoEdicao}>
                 {salvandoEdicao ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal nova reserva manual */}
+      {modalNova && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNova(false)}>
+          <div className="modal" style={{ maxWidth: 460 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Nova reserva manual</h2>
+              <button className="btn-ghost" onClick={() => setModalNova(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>
+                Use para datas já fechadas com o cliente por fora. A reserva entra direto como <strong>confirmada</strong>, sem enviar e-mail ou contrato automaticamente.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Data início</label>
+                    <input type="date" value={formNova.dataInicio}
+                      onChange={e => setFormNova(f => ({ ...f, dataInicio: e.target.value }))} />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Data fim</label>
+                    <input type="date" value={formNova.dataFim} min={formNova.dataInicio}
+                      onChange={e => setFormNova(f => ({ ...f, dataFim: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Pessoas</label>
+                  <input type="number" min={1} value={formNova.pessoas}
+                    onChange={e => setFormNova(f => ({ ...f, pessoas: Number(e.target.value) }))} style={{ width: 100 }} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Nome do cliente</label>
+                  <input value={formNova.clienteNome}
+                    onChange={e => setFormNova(f => ({ ...f, clienteNome: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">E-mail (opcional)</label>
+                  <input type="email" value={formNova.clienteEmail}
+                    onChange={e => setFormNova(f => ({ ...f, clienteEmail: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Telefone (opcional)</label>
+                  <input value={formNova.clienteTelefone}
+                    onChange={e => setFormNova(f => ({ ...f, clienteTelefone: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Valor combinado (R$)</label>
+                  <input type="number" min={0} step={0.01} value={formNova.valor}
+                    onChange={e => setFormNova(f => ({ ...f, valor: Number(e.target.value) }))} />
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    Valor livre — não é calculado automaticamente, use o valor combinado com o cliente (com desconto ou não).
+                  </p>
+                </div>
+              </div>
+              {erroNova && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 12 }}>{erroNova}</p>}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalNova(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarNova} disabled={salvandoNova}>
+                {salvandoNova ? 'Salvando...' : 'Criar reserva confirmada'}
               </button>
             </div>
           </div>
