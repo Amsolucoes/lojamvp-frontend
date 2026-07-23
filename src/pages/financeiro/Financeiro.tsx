@@ -1160,7 +1160,7 @@ export function Financeiro() {
                         <td style={{ fontSize: 13 }}>{new Date(l.vencimento).toLocaleDateString('pt-BR')}</td>
                         <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
                         <td>
-                          {l.status === 'pago' ? <span className="badge badge-green">Pago</span>
+                          {l.status === 'pago' ? <span className="badge badge-green">Recebido</span>
                             : new Date(l.vencimento) < new Date(new Date().toDateString()) ? <span className="badge badge-red">Vencido</span>
                             : <span className="badge badge-accent">Pendente</span>}
                         </td>
@@ -1213,7 +1213,7 @@ export function Financeiro() {
                       <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                      {l.status === 'pago' ? <span className="badge badge-green">Pago</span> : <span className="badge badge-accent">Pendente</span>}
+                      {l.status === 'pago' ? <span className="badge badge-green">Recebido</span> : <span className="badge badge-accent">Pendente</span>}
                       {l.origem === 'avulso' ? (
                         <div style={{ display: 'flex', gap: 6 }}>
                           {l.status === 'pago'
