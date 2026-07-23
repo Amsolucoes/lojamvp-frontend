@@ -139,7 +139,11 @@ export function Financeiro() {
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
   const [faturaDados, setFaturaDados] = useState<{
     vencimento: string; total: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
-    parcelasFinanciamento?: { id: string; descricao: string; valor: number; vencimento: string; status: string; numeroParcela: number; totalParcelas: number }[];
+    parcelasFinanciamento?: {
+      id: string; descricao: string; valor: number; vencimento: string; status: string;
+      numeroParcela: number; totalParcelas: number; contaBancariaId: string; categoriaId: string | null;
+      observacao: string | null; modo: string; mesOrigemFatura: number | null; anoOrigemFatura: number | null;
+    }[];
   } | null>(null);
   const [faturaAno, setFaturaAno] = useState(new Date().getFullYear());
   const [faturaMes, setFaturaMes] = useState(new Date().getMonth() + 1);
@@ -1820,19 +1824,50 @@ export function Financeiro() {
               {faturaDados?.parcelasFinanciamento && faturaDados.parcelasFinanciamento.length > 0 && (
                 <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>
-                    💳 Esta fatura foi parcelada
-                    {faturaDados.valorEntrada ? ` — entrada de ${fmt(faturaDados.valorEntrada)} paga` : ''}
+                    💳 Parcela(s) do parcelamento de faturas anteriores
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {faturaDados.parcelasFinanciamento.map(p => (
-                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                        <span>Parcela {p.numeroParcela}/{p.totalParcelas} — vence {new Date(p.vencimento).toLocaleDateString('pt-BR')}</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>
+                        <div>
+                          <div>
+                            Parcela {p.numeroParcela}/{p.totalParcelas}
+                            {p.mesOrigemFatura && p.anoOrigemFatura && (
+                              <span style={{ color: 'var(--text-3)' }}> — da fatura de {MESES[p.mesOrigemFatura - 1]}/{p.anoOrigemFatura}</span>
+                            )}
+                          </div>
+                          <div style={{ color: 'var(--text-3)', fontSize: 11 }}>Vence {new Date(p.vencimento).toLocaleDateString('pt-BR')}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           {fmt(p.valor)}
                           <span className={`badge ${p.status === 'pago' ? 'badge-green' : 'badge-accent'}`} style={{ fontSize: 9 }}>
                             {p.status === 'pago' ? 'Paga' : 'Pendente'}
                           </span>
-                        </span>
+                          {p.status !== 'pago' && (
+                            <>
+                              <button className="btn-ghost" style={{ padding: 4 }} title="Editar"
+                                onClick={() => abrirEditarLancamento({
+                                  id: p.id, descricao: p.descricao, observacao: p.observacao ?? undefined,
+                                  categoriaNome: null, categoriaId: p.categoriaId, contaBancariaId: p.contaBancariaId,
+                                  modo: p.modo, valor: p.valor, vencimento: p.vencimento, status: p.status,
+                                  pagoEm: null, numeroParcela: p.numeroParcela, totalParcelas: p.totalParcelas,
+                                  origem: 'avulso', cartaoId: null, cartaoNome: null,
+                                } as any)}>
+                                <span style={{ fontSize: 11 }}>✎</span>
+                              </button>
+                              <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} title="Excluir"
+                                onClick={() => setConfirmExcluir({
+                                  id: p.id, descricao: p.descricao, observacao: p.observacao ?? undefined,
+                                  categoriaNome: null, categoriaId: p.categoriaId, contaBancariaId: p.contaBancariaId,
+                                  modo: p.modo, valor: p.valor, vencimento: p.vencimento, status: p.status,
+                                  pagoEm: null, numeroParcela: p.numeroParcela, totalParcelas: p.totalParcelas,
+                                  origem: 'avulso', cartaoId: null, cartaoNome: null,
+                                } as any)}>
+                                <Trash2 size={12} />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
