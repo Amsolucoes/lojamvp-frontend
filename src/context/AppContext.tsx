@@ -25,6 +25,7 @@ interface AppCtx {
   temTurmas: boolean;
   temCorretora: boolean;
   temNf: boolean;
+  temChacaraReservas: boolean;
 
   addProduto:    (p: Omit<Produto, 'id' | 'criadoEm'>) => Promise<void>;
   updateProduto: (id: string, p: Partial<Produto>)       => Promise<void>;
@@ -118,6 +119,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const temCorretora = modulosAtivos.includes('corretora');
   const temProdutos = tipoPlano === 'loja' || tipoPlano === 'loja_modulos';
   const temNf = modulosAtivos.includes('nf') && temProdutos;
+  const temChacaraReservas = modulosAtivos.includes('chacara_reservas');
 
   async function recarregar() {
     setLoading(true);
@@ -271,7 +273,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       produtos, clientes, vendas, movimentos, loading, erro, trocas,
       modulosAtivos, tipoPlano, temProdutos, temServicos, soServicos,
       soFinanceiro, temFinanceiro, temTurmas,
-      fase, nomeLoja, temCorretora, temNf,
+      fase, nomeLoja, temCorretora, temNf, temChacaraReservas,
       addProduto, updateProduto, deleteProduto,
       addCliente, updateCliente, deleteCliente,
       registrarVenda, ajustarEstoque,

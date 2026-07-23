@@ -1,4 +1,4 @@
-import { ShoppingCart, Package, TrendingUp, AlertTriangle, Clock, Store, Wallet, Filter, Users2 } from 'lucide-react';
+import { ShoppingCart, Package, TrendingUp, AlertTriangle, Clock, Store, Wallet, Filter, Users2, Home } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Produto, Venda, ItemVenda } from '../types';
 import { useState, useEffect } from 'react';
@@ -6,6 +6,7 @@ import { api } from '../services/api';
 import { DashboardFinanceiro } from './DashboardFinanceiro';
 import { DashboardCorretora } from './DashboardCorretora';
 import { DashboardTurmas } from './DashboardTurmas';
+import { DashboardChacara } from './DashboardChacara';
 import './Dashboard.css';
 
 function fmt(n: number) {
@@ -13,12 +14,13 @@ function fmt(n: number) {
 }
 
 export function Dashboard() {
-  const { temProdutos, temServicos, temTurmas, temFinanceiro, temCorretora } = useApp();
+  const { temProdutos, temServicos, temTurmas, temFinanceiro, temCorretora, temChacaraReservas } = useApp();
 
   const abasDisponiveis = [
     ...(temProdutos || temServicos ? [{ chave: 'loja' as const, label: 'Loja', Icon: Store }] : []),
     ...(temTurmas && !temProdutos && !temServicos ? [{ chave: 'turmas' as const, label: 'Turmas', Icon: Users2 }] : []),
     ...(temCorretora ? [{ chave: 'corretora' as const, label: 'Corretora', Icon: Filter }] : []),
+    ...(temChacaraReservas && !temProdutos && !temServicos ? [{ chave: 'chacara' as const, label: 'Chácara', Icon: Home }] : []),
     ...(temFinanceiro ? [{ chave: 'financeiro' as const, label: 'Financeiro', Icon: Wallet }] : []),
   ];
 
@@ -28,7 +30,7 @@ export function Dashboard() {
     if (abasDisponiveis.length > 0 && !abasDisponiveis.some(a => a.chave === abaDash)) {
       setAbaDash(abasDisponiveis[0].chave);
     }
-  }, [temProdutos, temServicos, temTurmas, temCorretora, temFinanceiro]);
+  }, [temProdutos, temServicos, temTurmas, temCorretora, temFinanceiro, temChacaraReservas]);
 
   // Só existe 1 dashboard aplicável — renderiza direto, sem abas
   if (abasDisponiveis.length <= 1) {
@@ -36,6 +38,7 @@ export function Dashboard() {
     if (unica === 'financeiro') return <DashboardFinanceiro />;
     if (unica === 'corretora') return <DashboardCorretora />;
     if (unica === 'turmas') return <DashboardTurmas />;
+    if (unica === 'chacara') return <DashboardChacara />;
     return <DashboardLoja />;
   }
 
@@ -52,6 +55,7 @@ export function Dashboard() {
       {abaDash === 'financeiro' && <DashboardFinanceiro />}
       {abaDash === 'corretora' && <DashboardCorretora />}
       {abaDash === 'turmas' && <DashboardTurmas />}
+      {abaDash === 'chacara' && <DashboardChacara />}
     </div>
   );
 }
