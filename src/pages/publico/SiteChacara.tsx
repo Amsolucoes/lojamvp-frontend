@@ -8,7 +8,7 @@ type DadosChacara = {
   fotos: string[];
   comodidades: { chave: string; label: string }[];
   comodidadesExtras: string[];
-  precificacao: { limitePessoasPacotePequeno: number };
+  precificacao: { limitePessoasPacotePequeno: number; minimoPessoas: number };
 };
 
 type Detalhamento = { valorEstadia: number; valorTaxaLimpeza: number; valorTotal: number; detalhamento: string[] };
@@ -17,6 +17,18 @@ function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 function ymd(d: string) { return d; } // datas já vêm como yyyy-mm-dd do <input type="date">
+
+function formatarTelefone(valor: string): string {
+  const d = valor.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+function emailValido(valor: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
+}
 
 export function SiteChacara() {
   const { slug } = useParams<{ slug: string }>();
@@ -51,6 +63,7 @@ export function SiteChacara() {
 
   useEffect(() => {
     if (!slug || !dataInicio || !dataFim || pessoas <= 0) { setDisponivel(null); setValor(null); return; }
+    if (pessoas < dados!.precificacao.minimoPessoas) { setDisponivel(null); setValor(null); return; }
     if (dataFim < dataInicio) return;
 
     setVerificando(true);
@@ -68,6 +81,10 @@ export function SiteChacara() {
     if (!slug || !dataInicio || !dataFim) return;
     if (!nome.trim() || !email.trim() || !telefone.trim()) {
       setErro('Preencha nome, e-mail e telefone.');
+      return;
+    }
+    if (!emailValido(email)) {
+      setErro('Informe um e-mail válido.');
       return;
     }
     setEnviando(true);
@@ -160,9 +177,13 @@ export function SiteChacara() {
               </div>
               <div>
                 <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Pessoas</label>
-                <input type="number" min={1} value={pessoas} onChange={e => setPessoas(Number(e.target.value))} style={{ width: 70 }} />
+                <input type="number" min={dados.precificacao.minimoPessoas} value={pessoas} onChange={e => setPessoas(Number(e.target.value))} style={{ width: 70 }} />
               </div>
             </div>
+
+            {pessoas > 0 && pessoas < dados.precificacao.minimoPessoas && (
+              <p style={{ fontSize: 13, color: '#c0392b' }}>O mínimo é de {dados.precificacao.minimoPessoas} pessoas.</p>
+            )}
 
             {verificando && <p style={{ fontSize: 13, color: '#888' }}>Verificando disponibilidade...</p>}
 
@@ -200,7 +221,9 @@ export function SiteChacara() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
               <input placeholder="Nome completo" value={nome} onChange={e => setNome(e.target.value)} />
               <input placeholder="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} />
-              <input placeholder="Telefone / WhatsApp" value={telefone} onChange={e => setTelefone(e.target.value)} />
+              <input placeholder="Telefone / WhatsApp" value={telefone}
+                onChange={e => setTelefone(formatarTelefone(e.target.value))}
+                inputMode="tel" maxLength={16} />
             </div>
 
             {erro && <p style={{ color: '#c0392b', fontSize: 13, marginBottom: 10 }}>{erro}</p>}

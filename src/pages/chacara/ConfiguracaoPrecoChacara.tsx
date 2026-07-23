@@ -9,6 +9,7 @@ type ConfigPreco = {
   valorPacote2DiasFimSemana: number;
   valorPacote2DiasFimSemanaGrande: number;
   limitePessoasPacotePequeno: number;
+  minimoPessoas: number;
   valorTaxaLimpeza: number;
   valorMultaNaoLimpeza: number;
 };
@@ -20,6 +21,7 @@ const CAMPOS: { chave: keyof ConfigPreco; label: string; tipo: 'moeda' | 'numero
   { chave: 'valorPacote2DiasFimSemana', label: 'Pacote 2 dias (sex+sáb ou sáb+dom)', tipo: 'moeda', ajuda: 'Até o limite de pessoas abaixo' },
   { chave: 'valorPacote2DiasFimSemanaGrande', label: 'Pacote 2 dias — grupo grande', tipo: 'moeda', ajuda: 'Acima do limite de pessoas abaixo' },
   { chave: 'limitePessoasPacotePequeno', label: 'Limite de pessoas (grupo pequeno)', tipo: 'numero', ajuda: 'Acima disso, usa os valores de "grupo grande"' },
+  { chave: 'minimoPessoas', label: 'Mínimo de pessoas por reserva', tipo: 'numero', ajuda: 'O site público não permite reservar com menos que isso' },
   { chave: 'valorTaxaLimpeza', label: 'Taxa de limpeza', tipo: 'moeda', ajuda: 'Cobrada junto no pagamento quando ultrapassa o limite de pessoas' },
   { chave: 'valorMultaNaoLimpeza', label: 'Multa por não limpar ao sair', tipo: 'moeda', ajuda: 'Só informativa — avisada ao cliente, cobrança é manual' },
 ];
