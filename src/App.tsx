@@ -17,6 +17,7 @@ import { Agenda } from './pages/agenda/Agenda';
 import { Cadastro } from './pages/login/Cadastro';
 import { Suporte } from './pages/login/Suporte';
 import { AgendamentoPublico } from './pages/publico/AgendamentoPublico';
+import { SiteChacara } from './pages/publico/SiteChacara';
 import { Planos } from './pages/planos/Planos';
 import { Financeiro } from './pages/financeiro/Financeiro';
 import { BalancoMensal } from './pages/financeiro/BalancoMensal';
@@ -27,6 +28,7 @@ import { Apolices } from './pages/apolices/Apolices';
 import { ImportarNf } from './pages/nf/ImportarNf';
 import { CentralAjuda } from './pages/ajuda/CentralAjuda';
 import { ConfiguracaoPrecoChacara } from './pages/chacara/ConfiguracaoPrecoChacara';
+import { GerenciarChacara } from './pages/chacara/GerenciarChacara';
 import { ToastProvider } from './context/ToastContext';
 
 function Rotas() {
@@ -39,6 +41,7 @@ function Rotas() {
     return (
       <Routes>
         <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
+        <Route path="/chacara-site/:slug" element={<SiteChacara />} />
       </Routes>
     );
   }
@@ -47,6 +50,7 @@ function Rotas() {
     return (
       <Routes>
         <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
+        <Route path="/chacara-site/:slug" element={<SiteChacara />} />
         <Route path="/suporte" element={<Suporte />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/login" element={<Login />} />
@@ -59,6 +63,7 @@ function Rotas() {
     <AppProvider>
       <Routes>
         <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
+        <Route path="/chacara-site/:slug" element={<SiteChacara />} />
         <Route path="/suporte" element={<Suporte />} />
         <Route element={<Layout />}>
           <Route index             element={<Dashboard />} />
@@ -80,6 +85,7 @@ function Rotas() {
           <Route path="nf"         element={<ImportarNf />} />
           <Route path="ajuda"      element={<CentralAjuda />} />
           <Route path="chacara/preco" element={<ConfiguracaoPrecoChacara />} />
+          <Route path="chacara/info" element={<GerenciarChacara />} />
           <Route path="*"          element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

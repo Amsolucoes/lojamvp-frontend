@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
-  TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, FileText, HelpCircle, Home } from 'lucide-react';
+  TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, FileText, HelpCircle, Home, Image } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -103,6 +103,7 @@ export function Sidebar() {
     ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
     ...(temCorretora ? [{ to: '/funil', icon: Filter, label: 'Funil de Vendas' }] : []),
     ...(temChacaraReservas ? [{ to: '/chacara/preco', icon: Home, label: 'Preço das Reservas' }] : []),
+    ...(temChacaraReservas ? [{ to: '/chacara/info', icon: Image, label: 'Fotos e Descrição' }] : []),
     ...(temProdutos || temServicos ? [{ to: '/relatorios', icon: BarChart2, label: 'Relatórios' }] : []),
     ...(temProdutos || temServicos ? [{ to: '/fluxo', icon: TrendingUp, label: 'Fluxo de Caixa' }] : []),
     { to: '/ajuda', icon: HelpCircle, label: 'Central de Ajuda' },
