@@ -104,6 +104,7 @@ export function Sidebar() {
     ...(temCorretora ? [{ to: '/funil', icon: Filter, label: 'Funil de Vendas' }] : []),
     ...(temChacaraReservas ? [{ to: '/chacara/preco', icon: Home, label: 'Preço das Reservas' }] : []),
     ...(temChacaraReservas ? [{ to: '/chacara/info', icon: Image, label: 'Fotos e Descrição' }] : []),
+    ...(temChacaraReservas ? [{ to: '/chacara/reservas', icon: Calendar, label: 'Reservas' }] : []),
     ...(temProdutos || temServicos ? [{ to: '/relatorios', icon: BarChart2, label: 'Relatórios' }] : []),
     ...(temProdutos || temServicos ? [{ to: '/fluxo', icon: TrendingUp, label: 'Fluxo de Caixa' }] : []),
     { to: '/ajuda', icon: HelpCircle, label: 'Central de Ajuda' },

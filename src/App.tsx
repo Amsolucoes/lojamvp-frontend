@@ -29,6 +29,7 @@ import { ImportarNf } from './pages/nf/ImportarNf';
 import { CentralAjuda } from './pages/ajuda/CentralAjuda';
 import { ConfiguracaoPrecoChacara } from './pages/chacara/ConfiguracaoPrecoChacara';
 import { GerenciarChacara } from './pages/chacara/GerenciarChacara';
+import { ListaReservasChacara } from './pages/chacara/ListaReservasChacara';
 import { ToastProvider } from './context/ToastContext';
 
 function Rotas() {
@@ -86,6 +87,7 @@ function Rotas() {
           <Route path="ajuda"      element={<CentralAjuda />} />
           <Route path="chacara/preco" element={<ConfiguracaoPrecoChacara />} />
           <Route path="chacara/info" element={<GerenciarChacara />} />
+          <Route path="chacara/reservas" element={<ListaReservasChacara />} />
           <Route path="*"          element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
