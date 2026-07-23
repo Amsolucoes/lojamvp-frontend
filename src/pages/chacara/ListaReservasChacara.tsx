@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Check, Mail, FileCheck } from 'lucide-react';
+import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -38,6 +38,14 @@ export function ListaReservasChacara() {
   const [filtro, setFiltro] = useState<'todas' | 'pendente_pagamento' | 'confirmada'>('todas');
   const { sucesso, erro: toastErro } = useToast();
 
+  const [modalEditar, setModalEditar] = useState<Reserva | null>(null);
+  const [formEditar, setFormEditar] = useState({ dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '' });
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+  const [erroEdicao, setErroEdicao] = useState('');
+
+  const [modalExcluir, setModalExcluir] = useState<Reserva | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
   useEffect(() => {
     carregar();
   }, []);
@@ -60,6 +68,51 @@ export function ListaReservasChacara() {
       toastErro((e as Error).message);
     } finally {
       setConfirmando(null);
+    }
+  }
+
+  function abrirEdicao(r: Reserva) {
+    setFormEditar({
+      dataInicio: r.dataInicio.slice(0, 10),
+      dataFim: r.dataFim.slice(0, 10),
+      pessoas: r.pessoas,
+      clienteNome: r.clienteNome,
+      clienteEmail: r.clienteEmail,
+      clienteTelefone: r.clienteTelefone,
+    });
+    setErroEdicao('');
+    setModalEditar(r);
+  }
+
+  async function salvarEdicao() {
+    if (!modalEditar) return;
+    setErroEdicao('');
+    setSalvandoEdicao(true);
+    try {
+      await api.put(`/api/chacara/reservas/${modalEditar.id}`, formEditar);
+      sucesso('Reserva atualizada.');
+      setModalEditar(null);
+      carregar();
+    } catch (e) {
+      setErroEdicao((e as Error).message);
+    } finally {
+      setSalvandoEdicao(false);
+    }
+  }
+
+  async function confirmarExclusao() {
+    if (!modalExcluir) return;
+    setExcluindo(true);
+    try {
+      await api.delete(`/api/chacara/reservas/${modalExcluir.id}`);
+      sucesso('Reserva excluída.');
+      setModalExcluir(null);
+      carregar();
+    } catch (e) {
+      toastErro((e as Error).message);
+      setModalExcluir(null);
+    } finally {
+      setExcluindo(false);
     }
   }
 
@@ -118,15 +171,105 @@ export function ListaReservasChacara() {
                   </div>
 
                   {r.status === 'pendente_pagamento' && (
-                    <button className="btn-primary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
-                      onClick={() => confirmar(r.id)} disabled={confirmando === r.id}>
-                      <Check size={13} /> {confirmando === r.id ? 'Confirmando...' : 'Confirmar pagamento manual'}
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn-ghost" title="Editar" onClick={() => abrirEdicao(r)}>
+                        <Pencil size={14} />
+                      </button>
+                      <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setModalExcluir(r)}>
+                        <Trash2 size={14} />
+                      </button>
+                      <button className="btn-primary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
+                        onClick={() => confirmar(r.id)} disabled={confirmando === r.id}>
+                        <Check size={13} /> {confirmando === r.id ? 'Confirmando...' : 'Confirmar pagamento manual'}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal editar reserva */}
+      {modalEditar && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalEditar(null)}>
+          <div className="modal" style={{ maxWidth: 460 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar reserva</h2>
+              <button className="btn-ghost" onClick={() => setModalEditar(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Data início</label>
+                    <input type="date" value={formEditar.dataInicio}
+                      onChange={e => setFormEditar(f => ({ ...f, dataInicio: e.target.value }))} />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Data fim</label>
+                    <input type="date" value={formEditar.dataFim} min={formEditar.dataInicio}
+                      onChange={e => setFormEditar(f => ({ ...f, dataFim: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Pessoas</label>
+                  <input type="number" min={1} value={formEditar.pessoas}
+                    onChange={e => setFormEditar(f => ({ ...f, pessoas: Number(e.target.value) }))} style={{ width: 100 }} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Nome do cliente</label>
+                  <input value={formEditar.clienteNome}
+                    onChange={e => setFormEditar(f => ({ ...f, clienteNome: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">E-mail</label>
+                  <input type="email" value={formEditar.clienteEmail}
+                    onChange={e => setFormEditar(f => ({ ...f, clienteEmail: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Telefone</label>
+                  <input value={formEditar.clienteTelefone}
+                    onChange={e => setFormEditar(f => ({ ...f, clienteTelefone: e.target.value }))} />
+                </div>
+              </div>
+              {erroEdicao && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 12 }}>{erroEdicao}</p>}
+              <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 10 }}>
+                O valor será recalculado automaticamente com base nas novas datas e quantidade de pessoas.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalEditar(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarEdicao} disabled={salvandoEdicao}>
+                {salvandoEdicao ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal excluir reserva */}
+      {modalExcluir && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalExcluir(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir reserva</h2>
+              <button className="btn-ghost" onClick={() => setModalExcluir(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Tem certeza que deseja excluir a reserva de <strong style={{ color: 'var(--text-1)' }}>{modalExcluir.clienteNome}</strong>?
+                Essa ação não pode ser desfeita.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalExcluir(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={confirmarExclusao} disabled={excluindo}>
+                {excluindo ? 'Excluindo...' : 'Excluir mesmo assim'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
