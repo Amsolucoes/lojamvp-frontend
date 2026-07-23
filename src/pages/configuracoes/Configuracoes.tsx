@@ -45,8 +45,12 @@ export function Configuracoes() {
   const [modulosPreco, setModulosPreco] = useState<ModuloPreco[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-  const { temCorretora, temProdutos, soFinanceiro } = useApp();
+  const { temCorretora, temProdutos, soFinanceiro, temChacaraReservas } = useApp();
   const [mensalidadeAtual, setMensalidadeAtual] = useState(0);
+  const [slugChacara, setSlugChacara] = useState('');
+  const [slugAtual, setSlugAtual] = useState('');
+  const [salvandoSlug, setSalvandoSlug] = useState(false);
+  const [erroSlug, setErroSlug] = useState('');
   const { erro: toastErro } = useToast();
 
   // modal de confirmação
@@ -65,6 +69,10 @@ export function Configuracoes() {
         setModulosAtivos(res.modulosAtivos);
       if (res?.mensalidadeValor)
         setMensalidadeAtual(res.mensalidadeValor);
+      if (res?.slug) {
+        setSlugAtual(res.slug);
+        setSlugChacara(res.slug);
+      }
       if (res?.modulosAlteradoEm) {
         // calcula diasRestantes de cooldown para cada módulo
         const agora = new Date();
@@ -76,7 +84,7 @@ export function Configuracoes() {
         setCooldowns(cd);
       }
     }).catch(() => {});
-  }, []);
+}, []);
 
   function handleToggle(mod: ModuloPreco, marcado: boolean) {
     const novaLista = marcado
@@ -116,6 +124,24 @@ export function Configuracoes() {
       toastErro(e?.message ?? 'Erro ao salvar.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function salvarSlugChacara() {
+    setErroSlug('');
+    if (!slugChacara.trim()) {
+      setErroSlug('Informe um link.');
+      return;
+    }
+    setSalvandoSlug(true);
+    try {
+      const res = await api.patch<{ slug: string }>('/api/loja/slug', { slug: slugChacara.trim() });
+      setSlugAtual(res.slug);
+      setSlugChacara(res.slug);
+    } catch (e: any) {
+      setErroSlug(e?.message ?? 'Erro ao salvar link.');
+    } finally {
+      setSalvandoSlug(false);
     }
   }
 
@@ -242,6 +268,46 @@ export function Configuracoes() {
           })}
         </div>
       </div>
+
+      {temChacaraReservas && (
+        <div className="card" style={{ maxWidth: 520, marginTop: 20 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Link do site da chácara</div>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>
+            Este é o link que você vai divulgar pros clientes reservarem online.
+          </p>
+
+          <div className="form-group">
+            <label className="form-label">Seu link personalizado</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-3)' }}>app.aldevsoftware.com.br/chacara-site/</span>
+              <input value={slugChacara}
+                onChange={e => setSlugChacara(e.target.value)}
+                placeholder="minha-chacara" style={{ flex: 1, minWidth: 140 }} />
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+              Use letras, números e hífens. Ex: chacara-familia-cardoso
+            </p>
+          </div>
+
+          {slugAtual && (
+            <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 10 }}>
+              <span style={{ fontSize: 12, wordBreak: 'break-all' }}>
+                app.aldevsoftware.com.br/chacara-site/{slugAtual}
+              </span>
+              <button className="btn-ghost" style={{ flexShrink: 0, fontSize: 12 }}
+                onClick={() => navigator.clipboard.writeText(`https://app.aldevsoftware.com.br/chacara-site/${slugAtual}`)}>
+                Copiar
+              </button>
+            </div>
+          )}
+
+          {erroSlug && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{erroSlug}</p>}
+
+          <button className="btn-primary" onClick={salvarSlugChacara} disabled={salvandoSlug} style={{ marginTop: 14 }}>
+            {salvandoSlug ? 'Salvando...' : 'Salvar link'}
+          </button>
+        </div>
+      )}
 
       {/* Modal confirmação de módulo */}
       {modalModulo && (
