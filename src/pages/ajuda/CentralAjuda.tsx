@@ -1,34 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HelpCircle, Play } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../services/api';
 
 interface Video {
+  id: string;
   titulo: string;
-  youtubeId: string; // só o ID do vídeo, ex: em youtube.com/watch?v=ABC123, o ID é "ABC123"
+  categoria: string;
+  youtubeId: string;
+  ordem: number;
 }
-
-// Pra adicionar um vídeo novo: cole o ID do YouTube (link "Não listado") na categoria certa.
-const VIDEOS: Record<string, Video[]> = {
-  'Produtos': [
-    // { titulo: 'Como criar um produto', youtubeId: 'COLE_O_ID_AQUI' },
-    // { titulo: 'Como editar um produto', youtubeId: 'COLE_O_ID_AQUI' },
-    // { titulo: 'Como excluir um produto', youtubeId: 'COLE_O_ID_AQUI' },
-  ],
-  'Caixa': [],
-  'Estoque': [],
-  'Clientes': [],
-  'Financeiro': [],
-  'Agenda': [],
-  'Planos': [],
-  'Turmas': [],
-  'Corretora': [],
-  'Importação de NF': [],
-};
 
 export function CentralAjuda() {
   const { temProdutos, temServicos, temFinanceiro, temTurmas, temCorretora, temNf } = useApp();
+  const [todosVideos, setTodosVideos] = useState<Video[]>([]);
 
-  // Só mostra categorias que fazem sentido pro que a loja realmente usa
+  useEffect(() => {
+    api.get<Video[]>('/api/videos-ajuda').then(setTodosVideos).catch(() => {});
+  }, []);
+
+  const categoriasComVideo = new Set(todosVideos.map(v => v.categoria));
+
+  // Só mostra categorias que fazem sentido pro que a loja realmente usa E que já têm vídeo cadastrado
   const categoriasDisponiveis = [
     ...(temProdutos ? ['Produtos', 'Caixa', 'Estoque'] : []),
     ...(temProdutos || temServicos || temTurmas || temCorretora ? ['Clientes'] : []),
@@ -38,12 +31,17 @@ export function CentralAjuda() {
     ...(temTurmas ? ['Turmas'] : []),
     ...(temCorretora ? ['Corretora'] : []),
     ...(temNf ? ['Importação de NF'] : []),
-  ].filter(cat => VIDEOS[cat] !== undefined);
+  ].filter(cat => categoriasComVideo.has(cat));
 
-  const [categoria, setCategoria] = useState(categoriasDisponiveis[0] ?? '');
+  const [categoria, setCategoria] = useState('');
   const [aberto, setAberto] = useState<number | null>(null);
 
-  const videos = VIDEOS[categoria] ?? [];
+  useEffect(() => {
+    if (!categoria && categoriasDisponiveis.length > 0) setCategoria(categoriasDisponiveis[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todosVideos]);
+
+  const videos = todosVideos.filter(v => v.categoria === categoria).sort((a, b) => a.ordem - b.ordem);
 
   return (
     <div className="page">
@@ -80,7 +78,7 @@ export function CentralAjuda() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {videos.map((v, i) => (
-            <div key={i} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div key={v.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <button
                 onClick={() => setAberto(aberto === i ? null : i)}
                 style={{
