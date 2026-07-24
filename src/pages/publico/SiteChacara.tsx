@@ -68,6 +68,9 @@ export function SiteChacara() {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [cep, setCep] = useState('');
+  const [enderecoCliente, setEnderecoCliente] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [reservaCriada, setReservaCriada] = useState<{ id: number; valor: number } | null>(null);
@@ -121,6 +124,7 @@ export function SiteChacara() {
       const res = await api.post<{ id: number; valor: number }>(`/api/publico/${slug}/chacara/reservar`, {
         dataInicio, dataFim, pessoas,
         clienteNome: nome.trim(), clienteEmail: email.trim(), clienteTelefone: telefone.trim(),
+        clienteDocumento: cpf.trim() || null, clienteCep: cep.trim() || null, clienteEndereco: enderecoCliente.trim() || null,
       });
       setReservaCriada(res);
       setEtapa('sucesso');
@@ -262,7 +266,13 @@ export function SiteChacara() {
               <input placeholder="Telefone / WhatsApp" value={telefone}
                 onChange={e => setTelefone(formatarTelefone(e.target.value))}
                 inputMode="tel" maxLength={16} className="site-chacara-input" />
+              <input placeholder="CPF" value={cpf} onChange={e => setCpf(e.target.value)} className="site-chacara-input" />
+              <input placeholder="CEP" value={cep} onChange={e => setCep(e.target.value)} className="site-chacara-input" />
+              <input placeholder="Endereço completo" value={enderecoCliente} onChange={e => setEnderecoCliente(e.target.value)} className="site-chacara-input" />
             </div>
+            <p style={{ fontSize: 11, color: '#888', marginTop: -8, marginBottom: 12 }}>
+              CPF, CEP e endereço são usados para gerar seu contrato de locação.
+            </p>
 
             {erro && <p style={{ color: '#c0392b', fontSize: 13, marginBottom: 10 }}>{erro}</p>}
 

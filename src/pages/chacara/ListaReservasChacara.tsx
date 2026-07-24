@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign } from 'lucide-react';
+import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -11,6 +11,9 @@ type Reserva = {
   clienteNome: string;
   clienteEmail: string;
   clienteTelefone: string;
+  clienteDocumento: string | null;
+  clienteCep: string | null;
+  clienteEndereco: string | null;
   valor: number;
   valorPago: number;
   status: string;
@@ -40,7 +43,10 @@ export function ListaReservasChacara() {
   const { sucesso, erro: toastErro } = useToast();
 
   const [modalEditar, setModalEditar] = useState<Reserva | null>(null);
-  const [formEditar, setFormEditar] = useState({ dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '' });
+  const [formEditar, setFormEditar] = useState({
+    dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '',
+    clienteDocumento: '', clienteCep: '', clienteEndereco: '',
+  });
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   const [erroEdicao, setErroEdicao] = useState('');
 
@@ -92,6 +98,21 @@ export function ListaReservasChacara() {
     }
   }
 
+  const [enviandoContrato, setEnviandoContrato] = useState<number | null>(null);
+
+  async function enviarContrato(r: Reserva) {
+    setEnviandoContrato(r.id);
+    try {
+      await api.post(`/api/chacara/reservas/${r.id}/enviar-contrato`, {});
+      sucesso('Contrato enviado por e-mail.');
+      carregar();
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setEnviandoContrato(null);
+    }
+  }
+
   async function registrarPagamento() {
     if (!modalPagamento) return;
     setErroPagamento('');
@@ -120,6 +141,9 @@ export function ListaReservasChacara() {
       clienteNome: r.clienteNome,
       clienteEmail: r.clienteEmail,
       clienteTelefone: r.clienteTelefone,
+      clienteDocumento: r.clienteDocumento ?? '',
+      clienteCep: r.clienteCep ?? '',
+      clienteEndereco: r.clienteEndereco ?? '',
     });
     setErroEdicao('');
     setModalEditar(r);
@@ -239,12 +263,19 @@ export function ListaReservasChacara() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {r.contratoEnviadoEm ? (
-                      <><FileCheck size={13} color="var(--green)" /> Contrato enviado em {fmtData(r.contratoEnviadoEm)}</>
-                    ) : (
-                      <><Mail size={13} /> Contrato ainda não enviado</>
-                    )}
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {r.contratoEnviadoEm ? (
+                        <><FileCheck size={13} color="var(--green)" /> Contrato enviado em {fmtData(r.contratoEnviadoEm)}</>
+                      ) : (
+                        <><Mail size={13} /> Contrato ainda não enviado</>
+                      )}
+                    </span>
+                    <button className="btn-ghost" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px' }}
+                      onClick={() => enviarContrato(r)} disabled={enviandoContrato === r.id || !r.clienteEmail}
+                      title={!r.clienteEmail ? 'Reserva sem e-mail cadastrado' : ''}>
+                      <Send size={12} /> {enviandoContrato === r.id ? 'Enviando...' : (r.contratoEnviadoEm ? 'Reenviar' : 'Enviar')} contrato
+                    </button>
                   </div>
 
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -315,6 +346,23 @@ export function ListaReservasChacara() {
                   <label className="form-label">Telefone</label>
                   <input value={formEditar.clienteTelefone}
                     onChange={e => setFormEditar(f => ({ ...f, clienteTelefone: e.target.value }))} />
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">CPF</label>
+                    <input value={formEditar.clienteDocumento}
+                      onChange={e => setFormEditar(f => ({ ...f, clienteDocumento: e.target.value }))} />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">CEP</label>
+                    <input value={formEditar.clienteCep}
+                      onChange={e => setFormEditar(f => ({ ...f, clienteCep: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Endereço completo</label>
+                  <input value={formEditar.clienteEndereco}
+                    onChange={e => setFormEditar(f => ({ ...f, clienteEndereco: e.target.value }))} />
                 </div>
               </div>
               {erroEdicao && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 12 }}>{erroEdicao}</p>}

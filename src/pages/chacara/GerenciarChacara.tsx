@@ -8,7 +8,11 @@ const CLOUDINARY_PRESET = 'chacara-fotos';
 const LIMITE_FOTOS = 30;
 
 type Foto = { id: number; url: string; ordem: number };
-type Info = { descricao: string; endereco: string; comodidades: string; comodidadesExtras: string | null; mapaEmbedUrl: string | null };
+type Info = {
+  descricao: string; endereco: string; comodidades: string; comodidadesExtras: string | null; mapaEmbedUrl: string | null;
+  locadorNome: string | null; locadorRg: string | null; locadorCpf: string | null; locadorEndereco: string | null; locadorTelefone: string | null;
+  cidadeAssinatura: string | null;
+};
 
 const COMODIDADES_OPCOES: { chave: string; label: string }[] = [
   { chave: 'piscina', label: 'Piscina' },
@@ -26,7 +30,10 @@ const COMODIDADES_OPCOES: { chave: string; label: string }[] = [
 export function GerenciarChacara() {
   const [fotos, setFotos] = useState<Foto[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [info, setInfo] = useState<Info>({ descricao: '', endereco: '', comodidades: '', comodidadesExtras: '', mapaEmbedUrl: '' });
+  const [info, setInfo] = useState<Info>({
+    descricao: '', endereco: '', comodidades: '', comodidadesExtras: '', mapaEmbedUrl: '',
+    locadorNome: '', locadorRg: '', locadorCpf: '', locadorEndereco: '', locadorTelefone: '', cidadeAssinatura: '',
+  });
   const [salvandoInfo, setSalvandoInfo] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -221,6 +228,49 @@ export function GerenciarChacara() {
 
           <button className="btn-primary" onClick={salvarInfo} disabled={salvandoInfo} style={{ alignSelf: 'flex-start' }}>
             {salvandoInfo ? 'Salvando...' : 'Salvar informações'}
+          </button>
+        </div>
+      </div>
+
+      {/* Dados do locador (contrato) */}
+      <div className="card" style={{ maxWidth: 640, marginTop: 20 }}>
+        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Meus dados (Locador)</div>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>
+          Usados para preencher automaticamente o contrato de locação gerado nas reservas.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label">Nome completo</label>
+            <input value={info.locadorNome ?? ''} onChange={e => setInfo(i => ({ ...i, locadorNome: e.target.value }))} />
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">RG</label>
+              <input value={info.locadorRg ?? ''} onChange={e => setInfo(i => ({ ...i, locadorRg: e.target.value }))} />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">CPF</label>
+              <input value={info.locadorCpf ?? ''} onChange={e => setInfo(i => ({ ...i, locadorCpf: e.target.value }))} />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Endereço completo</label>
+            <input value={info.locadorEndereco ?? ''} onChange={e => setInfo(i => ({ ...i, locadorEndereco: e.target.value }))}
+              placeholder="Rua, número, bairro, cidade - UF" />
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Telefone</label>
+              <input value={info.locadorTelefone ?? ''} onChange={e => setInfo(i => ({ ...i, locadorTelefone: e.target.value }))} />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Cidade para assinatura do contrato</label>
+              <input value={info.cidadeAssinatura ?? ''} onChange={e => setInfo(i => ({ ...i, cidadeAssinatura: e.target.value }))}
+                placeholder="Ex: Campo Grande – MS" />
+            </div>
+          </div>
+          <button className="btn-primary" onClick={salvarInfo} disabled={salvandoInfo} style={{ alignSelf: 'flex-start' }}>
+            {salvandoInfo ? 'Salvando...' : 'Salvar meus dados'}
           </button>
         </div>
       </div>
