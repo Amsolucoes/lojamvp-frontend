@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../../services/api';
+import { formatarTelefone, formatarCpf, formatarCep, emailValido, buscarEnderecoPorCep } from '../../utils/mascaras';
 
 type DadosChacara = {
   nome: string; logoUrl: string | null; corPrimaria: string;
@@ -17,32 +18,6 @@ function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 function ymd(d: string) { return d; } // datas já vêm como yyyy-mm-dd do <input type="date">
-
-function formatarTelefone(valor: string): string {
-  const d = valor.replace(/\D/g, '').slice(0, 11);
-  if (d.length <= 2) return d;
-  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-}
-
-function emailValido(valor: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
-}
-
-function formatarCep(valor: string): string {
-  const d = valor.replace(/\D/g, '').slice(0, 8);
-  if (d.length <= 5) return d;
-  return `${d.slice(0, 5)}-${d.slice(5)}`;
-}
-
-function formatarCpf(valor: string): string {
-  const d = valor.replace(/\D/g, '').slice(0, 11);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-}
 
 const ESTILO_INPUTS_PUBLICO = `
   .site-chacara-input {
@@ -123,24 +98,11 @@ export function SiteChacara() {
       .finally(() => setVerificando(false));
   }, [slug, dataInicio, dataFim, pessoas]);
 
-  async function buscarEnderecoPorCep(valor: string) {
-    const digitos = valor.replace(/\D/g, '');
-    if (digitos.length !== 8) return;
-
+  async function handleBuscarCep(valor: string) {
     setBuscandoCep(true);
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
-      const dados = await res.json();
-      if (!dados.erro) {
-        const partes = [dados.logradouro, dados.bairro, dados.localidade && dados.uf ? `${dados.localidade} - ${dados.uf}` : '']
-          .filter(Boolean);
-        setEnderecoCliente(partes.join(', '));
-      }
-    } catch {
-      // silencioso — se falhar, o cliente só preenche manualmente
-    } finally {
-      setBuscandoCep(false);
-    }
+    const endereco = await buscarEnderecoPorCep(valor);
+    if (endereco) setEnderecoCliente(endereco);
+    setBuscandoCep(false);
   }
 
   async function confirmarReserva() {
@@ -307,7 +269,7 @@ export function SiteChacara() {
                 className="site-chacara-input" />
               <input placeholder="CEP" value={cep}
                 onChange={e => setCep(formatarCep(e.target.value))}
-                onBlur={e => buscarEnderecoPorCep(e.target.value)}
+                onBlur={e => handleBuscarCep(e.target.value)}
                 inputMode="numeric" maxLength={9}
                 className="site-chacara-input" />
               {buscandoCep && <p style={{ fontSize: 12, color: '#888', margin: 0 }}>Buscando endereço...</p>}

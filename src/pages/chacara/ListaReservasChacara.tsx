@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatarTelefone, formatarCpf, formatarCep, buscarEnderecoPorCep } from '../../utils/mascaras';
 
 type Reserva = {
   id: number;
@@ -26,28 +27,6 @@ function fmt(n: number) {
 }
 function fmtData(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-function formatarTelefone(valor: string): string {
-  const d = valor.replace(/\D/g, '').slice(0, 11);
-  if (d.length <= 2) return d;
-  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-}
-
-function formatarCpf(valor: string): string {
-  const d = valor.replace(/\D/g, '').slice(0, 11);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-}
-
-function formatarCep(valor: string): string {
-  const d = valor.replace(/\D/g, '').slice(0, 8);
-  if (d.length <= 5) return d;
-  return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -171,23 +150,10 @@ export function ListaReservasChacara() {
   const [buscandoCepEdicao, setBuscandoCepEdicao] = useState(false);
 
   async function buscarEnderecoPorCepEdicao(valor: string) {
-    const digitos = valor.replace(/\D/g, '');
-    if (digitos.length !== 8) return;
-
     setBuscandoCepEdicao(true);
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
-      const dados = await res.json();
-      if (!dados.erro) {
-        const partes = [dados.logradouro, dados.bairro, dados.localidade && dados.uf ? `${dados.localidade} - ${dados.uf}` : '']
-          .filter(Boolean);
-        setFormEditar(f => ({ ...f, clienteEndereco: partes.join(', ') }));
-      }
-    } catch {
-      // silencioso — se falhar, preenche manualmente
-    } finally {
-      setBuscandoCepEdicao(false);
-    }
+    const endereco = await buscarEnderecoPorCep(valor);
+    if (endereco) setFormEditar(f => ({ ...f, clienteEndereco: endereco }));
+    setBuscandoCepEdicao(false);
   }
 
   function abrirEdicao(r: Reserva) {
