@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, CalendarHeart } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, CalendarHeart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -18,6 +18,8 @@ function fmtData(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
 const VAZIO = { nome: '', dataInicio: '', dataFim: '', valorTotal: 0 };
 
 export function PeriodosEspeciaisChacara() {
@@ -32,13 +34,35 @@ export function PeriodosEspeciaisChacara() {
   const [excluindo, setExcluindo] = useState(false);
   const { sucesso, erro: toastErro } = useToast();
 
+  const hoje = new Date();
+  const [periodoTipo, setPeriodoTipo] = useState<'mes' | 'todos'>('todos');
+  const [mesRef, setMesRef] = useState(hoje.getMonth());
+  const [anoRef, setAnoRef] = useState(hoje.getFullYear());
+
+  function navMes(delta: number) {
+    let nm = mesRef + delta, na = anoRef;
+    if (nm < 0) { nm = 11; na--; }
+    if (nm > 11) { nm = 0; na++; }
+    setMesRef(nm); setAnoRef(na);
+  }
+
   const [paginaAtual, setPaginaAtual] = useState(1);
   const ITENS_POR_PAGINA = 5;
-  const totalPaginas = Math.max(1, Math.ceil(periodos.length / ITENS_POR_PAGINA));
+
+  const periodosFiltrados = periodos.filter(p => {
+    if (periodoTipo === 'todos') return true;
+    const chaveRef = `${anoRef}-${String(mesRef + 1).padStart(2, '0')}`;
+    const bateInicio = p.dataInicio.slice(0, 7) === chaveRef;
+    const bateFim = p.dataFim.slice(0, 7) === chaveRef;
+    return bateInicio || bateFim;
+  });
+
+  const totalPaginas = Math.max(1, Math.ceil(periodosFiltrados.length / ITENS_POR_PAGINA));
   const paginaSegura = Math.min(paginaAtual, totalPaginas);
-  const periodosPagina = periodos.slice((paginaSegura - 1) * ITENS_POR_PAGINA, paginaSegura * ITENS_POR_PAGINA);
+  const periodosPagina = periodosFiltrados.slice((paginaSegura - 1) * ITENS_POR_PAGINA, paginaSegura * ITENS_POR_PAGINA);
 
   useEffect(() => { carregar(); }, []);
+  useEffect(() => { setPaginaAtual(1); }, [periodoTipo, mesRef, anoRef]);
 
   function carregar() {
     setCarregando(true);
@@ -120,8 +144,22 @@ export function PeriodosEspeciaisChacara() {
         </button>
       </div>
 
-      {periodos.length === 0 ? (
-        <div className="card"><div className="empty" style={{ padding: '30px 0' }}><p>Nenhum período especial cadastrado.</p></div></div>
+      <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="cx-tipo-toggle">
+          <button className={periodoTipo === 'todos' ? 'active' : ''} onClick={() => setPeriodoTipo('todos')}>Todos</button>
+          <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
+        </div>
+        {periodoTipo === 'mes' && (
+          <>
+            <button className="btn-secondary" onClick={() => navMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+            <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesRef]} {anoRef}</span>
+            <button className="btn-secondary" onClick={() => navMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+          </>
+        )}
+      </div>
+
+      {periodosFiltrados.length === 0 ? (
+        <div className="card"><div className="empty" style={{ padding: '30px 0' }}><p>Nenhum período especial encontrado.</p></div></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {periodosPagina.map(p => {
@@ -150,7 +188,7 @@ export function PeriodosEspeciaisChacara() {
         </div>
       )}
 
-      {periodos.length > ITENS_POR_PAGINA && (
+      {periodosFiltrados.length > ITENS_POR_PAGINA && (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 16 }}>
           <button className="btn-secondary" disabled={paginaSegura <= 1} onClick={() => setPaginaAtual(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaSegura} / {totalPaginas}</span>
