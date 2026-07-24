@@ -45,7 +45,7 @@ export function Configuracoes() {
   const [modulosPreco, setModulosPreco] = useState<ModuloPreco[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-  const { temCorretora, temProdutos, soFinanceiro, temChacaraReservas } = useApp();
+  const { temCorretora, temProdutos, soFinanceiro, temChacaraReservas, tipoPlano } = useApp();
   const [mensalidadeAtual, setMensalidadeAtual] = useState(0);
   const [slugChacara, setSlugChacara] = useState('');
   const [slugAtual, setSlugAtual] = useState('');
@@ -189,14 +189,25 @@ export function Configuracoes() {
               if (mod.chave === 'nf' && !temProdutos) return false;
               // Módulos ainda não disponíveis (em breve) ficam escondidos por completo
               if (!mod.disponivelParaAtivar) return false;
+
+              const grupoExclusivo = ['corretora', 'servicos', 'turmas'];
+
               // Corretora e Turmas não fazem sentido pra loja com produtos (retail) —
               // só aparecem se por algum motivo já estiverem ativos nela
               if ((mod.chave === 'corretora' || mod.chave === 'turmas') && temProdutos && !modulosAtivos.includes(mod.chave)) {
                 return false;
               }
+
+              // Planos "fechados" (identidade própria, sem relação com retail/serviços)
+              // não devem oferecer o trio Serviços/Corretora/Turmas — a não ser que
+              // por algum motivo já estejam ativos (grandfather)
+              const planosFechados = ['financeiro', 'chacara'];
+              if (grupoExclusivo.includes(mod.chave) && planosFechados.includes(tipoPlano) && !modulosAtivos.includes(mod.chave)) {
+                return false;
+              }
+
               // Corretora, Serviços e Turmas são um grupo mutuamente exclusivo:
               // mostra os disponíveis até um ser ativado, depois esconde os outros
-              const grupoExclusivo = ['corretora', 'servicos', 'turmas'];
               if (grupoExclusivo.includes(mod.chave)) {
                 const algumAtivo = grupoExclusivo.find(chave => modulosAtivos.includes(chave));
                 if (algumAtivo && algumAtivo !== mod.chave) return false;
