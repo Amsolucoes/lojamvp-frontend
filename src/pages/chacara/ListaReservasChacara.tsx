@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send } from 'lucide-react';
+import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -28,6 +28,8 @@ function fmtData(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
 const STATUS_LABEL: Record<string, { label: string; cor: string }> = {
   pendente_pagamento: { label: 'Pendente', cor: 'var(--yellow)' },
   confirmada: { label: 'Confirmada', cor: 'var(--green)' },
@@ -40,7 +42,17 @@ export function ListaReservasChacara() {
   const [carregando, setCarregando] = useState(true);
   const [confirmando, setConfirmando] = useState<number | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'pendente_pagamento' | 'confirmada'>('todas');
-  const [filtroMes, setFiltroMes] = useState(''); // formato "YYYY-MM", vazio = todos os meses
+  const hoje = new Date();
+  const [periodoTipo, setPeriodoTipo] = useState<'mes' | 'todos'>('mes');
+  const [mesRef, setMesRef] = useState(hoje.getMonth());
+  const [anoRef, setAnoRef] = useState(hoje.getFullYear());
+
+  function navMes(delta: number) {
+    let nm = mesRef + delta, na = anoRef;
+    if (nm < 0) { nm = 11; na--; }
+    if (nm > 11) { nm = 0; na++; }
+    setMesRef(nm); setAnoRef(na);
+  }
   const { sucesso, erro: toastErro } = useToast();
 
   const [modalEditar, setModalEditar] = useState<Reserva | null>(null);
@@ -209,7 +221,12 @@ export function ListaReservasChacara() {
 
   const lista = reservas.filter(r => {
     if (filtro !== 'todas' && r.status !== filtro) return false;
-    if (filtroMes && !r.dataInicio.slice(0, 7).includes(filtroMes) && !r.dataFim.slice(0, 7).includes(filtroMes)) return false;
+    if (periodoTipo === 'mes') {
+      const chaveRef = `${anoRef}-${String(mesRef + 1).padStart(2, '0')}`;
+      const bateInicio = r.dataInicio.slice(0, 7) === chaveRef;
+      const bateFim = r.dataFim.slice(0, 7) === chaveRef;
+      if (!bateInicio && !bateFim) return false;
+    }
     return true;
   });
 
@@ -227,21 +244,29 @@ export function ListaReservasChacara() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        {(['todas', 'pendente_pagamento', 'confirmada'] as const).map(f => (
-          <button key={f} className={filtro === f ? 'btn-primary' : 'btn-secondary'}
-            style={{ fontSize: 12, padding: '6px 14px' }}
-            onClick={() => setFiltro(f)}>
-            {f === 'todas' ? 'Todas' : STATUS_LABEL[f].label}
-          </button>
-        ))}
-        <input type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}
-          style={{ fontSize: 12, padding: '6px 10px' }} />
-        {filtroMes && (
-          <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => setFiltroMes('')}>
-            Limpar mês
-          </button>
-        )}
+      <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div className="cx-tipo-toggle">
+            <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
+            <button className={periodoTipo === 'todos' ? 'active' : ''} onClick={() => setPeriodoTipo('todos')}>Todos</button>
+          </div>
+          {periodoTipo === 'mes' && (
+            <>
+              <button className="btn-secondary" onClick={() => navMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+              <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesRef]} {anoRef}</span>
+              <button className="btn-secondary" onClick={() => navMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+            </>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {(['todas', 'pendente_pagamento', 'confirmada'] as const).map(f => (
+            <button key={f} className={filtro === f ? 'btn-primary' : 'btn-secondary'}
+              style={{ fontSize: 12, padding: '6px 14px' }}
+              onClick={() => setFiltro(f)}>
+              {f === 'todas' ? 'Todas' : STATUS_LABEL[f].label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {lista.length === 0 ? (
