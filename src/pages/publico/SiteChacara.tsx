@@ -180,19 +180,19 @@ export function SiteChacara() {
               <div style={{ flex: '1 1 140px', minWidth: 140 }}>
                 <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Data início</label>
                 <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)}
-                  style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '8px 10px' }} />
+                  style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '8px 10px', background: '#fff', color: '#222', border: '1px solid #ccc', borderRadius: 6, colorScheme: 'light' }} />
               </div>
               <div style={{ flex: '1 1 140px', minWidth: 140 }}>
                 <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Data fim</label>
                 <input type="date" value={dataFim} min={dataInicio}
                   max={dataInicio ? new Date(new Date(dataInicio).getTime() + 29 * 86400000).toISOString().slice(0, 10) : undefined}
                   onChange={e => setDataFim(e.target.value)}
-                  style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '8px 10px' }} />
+                  style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '8px 10px', background: '#fff', color: '#222', border: '1px solid #ccc', borderRadius: 6, colorScheme: 'light' }} />
               </div>
               <div style={{ flex: '0 1 90px', minWidth: 80 }}>
                 <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Pessoas</label>
                 <input type="number" min={dados.precificacao.minimoPessoas} value={pessoas} onChange={e => setPessoas(Number(e.target.value))}
-                  style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '8px 10px' }} />
+                  style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '8px 10px', background: '#fff', color: '#222', border: '1px solid #ccc', borderRadius: 6 }} />
               </div>
             </div>
 
