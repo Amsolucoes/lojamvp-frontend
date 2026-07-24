@@ -17,24 +17,200 @@ type Detalhamento = { valorEstadia: number; valorTaxaLimpeza: number; valorTotal
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
-function ymd(d: string) { return d; } // datas já vêm como yyyy-mm-dd do <input type="date">
+function ymd(d: string) { return d; }
 
-const ESTILO_INPUTS_PUBLICO = `
-  .site-chacara-input {
-    background: #fff !important;
-    color: #222 !important;
-    border: 1px solid #ccc !important;
-    border-radius: 6px !important;
-    padding: 10px 12px !important;
-    font-size: 16px !important;
-    height: 42px !important;
-    line-height: 1.4 !important;
-    box-sizing: border-box !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-    width: 100% !important;
-    color-scheme: light;
-  }
+const CHAC_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Work+Sans:wght@400;500;600&family=Caveat:wght@600&display=swap');
+
+.chac-root {
+  --chac-paper: #F1E9D8;
+  --chac-panel: #FFFFFF;
+  --chac-ink: #2B2A1F;
+  --chac-ink-soft: #6b6650;
+  --chac-green: #2E4A34;
+  --chac-green-deep: #1B2A20;
+  --chac-terra: #A6472E;
+  --chac-gold: #C99A3C;
+  --chac-line: #D8CBA8;
+  font-family: 'Work Sans', sans-serif;
+  background: var(--chac-paper);
+  color: var(--chac-ink);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+.chac-root * { box-sizing: border-box; }
+
+.chac-hero {
+  position: relative;
+  min-height: 62vh;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--chac-green-deep);
+  display: flex;
+  align-items: flex-end;
+}
+.chac-hero-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(27,42,32,0.15) 0%, rgba(20,26,18,0.55) 65%, rgba(15,19,13,0.88) 100%);
+}
+.chac-hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 32px 24px 36px;
+  max-width: 780px;
+  margin: 0 auto;
+  width: 100%;
+  color: #fdfbf5;
+}
+.chac-hero-logo {
+  width: 52px; height: 52px; object-fit: contain;
+  border-radius: 10px; background: rgba(255,255,255,0.92);
+  padding: 6px; margin-bottom: 14px;
+}
+.chac-eyebrow {
+  font-family: 'Caveat', cursive;
+  font-size: 22px;
+  color: var(--chac-gold);
+  margin: 0 0 2px;
+  transform: rotate(-1deg);
+  display: inline-block;
+}
+.chac-hero-title {
+  font-family: 'Zilla Slab', serif;
+  font-weight: 700;
+  font-size: clamp(30px, 6vw, 48px);
+  line-height: 1.05;
+  margin: 0 0 10px;
+  text-shadow: 0 2px 14px rgba(0,0,0,0.35);
+}
+.chac-hero-sub {
+  font-size: 14px;
+  color: #e9e2cf;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.chac-container { max-width: 780px; margin: 0 auto; padding: 0 20px; }
+
+.chac-thumbs {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 16px 0 4px;
+  margin-bottom: 4px;
+}
+.chac-thumb {
+  width: 64px; height: 64px; object-fit: cover; border-radius: 8px;
+  cursor: pointer; flex-shrink: 0; border: 2px solid transparent; opacity: 0.7;
+  transition: opacity 0.15s, border-color 0.15s, transform 0.15s;
+}
+.chac-thumb:hover { opacity: 1; transform: translateY(-2px); }
+.chac-thumb.active { border-color: var(--chac-terra); opacity: 1; }
+
+.chac-section { padding: 30px 0; border-top: 1px dashed var(--chac-line); }
+.chac-section:first-of-type { border-top: none; }
+
+.chac-lede {
+  font-size: 16px; color: var(--chac-ink); max-width: 62ch; margin: 0;
+}
+
+.chac-heading {
+  font-family: 'Zilla Slab', serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--chac-green);
+  margin: 0 0 16px;
+}
+
+.chac-tags { display: flex; flex-wrap: wrap; gap: 12px 14px; }
+.chac-tag {
+  display: inline-block;
+  font-family: 'Zilla Slab', serif;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--chac-green);
+  background: var(--chac-panel);
+  border: 1.5px solid var(--chac-green);
+  border-radius: 4px;
+  padding: 7px 13px;
+  box-shadow: 2px 3px 0 var(--chac-line);
+  transition: transform 0.15s;
+}
+.chac-tag:hover { transform: translateY(-2px) rotate(0deg) !important; }
+
+.chac-address { font-size: 14px; color: var(--chac-ink-soft); margin: 0 0 12px; }
+.chac-map { border-radius: 10px; overflow: hidden; border: 1px solid var(--chac-line); }
+.chac-map iframe { display: block; }
+
+.chac-booking-card {
+  background: var(--chac-panel);
+  border: 1px solid var(--chac-line);
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 10px 30px rgba(43,42,31,0.08);
+}
+
+.chac-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.chac-cal-nav {
+  background: var(--chac-paper); border: 1px solid var(--chac-line); border-radius: 8px;
+  width: 32px; height: 32px; cursor: pointer; font-size: 15px; color: var(--chac-green);
+}
+.chac-cal-nav:hover { background: var(--chac-line); }
+.chac-cal-month { font-family: 'Zilla Slab', serif; font-weight: 700; font-size: 15px; text-transform: capitalize; }
+.chac-cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; font-size: 11px; color: var(--chac-ink-soft); text-align: center; margin-bottom: 4px; }
+.chac-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.chac-cal-day {
+  aspect-ratio: 1; border-radius: 6px; font-size: 12px; border: 1px solid var(--chac-line);
+  background: var(--chac-panel); color: var(--chac-ink); cursor: pointer;
+}
+.chac-cal-day:disabled { cursor: not-allowed; color: #bcb6a0; }
+.chac-cal-day.occupied { background: #f1d9d2; color: var(--chac-terra); text-decoration: line-through; border-color: #e0bfb4; }
+.chac-cal-day.selected { background: var(--chac-accent, var(--chac-green)); color: #fff; border-color: transparent; }
+.chac-cal-day.in-range { background: color-mix(in srgb, var(--chac-accent, var(--chac-green)) 20%, white); }
+.chac-cal-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--chac-ink-soft); }
+.chac-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+
+.chac-input {
+  width: 100%; box-sizing: border-box; font-size: 16px; padding: 10px 12px;
+  background: #fff; color: var(--chac-ink); border: 1px solid var(--chac-line);
+  border-radius: 8px; font-family: 'Work Sans', sans-serif;
+}
+.chac-input:focus-visible { outline: 2px solid var(--chac-accent, var(--chac-green)); outline-offset: 1px; }
+.chac-field-label { font-size: 12px; color: var(--chac-ink-soft); display: block; margin-bottom: 4px; }
+
+.chac-summary { background: var(--chac-paper); border-radius: 10px; padding: 14px; margin: 14px 0; }
+.chac-summary-line { font-size: 12px; color: var(--chac-ink-soft); }
+.chac-summary-total { font-size: 16px; font-weight: 700; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--chac-line); color: var(--chac-green); }
+
+.chac-btn {
+  font-family: 'Zilla Slab', serif; font-weight: 700; font-size: 15px;
+  color: #fff; background: var(--chac-accent, var(--chac-terra));
+  border: none; border-radius: 8px; padding: 12px 22px; cursor: pointer;
+  transition: filter 0.15s, transform 0.15s;
+}
+.chac-btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.chac-btn:disabled { background: #cfc9b6; cursor: not-allowed; }
+.chac-btn-ghost {
+  background: none; border: none; color: var(--chac-ink-soft); font-size: 13px; cursor: pointer; padding: 0;
+}
+
+.chac-error { color: var(--chac-terra); font-size: 13px; margin: 8px 0 0; }
+
+.chac-success { text-align: center; padding: 16px 4px; }
+.chac-success-icon { font-size: 34px; margin-bottom: 8px; }
+.chac-success-title { font-family: 'Zilla Slab', serif; font-weight: 700; font-size: 19px; color: var(--chac-green); margin: 0 0 6px; }
+
+.chac-footer { text-align: center; font-size: 12px; color: var(--chac-ink-soft); padding: 28px 20px 40px; }
+.chac-footer a { color: inherit; }
+
+.chac-state-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px; background: var(--chac-paper); color: var(--chac-ink);
+  font-family: 'Work Sans', sans-serif; text-align: center; padding: 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chac-root * { transition: none !important; animation: none !important; }
+}
 `;
 
 export function SiteChacara() {
@@ -142,16 +318,10 @@ export function SiteChacara() {
     }
   }
 
-  if (carregando) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando...</div>;
-  if (naoEncontrada || !dados) return <div style={{ padding: 40, textAlign: 'center' }}>Página não encontrada.</div>;
-
-  const cor = dados.corPrimaria || '#2f7d4f';
-  const mapaUrl = dados.mapaEmbedUrl || `https://www.google.com/maps?q=${encodeURIComponent(dados.endereco)}&output=embed`;
+  const hojeStr = ymd(new Date().toISOString().slice(0, 10));
 
   const diaOcupado = (diaStr: string) =>
     datasOcupadas.some(o => diaStr >= o.dataInicio.slice(0, 10) && diaStr <= o.dataFim.slice(0, 10));
-
-  const hojeStr = ymd(new Date().toISOString().slice(0, 10));
 
   function selecionarDiaCalendario(diaStr: string) {
     if (diaOcupado(diaStr) || diaStr < hojeStr) return;
@@ -186,223 +356,214 @@ export function SiteChacara() {
     return dias;
   }
 
- return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px', fontFamily: 'inherit', background: '#fff', color: '#222', minHeight: '100vh' }}>
-      <style>{ESTILO_INPUTS_PUBLICO}</style>
-      {/* Cabeçalho */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        {dados.logoUrl && <img src={dados.logoUrl} alt={dados.nome} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain' }} />}
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: '#222' }}>{dados.nome}</h1>
-      </div>
+  if (carregando) {
+    return <div className="chac-state-screen">Carregando...</div>;
+  }
+  if (naoEncontrada || !dados) {
+    return <div className="chac-state-screen"><strong>Página não encontrada.</strong></div>;
+  }
 
-      {/* Galeria */}
-      {dados.fotos.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <img src={dados.fotos[fotoAtiva]} alt="" style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 12 }} />
-          <div style={{ display: 'flex', gap: 6, marginTop: 8, overflowX: 'auto' }}>
+  const cor = dados.corPrimaria || '#A6472E';
+  const mapaUrl = dados.mapaEmbedUrl || `https://www.google.com/maps?q=${encodeURIComponent(dados.endereco)}&output=embed`;
+
+  return (
+    <div className="chac-root" style={{ ['--chac-accent' as any]: cor }}>
+      <style>{CHAC_CSS}</style>
+
+      <header className="chac-hero" style={dados.fotos.length > 0 ? { backgroundImage: `url(${dados.fotos[fotoAtiva]})` } : undefined}>
+        <div className="chac-hero-overlay" />
+        <div className="chac-hero-content">
+          {dados.logoUrl && <img src={dados.logoUrl} alt={dados.nome} className="chac-hero-logo" />}
+          <span className="chac-eyebrow">um cantinho pra chamar de seu</span>
+          <h1 className="chac-hero-title">{dados.nome}</h1>
+          {dados.endereco && <p className="chac-hero-sub">📍 {dados.endereco}</p>}
+        </div>
+      </header>
+
+      <div className="chac-container">
+        {dados.fotos.length > 1 && (
+          <div className="chac-thumbs">
             {dados.fotos.map((f, i) => (
-              <img key={i} src={f} alt="" onClick={() => { setFotoAtiva(i); setAutoplayPausado(true); }}
-                style={{
-                  width: 60, height: 60, objectFit: 'cover', borderRadius: 6, cursor: 'pointer', flexShrink: 0,
-                  border: i === fotoAtiva ? `2px solid ${cor}` : '2px solid transparent',
-                }} />
+              <img key={i} src={f} alt="" className={`chac-thumb${i === fotoAtiva ? ' active' : ''}`}
+                onClick={() => { setFotoAtiva(i); setAutoplayPausado(true); }} />
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Descrição */}
-      {dados.descricao && <p style={{ fontSize: 14, lineHeight: 1.7, color: '#333', marginBottom: 20 }}>{dados.descricao}</p>}
+        {dados.descricao && (
+          <section className="chac-section">
+            <p className="chac-lede">{dados.descricao}</p>
+          </section>
+        )}
 
-      {/* Comodidades */}
-      {(dados.comodidades.length > 0 || dados.comodidadesExtras.length > 0) && (
-        <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10, color: '#222' }}>O que a chácara oferece</h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {dados.comodidades.map(c => (
-              <span key={c.chave} style={{ fontSize: 13, background: '#f0f0f0', color: '#333', padding: '6px 12px', borderRadius: 20 }}>{c.label}</span>
-            ))}
-            {dados.comodidadesExtras.map((c, i) => (
-              <span key={i} style={{ fontSize: 13, background: '#f0f0f0', color: '#333', padding: '6px 12px', borderRadius: 20 }}>{c}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Localização */}
-      {dados.endereco && (
-        <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10, color: '#222' }}>Localização</h2>
-          <p style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>{dados.endereco}</p>
-          <iframe title="Mapa" src={mapaUrl} width="100%" height="240" style={{ border: 0, borderRadius: 12 }} loading="lazy" />
-        </div>
-      )}
-
-      {/* Reserva */}
-      <div style={{ border: '1px solid #e0e0e0', borderRadius: 12, padding: 20 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: '#222' }}>Reservar</h2>
-
-        {etapa === 'datas' && (
-          <>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <button type="button" onClick={() => navMesCalendario(-1)}
-                  style={{ background: 'none', border: '1px solid #ccc', borderRadius: 6, width: 30, height: 30, cursor: 'pointer', fontSize: 14 }}>
-                  ‹
-                </button>
-                <strong style={{ fontSize: 14, textTransform: 'capitalize' }}>
-                  {mesCalendario.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                </strong>
-                <button type="button" onClick={() => navMesCalendario(1)}
-                  style={{ background: 'none', border: '1px solid #ccc', borderRadius: 6, width: 30, height: 30, cursor: 'pointer', fontSize: 14 }}>
-                  ›
-                </button>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, fontSize: 11, color: '#888', textAlign: 'center', marginBottom: 4 }}>
-                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => <div key={d}>{d}</div>)}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-                {gerarDiasDoMes(mesCalendario).map((dia, i) => {
-                  if (!dia) return <div key={`vazio-${i}`} />;
-                  const ocupado = diaOcupado(dia);
-                  const passado = dia < hojeStr;
-                  const noIntervalo = dataInicio && dataFim && dia >= dataInicio && dia <= dataFim;
-                  const extremo = dia === dataInicio || dia === dataFim;
-                  return (
-                    <button key={dia} type="button" disabled={ocupado || passado}
-                      onClick={() => selecionarDiaCalendario(dia)}
-                      title={ocupado ? 'Já reservado' : ''}
-                      style={{
-                        aspectRatio: '1', border: '1px solid #ddd', borderRadius: 6, fontSize: 12,
-                        cursor: (ocupado || passado) ? 'not-allowed' : 'pointer',
-                        background: ocupado ? '#f5d5d5' : extremo ? cor : noIntervalo ? `${cor}33` : '#fff',
-                        color: ocupado ? '#a33' : extremo ? '#fff' : passado ? '#ccc' : '#333',
-                        textDecoration: ocupado ? 'line-through' : 'none',
-                      }}>
-                      {Number(dia.slice(8, 10))}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div style={{ display: 'flex', gap: 14, marginTop: 8, fontSize: 11, color: '#888' }}>
-                <span><span style={{ display: 'inline-block', width: 10, height: 10, background: '#f5d5d5', borderRadius: 2, marginRight: 4 }} />Ocupado</span>
-                <span><span style={{ display: 'inline-block', width: 10, height: 10, background: cor, borderRadius: 2, marginRight: 4 }} />Selecionado</span>
-              </div>
+        {(dados.comodidades.length > 0 || dados.comodidadesExtras.length > 0) && (
+          <section className="chac-section">
+            <h2 className="chac-heading">O que você encontra por aqui</h2>
+            <div className="chac-tags">
+              {dados.comodidades.map((c, i) => (
+                <span key={c.chave} className="chac-tag" style={{ transform: `rotate(${i % 2 === 0 ? -1.2 : 1.2}deg)` }}>
+                  {c.label}
+                </span>
+              ))}
+              {dados.comodidadesExtras.map((c, i) => (
+                <span key={i} className="chac-tag" style={{ transform: `rotate(${i % 2 === 0 ? 1.2 : -1.2}deg)` }}>
+                  {c}
+                </span>
+              ))}
             </div>
+          </section>
+        )}
 
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-              <div style={{ flex: '1 1 140px', minWidth: 140 }}>
-                <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Data início</label>
-                <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)}
-                  className="site-chacara-input" />
-              </div>
-              <div style={{ flex: '1 1 140px', minWidth: 140 }}>
-                <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Data fim</label>
-                <input type="date" value={dataFim} min={dataInicio}
-                  max={dataInicio ? new Date(new Date(dataInicio).getTime() + 29 * 86400000).toISOString().slice(0, 10) : undefined}
-                  onChange={e => setDataFim(e.target.value)}
-                  className="site-chacara-input" />
-              </div>
-              <div style={{ flex: '0 1 90px', minWidth: 80 }}>
-                <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Pessoas</label>
-                <input type="number" min={dados.precificacao.minimoPessoas} value={pessoas} onChange={e => setPessoas(Number(e.target.value))}
-                  className="site-chacara-input" />
-              </div>
+        {dados.endereco && (
+          <section className="chac-section">
+            <h2 className="chac-heading">Como chegar</h2>
+            <p className="chac-address">{dados.endereco}</p>
+            <div className="chac-map">
+              <iframe title="Mapa" src={mapaUrl} width="100%" height="240" style={{ border: 0 }} loading="lazy" />
             </div>
+          </section>
+        )}
 
-            {pessoas > 0 && pessoas < dados.precificacao.minimoPessoas && (
-              <p style={{ fontSize: 13, color: '#c0392b' }}>O mínimo é de {dados.precificacao.minimoPessoas} pessoas.</p>
-            )}
+        <section className="chac-section" id="reservar">
+          <h2 className="chac-heading">Reserve sua estadia</h2>
 
-            {dataInicio && dataFim && (new Date(dataFim).getTime() - new Date(dataInicio).getTime()) / 86400000 > 29 && (
-              <p style={{ fontSize: 13, color: '#c0392b' }}>O período máximo por reserva é de 30 dias.</p>
-            )}
+          <div className="chac-booking-card">
+            {etapa === 'datas' && (
+              <>
+                <div style={{ marginBottom: 18 }}>
+                  <div className="chac-cal-head">
+                    <button type="button" className="chac-cal-nav" onClick={() => navMesCalendario(-1)}>‹</button>
+                    <span className="chac-cal-month">
+                      {mesCalendario.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                    </span>
+                    <button type="button" className="chac-cal-nav" onClick={() => navMesCalendario(1)}>›</button>
+                  </div>
 
-            {verificando && <p style={{ fontSize: 13, color: '#888' }}>Verificando disponibilidade...</p>}
+                  <div className="chac-cal-dow">
+                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => <div key={d}>{d}</div>)}
+                  </div>
 
-            {!verificando && disponivel === false && (
-              <p style={{ fontSize: 13, color: '#c0392b' }}>Datas indisponíveis. Escolha outro período.</p>
-            )}
+                  <div className="chac-cal-grid">
+                    {gerarDiasDoMes(mesCalendario).map((dia, i) => {
+                      if (!dia) return <div key={`vazio-${i}`} />;
+                      const ocupado = diaOcupado(dia);
+                      const passado = dia < hojeStr;
+                      const noIntervalo = !!(dataInicio && dataFim && dia >= dataInicio && dia <= dataFim);
+                      const extremo = dia === dataInicio || dia === dataFim;
+                      const classes = ['chac-cal-day'];
+                      if (ocupado) classes.push('occupied');
+                      else if (extremo) classes.push('selected');
+                      else if (noIntervalo) classes.push('in-range');
+                      return (
+                        <button key={dia} type="button" disabled={ocupado || passado}
+                          className={classes.join(' ')}
+                          onClick={() => selecionarDiaCalendario(dia)}
+                          title={ocupado ? 'Já reservado' : ''}>
+                          {Number(dia.slice(8, 10))}
+                        </button>
+                      );
+                    })}
+                  </div>
 
-            {!verificando && disponivel === true && valor && (
-              <div style={{ background: '#f7f7f7', borderRadius: 8, padding: 14, marginBottom: 14 }}>
-                {valor.detalhamento.map((linha, i) => (
-                  <div key={i} style={{ fontSize: 12, color: '#555' }}>{linha}</div>
-                ))}
-                <div style={{ fontSize: 15, fontWeight: 700, marginTop: 8, borderTop: '1px solid #ddd', paddingTop: 8 }}>
-                  Total: {fmt(valor.valorTotal)}
+                  <div className="chac-cal-legend">
+                    <span><span className="chac-legend-dot" style={{ background: '#f1d9d2' }} />Ocupado</span>
+                    <span><span className="chac-legend-dot" style={{ background: cor }} />Selecionado</span>
+                  </div>
                 </div>
-              </div>
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                  <div style={{ flex: '1 1 140px', minWidth: 140 }}>
+                    <label className="chac-field-label">Data início</label>
+                    <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="chac-input" />
+                  </div>
+                  <div style={{ flex: '1 1 140px', minWidth: 140 }}>
+                    <label className="chac-field-label">Data fim</label>
+                    <input type="date" value={dataFim} min={dataInicio}
+                      max={dataInicio ? new Date(new Date(dataInicio).getTime() + 29 * 86400000).toISOString().slice(0, 10) : undefined}
+                      onChange={e => setDataFim(e.target.value)} className="chac-input" />
+                  </div>
+                  <div style={{ flex: '0 1 90px', minWidth: 80 }}>
+                    <label className="chac-field-label">Pessoas</label>
+                    <input type="number" min={dados.precificacao.minimoPessoas} value={pessoas}
+                      onChange={e => setPessoas(Number(e.target.value))} className="chac-input" />
+                  </div>
+                </div>
+
+                {pessoas > 0 && pessoas < dados.precificacao.minimoPessoas && (
+                  <p className="chac-error">O mínimo é de {dados.precificacao.minimoPessoas} pessoas.</p>
+                )}
+                {dataInicio && dataFim && (new Date(dataFim).getTime() - new Date(dataInicio).getTime()) / 86400000 > 29 && (
+                  <p className="chac-error">O período máximo por reserva é de 30 dias.</p>
+                )}
+                {verificando && <p style={{ fontSize: 13, color: 'var(--chac-ink-soft)' }}>Verificando disponibilidade...</p>}
+                {!verificando && disponivel === false && (
+                  <p className="chac-error">Datas indisponíveis. Escolha outro período.</p>
+                )}
+
+                {!verificando && disponivel === true && valor && (
+                  <div className="chac-summary">
+                    {valor.detalhamento.map((linha, i) => (
+                      <div key={i} className="chac-summary-line">{linha}</div>
+                    ))}
+                    <div className="chac-summary-total">Total: {fmt(valor.valorTotal)}</div>
+                  </div>
+                )}
+
+                <button className="chac-btn" disabled={!disponivel || !valor} onClick={() => setEtapa('dados')}>
+                  Continuar
+                </button>
+              </>
             )}
 
-            <button
-              disabled={!disponivel || !valor}
-              onClick={() => setEtapa('dados')}
-              style={{
-                background: disponivel ? cor : '#ccc', color: '#fff', border: 'none',
-                borderRadius: 8, padding: '10px 20px', fontSize: 14, cursor: disponivel ? 'pointer' : 'not-allowed',
-              }}>
-              Continuar
-            </button>
-          </>
-        )}
+            {etapa === 'dados' && valor && (
+              <>
+                <button className="chac-btn-ghost" style={{ marginBottom: 14 }} onClick={() => setEtapa('datas')}>← Voltar</button>
 
-        {etapa === 'dados' && valor && (
-          <>
-            <button onClick={() => setEtapa('datas')} style={{ background: 'none', border: 'none', fontSize: 13, color: '#888', marginBottom: 12, cursor: 'pointer' }}>← Voltar</button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+                  <input placeholder="Nome completo" value={nome} onChange={e => setNome(e.target.value)} className="chac-input" />
+                  <input placeholder="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} className="chac-input" />
+                  <input placeholder="Telefone / WhatsApp" value={telefone}
+                    onChange={e => setTelefone(formatarTelefone(e.target.value))}
+                    inputMode="tel" maxLength={16} className="chac-input" />
+                  <input placeholder="CPF" value={cpf}
+                    onChange={e => setCpf(formatarCpf(e.target.value))}
+                    inputMode="numeric" maxLength={14} className="chac-input" />
+                  <input placeholder="CEP" value={cep}
+                    onChange={e => setCep(formatarCep(e.target.value))}
+                    onBlur={e => handleBuscarCep(e.target.value)}
+                    inputMode="numeric" maxLength={9} className="chac-input" />
+                  {buscandoCep && <p style={{ fontSize: 12, color: 'var(--chac-ink-soft)', margin: 0 }}>Buscando endereço...</p>}
+                  <input placeholder="Endereço completo (rua, número, bairro)" value={enderecoCliente}
+                    onChange={e => setEnderecoCliente(e.target.value)}
+                    maxLength={150} className="chac-input" />
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--chac-ink-soft)', marginTop: -8, marginBottom: 12 }}>
+                  CPF, CEP e endereço são usados para gerar seu contrato de locação.
+                </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
-              <input placeholder="Nome completo" value={nome} onChange={e => setNome(e.target.value)} className="site-chacara-input" />
-              <input placeholder="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} className="site-chacara-input" />
-              <input placeholder="Telefone / WhatsApp" value={telefone}
-                onChange={e => setTelefone(formatarTelefone(e.target.value))}
-                inputMode="tel" maxLength={16} className="site-chacara-input" />
-              <input placeholder="CPF" value={cpf}
-                onChange={e => setCpf(formatarCpf(e.target.value))}
-                inputMode="numeric" maxLength={14}
-                className="site-chacara-input" />
-              <input placeholder="CEP" value={cep}
-                onChange={e => setCep(formatarCep(e.target.value))}
-                onBlur={e => handleBuscarCep(e.target.value)}
-                inputMode="numeric" maxLength={9}
-                className="site-chacara-input" />
-              {buscandoCep && <p style={{ fontSize: 12, color: '#888', margin: 0 }}>Buscando endereço...</p>}
-              <input placeholder="Endereço completo (rua, número, bairro)" value={enderecoCliente}
-                onChange={e => setEnderecoCliente(e.target.value)}
-                maxLength={150}
-                className="site-chacara-input" />
-            </div>
-            <p style={{ fontSize: 11, color: '#888', marginTop: -8, marginBottom: 12 }}>
-              CPF, CEP e endereço são usados para gerar seu contrato de locação.
-            </p>
+                {erro && <p className="chac-error">{erro}</p>}
 
-            {erro && <p style={{ color: '#c0392b', fontSize: 13, marginBottom: 10 }}>{erro}</p>}
+                <button className="chac-btn" onClick={confirmarReserva} disabled={enviando}>
+                  {enviando ? 'Enviando...' : `Confirmar reserva — ${fmt(valor.valorTotal)}`}
+                </button>
+              </>
+            )}
 
-            <button onClick={confirmarReserva} disabled={enviando}
-              style={{ background: cor, color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, cursor: 'pointer' }}>
-              {enviando ? 'Enviando...' : `Confirmar reserva — ${fmt(valor.valorTotal)}`}
-            </button>
-          </>
-        )}
-
-        {etapa === 'sucesso' && reservaCriada && (
-          <div style={{ textAlign: 'center', padding: 10 }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>⏳</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Reserva criada!</h3>
-            <p style={{ fontSize: 13, color: '#555' }}>
-              Sua reserva no valor de <strong>{fmt(reservaCriada.valor)}</strong> foi criada.
-              Em breve o pagamento estará disponível aqui para confirmar sua data.
-            </p>
+            {etapa === 'sucesso' && reservaCriada && (
+              <div className="chac-success">
+                <div className="chac-success-icon">⏳</div>
+                <h3 className="chac-success-title">Reserva criada!</h3>
+                <p style={{ fontSize: 13, color: 'var(--chac-ink-soft)' }}>
+                  Sua reserva no valor de <strong>{fmt(reservaCriada.valor)}</strong> foi criada.
+                  Em breve o pagamento estará disponível aqui para confirmar sua data.
+                </p>
+              </div>
+            )}
           </div>
-        )}
+        </section>
       </div>
 
-      <p style={{ textAlign: 'center', fontSize: 11, color: '#aaa', marginTop: 20 }}>
-        Reservas online por AL Dev Software
-      </p>
+      <p className="chac-footer">Reservas online por AL Dev Software</p>
     </div>
   );
 }
