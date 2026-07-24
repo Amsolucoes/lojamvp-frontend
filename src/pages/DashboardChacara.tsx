@@ -17,7 +17,8 @@ type Pendente = { id: number; clienteNome: string; dataInicio: string; dataFim: 
 type MesResumo = {
   ano: number; mes: number; qtdReservas: number;
   diasOcupados: number; diasNoMes: number;
-  percentualOcupado: number; percentualLivre: number; receita: number;
+  percentualOcupado: number; percentualLivre: number;
+  receita: number; pago: number; pendente: number;
 };
 
 type DadosDashboard = {
@@ -46,7 +47,7 @@ export function DashboardChacara() {
       </div>
 
       {/* Totais gerais */}
-      <div className="dash-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 20 }}>
+      <div className="dash-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 20, maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
         <div className="stat-card">
           <div className="stat-label"><Calendar size={12} style={{ verticalAlign: -1 }} /> Total de aluguéis</div>
           <div className="stat-value">{dados?.totalReservas ?? 0}</div>
@@ -67,45 +68,48 @@ export function DashboardChacara() {
       </div>
 
       {/* Quebra mês a mês */}
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card" style={{ marginBottom: 16, maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
         <div className="dash-card-header">
           <div className="dash-card-title"><TrendingUp size={15} /> Ocupação por mês</div>
         </div>
         {!dados || dados.meses.length === 0 ? (
           <div className="empty" style={{ padding: '20px 0' }}><p>Sem dados de meses.</p></div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {dados.meses.map(m => (
-              <div key={`${m.ano}-${m.mes}`} style={{ paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, textTransform: 'capitalize' }}>
-                    {MESES[m.mes - 1]} {m.ano}
-                    <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-3)', marginLeft: 8 }}>
-                      {m.qtdReservas} aluguel(éis)
-                    </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {dados.meses.map(m => {
+              const pctPago = m.diasNoMes > 0 ? (m.pago > 0 ? (m.diasOcupados / m.diasNoMes) * (m.pago / (m.pago + m.pendente || 1)) * 100 : 0) : 0;
+              const pctPendente = m.diasNoMes > 0 ? (m.percentualOcupado - pctPago) : 0;
+              return (
+                <div key={`${m.ano}-${m.mes}`} style={{
+                  display: 'grid', gridTemplateColumns: '104px 1fr auto', alignItems: 'center', gap: 12,
+                  padding: '8px 4px', borderBottom: '1px solid var(--border)',
+                }}>
+                  <div style={{ fontSize: 13 }}>
+                    <div style={{ fontWeight: 600, textTransform: 'capitalize' }}>{MESES[m.mes - 1].slice(0, 3)} {m.ano}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                      <BedDouble size={10} style={{ verticalAlign: -1, marginRight: 2 }} />
+                      {m.diasOcupados}/{m.diasNoMes}d
+                    </div>
                   </div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--green)' }}>{fmt(m.receita)}</div>
-                </div>
 
-                <div style={{ height: 8, background: 'var(--bg-3)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 4, width: `${m.percentualOcupado}%`,
-                    background: m.percentualOcupado >= 80 ? 'var(--red)' : m.percentualOcupado >= 40 ? 'var(--yellow, #d97706)' : 'var(--accent)',
-                  }} />
-                </div>
+                  <div style={{ height: 10, background: 'var(--bg-3)', borderRadius: 5, overflow: 'hidden', display: 'flex' }}>
+                    {pctPago > 0 && <div style={{ height: '100%', width: `${pctPago}%`, background: 'var(--green)' }} title={`Pago: ${fmt(m.pago)}`} />}
+                    {pctPendente > 0 && <div style={{ height: '100%', width: `${pctPendente}%`, background: 'var(--yellow, #d97706)' }} title={`Pendente: ${fmt(m.pendente)}`} />}
+                  </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-                  <span><BedDouble size={11} style={{ verticalAlign: -1, marginRight: 3 }} /> {m.diasOcupados} de {m.diasNoMes} dias ocupados</span>
-                  <span>{m.percentualLivre}% livre</span>
+                  <div style={{ textAlign: 'right', fontSize: 11, lineHeight: 1.5, minWidth: 92 }}>
+                    <div style={{ color: 'var(--green)' }}>{fmt(m.pago)}</div>
+                    {m.pendente > 0 && <div style={{ color: 'var(--yellow)' }}>{fmt(m.pendente)}</div>}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* Próximas reservas confirmadas */}
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card" style={{ marginBottom: 16, maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
         <div className="dash-card-header">
           <div className="dash-card-title"><Calendar size={15} /> Próximas reservas confirmadas</div>
         </div>
@@ -132,7 +136,7 @@ export function DashboardChacara() {
       </div>
 
       {dados && dados.pendentes.length > 0 && (
-        <div className="card">
+        <div className="card" style={{ maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
           <div className="dash-card-header">
             <div className="dash-card-title" style={{ color: 'var(--yellow)' }}><Clock size={15} /> Aguardando pagamento</div>
           </div>
