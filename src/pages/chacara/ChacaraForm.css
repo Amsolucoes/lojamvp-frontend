@@ -1,0 +1,19 @@
+.chacara-card-wide {
+  max-width: 760px;
+}
+
+.chacara-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+}
+
+.chacara-grid-2 .chacara-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 680px) {
+  .chacara-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

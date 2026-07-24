@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import './ChacaraForm.css';
 
 type ConfigPreco = {
   valorDiariaSemana: number;
@@ -25,7 +26,6 @@ const CAMPOS: { chave: keyof ConfigPreco; label: string; tipo: 'moeda' | 'numero
   { chave: 'minimoPessoas', label: 'Mínimo de pessoas por reserva', tipo: 'numero', ajuda: 'O site público não permite reservar com menos que isso' },
   { chave: 'valorTaxaLimpeza', label: 'Taxa de limpeza', tipo: 'moeda', ajuda: 'Cobrada junto no pagamento quando ultrapassa o limite de pessoas' },
   { chave: 'valorMultaNaoLimpeza', label: 'Multa por não limpar ao sair', tipo: 'moeda', ajuda: 'Só informativa — avisada ao cliente, cobrança é manual' },
-  { chave: 'percentualEntradaMinimo', label: '% mínimo de entrada', tipo: 'numero', ajuda: 'Só uma sugestão exibida na tela de reservas — você pode registrar qualquer valor de entrada' },
 ];
 
 function fmt(n: number) {
@@ -82,8 +82,8 @@ export function ConfiguracaoPrecoChacara() {
         </div>
       </div>
 
-      <div className="card" style={{ maxWidth: 560 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="card chacara-card-wide">
+        <div className="chacara-grid-2">
           {CAMPOS.map(campo => (
             <div key={campo.chave}>
               <label style={{ fontSize: 13, fontWeight: 500, display: 'block', marginBottom: 4 }}>
@@ -119,7 +119,7 @@ export function ConfiguracaoPrecoChacara() {
         </div>
       </div>
 
-      <div className="card" style={{ maxWidth: 560, marginTop: 20 }}>
+      <div className="card chacara-card-wide" style={{ marginTop: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Prévia dos valores atuais</div>
         <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.8 }}>
           <div>Seg a qui (1 dia): <strong>{fmt(config.valorDiariaSemana)}</strong></div>

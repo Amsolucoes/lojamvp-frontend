@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Upload, X, GripVertical } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import './ChacaraForm.css';
 
 const CLOUDINARY_CLOUD = 'dnwnwshvq';
 const CLOUDINARY_PRESET = 'chacara-fotos';
@@ -135,7 +136,7 @@ export function GerenciarChacara() {
       </div>
 
       {/* Galeria de fotos */}
-      <div className="card" style={{ maxWidth: 640 }}>
+      <div className="card chacara-card-wide">
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Fotos ({fotos.length}/{LIMITE_FOTOS})</div>
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>
           A primeira foto é a capa. Use as setas para reordenar.
@@ -174,9 +175,9 @@ export function GerenciarChacara() {
       </div>
 
       {/* Descrição e endereço */}
-      <div className="card" style={{ maxWidth: 640, marginTop: 20 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div className="form-group">
+      <div className="card chacara-card-wide" style={{ marginTop: 20 }}>
+        <div className="chacara-grid-2">
+          <div className="form-group chacara-full">
             <label className="form-label">Descrição</label>
             <textarea rows={4} value={info.descricao}
               onChange={e => setInfo(i => ({ ...i, descricao: e.target.value }))}
@@ -203,7 +204,7 @@ export function GerenciarChacara() {
             </p>
           </div>
 
-          <div className="form-group">
+          <div className="form-group chacara-full">
             <label className="form-label">Comodidades</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
               {COMODIDADES_OPCOES.map(op => {
@@ -219,27 +220,27 @@ export function GerenciarChacara() {
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group chacara-full">
             <label className="form-label">Outras comodidades (opcional)</label>
             <textarea rows={3} value={info.comodidadesExtras ?? ''}
               onChange={e => setInfo(i => ({ ...i, comodidadesExtras: e.target.value }))}
               placeholder={'Uma por linha, ex:\nLago para pesca\nQuadra de vôlei'} />
           </div>
 
-          <button className="btn-primary" onClick={salvarInfo} disabled={salvandoInfo} style={{ alignSelf: 'flex-start' }}>
+          <button className="btn-primary chacara-full" onClick={salvarInfo} disabled={salvandoInfo} style={{ alignSelf: 'flex-start' }}>
             {salvandoInfo ? 'Salvando...' : 'Salvar informações'}
           </button>
         </div>
       </div>
 
       {/* Dados do locador (contrato) */}
-      <div className="card" style={{ maxWidth: 640, marginTop: 20 }}>
+      <div className="card chacara-card-wide" style={{ marginTop: 20 }}>
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Meus dados (Locador)</div>
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>
           Usados para preencher automaticamente o contrato de locação gerado nas reservas.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div className="form-group">
+        <div className="chacara-grid-2">
+          <div className="form-group chacara-full">
             <label className="form-label">Nome completo</label>
             <input value={info.locadorNome ?? ''} onChange={e => setInfo(i => ({ ...i, locadorNome: e.target.value }))} />
           </div>
@@ -253,7 +254,7 @@ export function GerenciarChacara() {
               <input value={info.locadorCpf ?? ''} onChange={e => setInfo(i => ({ ...i, locadorCpf: e.target.value }))} />
             </div>
           </div>
-          <div className="form-group">
+          <div className="form-group chacara-full">
             <label className="form-label">Endereço completo</label>
             <input value={info.locadorEndereco ?? ''} onChange={e => setInfo(i => ({ ...i, locadorEndereco: e.target.value }))}
               placeholder="Rua, número, bairro, cidade - UF" />
@@ -269,7 +270,7 @@ export function GerenciarChacara() {
                 placeholder="Ex: Campo Grande – MS" />
             </div>
           </div>
-          <button className="btn-primary" onClick={salvarInfo} disabled={salvandoInfo} style={{ alignSelf: 'flex-start' }}>
+          <button className="btn-primary chacara-full" onClick={salvarInfo} disabled={salvandoInfo} style={{ alignSelf: 'flex-start' }}>
             {salvandoInfo ? 'Salvando...' : 'Salvar meus dados'}
           </button>
         </div>
