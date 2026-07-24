@@ -32,12 +32,18 @@ export function PeriodosEspeciaisChacara() {
   const [excluindo, setExcluindo] = useState(false);
   const { sucesso, erro: toastErro } = useToast();
 
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const ITENS_POR_PAGINA = 5;
+  const totalPaginas = Math.max(1, Math.ceil(periodos.length / ITENS_POR_PAGINA));
+  const paginaSegura = Math.min(paginaAtual, totalPaginas);
+  const periodosPagina = periodos.slice((paginaSegura - 1) * ITENS_POR_PAGINA, paginaSegura * ITENS_POR_PAGINA);
+
   useEffect(() => { carregar(); }, []);
 
   function carregar() {
     setCarregando(true);
     api.get<Periodo[]>('/api/chacara/periodos-especiais')
-      .then(setPeriodos)
+      .then(lista => { setPeriodos(lista); setPaginaAtual(1); })
       .catch(() => toastErro('Erro ao carregar períodos especiais.'))
       .finally(() => setCarregando(false));
   }
@@ -118,7 +124,7 @@ export function PeriodosEspeciaisChacara() {
         <div className="card"><div className="empty" style={{ padding: '30px 0' }}><p>Nenhum período especial cadastrado.</p></div></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {periodos.map(p => {
+          {periodosPagina.map(p => {
             const dias = diasDoPeriodo(p);
             return (
               <div key={p.id} className="card" style={{ padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
@@ -141,6 +147,14 @@ export function PeriodosEspeciaisChacara() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {periodos.length > ITENS_POR_PAGINA && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 16 }}>
+          <button className="btn-secondary" disabled={paginaSegura <= 1} onClick={() => setPaginaAtual(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaSegura} / {totalPaginas}</span>
+          <button className="btn-secondary" disabled={paginaSegura >= totalPaginas} onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
         </div>
       )}
 

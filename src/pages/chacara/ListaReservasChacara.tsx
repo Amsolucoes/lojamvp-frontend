@@ -77,9 +77,16 @@ export function ListaReservasChacara() {
   const [salvandoPagamento, setSalvandoPagamento] = useState(false);
   const [erroPagamento, setErroPagamento] = useState('');
 
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const ITENS_POR_PAGINA = 5;
+
   useEffect(() => {
     carregar();
   }, []);
+
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [filtro, periodoTipo, mesRef, anoRef]);
 
   function carregar() {
     setCarregando(true);
@@ -229,7 +236,7 @@ export function ListaReservasChacara() {
     }
   }
 
-  const lista = reservas.filter(r => {
+  const listaCompleta = reservas.filter(r => {
     if (filtro !== 'todas' && r.status !== filtro) return false;
     if (periodoTipo === 'mes') {
       const chaveRef = `${anoRef}-${String(mesRef + 1).padStart(2, '0')}`;
@@ -239,6 +246,10 @@ export function ListaReservasChacara() {
     }
     return true;
   });
+
+  const totalPaginas = Math.max(1, Math.ceil(listaCompleta.length / ITENS_POR_PAGINA));
+  const paginaSegura = Math.min(paginaAtual, totalPaginas);
+  const lista = listaCompleta.slice((paginaSegura - 1) * ITENS_POR_PAGINA, paginaSegura * ITENS_POR_PAGINA);
 
   if (carregando) return <div className="page"><p>Carregando...</p></div>;
 
@@ -349,6 +360,14 @@ export function ListaReservasChacara() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {listaCompleta.length > ITENS_POR_PAGINA && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 16 }}>
+          <button className="btn-secondary" disabled={paginaSegura <= 1} onClick={() => setPaginaAtual(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaSegura} / {totalPaginas}</span>
+          <button className="btn-secondary" disabled={paginaSegura >= totalPaginas} onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
         </div>
       )}
 
