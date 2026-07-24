@@ -9,6 +9,8 @@ type Periodo = {
   dataInicio: string;
   dataFim: string;
   valorTotal: number;
+  confirmado: boolean;
+  ocupado: boolean;
 };
 
 function fmt(n: number) {
@@ -164,23 +166,40 @@ export function PeriodosEspeciaisChacara() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {periodosPagina.map(p => {
             const dias = diasDoPeriodo(p);
+            const desabilitado = p.ocupado && !p.confirmado;
             return (
-              <div key={p.id} className="card" style={{ padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+              <div key={p.id} className="card" style={{
+                padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10,
+                background: p.confirmado ? 'rgba(34,197,94,0.08)' : desabilitado ? 'var(--bg-3)' : undefined,
+                borderColor: p.confirmado ? 'rgba(34,197,94,0.4)' : undefined,
+                opacity: desabilitado ? 0.55 : 1,
+              }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 }}>
                     <CalendarHeart size={15} /> {p.nome}
+                    {p.confirmado && (
+                      <span className="badge badge-green" style={{ fontSize: 10 }}>Confirmado</span>
+                    )}
+                    {desabilitado && (
+                      <span className="badge badge-accent" style={{ fontSize: 10, opacity: 0.8 }}>Indisponível</span>
+                    )}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
                     {fmtData(p.dataInicio)} — {fmtData(p.dataFim)} · {dias} dia(s)
                   </div>
+                  {desabilitado && (
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                      Datas já reservadas em outro período que se sobrepõe a este.
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{fmt(p.valorTotal)}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{fmt(p.valorTotal / dias)}/dia</div>
                   </div>
-                  <button className="btn-ghost" title="Editar" onClick={() => abrirEditar(p)}><Pencil size={14} /></button>
-                  <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setModalExcluir(p)}><Trash2 size={14} /></button>
+                  <button className="btn-ghost" title="Editar" disabled={desabilitado} onClick={() => abrirEditar(p)}><Pencil size={14} /></button>
+                  <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} disabled={desabilitado} onClick={() => setModalExcluir(p)}><Trash2 size={14} /></button>
                 </div>
               </div>
             );
