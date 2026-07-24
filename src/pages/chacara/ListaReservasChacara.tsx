@@ -40,6 +40,7 @@ export function ListaReservasChacara() {
   const [carregando, setCarregando] = useState(true);
   const [confirmando, setConfirmando] = useState<number | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'pendente_pagamento' | 'confirmada'>('todas');
+  const [filtroMes, setFiltroMes] = useState(''); // formato "YYYY-MM", vazio = todos os meses
   const { sucesso, erro: toastErro } = useToast();
 
   const [modalEditar, setModalEditar] = useState<Reserva | null>(null);
@@ -206,7 +207,11 @@ export function ListaReservasChacara() {
     }
   }
 
-  const lista = reservas.filter(r => filtro === 'todas' || r.status === filtro);
+  const lista = reservas.filter(r => {
+    if (filtro !== 'todas' && r.status !== filtro) return false;
+    if (filtroMes && !r.dataInicio.slice(0, 7).includes(filtroMes) && !r.dataFim.slice(0, 7).includes(filtroMes)) return false;
+    return true;
+  });
 
   if (carregando) return <div className="page"><p>Carregando...</p></div>;
 
@@ -222,7 +227,7 @@ export function ListaReservasChacara() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {(['todas', 'pendente_pagamento', 'confirmada'] as const).map(f => (
           <button key={f} className={filtro === f ? 'btn-primary' : 'btn-secondary'}
             style={{ fontSize: 12, padding: '6px 14px' }}
@@ -230,6 +235,13 @@ export function ListaReservasChacara() {
             {f === 'todas' ? 'Todas' : STATUS_LABEL[f].label}
           </button>
         ))}
+        <input type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}
+          style={{ fontSize: 12, padding: '6px 10px' }} />
+        {filtroMes && (
+          <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => setFiltroMes('')}>
+            Limpar mês
+          </button>
+        )}
       </div>
 
       {lista.length === 0 ? (
