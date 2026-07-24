@@ -178,6 +178,7 @@ export function ConfiguracaoPrecoChacara() {
                   step={campo.tipo === 'moeda' ? '0.01' : '1'}
                   value={config[campo.chave]}
                   onChange={e => atualizarCampo(campo.chave, e.target.value)}
+                  onFocus={e => e.target.select()}
                   style={{
                     width: 140, padding: '8px 10px', fontSize: 13,
                     border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
@@ -259,7 +260,8 @@ export function ConfiguracaoPrecoChacara() {
                 <div className="form-group">
                   <label className="form-label">Até quantas pessoas</label>
                   <input type="number" min={1} value={formFaixa.pessoasAte}
-                    onChange={e => setFormFaixa(f => ({ ...f, pessoasAte: Number(e.target.value) }))} />
+                    onChange={e => setFormFaixa(f => ({ ...f, pessoasAte: Number(e.target.value) }))}
+                    onFocus={e => e.target.select()} />
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
                     Ex: 50, 100, 200, 500, 1000 — a reserva usa a menor faixa que cobre a quantidade de pessoas escolhida.
                   </p>
@@ -267,17 +269,20 @@ export function ConfiguracaoPrecoChacara() {
                 <div className="form-group">
                   <label className="form-label">Diária segunda a quinta (R$)</label>
                   <input type="number" min={0} step={0.01} value={formFaixa.valorDiariaSemana}
-                    onChange={e => setFormFaixa(f => ({ ...f, valorDiariaSemana: Number(e.target.value) }))} />
+                    onChange={e => setFormFaixa(f => ({ ...f, valorDiariaSemana: Number(e.target.value) }))}
+                    onFocus={e => e.target.select()} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Diária sexta a domingo, 1 dia (R$)</label>
                   <input type="number" min={0} step={0.01} value={formFaixa.valorDiariaFimSemana}
-                    onChange={e => setFormFaixa(f => ({ ...f, valorDiariaFimSemana: Number(e.target.value) }))} />
+                    onChange={e => setFormFaixa(f => ({ ...f, valorDiariaFimSemana: Number(e.target.value) }))}
+                    onFocus={e => e.target.select()} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Pacote 2 dias fim de semana — sex+sáb ou sáb+dom (R$)</label>
                   <input type="number" min={0} step={0.01} value={formFaixa.valorPacote2DiasFimSemana}
-                    onChange={e => setFormFaixa(f => ({ ...f, valorPacote2DiasFimSemana: Number(e.target.value) }))} />
+                    onChange={e => setFormFaixa(f => ({ ...f, valorPacote2DiasFimSemana: Number(e.target.value) }))}
+                    onFocus={e => e.target.select()} />
                 </div>
               </div>
               {erroFaixa && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 12 }}>{erroFaixa}</p>}
