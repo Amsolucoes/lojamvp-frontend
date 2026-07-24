@@ -28,6 +28,28 @@ function fmtData(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+function formatarTelefone(valor: string): string {
+  const d = valor.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+function formatarCpf(valor: string): string {
+  const d = valor.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
+function formatarCep(valor: string): string {
+  const d = valor.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 5) return d;
+  return `${d.slice(0, 5)}-${d.slice(5)}`;
+}
+
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 const STATUS_LABEL: Record<string, { label: string; cor: string }> = {
@@ -143,6 +165,28 @@ export function ListaReservasChacara() {
       setErroPagamento((e as Error).message);
     } finally {
       setSalvandoPagamento(false);
+    }
+  }
+
+  const [buscandoCepEdicao, setBuscandoCepEdicao] = useState(false);
+
+  async function buscarEnderecoPorCepEdicao(valor: string) {
+    const digitos = valor.replace(/\D/g, '');
+    if (digitos.length !== 8) return;
+
+    setBuscandoCepEdicao(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
+      const dados = await res.json();
+      if (!dados.erro) {
+        const partes = [dados.logradouro, dados.bairro, dados.localidade && dados.uf ? `${dados.localidade} - ${dados.uf}` : '']
+          .filter(Boolean);
+        setFormEditar(f => ({ ...f, clienteEndereco: partes.join(', ') }));
+      }
+    } catch {
+      // silencioso — se falhar, preenche manualmente
+    } finally {
+      setBuscandoCepEdicao(false);
     }
   }
 
@@ -382,24 +426,30 @@ export function ListaReservasChacara() {
                 <div className="form-group">
                   <label className="form-label">Telefone</label>
                   <input value={formEditar.clienteTelefone}
-                    onChange={e => setFormEditar(f => ({ ...f, clienteTelefone: e.target.value }))} />
+                    onChange={e => setFormEditar(f => ({ ...f, clienteTelefone: formatarTelefone(e.target.value) }))}
+                    inputMode="tel" maxLength={16} />
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label className="form-label">CPF</label>
                     <input value={formEditar.clienteDocumento}
-                      onChange={e => setFormEditar(f => ({ ...f, clienteDocumento: e.target.value }))} />
+                      onChange={e => setFormEditar(f => ({ ...f, clienteDocumento: formatarCpf(e.target.value) }))}
+                      inputMode="numeric" maxLength={14} />
                   </div>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label className="form-label">CEP</label>
                     <input value={formEditar.clienteCep}
-                      onChange={e => setFormEditar(f => ({ ...f, clienteCep: e.target.value }))} />
+                      onChange={e => setFormEditar(f => ({ ...f, clienteCep: formatarCep(e.target.value) }))}
+                      onBlur={e => buscarEnderecoPorCepEdicao(e.target.value)}
+                      inputMode="numeric" maxLength={9} />
+                    {buscandoCepEdicao && <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Buscando...</p>}
                   </div>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Endereço completo</label>
                   <input value={formEditar.clienteEndereco}
-                    onChange={e => setFormEditar(f => ({ ...f, clienteEndereco: e.target.value }))} />
+                    onChange={e => setFormEditar(f => ({ ...f, clienteEndereco: e.target.value }))}
+                    maxLength={150} />
                 </div>
               </div>
               {erroEdicao && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 12 }}>{erroEdicao}</p>}
@@ -460,7 +510,8 @@ export function ListaReservasChacara() {
                 <div className="form-group">
                   <label className="form-label">Telefone (opcional)</label>
                   <input value={formNova.clienteTelefone}
-                    onChange={e => setFormNova(f => ({ ...f, clienteTelefone: e.target.value }))} />
+                    onChange={e => setFormNova(f => ({ ...f, clienteTelefone: formatarTelefone(e.target.value) }))}
+                    inputMode="tel" maxLength={16} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Valor combinado (R$)</label>

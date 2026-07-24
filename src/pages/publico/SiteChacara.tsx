@@ -30,6 +30,20 @@ function emailValido(valor: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
 }
 
+function formatarCep(valor: string): string {
+  const d = valor.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 5) return d;
+  return `${d.slice(0, 5)}-${d.slice(5)}`;
+}
+
+function formatarCpf(valor: string): string {
+  const d = valor.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
 const ESTILO_INPUTS_PUBLICO = `
   .site-chacara-input {
     background: #fff !important;
@@ -71,6 +85,7 @@ export function SiteChacara() {
   const [cpf, setCpf] = useState('');
   const [cep, setCep] = useState('');
   const [enderecoCliente, setEnderecoCliente] = useState('');
+  const [buscandoCep, setBuscandoCep] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [reservaCriada, setReservaCriada] = useState<{ id: number; valor: number } | null>(null);
@@ -107,6 +122,26 @@ export function SiteChacara() {
     }).catch(() => { setDisponivel(null); setValor(null); })
       .finally(() => setVerificando(false));
   }, [slug, dataInicio, dataFim, pessoas]);
+
+  async function buscarEnderecoPorCep(valor: string) {
+    const digitos = valor.replace(/\D/g, '');
+    if (digitos.length !== 8) return;
+
+    setBuscandoCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
+      const dados = await res.json();
+      if (!dados.erro) {
+        const partes = [dados.logradouro, dados.bairro, dados.localidade && dados.uf ? `${dados.localidade} - ${dados.uf}` : '']
+          .filter(Boolean);
+        setEnderecoCliente(partes.join(', '));
+      }
+    } catch {
+      // silencioso — se falhar, o cliente só preenche manualmente
+    } finally {
+      setBuscandoCep(false);
+    }
+  }
 
   async function confirmarReserva() {
     if (!slug || !dataInicio || !dataFim) return;
@@ -266,9 +301,20 @@ export function SiteChacara() {
               <input placeholder="Telefone / WhatsApp" value={telefone}
                 onChange={e => setTelefone(formatarTelefone(e.target.value))}
                 inputMode="tel" maxLength={16} className="site-chacara-input" />
-              <input placeholder="CPF" value={cpf} onChange={e => setCpf(e.target.value)} className="site-chacara-input" />
-              <input placeholder="CEP" value={cep} onChange={e => setCep(e.target.value)} className="site-chacara-input" />
-              <input placeholder="Endereço completo" value={enderecoCliente} onChange={e => setEnderecoCliente(e.target.value)} className="site-chacara-input" />
+              <input placeholder="CPF" value={cpf}
+                onChange={e => setCpf(formatarCpf(e.target.value))}
+                inputMode="numeric" maxLength={14}
+                className="site-chacara-input" />
+              <input placeholder="CEP" value={cep}
+                onChange={e => setCep(formatarCep(e.target.value))}
+                onBlur={e => buscarEnderecoPorCep(e.target.value)}
+                inputMode="numeric" maxLength={9}
+                className="site-chacara-input" />
+              {buscandoCep && <p style={{ fontSize: 12, color: '#888', margin: 0 }}>Buscando endereço...</p>}
+              <input placeholder="Endereço completo (rua, número, bairro)" value={enderecoCliente}
+                onChange={e => setEnderecoCliente(e.target.value)}
+                maxLength={150}
+                className="site-chacara-input" />
             </div>
             <p style={{ fontSize: 11, color: '#888', marginTop: -8, marginBottom: 12 }}>
               CPF, CEP e endereço são usados para gerar seu contrato de locação.
