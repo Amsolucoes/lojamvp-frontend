@@ -53,6 +53,9 @@ export function SiteChacara() {
   const [valor, setValor] = useState<Detalhamento | null>(null);
   const [verificando, setVerificando] = useState(false);
 
+  const [mesCalendario, setMesCalendario] = useState(() => { const d = new Date(); d.setDate(1); return d; });
+  const [datasOcupadas, setDatasOcupadas] = useState<{ dataInicio: string; dataFim: string }[]>([]);
+
   const [etapa, setEtapa] = useState<'datas' | 'dados' | 'sucesso'>('datas');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -71,6 +74,13 @@ export function SiteChacara() {
       .then(setDados)
       .catch(() => setNaoEncontrada(true))
       .finally(() => setCarregando(false));
+  }, [slug]);
+
+  useEffect(() => {
+    if (!slug) return;
+    api.get<{ dataInicio: string; dataFim: string }[]>(`/api/publico/${slug}/chacara/datas-ocupadas?meses=6`)
+      .then(setDatasOcupadas)
+      .catch(() => setDatasOcupadas([]));
   }, [slug]);
 
   useEffect(() => {
@@ -138,6 +148,44 @@ export function SiteChacara() {
   const cor = dados.corPrimaria || '#2f7d4f';
   const mapaUrl = dados.mapaEmbedUrl || `https://www.google.com/maps?q=${encodeURIComponent(dados.endereco)}&output=embed`;
 
+  const diaOcupado = (diaStr: string) =>
+    datasOcupadas.some(o => diaStr >= o.dataInicio.slice(0, 10) && diaStr <= o.dataFim.slice(0, 10));
+
+  const hojeStr = ymd(new Date().toISOString().slice(0, 10));
+
+  function selecionarDiaCalendario(diaStr: string) {
+    if (diaOcupado(diaStr) || diaStr < hojeStr) return;
+    if (!dataInicio || (dataInicio && dataFim)) {
+      setDataInicio(diaStr);
+      setDataFim('');
+    } else if (diaStr < dataInicio) {
+      setDataInicio(diaStr);
+      setDataFim('');
+    } else {
+      setDataFim(diaStr);
+    }
+  }
+
+  function navMesCalendario(delta: number) {
+    setMesCalendario(m => {
+      const novo = new Date(m);
+      novo.setMonth(novo.getMonth() + delta);
+      return novo;
+    });
+  }
+
+  function gerarDiasDoMes(mes: Date) {
+    const ano = mes.getFullYear();
+    const mesIndex = mes.getMonth();
+    const primeiroDiaSemana = new Date(ano, mesIndex, 1).getDay();
+    const totalDias = new Date(ano, mesIndex + 1, 0).getDate();
+    const dias: (string | null)[] = Array(primeiroDiaSemana).fill(null);
+    for (let d = 1; d <= totalDias; d++) {
+      dias.push(`${ano}-${String(mesIndex + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    }
+    return dias;
+  }
+
  return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px', fontFamily: 'inherit', background: '#fff', color: '#222', minHeight: '100vh' }}>
       <style>{ESTILO_INPUTS_PUBLICO}</style>
@@ -196,6 +244,55 @@ export function SiteChacara() {
 
         {etapa === 'datas' && (
           <>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <button type="button" onClick={() => navMesCalendario(-1)}
+                  style={{ background: 'none', border: '1px solid #ccc', borderRadius: 6, width: 30, height: 30, cursor: 'pointer', fontSize: 14 }}>
+                  ‹
+                </button>
+                <strong style={{ fontSize: 14, textTransform: 'capitalize' }}>
+                  {mesCalendario.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                </strong>
+                <button type="button" onClick={() => navMesCalendario(1)}
+                  style={{ background: 'none', border: '1px solid #ccc', borderRadius: 6, width: 30, height: 30, cursor: 'pointer', fontSize: 14 }}>
+                  ›
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, fontSize: 11, color: '#888', textAlign: 'center', marginBottom: 4 }}>
+                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => <div key={d}>{d}</div>)}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+                {gerarDiasDoMes(mesCalendario).map((dia, i) => {
+                  if (!dia) return <div key={`vazio-${i}`} />;
+                  const ocupado = diaOcupado(dia);
+                  const passado = dia < hojeStr;
+                  const noIntervalo = dataInicio && dataFim && dia >= dataInicio && dia <= dataFim;
+                  const extremo = dia === dataInicio || dia === dataFim;
+                  return (
+                    <button key={dia} type="button" disabled={ocupado || passado}
+                      onClick={() => selecionarDiaCalendario(dia)}
+                      title={ocupado ? 'Já reservado' : ''}
+                      style={{
+                        aspectRatio: '1', border: '1px solid #ddd', borderRadius: 6, fontSize: 12,
+                        cursor: (ocupado || passado) ? 'not-allowed' : 'pointer',
+                        background: ocupado ? '#f5d5d5' : extremo ? cor : noIntervalo ? `${cor}33` : '#fff',
+                        color: ocupado ? '#a33' : extremo ? '#fff' : passado ? '#ccc' : '#333',
+                        textDecoration: ocupado ? 'line-through' : 'none',
+                      }}>
+                      {Number(dia.slice(8, 10))}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', gap: 14, marginTop: 8, fontSize: 11, color: '#888' }}>
+                <span><span style={{ display: 'inline-block', width: 10, height: 10, background: '#f5d5d5', borderRadius: 2, marginRight: 4 }} />Ocupado</span>
+                <span><span style={{ display: 'inline-block', width: 10, height: 10, background: cor, borderRadius: 2, marginRight: 4 }} />Selecionado</span>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
               <div style={{ flex: '1 1 140px', minWidth: 140 }}>
                 <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Data início</label>
