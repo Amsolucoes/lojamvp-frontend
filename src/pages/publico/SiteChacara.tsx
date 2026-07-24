@@ -30,6 +30,24 @@ function emailValido(valor: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
 }
 
+const ESTILO_INPUTS_PUBLICO = `
+  .site-chacara-input {
+    background: #fff !important;
+    color: #222 !important;
+    border: 1px solid #ccc !important;
+    border-radius: 6px !important;
+    padding: 10px 12px !important;
+    font-size: 16px !important;
+    height: 42px !important;
+    line-height: 1.4 !important;
+    box-sizing: border-box !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 100% !important;
+    color-scheme: light;
+  }
+`;
+
 export function SiteChacara() {
   const { slug } = useParams<{ slug: string }>();
 
@@ -119,8 +137,9 @@ export function SiteChacara() {
   const cor = dados.corPrimaria || '#2f7d4f';
   const mapaUrl = dados.mapaEmbedUrl || `https://www.google.com/maps?q=${encodeURIComponent(dados.endereco)}&output=embed`;
 
-  return (
+ return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px', fontFamily: 'inherit', background: '#fff', color: '#222', minHeight: '100vh' }}>
+      <style>{ESTILO_INPUTS_PUBLICO}</style>
       {/* Cabeçalho */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         {dados.logoUrl && <img src={dados.logoUrl} alt={dados.nome} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain' }} />}
@@ -180,19 +199,19 @@ export function SiteChacara() {
               <div style={{ flex: '1 1 140px', minWidth: 140 }}>
                 <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Data início</label>
                 <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)}
-                  style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '8px 10px', background: '#fff', color: '#222', border: '1px solid #ccc', borderRadius: 6, colorScheme: 'light' }} />
+                  className="site-chacara-input" />
               </div>
               <div style={{ flex: '1 1 140px', minWidth: 140 }}>
                 <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Data fim</label>
                 <input type="date" value={dataFim} min={dataInicio}
                   max={dataInicio ? new Date(new Date(dataInicio).getTime() + 29 * 86400000).toISOString().slice(0, 10) : undefined}
                   onChange={e => setDataFim(e.target.value)}
-                  style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '8px 10px', background: '#fff', color: '#222', border: '1px solid #ccc', borderRadius: 6, colorScheme: 'light' }} />
+                  className="site-chacara-input" />
               </div>
               <div style={{ flex: '0 1 90px', minWidth: 80 }}>
                 <label style={{ fontSize: 12, display: 'block', marginBottom: 4, color: '#555' }}>Pessoas</label>
                 <input type="number" min={dados.precificacao.minimoPessoas} value={pessoas} onChange={e => setPessoas(Number(e.target.value))}
-                  style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '8px 10px', background: '#fff', color: '#222', border: '1px solid #ccc', borderRadius: 6 }} />
+                  className="site-chacara-input" />
               </div>
             </div>
 
@@ -238,11 +257,11 @@ export function SiteChacara() {
             <button onClick={() => setEtapa('datas')} style={{ background: 'none', border: 'none', fontSize: 13, color: '#888', marginBottom: 12, cursor: 'pointer' }}>← Voltar</button>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
-              <input placeholder="Nome completo" value={nome} onChange={e => setNome(e.target.value)} />
-              <input placeholder="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+              <input placeholder="Nome completo" value={nome} onChange={e => setNome(e.target.value)} className="site-chacara-input" />
+              <input placeholder="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} className="site-chacara-input" />
               <input placeholder="Telefone / WhatsApp" value={telefone}
                 onChange={e => setTelefone(formatarTelefone(e.target.value))}
-                inputMode="tel" maxLength={16} />
+                inputMode="tel" maxLength={16} className="site-chacara-input" />
             </div>
 
             {erro && <p style={{ color: '#c0392b', fontSize: 13, marginBottom: 10 }}>{erro}</p>}
