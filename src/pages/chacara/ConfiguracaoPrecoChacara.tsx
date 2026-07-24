@@ -12,6 +12,7 @@ type ConfigPreco = {
   minimoPessoas: number;
   valorTaxaLimpeza: number;
   valorMultaNaoLimpeza: number;
+  percentualEntradaMinimo: number;
 };
 
 const CAMPOS: { chave: keyof ConfigPreco; label: string; tipo: 'moeda' | 'numero'; ajuda: string }[] = [
@@ -24,6 +25,7 @@ const CAMPOS: { chave: keyof ConfigPreco; label: string; tipo: 'moeda' | 'numero
   { chave: 'minimoPessoas', label: 'Mínimo de pessoas por reserva', tipo: 'numero', ajuda: 'O site público não permite reservar com menos que isso' },
   { chave: 'valorTaxaLimpeza', label: 'Taxa de limpeza', tipo: 'moeda', ajuda: 'Cobrada junto no pagamento quando ultrapassa o limite de pessoas' },
   { chave: 'valorMultaNaoLimpeza', label: 'Multa por não limpar ao sair', tipo: 'moeda', ajuda: 'Só informativa — avisada ao cliente, cobrança é manual' },
+  { chave: 'percentualEntradaMinimo', label: '% mínimo de entrada', tipo: 'numero', ajuda: 'Só uma sugestão exibida na tela de reservas — você pode registrar qualquer valor de entrada' },
 ];
 
 function fmt(n: number) {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus } from 'lucide-react';
+import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -12,6 +12,7 @@ type Reserva = {
   clienteEmail: string;
   clienteTelefone: string;
   valor: number;
+  valorPago: number;
   status: string;
   contratoEnviadoEm: string | null;
   criadoEm: string;
@@ -47,9 +48,14 @@ export function ListaReservasChacara() {
   const [excluindo, setExcluindo] = useState(false);
 
   const [modalNova, setModalNova] = useState(false);
-  const [formNova, setFormNova] = useState({ dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '', valor: 0 });
+  const [formNova, setFormNova] = useState({ dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '', valor: 0, valorPago: 0 });
   const [salvandoNova, setSalvandoNova] = useState(false);
   const [erroNova, setErroNova] = useState('');
+
+  const [modalPagamento, setModalPagamento] = useState<Reserva | null>(null);
+  const [valorPagamento, setValorPagamento] = useState(0);
+  const [salvandoPagamento, setSalvandoPagamento] = useState(false);
+  const [erroPagamento, setErroPagamento] = useState('');
 
   useEffect(() => {
     carregar();
@@ -63,16 +69,46 @@ export function ListaReservasChacara() {
       .finally(() => setCarregando(false));
   }
 
-  async function confirmar(id: number) {
-    setConfirmando(id);
+  const [modalConfirmar, setModalConfirmar] = useState<Reserva | null>(null);
+  const [valorEntrada, setValorEntrada] = useState(0);
+
+  function abrirConfirmacao(r: Reserva) {
+    setValorEntrada(r.valor); // sugestão inicial: valor cheio, dono ajusta se for só entrada
+    setModalConfirmar(r);
+  }
+
+  async function confirmar() {
+    if (!modalConfirmar) return;
+    setConfirmando(modalConfirmar.id);
     try {
-      await api.patch(`/api/chacara/reservas/${id}/confirmar`, {});
+      await api.patch(`/api/chacara/reservas/${modalConfirmar.id}/confirmar`, { valorPago: valorEntrada });
       sucesso('Reserva confirmada! E-mail e contrato enviados.');
+      setModalConfirmar(null);
       carregar();
     } catch (e) {
       toastErro((e as Error).message);
     } finally {
       setConfirmando(null);
+    }
+  }
+
+  async function registrarPagamento() {
+    if (!modalPagamento) return;
+    setErroPagamento('');
+    if (valorPagamento <= 0) {
+      setErroPagamento('Informe um valor maior que zero.');
+      return;
+    }
+    setSalvandoPagamento(true);
+    try {
+      await api.patch(`/api/chacara/reservas/${modalPagamento.id}/registrar-pagamento`, { valor: valorPagamento });
+      sucesso('Pagamento registrado.');
+      setModalPagamento(null);
+      carregar();
+    } catch (e) {
+      setErroPagamento((e as Error).message);
+    } finally {
+      setSalvandoPagamento(false);
     }
   }
 
@@ -122,7 +158,7 @@ export function ListaReservasChacara() {
   }
 
   function abrirNova() {
-    setFormNova({ dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '', valor: 0 });
+    setFormNova({ dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '', valor: 0, valorPago: 0 });
     setErroNova('');
     setModalNova(true);
   }
@@ -190,6 +226,14 @@ export function ListaReservasChacara() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 700, fontSize: 16 }}>{fmt(r.valor)}</div>
+                    {r.status === 'confirmada' && r.valorPago < r.valor && (
+                      <div style={{ fontSize: 11, color: 'var(--yellow)' }}>
+                        Pago: {fmt(r.valorPago)} · Falta: {fmt(r.valor - r.valorPago)}
+                      </div>
+                    )}
+                    {r.status === 'confirmada' && r.valorPago >= r.valor && (
+                      <div style={{ fontSize: 11, color: 'var(--green)' }}>Pago integralmente</div>
+                    )}
                     <span style={{ fontSize: 12, fontWeight: 600, color: statusInfo.cor }}>{statusInfo.label}</span>
                   </div>
                 </div>
@@ -212,8 +256,14 @@ export function ListaReservasChacara() {
                     </button>
                     {r.status === 'pendente_pagamento' && (
                       <button className="btn-primary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
-                        onClick={() => confirmar(r.id)} disabled={confirmando === r.id}>
-                        <Check size={13} /> {confirmando === r.id ? 'Confirmando...' : 'Confirmar pagamento manual'}
+                        onClick={() => abrirConfirmacao(r)} disabled={confirmando === r.id}>
+                        <Check size={13} /> {confirmando === r.id ? 'Confirmando...' : 'Confirmar pagamento'}
+                      </button>
+                    )}
+                    {r.status === 'confirmada' && r.valorPago < r.valor && (
+                      <button className="btn-primary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
+                        onClick={() => { setValorPagamento(r.valor - r.valorPago); setModalPagamento(r); }}>
+                        <DollarSign size={13} /> Registrar saldo
                       </button>
                     )}
                   </div>
@@ -335,6 +385,14 @@ export function ListaReservasChacara() {
                     Valor livre — não é calculado automaticamente, use o valor combinado com o cliente (com desconto ou não).
                   </p>
                 </div>
+                <div className="form-group">
+                  <label className="form-label">Valor já pago (R$)</label>
+                  <input type="number" min={0} step={0.01} value={formNova.valorPago}
+                    onChange={e => setFormNova(f => ({ ...f, valorPago: Number(e.target.value) }))} />
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    Deixe igual ao valor combinado se já recebeu tudo, ou menor se só recebeu a entrada.
+                  </p>
+                </div>
               </div>
               {erroNova && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 12 }}>{erroNova}</p>}
             </div>
@@ -342,6 +400,66 @@ export function ListaReservasChacara() {
               <button className="btn-secondary" onClick={() => setModalNova(false)}>Cancelar</button>
               <button className="btn-primary" onClick={salvarNova} disabled={salvandoNova}>
                 {salvandoNova ? 'Salvando...' : 'Criar reserva confirmada'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar com entrada */}
+      {modalConfirmar && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalConfirmar(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Confirmar reserva</h2>
+              <button className="btn-ghost" onClick={() => setModalConfirmar(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12 }}>
+                Valor total da reserva: <strong>{fmt(modalConfirmar.valor)}</strong>
+              </p>
+              <div className="form-group">
+                <label className="form-label">Valor recebido agora (entrada ou total)</label>
+                <input type="number" min={0} step={0.01} value={valorEntrada}
+                  onChange={e => setValorEntrada(Number(e.target.value))} />
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>
+                Se for só a entrada, o saldo fica registrado como pendente e você pode registrar o pagamento do restante depois.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalConfirmar(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={confirmar} disabled={confirmando === modalConfirmar.id}>
+                {confirmando === modalConfirmar.id ? 'Confirmando...' : 'Confirmar reserva'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal registrar saldo */}
+      {modalPagamento && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalPagamento(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Registrar pagamento</h2>
+              <button className="btn-ghost" onClick={() => setModalPagamento(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12 }}>
+                Já pago: <strong>{fmt(modalPagamento.valorPago)}</strong> de {fmt(modalPagamento.valor)} — falta {fmt(modalPagamento.valor - modalPagamento.valorPago)}
+              </p>
+              <div className="form-group">
+                <label className="form-label">Valor recebido agora (R$)</label>
+                <input type="number" min={0} step={0.01} value={valorPagamento}
+                  onChange={e => setValorPagamento(Number(e.target.value))} />
+              </div>
+              {erroPagamento && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{erroPagamento}</p>}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalPagamento(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={registrarPagamento} disabled={salvandoPagamento}>
+                {salvandoPagamento ? 'Salvando...' : 'Registrar pagamento'}
               </button>
             </div>
           </div>
