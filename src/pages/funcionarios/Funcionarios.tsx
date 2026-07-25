@@ -19,6 +19,7 @@ interface Profissional {
   nome: string;
   ativo: boolean;
   comissaoPadraoPercentual: number | null;
+  diaPagamentoPadrao: number | null;
   comissoesPorServico: ComissaoServico[];
 }
 
@@ -30,7 +31,7 @@ export function Funcionarios() {
 
   const [modal, setModal] = useState<'novo' | 'editar' | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [form, setForm] = useState({ nome: '', comissaoPadraoPercentual: '', ativo: true });
+  const [form, setForm] = useState({ nome: '', comissaoPadraoPercentual: '', ativo: true, diaPagamentoPadrao: '' });
   const [saving, setSaving] = useState(false);
 
   const [modalComissoes, setModalComissoes] = useState<Profissional | null>(null);
@@ -51,7 +52,7 @@ export function Funcionarios() {
 
   function abrirNovo() {
     setEditandoId(null);
-    setForm({ nome: '', comissaoPadraoPercentual: '', ativo: true });
+    setForm({ nome: '', comissaoPadraoPercentual: '', ativo: true, diaPagamentoPadrao: '' });
     setModal('novo');
   }
 
@@ -61,6 +62,7 @@ export function Funcionarios() {
       nome: p.nome,
       comissaoPadraoPercentual: p.comissaoPadraoPercentual != null ? String(p.comissaoPadraoPercentual) : '',
       ativo: p.ativo,
+      diaPagamentoPadrao: p.diaPagamentoPadrao != null ? String(p.diaPagamentoPadrao) : '',
     });
     setModal('editar');
   }
@@ -73,6 +75,7 @@ export function Funcionarios() {
         nome: form.nome.trim(),
         comissaoPadraoPercentual: form.comissaoPadraoPercentual ? parseFloat(form.comissaoPadraoPercentual) : null,
         ativo: form.ativo,
+        diaPagamentoPadrao: form.diaPagamentoPadrao ? parseInt(form.diaPagamentoPadrao) : null,
       };
       if (modal === 'novo') await api.post('/api/funcionarios', payload);
       else await api.put(`/api/funcionarios/${editandoId}`, payload);
@@ -236,6 +239,14 @@ export function Funcionarios() {
                     onChange={e => setForm(f => ({ ...f, comissaoPadraoPercentual: e.target.value }))} placeholder="Ex: 40" />
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
                     Aplicada a todos os serviços, exceto onde houver uma comissão específica cadastrada.
+                  </p>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Dia de pagamento padrão <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <input type="number" min={1} max={28} value={form.diaPagamentoPadrao}
+                    onChange={e => setForm(f => ({ ...f, diaPagamentoPadrao: e.target.value }))} placeholder="Ex: 5" />
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    Usado como sugestão de vencimento ao fechar a comissão desse profissional.
                   </p>
                 </div>
                 {modal === 'editar' && (
