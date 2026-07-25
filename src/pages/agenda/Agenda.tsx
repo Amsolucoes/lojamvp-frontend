@@ -14,12 +14,19 @@ interface Servico {
   ativo: boolean;
 }
 
+interface Profissional {
+  id: string;
+  nome: string;
+}
+
 interface Agendamento {
   id: string;
   servicoId: string;
   nomeServico: string;
   clienteId?: string;
   nomeCliente?: string;
+  profissionalId?: string;
+  nomeProfissional?: string;
   preco: number;
   dataHora: string;
   duracaoMin: number;
@@ -99,11 +106,13 @@ export function Agenda() {
   const [horaFim, setHoraFim] = useState(18);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [modal, setModal] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
     servicoId: '', clienteId: '', nomeCliente: '', preco: 0,
     hora: '08:00', duracaoMin: 30, observacao: '',
+    profissionalId: '',
   });
   const [buscaCli, setBuscaCli] = useState('');
   const [showCli, setShowCli] = useState(false);
@@ -121,6 +130,10 @@ export function Agenda() {
 
   useEffect(() => {
     api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    api.get<Profissional[]>('/api/funcionarios/ativos').then(setProfissionais).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -196,6 +209,7 @@ export function Agenda() {
       hora: hora ?? `${String(horaInicio).padStart(2, '0')}:00`,
       duracaoMin: servicos[0]?.duracaoMin ?? 30,
       observacao: '',
+      profissionalId: '',
     });
     setBuscaCli('');
     setModal(true);
@@ -211,6 +225,7 @@ export function Agenda() {
       hora: horaLocal(a.dataHora),
       duracaoMin: a.duracaoMin,
       observacao: a.observacao ?? '',
+      profissionalId: a.profissionalId ?? '',
     });
     setBuscaCli(a.clienteId ? '' : (a.nomeCliente ?? ''));
     setModal(true);
@@ -234,6 +249,7 @@ export function Agenda() {
         dataHora: dataHoraLocal,
         duracaoMin: form.duracaoMin,
         observacao: form.observacao || null,
+        profissionalId: form.profissionalId || null,
       };
 
       if (editId) {
@@ -478,6 +494,7 @@ export function Agenda() {
                                 </div>
                                 <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
                                   {a.nomeCliente || 'Sem cliente'} · {a.duracaoMin}min
+                                  {a.nomeProfissional && <> · {a.nomeProfissional}</>}  
                                   {a.status === 'cancelado' && (
                                     <span style={{ marginLeft: 6, color: info.cor, fontWeight: 500 }}>· {info.label}</span>
                                   )}
@@ -663,6 +680,17 @@ export function Agenda() {
                   )}
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Deixe um nome digitado para cliente avulso, ou escolha um cadastrado.</p>
                 </div>
+
+                 {/* Profissional */}
+                {profissionais.length > 0 && (
+                  <div className="form-group">
+                    <label className="form-label">Profissional</label>
+                    <select value={form.profissionalId} onChange={e => setForm(f => ({ ...f, profissionalId: e.target.value }))}>
+                      <option value="">Sem profissional definido</option>
+                      {profissionais.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                    </select>
+                  </div>
+                )}
 
                 {/* Hora + duração + preço */}
                 <div className="agenda-form-row">

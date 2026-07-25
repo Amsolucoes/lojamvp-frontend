@@ -27,6 +27,7 @@ import { Funil } from './pages/funil/Funil';
 import { Apolices } from './pages/apolices/Apolices';
 import { ImportarNf } from './pages/nf/ImportarNf';
 import { Funcionarios } from './pages/funcionarios/Funcionarios';
+import { Comissoes } from './pages/comissoes/Comissoes';
 import { CentralAjuda } from './pages/ajuda/CentralAjuda';
 import { ConfiguracaoPrecoChacara } from './pages/chacara/ConfiguracaoPrecoChacara';
 import { GerenciarChacara } from './pages/chacara/GerenciarChacara';
@@ -87,6 +88,7 @@ function Rotas() {
           <Route path="apolices"   element={<Apolices />} />
           <Route path="nf"         element={<ImportarNf />} />
           <Route path="funcionarios" element={<Funcionarios />} />
+          <Route path="comissoes"  element={<Comissoes />} />
           <Route path="ajuda"      element={<CentralAjuda />} />
           <Route path="chacara/preco" element={<ConfiguracaoPrecoChacara />} />
           <Route path="chacara/info" element={<GerenciarChacara />} />
