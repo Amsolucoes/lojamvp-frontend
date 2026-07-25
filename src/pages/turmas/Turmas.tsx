@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, X, Users, Calendar, ChevronLeft, ChevronRight, Trash2, Check, UserX, RefreshCw } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -84,6 +85,7 @@ function inicioSemana(offset: number) {
 
 export function Turmas() {
   const { sucesso, erro } = useToast();
+  const navigate = useNavigate();
   const [aba, setAba] = useState<'turmas' | 'agenda'>('turmas');
 
   // ── Turmas ──────────────────────────────────────────────────────
@@ -94,10 +96,8 @@ export function Turmas() {
   const [salvandoTurma, setSalvandoTurma] = useState(false);
   const [confirmExcluirTurma, setConfirmExcluirTurma] = useState<Turma | null>(null);
 
-  // ── Profissionais ───────────────────────────────────────────────
+  // ── Profissionais (cadastro fica na tela de Funcionários; aqui é só consulta/seleção) ──
   const [profissionais, setProfissionais] = useState<{ id: string; nome: string }[]>([]);
-  const [modalProfissionais, setModalProfissionais] = useState(false);
-  const [novoProfissional, setNovoProfissional] = useState('');
 
   // ── Matrícula ───────────────────────────────────────────────────
   const [modalMatricula, setModalMatricula] = useState<Turma | null>(null);
@@ -135,29 +135,9 @@ export function Turmas() {
   }, []);
 
   function carregarProfissionais() {
-    api.get<{ id: string; nome: string }[]>('/api/turmas/profissionais').then(setProfissionais).catch(() => {});
+    api.get<{ id: string; nome: string }[]>('/api/funcionarios/ativos').then(setProfissionais).catch(() => {});
   }
 
-  async function adicionarProfissional() {
-    if (!novoProfissional.trim()) return;
-    try {
-      await api.post('/api/turmas/profissionais', { nome: novoProfissional.trim() });
-      setNovoProfissional('');
-      carregarProfissionais();
-      sucesso('Profissional adicionado!');
-    } catch (e) {
-      erro((e as Error).message);
-    }
-  }
-
-  async function removerProfissional(id: string) {
-    try {
-      await api.patch(`/api/turmas/profissionais/${id}/ativo`, {});
-      carregarProfissionais();
-    } catch (e) {
-      erro((e as Error).message);
-    }
-  }
   useEffect(() => { if (aba === 'agenda') carregarSessoes(); }, [aba, semanaOffset]);
 
   // ── CRUD Turma ──────────────────────────────────────────────────
@@ -318,7 +298,7 @@ export function Turmas() {
           <p className="page-subtitle">Aulas em grupo, matrícula e agenda semanal</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn-secondary" onClick={() => setModalProfissionais(true)}><Users size={14} /> Profissionais</button>
+          <button className="btn-secondary" onClick={() => navigate('/funcionarios')}><Users size={14} /> Profissionais</button>
           {aba === 'turmas' && (
             <button className="btn-primary" onClick={abrirNovaTurma}><Plus size={15} /> Nova turma</button>
           )}
@@ -590,41 +570,6 @@ export function Turmas() {
               <button className="btn-primary" onClick={() => confirmarFalta(!!sessaoDestinoId)}>
                 {sessaoDestinoId ? 'Remarcar' : 'Registrar falta'}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal profissionais */}
-      {modalProfissionais && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalProfissionais(false)}>
-          <div className="modal" style={{ maxWidth: 400 }}>
-            <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Profissionais</h2>
-              <button className="btn-ghost" onClick={() => setModalProfissionais(false)}><X size={16} /></button>
-            </div>
-            <div className="modal-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-                {profissionais.length === 0 ? (
-                  <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhum profissional cadastrado.</p>
-                ) : profissionais.map(p => (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
-                    <span style={{ fontSize: 13 }}>{p.nome}</span>
-                    <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removerProfissional(p.id)}><Trash2 size={13} /></button>
-                  </div>
-                ))}
-              </div>
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Novo profissional</p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input value={novoProfissional} onChange={e => setNovoProfissional(e.target.value)}
-                    placeholder="Nome do profissional" onKeyDown={e => e.key === 'Enter' && adicionarProfissional()} />
-                  <button className="btn-primary" onClick={adicionarProfissional}>Adicionar</button>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setModalProfissionais(false)}>Fechar</button>
             </div>
           </div>
         </div>
