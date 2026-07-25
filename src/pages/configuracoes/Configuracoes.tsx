@@ -206,6 +206,12 @@ export function Configuracoes() {
                 return false;
               }
 
+              // Reservas de Chácara só faz sentido pra loja do tipo "chacara" —
+              // esconde de Turmas, Corretora, Financeiro Puro, Loja, Loja+Serviço, etc.
+              if (mod.chave === 'chacara_reservas' && tipoPlano !== 'chacara' && !modulosAtivos.includes(mod.chave)) {
+                return false;
+              }
+
               // Corretora, Serviços e Turmas são um grupo mutuamente exclusivo:
               // mostra os disponíveis até um ser ativado, depois esconde os outros
               if (grupoExclusivo.includes(mod.chave)) {
