@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
-  TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, FileText, HelpCircle, Home, Image, CalendarHeart } from 'lucide-react';
+  TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, FileText, HelpCircle, Home, Image, CalendarHeart, UserCog } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -87,6 +87,7 @@ export function Sidebar() {
   const temCorretora = modulos.includes('corretora');
   const temProdutos = tipoPlano === 'loja' || tipoPlano === 'loja_modulos';
   const temNf = modulos.includes('nf') && temProdutos;
+  const temFuncionarios = modulos.includes('funcionarios');
   const temChacaraReservas = modulos.includes('chacara_reservas');
 
   const NAV = [
@@ -99,6 +100,7 @@ export function Sidebar() {
     ...(temServicos || temTurmas ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
     ...(temProdutos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
     ...(temNf ? [{ to: '/nf', icon: FileText, label: 'Importar NF' }] : []),
+    ...(temFuncionarios ? [{ href: '/funcionarios', label: 'Funcionários', Icon: UserCog }] : []),
     ...(temFinanceiro ? [{ to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
     ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
     ...(temCorretora ? [{ to: '/funil', icon: Filter, label: 'Funil de Vendas' }] : []),
