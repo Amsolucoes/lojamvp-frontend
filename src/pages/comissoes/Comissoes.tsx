@@ -6,6 +6,7 @@ import { useToast } from '../../context/ToastContext';
 interface ResumoProfissional {
   profissionalId: string;
   profissionalNome: string;
+  diaPagamentoPadrao: number | null;
   qtdAtendimentos: number;
   valorTotal: number;
 }
@@ -34,6 +35,11 @@ interface Fechamento {
   pagoEm: string;
 }
 
+interface Conta {
+  id: string;
+  nome: string;
+}
+
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -51,6 +57,13 @@ function primeiroDiaMesInput() {
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
 }
 
+function vencimentoSugerido(diaPagamentoPadrao: number | null) {
+  const d = new Date();
+  const dia = diaPagamentoPadrao && diaPagamentoPadrao >= 1 && diaPagamentoPadrao <= 28 ? diaPagamentoPadrao : d.getDate();
+  const proximoMes = new Date(d.getFullYear(), d.getMonth() + 1, dia);
+  return proximoMes.toISOString().slice(0, 10);
+}
+
 export function Comissoes() {
   const { sucesso, erro } = useToast();
   const [aba, setAba] = useState<'pendentes' | 'historico'>('pendentes');
@@ -58,6 +71,7 @@ export function Comissoes() {
   // Resumo (pendentes)
   const [resumo, setResumo] = useState<ResumoProfissional[]>([]);
   const [loadingResumo, setLoadingResumo] = useState(true);
+  const [contas, setContas] = useState<Conta[]>([]);
 
   // Detalhe do profissional
   const [modalDetalhe, setModalDetalhe] = useState<ResumoProfissional | null>(null);
@@ -68,6 +82,8 @@ export function Comissoes() {
   const [modalFechar, setModalFechar] = useState<ResumoProfissional | null>(null);
   const [periodoInicio, setPeriodoInicio] = useState(primeiroDiaMesInput());
   const [periodoFim, setPeriodoFim] = useState(hojeInput());
+  const [contaBancariaId, setContaBancariaId] = useState('');
+  const [vencimento, setVencimento] = useState(hojeInput());
   const [fechando, setFechando] = useState(false);
 
   // Histórico
@@ -89,6 +105,7 @@ export function Comissoes() {
   useEffect(() => {
     carregarResumo();
     carregarHistorico();
+    api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }, []);
 
   async function abrirDetalhe(p: ResumoProfissional) {
@@ -107,6 +124,8 @@ export function Comissoes() {
   function abrirFechar(p: ResumoProfissional) {
     setPeriodoInicio(primeiroDiaMesInput());
     setPeriodoFim(hojeInput());
+    setContaBancariaId('');
+    setVencimento(vencimentoSugerido(p.diaPagamentoPadrao));
     setModalFechar(p);
   }
 
@@ -118,6 +137,8 @@ export function Comissoes() {
         profissionalId: modalFechar.profissionalId,
         periodoInicio,
         periodoFim,
+        contaBancariaId: contaBancariaId || null,
+        vencimento: contaBancariaId ? vencimento : null,
       });
       sucesso(`Fechamento gerado: ${fmt(res.valorTotal)} para ${res.profissionalNome}.`);
       setModalFechar(null);
@@ -307,6 +328,21 @@ export function Comissoes() {
                   <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} />
                 </div>
               </div>
+
+              <div className="form-group" style={{ marginTop: 14 }}>
+                <label className="form-label">Lançar como conta a pagar no Financeiro <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                <select value={contaBancariaId} onChange={e => setContaBancariaId(e.target.value)}>
+                  <option value="">Não lançar no Financeiro</option>
+                  {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+
+              {contaBancariaId && (
+                <div className="form-group" style={{ marginTop: 14 }}>
+                  <label className="form-label">Vencimento no Financeiro</label>
+                  <input type="date" value={vencimento} onChange={e => setVencimento(e.target.value)} />
+                </div>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalFechar(null)}>Cancelar</button>
