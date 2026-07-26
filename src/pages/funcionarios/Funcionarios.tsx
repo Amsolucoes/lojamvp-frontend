@@ -40,6 +40,11 @@ export function Funcionarios() {
 
   const [confirmDel, setConfirmDel] = useState<Profissional | null>(null);
 
+  const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'ativo' | 'inativo'>('todos');
+  const [paginaLista, setPaginaLista] = useState(1);
+  const [itensPorPagina, setItensPorPagina] = useState(15);
+
   function carregar() {
     setLoading(true);
     api.get<Profissional[]>('/api/funcionarios').then(setProfissionais).catch(() => {}).finally(() => setLoading(false));
@@ -49,6 +54,8 @@ export function Funcionarios() {
     carregar();
     api.get<Servico[]>('/api/servicos').then(setServicos).catch(() => {});
   }, []);
+
+  useEffect(() => { setPaginaLista(1); }, [busca, statusFiltro, itensPorPagina]);
 
   function abrirNovo() {
     setEditandoId(null);
@@ -156,6 +163,16 @@ export function Funcionarios() {
     return servicos.find(s => s.id === servicoId)?.nome ?? '—';
   }
 
+  const profissionaisFiltrados = profissionais.filter(p => {
+    const passaBusca = !busca || p.nome.toLowerCase().includes(busca.toLowerCase());
+    const passaStatus = statusFiltro === 'todos' ? true : statusFiltro === 'ativo' ? p.ativo : !p.ativo;
+    return passaBusca && passaStatus;
+  });
+  const totalPaginas = Math.max(1, Math.ceil(profissionaisFiltrados.length / itensPorPagina));
+  const paginaAtual = Math.min(paginaLista, totalPaginas);
+  const inicioSlice = (paginaAtual - 1) * itensPorPagina;
+  const profissionaisPaginados = profissionaisFiltrados.slice(inicioSlice, inicioSlice + itensPorPagina);
+
   return (
     <div className="page">
       <div className="page-header">
@@ -168,6 +185,20 @@ export function Funcionarios() {
         </button>
       </div>
 
+      <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input placeholder="Buscar por nome..." value={busca} onChange={e => setBusca(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
+        <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value as any)} style={{ width: 'auto', minWidth: 130 }}>
+          <option value="todos">Todos os status</option>
+          <option value="ativo">Só ativos</option>
+          <option value="inativo">Só inativos</option>
+        </select>
+        {(busca || statusFiltro !== 'todos') && (
+          <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => { setBusca(''); setStatusFiltro('todos'); }}>
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
       {loading ? (
         <div className="card"><div className="empty"><div className="spinner" /></div></div>
       ) : profissionais.length === 0 ? (
@@ -178,9 +209,16 @@ export function Funcionarios() {
             <button className="btn-primary" onClick={abrirNovo} style={{ marginTop: 12 }}>Cadastrar primeiro funcionário</button>
           </div>
         </div>
+      ) : profissionaisFiltrados.length === 0 ? (
+        <div className="card">
+          <div className="empty">
+            <Users size={36} />
+            <p>Nenhum funcionário encontrado com esse filtro.</p>
+          </div>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {profissionais.map(p => (
+          {profissionaisPaginados.map(p => (
             <div key={p.id} className="card" style={{ opacity: p.ativo ? 1 : 0.5 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
                 <div>
@@ -216,6 +254,23 @@ export function Funcionarios() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && profissionaisFiltrados.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 16 }}>
+          <select value={itensPorPagina} onChange={e => setItensPorPagina(parseInt(e.target.value))} style={{ width: 'auto', fontSize: 12, padding: '4px 8px' }}>
+            <option value={15}>15 por página</option>
+            <option value={30}>30 por página</option>
+            <option value={50}>50 por página</option>
+          </select>
+          {totalPaginas > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaLista(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
+              <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaLista(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+            </div>
+          )}
         </div>
       )}
 
