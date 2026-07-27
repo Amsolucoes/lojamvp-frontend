@@ -121,7 +121,7 @@ export function Financeiro() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [receberUnificado, setReceberUnificado] = useState<any[]>([]);
   const [resumo, setResumo] = useState<{ pagar: Resumo; receber: Resumo } | null>(null);
-  const [catFiltro, setCatFiltro] = useState('todas');
+  const [catFiltro, setCatFiltro] = useState(() => searchParams.get('categoria') || 'todas');
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pago' | 'pendente'>('todos');
   const [modoFiltro, setModoFiltro] = useState<'todos' | 'avulsa' | 'parcelada' | 'fixa'>('todos');
   const [paginaLista, setPaginaLista] = useState(1);
@@ -244,7 +244,11 @@ export function Financeiro() {
 
   useEffect(() => { carregarContas(); carregarCategorias(); carregarCartoes(); }, []);
   useEffect(() => { carregarLancamentos(); carregarResumo(); }, [aba, mesRef, anoRef, modoPagar, periodoTipo, periodoDe, periodoAte]);
-  useEffect(() => { setCatFiltro('todas'); }, [aba]);
+  const primeiraCargaFiltro = useRef(true);
+  useEffect(() => {
+    if (primeiraCargaFiltro.current) { primeiraCargaFiltro.current = false; return; }
+    setCatFiltro('todas');
+  }, [aba]);
   useEffect(() => { setPaginaLista(1); }, [aba, mesRef, anoRef, catFiltro, statusFiltro, modoFiltro, periodoTipo, periodoDe, periodoAte, itensPorPagina]);
   useEffect(() => { setPaginaCat(1); }, [filtroCatModal]);
   useEffect(() => {
