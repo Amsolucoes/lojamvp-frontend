@@ -1774,10 +1774,16 @@ export function Financeiro() {
               <button className="btn-ghost" onClick={() => setFaturaAberta(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
-              <button className="btn-primary" onClick={() => setModalLancarCompra(true)}
-                style={{ position: 'sticky', top: 4, zIndex: 5, float: 'right', fontSize: 12, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <Plus size={13} /> Lançar compra
-              </button>
+              <div style={{ position: 'sticky', bottom: 8, zIndex: 5, display: 'flex', justifyContent: 'center', marginBottom: 8, pointerEvents: 'none' }}>
+                <button onClick={() => setModalLancarCompra(true)} title="Lançar compra" style={{
+                  width: 52, height: 52, borderRadius: '50%',
+                  background: 'var(--accent)', color: '#fff', border: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: 'var(--shadow-lg)', cursor: 'pointer', pointerEvents: 'auto',
+                }}>
+                  <Plus size={24} />
+                </button>
+              </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 14 }}>
                 <button className="btn-secondary" onClick={() => navFaturaMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
