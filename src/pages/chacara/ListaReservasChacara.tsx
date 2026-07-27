@@ -124,6 +124,10 @@ export function ListaReservasChacara() {
   const [enviandoContrato, setEnviandoContrato] = useState<number | null>(null);
 
   async function enviarContrato(r: Reserva) {
+    if (!r.clienteEmail) {
+      toastErro('Reserva sem e-mail cadastrado. Edite a reserva para adicionar um e-mail antes de enviar o contrato.');
+      return;
+    }
     setEnviandoContrato(r.id);
     try {
       await api.post(`/api/chacara/reservas/${r.id}/enviar-contrato`, {});
@@ -337,8 +341,7 @@ export function ListaReservasChacara() {
                       )}
                     </span>
                     <button className="btn-ghost" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px' }}
-                      onClick={() => enviarContrato(r)} disabled={enviandoContrato === r.id || !r.clienteEmail}
-                      title={!r.clienteEmail ? 'Reserva sem e-mail cadastrado' : ''}>
+                      onClick={() => enviarContrato(r)} disabled={enviandoContrato === r.id}>
                       <Send size={12} /> {enviandoContrato === r.id ? 'Enviando...' : (r.contratoEnviadoEm ? 'Reenviar' : 'Enviar')} contrato
                     </button>
                   </div>
