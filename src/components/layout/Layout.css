@@ -21,6 +21,11 @@
   font-size: 14px;
 }
 
+@media (max-width: 768px) {
+  .layout { flex-direction: column; }
+  .layout-main { overflow-y: auto; }
+}
+
 .layout-spinner {
   width: 28px;
   height: 28px;
