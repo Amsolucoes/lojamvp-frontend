@@ -278,9 +278,11 @@ export function Funcionarios() {
                     {!p.ativo && <span className="badge badge-accent" style={{ fontSize: 10 }}>Inativo</span>}
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>
-                    Comissão padrão: {p.comissaoPadraoPercentual != null ? `${p.comissaoPadraoPercentual}%` : 'não definida'}
+                    {p.tipoRemuneracao === 'salario_fixo'
+                      ? <>Salário fixo: <strong style={{ color: 'var(--text-1)' }}>{p.salarioFixo != null ? p.salarioFixo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'não definido'}</strong></>
+                      : <>Comissão padrão: {p.comissaoPadraoPercentual != null ? `${p.comissaoPadraoPercentual}%` : 'não definida'}</>}
                   </div>
-                  {p.comissoesPorServico.length > 0 && (
+                  {p.tipoRemuneracao !== 'salario_fixo' && p.comissoesPorServico.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                       {p.comissoesPorServico.map(c => (
                         <span key={c.id} className="badge badge-accent" style={{ fontSize: 11 }}>
@@ -291,9 +293,11 @@ export function Funcionarios() {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => abrirComissoes(p)}>
-                    <Percent size={13} /> Comissões
-                  </button>
+                  {p.tipoRemuneracao !== 'salario_fixo' && (
+                    <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => abrirComissoes(p)}>
+                      <Percent size={13} /> Comissões
+                    </button>
+                  )}
                   <button className="btn-ghost" title="Editar" onClick={() => abrirEditar(p)}><Edit2 size={14} /></button>
                   <button className="btn-ghost" title={p.ativo ? 'Desativar' : 'Ativar'} onClick={() => alternarAtivo(p)}>
                     {p.ativo ? 'Desativar' : 'Ativar'}
