@@ -137,8 +137,7 @@ export function Financeiro() {
   const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
 
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
-  const formCompraRef = useRef<HTMLDivElement>(null);
-  const descricaoCompraRef = useRef<HTMLInputElement>(null);
+  const [modalLancarCompra, setModalLancarCompra] = useState(false);
   const [faturaDados, setFaturaDados] = useState<{
     vencimento: string; total: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
     parcelasFinanciamento?: {
@@ -528,11 +527,6 @@ export function Financeiro() {
     } catch {
       setFaturaDados({ vencimento: '', total: 0, status: 'pendente', itens: [] });
     }
-  }
-
-  function irParaFormularioCompra() {
-    formCompraRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setTimeout(() => descricaoCompraRef.current?.focus(), 350);
   }
 
   function abrirFatura(c: Cartao) {
@@ -1780,7 +1774,7 @@ export function Financeiro() {
               <button className="btn-ghost" onClick={() => setFaturaAberta(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
-              <button className="btn-primary" onClick={irParaFormularioCompra}
+              <button className="btn-primary" onClick={() => setModalLancarCompra(true)}
                 style={{ position: 'sticky', top: 4, zIndex: 5, float: 'right', fontSize: 12, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <Plus size={13} /> Lançar compra
               </button>
@@ -1951,61 +1945,6 @@ export function Financeiro() {
                   </div>
                 );
               })()}
-
-              <div ref={formCompraRef} style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Lançar compra</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {[
-                      { v: 'avulsa', t: 'Avulsa' },
-                      { v: 'parcelada', t: 'Parcelada' },
-                      { v: 'fixa', t: 'Fixa/mensal' },
-                    ].map(op => (
-                      <button key={op.v} type="button"
-                        className={op.v === formCompra.modo ? 'btn-primary' : 'btn-secondary'}
-                        style={{ flex: 1, fontSize: 12, padding: '8px 0' }}
-                        onClick={() => setFormCompra(f => ({ ...f, modo: op.v as any }))}>
-                        {op.t}
-                      </button>
-                    ))}
-                  </div>
-
-                  <input ref={descricaoCompraRef} value={formCompra.descricao} onChange={e => setFormCompra(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Netflix" />
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))}
-                      placeholder={formCompra.modo === 'parcelada' ? 'Valor da parcela' : 'Valor'} />
-
-                    {formCompra.modo === 'parcelada' ? (
-                      <input type="number" min={2} max={24} value={formCompra.totalParcelas}
-                        onChange={e => setFormCompra(f => ({ ...f, totalParcelas: e.target.value }))} placeholder="Parcelas" />
-                    ) : (
-                      <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
-                    )}
-                  </div>
-
-                  {formCompra.modo === 'parcelada' && (
-                    <div className="form-group">
-                      <label className="form-label">Data da 1ª parcela</label>
-                      <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
-                    </div>
-                  )}
-
-                  <select value={formCompra.categoriaId} onChange={e => setFormCompra(f => ({ ...f, categoriaId: e.target.value }))}>
-                    <option value="">Sem categoria</option>
-                    {categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-                  </select>
-                  <input value={formCompra.observacao} onChange={e => setFormCompra(f => ({ ...f, observacao: e.target.value }))} placeholder="Observação (opcional)" />
-
-                  {formCompra.modo === 'fixa' && (
-                    <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                      Repete todo mês no dia escolhido, até você desativar.
-                    </p>
-                  )}
-
-                  <button className="btn-primary" onClick={lancarCompra}>Adicionar</button>
-                </div>
-              </div>
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setFaturaAberta(null)}>Fechar</button>
@@ -2014,7 +1953,74 @@ export function Financeiro() {
         </div>
       )}
 
-            {/* Modal escolher forma de pagar a fatura */}
+      {/* Modal lançar compra no cartão */}
+      {modalLancarCompra && faturaAberta && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalLancarCompra(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Lançar compra — {faturaAberta.nome}</h2>
+              <button className="btn-ghost" onClick={() => setModalLancarCompra(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[
+                    { v: 'avulsa', t: 'Avulsa' },
+                    { v: 'parcelada', t: 'Parcelada' },
+                    { v: 'fixa', t: 'Fixa/mensal' },
+                  ].map(op => (
+                    <button key={op.v} type="button"
+                      className={op.v === formCompra.modo ? 'btn-primary' : 'btn-secondary'}
+                      style={{ flex: 1, fontSize: 12, padding: '8px 0' }}
+                      onClick={() => setFormCompra(f => ({ ...f, modo: op.v as any }))}>
+                      {op.t}
+                    </button>
+                  ))}
+                </div>
+
+                <input autoFocus value={formCompra.descricao} onChange={e => setFormCompra(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Netflix" />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))}
+                    placeholder={formCompra.modo === 'parcelada' ? 'Valor da parcela' : 'Valor'} />
+
+                  {formCompra.modo === 'parcelada' ? (
+                    <input type="number" min={2} max={24} value={formCompra.totalParcelas}
+                      onChange={e => setFormCompra(f => ({ ...f, totalParcelas: e.target.value }))} placeholder="Parcelas" />
+                  ) : (
+                    <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
+                  )}
+                </div>
+
+                {formCompra.modo === 'parcelada' && (
+                  <div className="form-group">
+                    <label className="form-label">Data da 1ª parcela</label>
+                    <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
+                  </div>
+                )}
+
+                <select value={formCompra.categoriaId} onChange={e => setFormCompra(f => ({ ...f, categoriaId: e.target.value }))}>
+                  <option value="">Sem categoria</option>
+                  {categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
+                </select>
+                <input value={formCompra.observacao} onChange={e => setFormCompra(f => ({ ...f, observacao: e.target.value }))} placeholder="Observação (opcional)" />
+
+                {formCompra.modo === 'fixa' && (
+                  <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                    Repete todo mês no dia escolhido, até você desativar.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalLancarCompra(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={async () => { await lancarCompra(); setModalLancarCompra(false); }}>Adicionar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal escolher forma de pagar a fatura */}
       {modalPagarFatura && faturaAberta && faturaDados && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalPagarFatura(false)}>
           <div className="modal" style={{ maxWidth: 420 }}>
