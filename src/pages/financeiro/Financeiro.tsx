@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3 } from 'lucide-react';
 import { api } from '../../services/api';
@@ -137,6 +137,8 @@ export function Financeiro() {
   const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
 
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
+  const formCompraRef = useRef<HTMLDivElement>(null);
+  const descricaoCompraRef = useRef<HTMLInputElement>(null);
   const [faturaDados, setFaturaDados] = useState<{
     vencimento: string; total: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
     parcelasFinanciamento?: {
@@ -526,6 +528,11 @@ export function Financeiro() {
     } catch {
       setFaturaDados({ vencimento: '', total: 0, status: 'pendente', itens: [] });
     }
+  }
+
+  function irParaFormularioCompra() {
+    formCompraRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => descricaoCompraRef.current?.focus(), 350);
   }
 
   function abrirFatura(c: Cartao) {
@@ -1773,6 +1780,11 @@ export function Financeiro() {
               <button className="btn-ghost" onClick={() => setFaturaAberta(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
+              <button className="btn-primary" onClick={irParaFormularioCompra}
+                style={{ position: 'sticky', top: 4, zIndex: 5, float: 'right', fontSize: 12, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <Plus size={13} /> Lançar compra
+              </button>
+
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 14 }}>
                 <button className="btn-secondary" onClick={() => navFaturaMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
                 <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{MESES[faturaMes - 1]} {faturaAno}</span>
@@ -1940,7 +1952,7 @@ export function Financeiro() {
                 );
               })()}
 
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+              <div ref={formCompraRef} style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Lançar compra</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -1958,7 +1970,7 @@ export function Financeiro() {
                     ))}
                   </div>
 
-                  <input value={formCompra.descricao} onChange={e => setFormCompra(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Netflix" />
+                  <input ref={descricaoCompraRef} value={formCompra.descricao} onChange={e => setFormCompra(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Netflix" />
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))}

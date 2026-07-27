@@ -425,11 +425,10 @@ export function DashboardFinanceiro() {
       </div>
       <div className="dash-fab-spacer" />
       {fabAberto && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setFabAberto(false)} />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 35 }} onClick={() => setFabAberto(false)} />
       )}
 
-      <div className="fin-fab-mobile-only" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 100, flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-        {fabAberto && (
+      <div className="fin-fab-mobile-only" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 40, flexDirection: 'column', alignItems: 'center', gap: 10 }}>        {fabAberto && (
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn-secondary" style={{ borderColor: 'var(--red)', color: 'var(--red)', boxShadow: 'var(--shadow-lg)' }}
               onClick={() => navigate('/financeiro?aba=pagar&novo=pagar')}>
