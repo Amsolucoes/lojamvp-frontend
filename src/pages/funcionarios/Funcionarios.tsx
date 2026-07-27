@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, X, Trash2, Users, Edit2, Percent } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatarTelefone, formatarCep, buscarEnderecoPorCep } from '../../utils/mascaras';
 
 interface Servico {
   id: string;
@@ -20,18 +21,35 @@ interface Profissional {
   ativo: boolean;
   comissaoPadraoPercentual: number | null;
   diaPagamentoPadrao: number | null;
+  tipoRemuneracao: string; // comissao | salario_fixo
+  salarioFixo: number | null;
+  telefone: string | null;
+  cep: string | null;
+  endereco: string | null;
   comissoesPorServico: ComissaoServico[];
+}
+
+interface Conta {
+  id: string;
+  nome: string;
 }
 
 export function Funcionarios() {
   const { sucesso, erro } = useToast();
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
+  const [contas, setContas] = useState<Conta[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [modal, setModal] = useState<'novo' | 'editar' | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [form, setForm] = useState({ nome: '', comissaoPadraoPercentual: '', ativo: true, diaPagamentoPadrao: '' });
+  const [form, setForm] = useState({
+    nome: '', comissaoPadraoPercentual: '', ativo: true, diaPagamentoPadrao: '',
+    tipoRemuneracao: 'comissao' as 'comissao' | 'salario_fixo',
+    salarioFixo: '', contaBancariaId: '',
+    telefone: '', cep: '', endereco: '',
+  });
+  const [buscandoCep, setBuscandoCep] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [modalComissoes, setModalComissoes] = useState<Profissional | null>(null);
@@ -53,13 +71,30 @@ export function Funcionarios() {
   useEffect(() => {
     carregar();
     api.get<Servico[]>('/api/servicos').then(setServicos).catch(() => {});
+    api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }, []);
 
   useEffect(() => { setPaginaLista(1); }, [busca, statusFiltro, itensPorPagina]);
 
+  async function handleCepChange(valor: string) {
+    const formatado = formatarCep(valor);
+    setForm(f => ({ ...f, cep: formatado }));
+    const digitos = formatado.replace(/\D/g, '');
+    if (digitos.length === 8) {
+      setBuscandoCep(true);
+      const resultado = await buscarEnderecoPorCep(formatado);
+      if (resultado) setForm(f => ({ ...f, endereco: resultado.slice(0, 200) }));
+      setBuscandoCep(false);
+    }
+  }
+
   function abrirNovo() {
     setEditandoId(null);
-    setForm({ nome: '', comissaoPadraoPercentual: '', ativo: true, diaPagamentoPadrao: '' });
+    setForm({
+      nome: '', comissaoPadraoPercentual: '', ativo: true, diaPagamentoPadrao: '',
+      tipoRemuneracao: 'comissao', salarioFixo: '', contaBancariaId: '',
+      telefone: '', cep: '', endereco: '',
+    });
     setModal('novo');
   }
 
@@ -70,12 +105,22 @@ export function Funcionarios() {
       comissaoPadraoPercentual: p.comissaoPadraoPercentual != null ? String(p.comissaoPadraoPercentual) : '',
       ativo: p.ativo,
       diaPagamentoPadrao: p.diaPagamentoPadrao != null ? String(p.diaPagamentoPadrao) : '',
+      tipoRemuneracao: (p.tipoRemuneracao as 'comissao' | 'salario_fixo') ?? 'comissao',
+      salarioFixo: p.salarioFixo != null ? String(p.salarioFixo) : '',
+      contaBancariaId: '',
+      telefone: p.telefone ?? '',
+      cep: p.cep ?? '',
+      endereco: p.endereco ?? '',
     });
     setModal('editar');
   }
 
   async function salvar() {
     if (!form.nome.trim()) { erro('Preencha o nome.'); return; }
+    if (form.tipoRemuneracao === 'salario_fixo' && !form.salarioFixo) {
+      erro('Informe o valor do salário fixo.');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -83,6 +128,12 @@ export function Funcionarios() {
         comissaoPadraoPercentual: form.comissaoPadraoPercentual ? parseFloat(form.comissaoPadraoPercentual) : null,
         ativo: form.ativo,
         diaPagamentoPadrao: form.diaPagamentoPadrao ? parseInt(form.diaPagamentoPadrao) : null,
+        tipoRemuneracao: form.tipoRemuneracao,
+        salarioFixo: form.tipoRemuneracao === 'salario_fixo' && form.salarioFixo ? parseFloat(form.salarioFixo) : null,
+        contaBancariaId: form.tipoRemuneracao === 'salario_fixo' && form.contaBancariaId ? form.contaBancariaId : null,
+        telefone: form.telefone || null,
+        cep: form.cep || null,
+        endereco: form.endereco || null,
       };
       if (modal === 'novo') await api.post('/api/funcionarios', payload);
       else await api.put(`/api/funcionarios/${editandoId}`, payload);
@@ -288,20 +339,77 @@ export function Funcionarios() {
                   <label className="form-label">Nome *</label>
                   <input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: João Silva" autoFocus />
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label">Comissão padrão (%) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                  <input type="number" min={0} max={100} step={0.1} value={form.comissaoPadraoPercentual}
-                    onChange={e => setForm(f => ({ ...f, comissaoPadraoPercentual: e.target.value }))} placeholder="Ex: 40" />
-                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-                    Aplicada a todos os serviços, exceto onde houver uma comissão específica cadastrada.
-                  </p>
+                  <label className="form-label">Telefone <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: formatarTelefone(e.target.value) }))} placeholder="(00) 00000-0000" />
                 </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 10 }}>
+                  <div className="form-group">
+                    <label className="form-label">CEP <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                    <input value={form.cep} onChange={e => handleCepChange(e.target.value)} placeholder="00000-000" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Endereço {buscandoCep && <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(buscando...)</span>}</label>
+                    <input value={form.endereco} maxLength={200}
+                      onChange={e => setForm(f => ({ ...f, endereco: e.target.value.slice(0, 200) }))} placeholder="Rua, bairro, cidade - UF" />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Tipo de remuneração</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className={form.tipoRemuneracao === 'comissao' ? 'btn-primary' : 'btn-secondary'}
+                      style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
+                      onClick={() => setForm(f => ({ ...f, tipoRemuneracao: 'comissao' }))}>
+                      Comissão
+                    </button>
+                    <button type="button" className={form.tipoRemuneracao === 'salario_fixo' ? 'btn-primary' : 'btn-secondary'}
+                      style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
+                      onClick={() => setForm(f => ({ ...f, tipoRemuneracao: 'salario_fixo' }))}>
+                      Salário fixo
+                    </button>
+                  </div>
+                </div>
+
+                {form.tipoRemuneracao === 'comissao' ? (
+                  <div className="form-group">
+                    <label className="form-label">Comissão padrão (%) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                    <input type="number" min={0} max={100} step={0.1} value={form.comissaoPadraoPercentual}
+                      onChange={e => setForm(f => ({ ...f, comissaoPadraoPercentual: e.target.value }))} placeholder="Ex: 40" />
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                      Aplicada a todos os serviços, exceto onde houver uma comissão específica cadastrada.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Valor do salário (R$) *</label>
+                      <input type="number" min={0} step={0.01} value={form.salarioFixo}
+                        onChange={e => setForm(f => ({ ...f, salarioFixo: e.target.value }))} placeholder="Ex: 1500" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Conta bancária <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                      <select value={form.contaBancariaId} onChange={e => setForm(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                        <option value="">Não lançar no Financeiro</option>
+                        {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                      </select>
+                      <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                        Se escolher uma conta, o salário vira um lançamento fixo automático em Contas a Pagar.
+                      </p>
+                    </div>
+                  </>
+                )}
+
                 <div className="form-group">
                   <label className="form-label">Dia de pagamento padrão <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
                   <input type="number" min={1} max={28} value={form.diaPagamentoPadrao}
                     onChange={e => setForm(f => ({ ...f, diaPagamentoPadrao: e.target.value }))} placeholder="Ex: 5" />
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-                    Usado como sugestão de vencimento ao fechar a comissão desse profissional.
+                    {form.tipoRemuneracao === 'comissao'
+                      ? 'Usado como sugestão de vencimento ao fechar a comissão desse profissional.'
+                      : 'Dia do vencimento do lançamento fixo do salário no Financeiro.'}
                   </p>
                 </div>
                 {modal === 'editar' && (
