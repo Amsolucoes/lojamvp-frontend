@@ -88,7 +88,9 @@ interface ItemFaturaDetalhe {
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const ICONES_CATEGORIA = ['🏷️','💵','💰','🤑','$','🏠','💧','💡','📶','📦','👤','🧾','💳','🛒','📁','🍽️','🚗','🎓','🏥','🎮'
-    ,'✈️','🐾','🎁','📱','💊','⛽','🧹','🎬','📈','📉','🔧','🛠️','🎉','👶','💇','🐶'];
+    ,'✈️','🐾','🎁','📱','💊','⛽','🧹','🎬','📈','📉','🔧','🛠️','🎉','👶','💇','🐶'
+    ,'🏢','🏭','🏦','📚','🖥️','🖨️','☎️','🚚','🧴','🪑','🛋️','🧯','🩺','💼','🎨','🧵','✂️','🔌','🔋','🚿'
+    ,'🧼','🍔','☕','🍺','🍷','🎵','🎤','⚽','🏋️','🧘','🩹','🧠','⚖️','🌐','🔒','🧊','🧻','🪒','🚪','🌳'];
 
 function ehVencido(l: { status: string; vencimento: string }) {
   if (!l.vencimento) return false;
@@ -187,6 +189,7 @@ export function Financeiro() {
   const [editandoConta, setEditandoConta] = useState<Conta | null>(null);
 
   const [formCat, setFormCat] = useState({ nome: '', tipo: 'ambos', icone: '' });
+  const [editandoCategoria, setEditandoCategoria] = useState<Categoria | null>(null);
   const [filtroCatModal, setFiltroCatModal] = useState<'todas' | 'pagar' | 'receber' | 'ambos'>('todas');
   const [paginaCat, setPaginaCat] = useState(1);
 
@@ -747,6 +750,26 @@ export function Financeiro() {
       erro((e as Error).message);
     }
   }
+
+  function abrirEditarCategoria(c: Categoria) {
+    setEditandoCategoria(c);
+    setFormCat({ nome: c.nome, tipo: c.tipo, icone: c.icone ?? '' });
+  }
+
+  async function salvarEdicaoCategoria() {
+    if (!editandoCategoria) return;
+    if (!formCat.nome.trim()) { erro('Digite o nome da categoria.'); return; }
+    try {
+      await api.put(`/api/financeiro/categorias/${editandoCategoria.id}`, { nome: formCat.nome.trim(), tipo: formCat.tipo, icone: formCat.icone || null });
+      setEditandoCategoria(null);
+      setFormCat({ nome: '', tipo: 'ambos', icone: '' });
+      carregarCategorias();
+      sucesso('Categoria atualizada!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
   async function excluirCategoria(c: Categoria) {
     try {
       const res = await api.delete<any>(`/api/financeiro/categorias/${c.id}`);
@@ -1626,7 +1649,10 @@ export function Financeiro() {
                       {catPaginadas.map(c => (
                         <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
                           <span style={{ fontSize: 13 }}>{c.icone} {c.nome} <span style={{ color: 'var(--text-3)', fontSize: 11 }}>({c.tipo})</span></span>
-                          <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => excluirCategoria(c)}><Trash2 size={13} /></button>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn-ghost" onClick={() => abrirEditarCategoria(c)}>Editar</button>
+                            <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => excluirCategoria(c)}><Trash2 size={13} /></button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1641,7 +1667,7 @@ export function Financeiro() {
                 );
               })()}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Nova categoria</p>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoCategoria ? 'Editar categoria' : 'Nova categoria'}</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input value={formCat.nome} onChange={e => setFormCat(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Marketing" />
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -1654,7 +1680,14 @@ export function Financeiro() {
                       {ICONES_CATEGORIA.map(i => <option key={i} value={i}>{i}</option>)}
                     </select>
                   </div>
-                  <button className="btn-primary" onClick={salvarCategoria}>Adicionar categoria</button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn-primary" style={{ flex: 1 }} onClick={editandoCategoria ? salvarEdicaoCategoria : salvarCategoria}>
+                      {editandoCategoria ? 'Salvar alterações' : 'Adicionar categoria'}
+                    </button>
+                    {editandoCategoria && (
+                      <button className="btn-secondary" onClick={() => { setEditandoCategoria(null); setFormCat({ nome: '', tipo: 'ambos', icone: '' }); }}>Cancelar</button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
