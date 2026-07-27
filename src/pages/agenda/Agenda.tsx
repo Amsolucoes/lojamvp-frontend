@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, ChevronLeft, ChevronRight, Clock, Check, Ban, Trash2, Calendar as CalIcon } from 'lucide-react';
+import { Plus, X, ChevronLeft, ChevronRight, Clock, Check, Ban, Trash2, Calendar as CalIcon, User } from 'lucide-react';
 import { api } from '../../services/api';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../context/ToastContext';
@@ -497,7 +497,11 @@ export function Agenda() {
                                 </div>
                                 <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
                                   {a.nomeCliente || 'Sem cliente'} · {a.duracaoMin}min
-                                  {a.nomeProfissional && <> · {a.nomeProfissional}</>}
+                                  {a.nomeProfissional && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 4 }}>
+                                      <User size={11} style={{ verticalAlign: -1 }} /> {a.nomeProfissional}
+                                    </span>
+                                  )}
                                   {a.status === 'cancelado' && (
                                     <span style={{ marginLeft: 6, color: info.cor, fontWeight: 500 }}>· {info.label}</span>
                                   )}
