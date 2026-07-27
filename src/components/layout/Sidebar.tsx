@@ -87,7 +87,7 @@ export function Sidebar() {
   const temCorretora = modulos.includes('corretora');
   const temProdutos = tipoPlano === 'loja' || tipoPlano === 'loja_modulos';
   const temNf = modulos.includes('nf') && temProdutos;
-  const temFuncionarios = modulos.includes('funcionarios');
+  const temFuncionarios = modulos.includes('funcionarios') && temServicos;
   const temChacaraReservas = modulos.includes('chacara_reservas');
 
   const NAV = [
