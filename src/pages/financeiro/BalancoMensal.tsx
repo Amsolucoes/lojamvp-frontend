@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 import { api } from '../../services/api';
 import { BankBadge } from '../../utils/bancos';
+import './BalancoMensal.css';
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -115,7 +116,7 @@ export function BalancoMensal() {
             </div>
 
             {/* Categorias lado a lado */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, maxWidth: 700, marginLeft: 'auto', marginRight: 'auto' }} className="balanco-cat-grid">
+            <div className="balanco-cat-grid">
               <div>
                 {balanco.receitas.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Sem receitas no mês.</p>}
                 {balanco.receitas.map(r => (
