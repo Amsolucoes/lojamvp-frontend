@@ -56,6 +56,11 @@ export function BalancoMensal() {
 
   const saldoTotalContas = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
 
+  function irParaCategoria(tipo: 'pagar' | 'receber', nome: string) {
+    const categoria = nome === 'Mensalidade/Assinatura' ? '__plano__' : nome;
+    navigate(`/financeiro?aba=${tipo}&mes=${mesRef + 1}&ano=${anoRef}&categoria=${encodeURIComponent(categoria)}`);
+  }
+
   return (
     <div className="page" style={{ paddingBottom: 40 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -114,7 +119,8 @@ export function BalancoMensal() {
               <div>
                 {balanco.receitas.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Sem receitas no mês.</p>}
                 {balanco.receitas.map(r => (
-                  <div key={r.nome} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                  <div key={r.nome} onClick={() => irParaCategoria('receber', r.nome)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, cursor: 'pointer' }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: '50%', background: corPara(r.nome) + '33',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0,
@@ -129,7 +135,8 @@ export function BalancoMensal() {
               <div>
                 {balanco.despesas.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Sem despesas no mês.</p>}
                 {balanco.despesas.map(d => (
-                  <div key={d.nome} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                  <div key={d.nome} onClick={() => irParaCategoria('pagar', d.nome)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, cursor: 'pointer' }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: '50%', background: corPara(d.nome) + '33',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0,
