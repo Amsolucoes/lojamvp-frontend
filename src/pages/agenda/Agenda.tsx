@@ -497,11 +497,6 @@ export function Agenda() {
                                 </div>
                                 <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
                                   {a.nomeCliente || 'Sem cliente'} · {a.duracaoMin}min
-                                  {a.nomeProfissional && (
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 4 }}>
-                                      <User size={11} style={{ verticalAlign: -1 }} /> {a.nomeProfissional}
-                                    </span>
-                                  )}
                                   {a.status === 'cancelado' && (
                                     <span style={{ marginLeft: 6, color: info.cor, fontWeight: 500 }}>· {info.label}</span>
                                   )}
@@ -511,6 +506,11 @@ export function Agenda() {
                                       : <span style={{ marginLeft: 6, color: '#d97706', fontWeight: 600 }}>· ⏳ Pendente</span>
                                   )}
                                 </div>
+                                {a.nomeProfissional && (
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 3, fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>
+                                    <User size={12} style={{ verticalAlign: -1 }} /> {a.nomeProfissional}
+                                  </div>
+                                )}
                                 {a.observacao && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{a.observacao}</div>}
                               </div>
                               <div className="agenda-acoes">
