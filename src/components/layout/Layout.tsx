@@ -111,6 +111,22 @@ export function Layout() {
   const { aviso } = useToast();
   const mainRef = useRef<HTMLElement | null>(null);
   const { pull, recarregando } = usePullToRefresh(mainRef);
+  const [debugScroll, setDebugScroll] = useState({ elScrollTop: 0, windowScrollY: 0 });
+
+  useEffect(() => {
+    function atualizarDebug() {
+      setDebugScroll({
+        elScrollTop: mainRef.current?.scrollTop ?? -1,
+        windowScrollY: window.scrollY,
+      });
+    }
+    window.addEventListener('scroll', atualizarDebug, true);
+    const interval = setInterval(atualizarDebug, 300);
+    return () => {
+      window.removeEventListener('scroll', atualizarDebug, true);
+      clearInterval(interval);
+    };
+  }, []);
 
   useTravaScrollModal();
 
@@ -184,6 +200,9 @@ export function Layout() {
   return (
     <div className="layout">
       <Sidebar />
+      <div style={{ position: 'fixed', bottom: 8, right: 8, zIndex: 9999, background: 'black', color: 'lime', fontSize: 11, padding: '6px 10px', borderRadius: 6, fontFamily: 'monospace' }}>
+        el: {debugScroll.elScrollTop} | win: {debugScroll.windowScrollY}
+      </div>
       <main className="layout-main" ref={mainRef} style={{ position: 'relative' }}>
         {pull > 0 && (
           <div style={{
