@@ -49,7 +49,7 @@ export function Cadastro() {
   const grupoLojas = perfis.filter(p => p.tipoPlano === 'loja' && p.nome !== 'Começar do zero' && p.nome !== 'Corretora' && !p.nome.startsWith('Pilates'));
   const grupoServicos = perfis.filter(p => p.tipoPlano === 'servicos' || p.tipoPlano === 'loja_modulos');
   const grupoFinanceiro = perfis.filter(p => p.tipoPlano === 'financeiro');
-  const grupoOutros = perfis.filter(p => p.nome === 'Corretora' || p.nome.startsWith('Pilates'));
+  const grupoOutros = perfis.filter(p => p.nome === 'Corretora' || p.nome.startsWith('Pilates') || p.tipoPlano === 'chacara');
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
