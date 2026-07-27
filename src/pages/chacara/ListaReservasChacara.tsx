@@ -331,8 +331,8 @@ export function ListaReservasChacara() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)', flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {r.contratoEnviadoEm ? (
                         <><FileCheck size={13} color="var(--green)" /> Contrato enviado em {fmtData(r.contratoEnviadoEm)}</>
@@ -346,7 +346,7 @@ export function ListaReservasChacara() {
                     </button>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button className="btn-ghost" title="Editar" onClick={() => abrirEdicao(r)}>
                       <Pencil size={14} />
                     </button>
