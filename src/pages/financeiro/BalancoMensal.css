@@ -9,7 +9,9 @@
 
 @media (max-width: 600px) {
   .balanco-cat-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 14px;
+  }
+  .balanco-cat-grid > div > div {
+    gap: 6px !important;
   }
 }
