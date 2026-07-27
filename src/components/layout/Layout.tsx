@@ -7,7 +7,7 @@ import { api } from '../../services/api';
 import './Layout.css';
 
 // Puxar a tela pra baixo no topo do scroll recarrega o app — padrão comum em apps mobile
-function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>) {
+function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>, onRefresh: () => void) {
   const [pull, setPull] = useState(0);
   const [recarregando, setRecarregando] = useState(false);
   const startY = useRef(0);
@@ -50,7 +50,11 @@ function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>) {
       if (pullAtual.current > 60) {
         setRecarregando(true);
         setPull(60);
-        window.location.reload();
+        onRefresh();
+        setTimeout(() => {
+          setRecarregando(false);
+          setPull(0);
+        }, 600);
       } else {
         setPull(0);
       }
@@ -118,7 +122,10 @@ export function Layout() {
   const { loading, erro, recarregar, fase, nomeLoja, temFinanceiro } = useApp();
   const { aviso } = useToast();
   const mainRef = useRef<HTMLElement | null>(null);
-  const { pull, recarregando } = usePullToRefresh(mainRef);
+  const { pull, recarregando } = usePullToRefresh(mainRef, () => {
+    recarregar();
+    window.dispatchEvent(new Event('pullToRefresh'));
+  });
 
   useTravaScrollModal();
 
