@@ -1068,7 +1068,7 @@ export function Financeiro() {
                               : l.status === 'parcial' ? <span className="badge badge-yellow">Pago parcialmente</span>
                               : l.status === 'pago' ? <span className="badge badge-green">Pago</span>
                               : ehVencido(l as any) ? <span className="badge badge-red">Vencido</span>
-                              : <span className="badge badge-accent">Pendente</span>}
+                              : <span className="badge badge-yellow">Pendente</span>}
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
@@ -1128,7 +1128,7 @@ export function Financeiro() {
                           : l.status === 'parcial' ? <span className="badge badge-yellow">Pago parcialmente</span>
                           : l.status === 'pago' ? <span className="badge badge-green">Pago</span>
                           : ehVencido(l as any) ? <span className="badge badge-red">Vencido</span>
-                          : <span className="badge badge-accent">Pendente</span>}
+                          : <span className="badge badge-yellow">Pendente</span>}
                         <div style={{ display: 'flex', gap: 6 }}>
                           {(ehFinanciada || l.status === 'parcial')
                             ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={desfazer}>Desfazer</button>
@@ -1194,7 +1194,7 @@ export function Financeiro() {
                         <td>
                           {l.status === 'pago' ? <span className="badge badge-green">Recebido</span>
                             : new Date(l.vencimento) < new Date(new Date().toDateString()) ? <span className="badge badge-red">Vencido</span>
-                            : <span className="badge badge-accent">Pendente</span>}
+                            : <span className="badge badge-yellow">Pendente</span>}
                         </td>
                         <td><span className="badge badge-accent" style={{ fontSize: 10 }}>{l.origem === 'plano' ? 'Plano' : 'Avulso'}</span></td>
                         <td>
@@ -1245,7 +1245,7 @@ export function Financeiro() {
                       <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                      {l.status === 'pago' ? <span className="badge badge-green">Recebido</span> : <span className="badge badge-accent">Pendente</span>}
+                      {l.status === 'pago' ? <span className="badge badge-green">Recebido</span> : <span className="badge badge-yellow">Pendente</span>}
                       {l.origem === 'avulso' ? (
                         <div style={{ display: 'flex', gap: 6 }}>
                           {l.status === 'pago'
