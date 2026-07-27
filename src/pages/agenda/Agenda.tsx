@@ -127,6 +127,7 @@ export function Agenda() {
   const [pausaMensagem, setPausaMensagem] = useState('');
   const [pausaAtiva, setPausaAtiva] = useState<{ pausaAte: string | null; pausaMensagem: string | null }>({ pausaAte: null, pausaMensagem: null });
   const [salvandoPausa, setSalvandoPausa] = useState(false);
+  const [temFuncionarios, setTemFuncionarios] = useState(false);
 
   useEffect(() => {
     api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
@@ -141,6 +142,7 @@ export function Agenda() {
       if (typeof res?.agendaHoraInicio === 'number') setHoraInicio(res.agendaHoraInicio);
       if (typeof res?.agendaHoraFim === 'number') setHoraFim(res.agendaHoraFim);
       setPausaAtiva({ pausaAte: res?.pausaAte ?? null, pausaMensagem: res?.pausaMensagem ?? null });
+      if (Array.isArray(res?.modulosAtivos)) setTemFuncionarios(res.modulosAtivos.includes('funcionarios'));
     }).catch(() => {}).finally(() => setCarregandoFaixa(false));
   }, []);
 
@@ -474,7 +476,8 @@ export function Agenda() {
                           <Plus size={13} /> Agendar
                         </button>
                       ) : (
-                        ags.map(({ a, comecaAqui }) => {
+                        <>
+                        {ags.map(({ a, comecaAqui }) => {
                           const info = STATUS_INFO[a.status] ?? STATUS_INFO.agendado;
                           // Faixa de continuação: versão discreta, sem ações
                           if (!comecaAqui) {
@@ -494,7 +497,7 @@ export function Agenda() {
                                 </div>
                                 <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
                                   {a.nomeCliente || 'Sem cliente'} · {a.duracaoMin}min
-                                  {a.nomeProfissional && <> · {a.nomeProfissional}</>}  
+                                  {a.nomeProfissional && <> · {a.nomeProfissional}</>}
                                   {a.status === 'cancelado' && (
                                     <span style={{ marginLeft: 6, color: info.cor, fontWeight: 500 }}>· {info.label}</span>
                                   )}
@@ -520,7 +523,13 @@ export function Agenda() {
                               </div>
                             </div>
                           );
-                        })
+                        })}
+                        {temFuncionarios && temInicio && (
+                          <button className="agenda-vazio" style={{ marginTop: 4, padding: '6px 8px', fontSize: 11 }} onClick={() => abrirNovo(faixa)}>
+                            <Plus size={12} /> Agendar outro
+                          </button>
+                        )}
+                        </>
                       )}
                     </div>
                   </div>
