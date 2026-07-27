@@ -40,6 +40,11 @@ interface Conta {
   nome: string;
 }
 
+interface ProfissionalFiltro {
+  id: string;
+  nome: string;
+}
+
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }

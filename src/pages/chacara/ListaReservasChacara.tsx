@@ -61,6 +61,8 @@ export function ListaReservasChacara() {
     dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '',
     clienteDocumento: '', clienteCep: '', clienteEndereco: '',
   });
+  const [ajustarValorManual, setAjustarValorManual] = useState(false);
+  const [valorManual, setValorManual] = useState(0);
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   const [erroEdicao, setErroEdicao] = useState('');
 
@@ -175,6 +177,8 @@ export function ListaReservasChacara() {
       clienteCep: r.clienteCep ?? '',
       clienteEndereco: r.clienteEndereco ?? '',
     });
+    setAjustarValorManual(false);
+    setValorManual(r.valor);
     setErroEdicao('');
     setModalEditar(r);
   }
@@ -184,7 +188,10 @@ export function ListaReservasChacara() {
     setErroEdicao('');
     setSalvandoEdicao(true);
     try {
-      await api.put(`/api/chacara/reservas/${modalEditar.id}`, formEditar);
+      await api.put(`/api/chacara/reservas/${modalEditar.id}`, {
+        ...formEditar,
+        valorManual: ajustarValorManual ? valorManual : null,
+      });
       sucesso('Reserva atualizada.');
       setModalEditar(null);
       carregar();
@@ -436,10 +443,28 @@ export function ListaReservasChacara() {
                     onChange={e => setFormEditar(f => ({ ...f, clienteEndereco: e.target.value }))}
                     maxLength={150} />
                 </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={ajustarValorManual}
+                    style={{ width: 16, height: 16, margin: 0 }}
+                    onChange={e => setAjustarValorManual(e.target.checked)} />
+                  Ajustar valor manualmente (ex: desconto)
+                </label>
+
+                {ajustarValorManual && (
+                  <div className="form-group">
+                    <label className="form-label">Valor final (R$)</label>
+                    <input type="number" min={0} step={0.01} value={valorManual}
+                      onChange={e => setValorManual(Number(e.target.value))}
+                      onFocus={e => e.target.select()} />
+                  </div>
+                )}
               </div>
               {erroEdicao && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 12 }}>{erroEdicao}</p>}
               <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 10 }}>
-                O valor será recalculado automaticamente com base nas novas datas e quantidade de pessoas.
+                {ajustarValorManual
+                  ? 'O valor acima será usado exatamente como digitado, sem recalcular pela regra de preço.'
+                  : 'O valor será recalculado automaticamente com base nas novas datas e quantidade de pessoas.'}
               </p>
             </div>
             <div className="modal-footer">
