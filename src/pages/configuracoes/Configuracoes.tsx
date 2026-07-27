@@ -212,6 +212,12 @@ export function Configuracoes() {
                 return false;
               }
 
+              // Funcionários (comissão por atendimento) não faz sentido pra loja do tipo chácara —
+              // fica disponível pra outros tipos (retail, serviços), grandfather se já ativo
+              if (mod.chave === 'funcionarios' && tipoPlano === 'chacara' && !modulosAtivos.includes(mod.chave)) {
+                return false;
+              }
+
               // Corretora, Serviços e Turmas são um grupo mutuamente exclusivo:
               // mostra os disponíveis até um ser ativado, depois esconde os outros
               if (grupoExclusivo.includes(mod.chave)) {
