@@ -7,7 +7,7 @@
   flex: 1;
   min-width: 0;
   overflow-y: auto;
-  background: var(--bg);
+  overscroll-behavior-y: contain;
 }
 
 .layout-loading {
