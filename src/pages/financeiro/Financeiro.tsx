@@ -2302,7 +2302,9 @@ export function Financeiro() {
       )}
 
       <div className="fin-fab-spacer" />
-      {!modalLancamento && !modalContas && !modalCartoes && !modalCategorias && !editandoLancamento && !confirmExcluir && (
+      {!modalLancamento && !modalContas && !modalCartoes && !modalCategorias && !editandoLancamento && !confirmExcluir
+        && !faturaAberta && !modalPagarFatura && !editandoItemCartao && !confirmExcluirItemCartao
+        && !modalAjuste && !modalTransferencia && (
       <div className="fin-fab-mobile-only" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
         <button onClick={abrirNovoLancamento} style={{
           width: 56, height: 56, borderRadius: '50%',
