@@ -77,6 +77,18 @@ export function Comissoes() {
   const [resumo, setResumo] = useState<ResumoProfissional[]>([]);
   const [loadingResumo, setLoadingResumo] = useState(true);
   const [contas, setContas] = useState<Conta[]>([]);
+  const [profissionaisFiltro, setProfissionaisFiltro] = useState<ProfissionalFiltro[]>([]);
+
+  // Paginação — Pendentes
+  const [paginaPendentes, setPaginaPendentes] = useState(1);
+  const [itensPorPaginaPendentes, setItensPorPaginaPendentes] = useState(15);
+
+  // Filtro + paginação — Histórico
+  const [profissionalFiltroHistorico, setProfissionalFiltroHistorico] = useState('');
+  const [periodoDeHistorico, setPeriodoDeHistorico] = useState('');
+  const [periodoAteHistorico, setPeriodoAteHistorico] = useState('');
+  const [paginaHistorico, setPaginaHistorico] = useState(1);
+  const [itensPorPaginaHistorico, setItensPorPaginaHistorico] = useState(15);
 
   // Detalhe do profissional
   const [modalDetalhe, setModalDetalhe] = useState<ResumoProfissional | null>(null);
@@ -111,7 +123,11 @@ export function Comissoes() {
     carregarResumo();
     carregarHistorico();
     api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+    api.get<ProfissionalFiltro[]>('/api/funcionarios/ativos').then(setProfissionaisFiltro).catch(() => {});
   }, []);
+
+  useEffect(() => { setPaginaPendentes(1); }, [itensPorPaginaPendentes]);
+  useEffect(() => { setPaginaHistorico(1); }, [profissionalFiltroHistorico, periodoDeHistorico, periodoAteHistorico, itensPorPaginaHistorico]);
 
   async function abrirDetalhe(p: ResumoProfissional) {
     setModalDetalhe(p);
@@ -174,6 +190,20 @@ export function Comissoes() {
 
   const totalPendente = resumo.reduce((s, r) => s + r.valorTotal, 0);
 
+  const totalPaginasPendentes = Math.max(1, Math.ceil(resumo.length / itensPorPaginaPendentes));
+  const paginaAtualPendentes = Math.min(paginaPendentes, totalPaginasPendentes);
+  const resumoPaginado = resumo.slice((paginaAtualPendentes - 1) * itensPorPaginaPendentes, paginaAtualPendentes * itensPorPaginaPendentes);
+
+  const fechamentosFiltrados = fechamentos.filter(f => {
+    const passaProfissional = !profissionalFiltroHistorico || f.profissionalId === profissionalFiltroHistorico;
+    const passaDe = !periodoDeHistorico || f.periodoFim.slice(0, 10) >= periodoDeHistorico;
+    const passaAte = !periodoAteHistorico || f.periodoInicio.slice(0, 10) <= periodoAteHistorico;
+    return passaProfissional && passaDe && passaAte;
+  });
+  const totalPaginasHistorico = Math.max(1, Math.ceil(fechamentosFiltrados.length / itensPorPaginaHistorico));
+  const paginaAtualHistorico = Math.min(paginaHistorico, totalPaginasHistorico);
+  const fechamentosPaginados = fechamentosFiltrados.slice((paginaAtualHistorico - 1) * itensPorPaginaHistorico, paginaAtualHistorico * itensPorPaginaHistorico);
+
   return (
     <div className="page">
       <div className="page-header">
@@ -210,7 +240,7 @@ export function Comissoes() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {resumo.map(r => (
+              {resumoPaginado.map(r => (
                 <div key={r.profissionalId} className="card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                     <div>
@@ -232,12 +262,44 @@ export function Comissoes() {
               ))}
             </div>
           )}
+
+          {!loadingResumo && resumo.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 16 }}>
+              <select value={itensPorPaginaPendentes} onChange={e => setItensPorPaginaPendentes(parseInt(e.target.value))} style={{ width: 'auto', fontSize: 12, padding: '4px 8px' }}>
+                <option value={15}>15 por página</option>
+                <option value={30}>30 por página</option>
+                <option value={50}>50 por página</option>
+              </select>
+              {totalPaginasPendentes > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button className="btn-secondary" disabled={paginaAtualPendentes <= 1} onClick={() => setPaginaPendentes(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtualPendentes} / {totalPaginasPendentes}</span>
+                  <button className="btn-secondary" disabled={paginaAtualPendentes >= totalPaginasPendentes} onClick={() => setPaginaPendentes(p => Math.min(totalPaginasPendentes, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
       {/* ── ABA HISTÓRICO ── */}
       {aba === 'historico' && (
         <>
+          <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <select value={profissionalFiltroHistorico} onChange={e => setProfissionalFiltroHistorico(e.target.value)} style={{ width: 'auto', minWidth: 180 }}>
+              <option value="">Todos os profissionais</option>
+              {profissionaisFiltro.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            </select>
+            <input type="date" value={periodoDeHistorico} onChange={e => setPeriodoDeHistorico(e.target.value)} style={{ width: 'auto' }} />
+            <span style={{ color: 'var(--text-3)' }}>até</span>
+            <input type="date" value={periodoAteHistorico} onChange={e => setPeriodoAteHistorico(e.target.value)} style={{ width: 'auto' }} />
+            {(profissionalFiltroHistorico || periodoDeHistorico || periodoAteHistorico) && (
+              <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => { setProfissionalFiltroHistorico(''); setPeriodoDeHistorico(''); setPeriodoAteHistorico(''); }}>
+                Limpar filtros
+              </button>
+            )}
+          </div>
+
           {loadingHistorico ? (
             <div className="card"><div className="empty"><div className="spinner" /></div></div>
           ) : fechamentos.length === 0 ? (
@@ -247,9 +309,16 @@ export function Comissoes() {
                 <p>Nenhum fechamento de comissão registrado ainda.</p>
               </div>
             </div>
+          ) : fechamentosFiltrados.length === 0 ? (
+            <div className="card">
+              <div className="empty">
+                <Calendar size={36} />
+                <p>Nenhum fechamento encontrado com esse filtro.</p>
+              </div>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {fechamentos.map(f => (
+              {fechamentosPaginados.map(f => (
                 <div key={f.id} className="card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                     <div>
@@ -268,8 +337,25 @@ export function Comissoes() {
                       </button>
                     </div>
                   </div>
-                </div>
+               </div>
               ))}
+            </div>
+          )}
+
+          {!loadingHistorico && fechamentosFiltrados.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 16 }}>
+              <select value={itensPorPaginaHistorico} onChange={e => setItensPorPaginaHistorico(parseInt(e.target.value))} style={{ width: 'auto', fontSize: 12, padding: '4px 8px' }}>
+                <option value={15}>15 por página</option>
+                <option value={30}>30 por página</option>
+                <option value={50}>50 por página</option>
+              </select>
+              {totalPaginasHistorico > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button className="btn-secondary" disabled={paginaAtualHistorico <= 1} onClick={() => setPaginaHistorico(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtualHistorico} / {totalPaginasHistorico}</span>
+                  <button className="btn-secondary" disabled={paginaAtualHistorico >= totalPaginasHistorico} onClick={() => setPaginaHistorico(p => Math.min(totalPaginasHistorico, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+                </div>
+              )}
             </div>
           )}
         </>
