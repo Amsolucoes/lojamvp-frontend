@@ -393,10 +393,26 @@ export function Funil() {
           onDrop={() => handleDrop('perdido')}
         >
           <div className="funil-coluna-header" style={{ borderTopColor: 'var(--red)' }}>
-            <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--red)' }}>Perdido</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--red)' }}>Perdido</span>
+              <span className="badge badge-accent" style={{ fontSize: 10 }}>
+                {oportunidades.filter(o => o.etapa === 'perdido').length}
+              </span>
+            </div>
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'center', padding: '20px 8px' }}>
-            Arraste aqui para marcar como perdido
+          <div className="funil-cards">
+            {oportunidades.filter(o => o.etapa === 'perdido').sort((a, b) => a.ordem - b.ordem).map(op => (
+              <div key={op.id} className="funil-card" draggable onDragStart={() => handleDragStart(op.id)} style={{ opacity: 0.8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, cursor: 'pointer' }} onClick={() => abrirEditar(op)}>{op.clienteNome}</div>
+                  <button className="btn-ghost" style={{ padding: 2, color: 'var(--red)' }} onClick={() => setConfirmExcluir(op)}><Trash2 size={12} /></button>
+                </div>
+                {op.observacao && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>💬 {op.observacao}</div>}
+              </div>
+            ))}
+            {oportunidades.filter(o => o.etapa === 'perdido').length === 0 && (
+              <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Arraste aqui para marcar como perdido</div>
+            )}
           </div>
         </div>
       </div>
