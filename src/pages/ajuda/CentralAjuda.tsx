@@ -11,27 +11,36 @@ interface Video {
   ordem: number;
 }
 
+interface CategoriaVideo {
+  id: string;
+  nome: string;
+  ordem: number;
+  modulosRelacionados: string | null;
+}
+
 export function CentralAjuda() {
-  const { temProdutos, temServicos, temFinanceiro, temTurmas, temCorretora, temNf } = useApp();
+  const { modulosAtivos } = useApp();
   const [todosVideos, setTodosVideos] = useState<Video[]>([]);
+  const [todasCategorias, setTodasCategorias] = useState<CategoriaVideo[]>([]);
 
   useEffect(() => {
     api.get<Video[]>('/api/videos-ajuda').then(setTodosVideos).catch(() => {});
+    api.get<CategoriaVideo[]>('/api/categorias-video-ajuda').then(setTodasCategorias).catch(() => {});
   }, []);
 
   const categoriasComVideo = new Set(todosVideos.map(v => v.categoria));
 
-  // Só mostra categorias que fazem sentido pro que a loja realmente usa E que já têm vídeo cadastrado
-  const categoriasDisponiveis = [
-    ...(temProdutos ? ['Produtos', 'Caixa', 'Estoque'] : []),
-    ...(temProdutos || temServicos || temTurmas || temCorretora ? ['Clientes'] : []),
-    ...(temServicos ? ['Agenda'] : []),
-    ...(temServicos || temTurmas ? ['Planos'] : []),
-    ...(temFinanceiro ? ['Financeiro'] : []),
-    ...(temTurmas ? ['Turmas'] : []),
-    ...(temCorretora ? ['Corretora'] : []),
-    ...(temNf ? ['Importação de NF'] : []),
-  ].filter(cat => categoriasComVideo.has(cat));
+  // Mostra categorias sem restrição de módulo (aparecem pra qualquer loja) OU
+  // que batem com pelo menos um módulo ativo da loja — e que já têm vídeo cadastrado
+  const categoriasDisponiveis = todasCategorias
+    .filter(c => categoriasComVideo.has(c.nome))
+    .filter(c => {
+      if (!c.modulosRelacionados) return true;
+      const modulos = c.modulosRelacionados.split(',').filter(Boolean);
+      return modulos.some(m => modulosAtivos.includes(m));
+    })
+    .sort((a, b) => a.ordem - b.ordem)
+    .map(c => c.nome);
 
   const [categoria, setCategoria] = useState('');
   const [aberto, setAberto] = useState<number | null>(null);
