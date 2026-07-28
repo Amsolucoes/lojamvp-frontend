@@ -321,7 +321,7 @@ export function Financeiro() {
 
   // Quando algum filtro (categoria ou status) está ativo, recalcula os totais
   // com base na lista já filtrada, em vez do resumo geral do backend.
-  const filtroAtivo = catFiltro !== 'todas' || statusFiltro !== 'todos';
+  const filtroAtivo = catFiltro !== 'todas' || statusFiltro !== 'todos' || modoFiltro !== 'todos' || periodoTipo === 'personalizado';
   const hoje0h = new Date(new Date().toDateString());
 
   function resumoDaLista(lista: any[]) {
