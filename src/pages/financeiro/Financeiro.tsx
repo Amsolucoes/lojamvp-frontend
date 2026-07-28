@@ -873,20 +873,44 @@ export function Financeiro() {
               {fmt(resumoAba.totalPendente + resumoAba.totalVencido)}
             </div>
 
-            {aba === 'pagar' && (resumo as any)?.detalhePagar && (
-              <div className="fin-resumo-detalhe-cartoes" style={{ marginTop: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                  <span style={{ color: 'var(--text-3)' }}>Contas</span>
-                  <span style={{ color: 'var(--text-2)' }}>{fmt((resumo as any).detalhePagar.lancamentos)}</span>
-                </div>
-                {(resumo as any).detalhePagar.cartoes.map((c: any) => (
-                  <div key={c.nome} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                    <span style={{ color: 'var(--text-3)' }}>💳 {c.nome}</span>
-                    <span style={{ color: 'var(--text-2)' }}>{fmt(c.valor)}</span>
+            {aba === 'pagar' && (() => {
+              const listaBase = filtroAtivo ? listaPagarCompleta : null;
+              const detalheBackend = (resumo as any)?.detalhePagar;
+              if (!listaBase && !detalheBackend) return null;
+
+              const totalContas = listaBase
+                ? listaBase.filter(l => l.origem === 'avulso').reduce((s, l) => s + l.valor, 0)
+                : detalheBackend?.lancamentos ?? 0;
+
+              const cartoes = listaBase
+                ? Object.entries(
+                    listaBase
+                      .filter(l => l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada')
+                      .reduce((acc, l) => {
+                        const nome = l.cartaoNome ?? 'Cartão';
+                        acc[nome] = (acc[nome] ?? 0) + l.valor;
+                        return acc;
+                      }, {} as Record<string, number>)
+                  ).map(([nome, valor]) => ({ nome, valor }))
+                : (detalheBackend?.cartoes ?? []);
+
+              if (totalContas === 0 && cartoes.length === 0) return null;
+
+              return (
+                <div className="fin-resumo-detalhe-cartoes" style={{ marginTop: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ color: 'var(--text-3)' }}>Contas</span>
+                    <span style={{ color: 'var(--text-2)' }}>{fmt(totalContas)}</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  {cartoes.map((c: any) => (
+                    <div key={c.nome} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ color: 'var(--text-3)' }}>💳 {c.nome}</span>
+                      <span style={{ color: 'var(--text-2)' }}>{fmt(c.valor)}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
             <div className="fin-resumo-pago-vencido" style={{ display: 'flex', justifyContent: 'center', gap: 28, fontSize: 13, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
               <div style={{ textAlign: 'center' }}>
