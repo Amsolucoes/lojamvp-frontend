@@ -813,7 +813,7 @@ export function Financeiro() {
     <div className="page">
       {veioComAbaEspecifica && (
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button className="fin-voltar-mobile" onClick={() => navigate('/')} style={{
+          <button className="fin-voltar-mobile" onClick={() => navigate(-1)} style={{
             alignItems: 'center', gap: 6, justifyContent: 'center',
             background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 8,
             color: 'var(--text-1)', fontSize: 14, fontWeight: 500,

@@ -1,5 +1,5 @@
 import { Wallet, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, CreditCard, Clock, ArrowUp, ArrowDown, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { BANCOS, BankBadge } from '../utils/bancos';
@@ -69,9 +69,16 @@ export function DashboardFinanceiro() {
     api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }, []);
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const agoraInicial = new Date();
-  const [mesResumo, setMesResumo] = useState(agoraInicial.getMonth());
-  const [anoResumo, setAnoResumo] = useState(agoraInicial.getFullYear());
+  const [mesResumo, setMesResumo] = useState(() => {
+    const m = searchParams.get('mes');
+    return m ? parseInt(m) - 1 : agoraInicial.getMonth();
+  });
+  const [anoResumo, setAnoResumo] = useState(() => {
+    const a = searchParams.get('ano');
+    return a ? parseInt(a) : agoraInicial.getFullYear();
+  });
 
   useEffect(() => {
     api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoResumo}&mes=${mesResumo + 1}`)
@@ -85,6 +92,15 @@ export function DashboardFinanceiro() {
     setMesResumo(nm);
     setAnoResumo(na);
   }
+
+  useEffect(() => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('mes', String(mesResumo + 1));
+      next.set('ano', String(anoResumo));
+      return next;
+    }, { replace: true });
+  }, [mesResumo, anoResumo]);
 
   useEffect(() => {
     api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {});
