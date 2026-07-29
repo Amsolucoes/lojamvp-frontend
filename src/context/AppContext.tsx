@@ -44,7 +44,7 @@ interface AppCtx {
     obs?: string
   ) => Promise<void>;
 
-  recarregar: () => Promise<void>;
+  recarregar: (silencioso?: boolean) => Promise<void>;
 }
 
 const Ctx = createContext<AppCtx | null>(null);
@@ -121,8 +121,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const temNf = modulosAtivos.includes('nf') && temProdutos;
   const temChacaraReservas = modulosAtivos.includes('chacara_reservas');
 
-  async function recarregar() {
-    setLoading(true);
+  async function recarregar(silencioso = false) {
+    if (!silencioso) setLoading(true);
     setErro(null);
 
     // Limpa localStorage para garantir que usa só a API
@@ -147,7 +147,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       setErro((e as Error).message);
     } finally {
-      setLoading(false);
+      if (!silencioso) setLoading(false);
     }
 
     // Módulos ativos / plano — busca separada pra não travar o resto se falhar
