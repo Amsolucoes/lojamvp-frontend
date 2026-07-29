@@ -74,6 +74,11 @@ export function Funcionarios() {
     api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    window.addEventListener('pullToRefresh', carregar);
+    return () => window.removeEventListener('pullToRefresh', carregar);
+  }, []);
+
   useEffect(() => { setPaginaLista(1); }, [busca, statusFiltro, itensPorPagina]);
 
   async function handleCepChange(valor: string) {
