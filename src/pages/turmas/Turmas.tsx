@@ -134,6 +134,15 @@ export function Turmas() {
     carregarProfissionais();
   }, []);
 
+  useEffect(() => {
+    function aoReceberPullToRefresh() {
+      carregarTurmas();
+      if (aba === 'agenda') carregarSessoes();
+    }
+    window.addEventListener('pullToRefresh', aoReceberPullToRefresh);
+    return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
+  }, [aba, semanaOffset]);
+
   function carregarProfissionais() {
     api.get<{ id: string; nome: string }[]>('/api/funcionarios/ativos').then(setProfissionais).catch(() => {});
   }
