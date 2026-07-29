@@ -173,6 +173,15 @@ export function Agenda() {
   useEffect(() => { carregar(); }, [dia, visao]);
   useEffect(() => { carregarPendentes(); }, []);
 
+  useEffect(() => {
+    function aoReceberPullToRefresh() {
+      carregar();
+      carregarPendentes();
+    }
+    window.addEventListener('pullToRefresh', aoReceberPullToRefresh);
+    return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
+  }, [dia, visao]);
+
   function carregarPendentes() {
     api.get<Agendamento[]>('/api/agendamentos/pendentes').then(setPendentes).catch(() => {});
   }
