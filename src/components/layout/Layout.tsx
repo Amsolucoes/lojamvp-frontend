@@ -2,31 +2,31 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../context/ToastContext';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { api } from '../../services/api';
 import './Layout.css';
 
 // Puxar a tela pra baixo no topo do scroll recarrega o app — padrão comum em apps mobile
-function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>, onRefresh: () => void) {
+function usePullToRefresh(onRefresh: () => void) {
   const [pull, setPull] = useState(0);
   const [recarregando, setRecarregando] = useState(false);
+  const [elNode, setElNode] = useState<HTMLElement | null>(null);
   const startY = useRef(0);
   const puxando = useRef(false);
   const pullAtual = useRef(0);
-  const anexadoRef = useRef(false);
+
+  // Callback ref: dispara exatamente quando o elemento é montado/desmontado,
+  // sem reanexar listeners em cada re-render do app (diferente de um RefObject comum).
+  const setRef = useCallback((node: HTMLElement | null) => {
+    setElNode(node);
+  }, []);
 
   useEffect(() => {
-    if (anexadoRef.current) return;
-    const el = containerRef.current;
-    if (!el) {
-      // Ref ainda null (pai renderizando estado de loading/erro). Tenta de novo em 100ms.
-      const timer = setTimeout(() => setPull(p => p), 100);
-      return () => clearTimeout(timer);
-    }
-    anexadoRef.current = true;
+    if (!elNode) return;
+    const el = elNode;
 
     function onTouchStart(e: TouchEvent) {
-      if (el!.scrollTop <= 0) {
+      if (el.scrollTop <= 0) {
         startY.current = e.touches[0].clientY;
         puxando.current = true;
       }
@@ -34,7 +34,7 @@ function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>, onR
     function onTouchMove(e: TouchEvent) {
       if (!puxando.current) return;
       const delta = e.touches[0].clientY - startY.current;
-      if (delta > 0 && el!.scrollTop <= 0) {
+      if (delta > 0 && el.scrollTop <= 0) {
         const novoPull = Math.min(delta * 0.5, 90);
         pullAtual.current = novoPull;
         setPull(novoPull);
@@ -47,7 +47,9 @@ function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>, onR
     function onTouchEnd() {
       if (!puxando.current) return;
       puxando.current = false;
-      if (pullAtual.current > 60) {
+      const disparou = pullAtual.current > 60;
+      pullAtual.current = 0;
+      if (disparou) {
         setRecarregando(true);
         setPull(60);
         onRefresh();
@@ -67,11 +69,10 @@ function usePullToRefresh(containerRef: React.RefObject<HTMLElement | null>, onR
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
-      anexadoRef.current = false;
     };
-  });
+  }, [elNode, onRefresh]);
 
-  return { pull, recarregando };
+  return { pull, recarregando, setRef };
 }
 
 // Trava o scroll do body sempre que existir algum modal (.modal-overlay) aberto
@@ -121,8 +122,7 @@ function useTravaScrollModal() {
 export function Layout() {
   const { loading, erro, recarregar, fase, nomeLoja, temFinanceiro } = useApp();
   const { aviso } = useToast();
-  const mainRef = useRef<HTMLElement | null>(null);
-  const { pull, recarregando } = usePullToRefresh(mainRef, () => {
+  const { pull, recarregando, setRef } = usePullToRefresh(() => {
     recarregar();
     window.dispatchEvent(new Event('pullToRefresh'));
   });
@@ -199,7 +199,7 @@ export function Layout() {
   return (
     <div className="layout">
       <Sidebar />
-      <main className="layout-main" ref={mainRef} style={{ position: 'relative' }}>
+      <main className="layout-main" ref={setRef} style={{ position: 'relative' }}>
         {pull > 0 && (
           <div style={{
             position: 'absolute', top: 0, left: '50%', transform: `translate(-50%, ${pull - 40}px)`,
