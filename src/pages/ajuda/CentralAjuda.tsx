@@ -19,7 +19,7 @@ interface CategoriaVideo {
 }
 
 export function CentralAjuda() {
-  const { modulosAtivos } = useApp();
+  const { modulosAtivos, temProdutos, temServicos, temFinanceiro, temTurmas, temCorretora, temNf, temChacaraReservas } = useApp();
   const [todosVideos, setTodosVideos] = useState<Video[]>([]);
   const [todasCategorias, setTodasCategorias] = useState<CategoriaVideo[]>([]);
 
@@ -30,14 +30,28 @@ export function CentralAjuda() {
 
   const categoriasComVideo = new Set(todosVideos.map(v => v.categoria));
 
+  // Alguns "módulos" (produtos, financeiro puro, chácara) não vêm no array bruto
+  // modulosAtivos — são inferidos pelo tipoPlano. Reconstrói a lista efetiva aqui,
+  // reaproveitando as mesmas flags já calculadas no AppContext.
+  const modulosEfetivos = [
+    ...modulosAtivos,
+    ...(temProdutos ? ['produtos'] : []),
+    ...(temServicos ? ['servicos'] : []),
+    ...(temFinanceiro ? ['financeiro'] : []),
+    ...(temTurmas ? ['turmas'] : []),
+    ...(temCorretora ? ['corretora'] : []),
+    ...(temNf ? ['nf'] : []),
+    ...(temChacaraReservas ? ['chacara_reservas'] : []),
+  ];
+
   // Mostra categorias sem restrição de módulo (aparecem pra qualquer loja) OU
-  // que batem com pelo menos um módulo ativo da loja — e que já têm vídeo cadastrado
+  // que batem com pelo menos um módulo efetivo da loja — e que já têm vídeo cadastrado
   const categoriasDisponiveis = todasCategorias
     .filter(c => categoriasComVideo.has(c.nome))
     .filter(c => {
       if (!c.modulosRelacionados) return true;
       const modulos = c.modulosRelacionados.split(',').filter(Boolean);
-      return modulos.some(m => modulosAtivos.includes(m));
+      return modulos.some(m => modulosEfetivos.includes(m));
     })
     .sort((a, b) => a.ordem - b.ordem)
     .map(c => c.nome);
