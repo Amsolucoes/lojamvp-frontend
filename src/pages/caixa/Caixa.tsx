@@ -160,6 +160,21 @@ export function Caixa() {
     ? Math.max(0, parseFloat(valorPago.replace(',', '.')) - total)
     : 0;
 
+  async function handleBipeCodigoBarras(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter') return;
+    const codigo = buscaProd.trim();
+    if (!codigo) return;
+
+    const prod = produtos.find(p => p.ativo && p.estoque > 0 && p.codigoBarras === codigo);
+    if (!prod) return; // não bateu exato com nenhum código — deixa o comportamento normal (dropdown/clique)
+
+    e.preventDefault();
+    await addProduto(prod.id);
+    setBuscaProd('');
+    setShowProd(false);
+    buscaRef.current?.focus();
+  }
+
   async function addProduto(prodId: string) {
     const prod = produtos.find(p => p.id === prodId);
     if (!prod) return;
@@ -506,6 +521,7 @@ export function Caixa() {
                 onChange={e => { setBuscaProd(e.target.value); setShowProd(true); }}
                 onFocus={() => setShowProd(true)}
                 onBlur={() => setTimeout(() => setShowProd(false), 150)}
+                onKeyDown={handleBipeCodigoBarras}
               />
             </div>
             {showProd && buscaProd && (
