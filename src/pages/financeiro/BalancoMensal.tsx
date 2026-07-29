@@ -48,6 +48,16 @@ export function BalancoMensal() {
     api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    function aoReceberPullToRefresh() {
+      api.get<Balanco>(`/api/financeiro/balanco-por-categoria?ano=${anoRef}&mes=${mesRef + 1}`)
+        .then(setBalanco).catch(() => setBalanco(null));
+      api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+    }
+    window.addEventListener('pullToRefresh', aoReceberPullToRefresh);
+    return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
+  }, [anoRef, mesRef]);
+
   function navMes(delta: number) {
     let nm = mesRef + delta, na = anoRef;
     if (nm < 0) { nm = 11; na--; }
