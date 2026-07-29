@@ -87,6 +87,11 @@ export function ListaReservasChacara() {
   }, []);
 
   useEffect(() => {
+    window.addEventListener('pullToRefresh', carregar);
+    return () => window.removeEventListener('pullToRefresh', carregar);
+  }, []);
+
+  useEffect(() => {
     setPaginaAtual(1);
   }, [filtro, periodoTipo, mesRef, anoRef]);
 
