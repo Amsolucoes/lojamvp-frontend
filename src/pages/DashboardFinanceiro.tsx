@@ -120,7 +120,7 @@ export function DashboardFinanceiro() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginTop: 16 }}>
-          <div onClick={() => navigate('/financeiro?aba=receber')} style={{ cursor: 'pointer' }}>
+          <div onClick={() => navigate(`/financeiro?aba=receber&mes=${mesResumo + 1}&ano=${anoResumo}`)} style={{ cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--green)', fontSize: 12 }}>
               <ArrowUp size={14} /> Receita
             </div>
@@ -128,7 +128,7 @@ export function DashboardFinanceiro() {
               {fmt((resumo as any)?.previsao?.receitaPrevista ?? 0)}
             </div>
           </div>
-          <div onClick={() => navigate('/financeiro?aba=pagar')} style={{ cursor: 'pointer' }}>
+          <div onClick={() => navigate(`/financeiro?aba=pagar&mes=${mesResumo + 1}&ano=${anoResumo}`)} style={{ cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--red)', fontSize: 12 }}>
               <ArrowDown size={14} /> Despesas
             </div>
