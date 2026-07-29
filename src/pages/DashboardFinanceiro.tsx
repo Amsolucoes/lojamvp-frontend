@@ -95,6 +95,18 @@ export function DashboardFinanceiro() {
     api.get<CartaoResumo[]>('/api/financeiro/cartoes-resumo').then(setCartoesResumo).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    function aoReceberPullToRefresh() {
+      api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+      api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoResumo}&mes=${mesResumo + 1}`).then(setResumo).catch(() => {});
+      api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {});
+      api.get<Alerta[]>('/api/financeiro/alertas-vencimento?dias=7').then(setAlertas).catch(() => {});
+      api.get<CartaoResumo[]>('/api/financeiro/cartoes-resumo').then(setCartoesResumo).catch(() => {});
+    }
+    window.addEventListener('pullToRefresh', aoReceberPullToRefresh);
+    return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
+  }, [mesResumo, anoResumo, anoRef]);
+
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
   const mesAtualLabel = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
