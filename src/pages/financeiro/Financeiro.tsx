@@ -243,8 +243,22 @@ export function Financeiro() {
   }
 
   useEffect(() => { carregarContas(); carregarCategorias(); carregarCartoes(); }, []);
+
+  useEffect(() => {
+    function aoReceberPullToRefresh() {
+      carregarContas();
+      carregarCategorias();
+      carregarCartoes();
+      carregarLancamentos();
+      carregarResumo();
+    }
+    window.addEventListener('pullToRefresh', aoReceberPullToRefresh);
+    return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
+  }, [aba, mesRef, anoRef, modoPagar, periodoTipo, periodoDe, periodoAte]);
+
   useEffect(() => { carregarLancamentos(); carregarResumo(); }, [aba, mesRef, anoRef, modoPagar, periodoTipo, periodoDe, periodoAte]);
   const primeiraCargaFiltro = useRef(true);
+  
   useEffect(() => {
     if (primeiraCargaFiltro.current) { primeiraCargaFiltro.current = false; return; }
     setCatFiltro('todas');

@@ -123,7 +123,7 @@ export function Layout() {
   const { loading, erro, recarregar, fase, nomeLoja, temFinanceiro } = useApp();
   const { aviso } = useToast();
   const { pull, recarregando, setRef } = usePullToRefresh(() => {
-    recarregar();
+    recarregar(true);
     window.dispatchEvent(new Event('pullToRefresh'));
   });
 
@@ -161,7 +161,7 @@ export function Layout() {
         <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
         <p style={{ color: 'var(--red)', marginBottom: 8 }}>Erro ao conectar com a API</p>
         <p style={{ color: 'var(--text-3)', fontSize: 13, marginBottom: 20 }}>{erro}</p>
-        <button className="btn-primary" onClick={recarregar}>Tentar novamente</button>
+        <button className="btn-primary" onClick={() => recarregar()}>Tentar novamente</button>
       </div>
     );
   }
@@ -187,7 +187,7 @@ export function Layout() {
         </a>
         <button
           className="btn-ghost"
-          onClick={recarregar}
+          onClick={() => recarregar()}
           style={{ marginTop: 14, fontSize: 13 }}
         >
           Já paguei — atualizar
