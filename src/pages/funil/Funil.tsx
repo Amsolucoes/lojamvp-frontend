@@ -115,6 +115,11 @@ export function Funil() {
     api.get<{ id: string; nome: string; ativa: boolean }[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    window.addEventListener('pullToRefresh', carregar);
+    return () => window.removeEventListener('pullToRefresh', carregar);
+  }, []);
+
   function abrirNova() {
     setEditandoOp(null);
     setFormOp({ clienteId: '', clienteNome: '', seguradoraId: '', planoDesejado: '', valorEstimado: '', observacao: '', quantidadeVidas: '' });
