@@ -126,6 +126,15 @@ export function Comissoes() {
     api.get<ProfissionalFiltro[]>('/api/funcionarios/ativos').then(setProfissionaisFiltro).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    function aoReceberPullToRefresh() {
+      carregarResumo();
+      carregarHistorico();
+    }
+    window.addEventListener('pullToRefresh', aoReceberPullToRefresh);
+    return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
+  }, []);
+
   useEffect(() => { setPaginaPendentes(1); }, [itensPorPaginaPendentes]);
   useEffect(() => { setPaginaHistorico(1); }, [profissionalFiltroHistorico, periodoDeHistorico, periodoAteHistorico, itensPorPaginaHistorico]);
 
