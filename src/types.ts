@@ -55,6 +55,7 @@ export interface Venda {
   parcelas?: number;
   troco?: number;
   criadaEm: string;
+  origemNome?: string;
 }
 
 // ── Estoque ───────────────────────────────────────────────────────
