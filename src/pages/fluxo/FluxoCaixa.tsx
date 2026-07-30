@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, Calendar, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import './FluxoCaixa.css';
 
@@ -49,6 +49,7 @@ export function FluxoCaixa() {
   const [aba, setAba]       = useState<'hoje' | 'diario' | 'mensal'>('hoje');
   const [mesRef, setMesRef] = useState(hoje.getMonth());
   const [anoRef, setAnoRef] = useState(hoje.getFullYear());
+  const [diaDetalhado, setDiaDetalhado] = useState<Date | null>(null);
 
   const diasDoMes = new Date(anoRef, mesRef + 1, 0).getDate();
 
@@ -105,6 +106,10 @@ export function FluxoCaixa() {
   }
 
   function navAno(delta: number) { setAnoRef(a => a + delta); }
+
+  const vendasDiaDetalhado = diaDetalhado
+    ? vendas.filter(v => new Date(v.criadaEm).toDateString() === diaDetalhado.toDateString())
+    : [];
 
   return (
     <div className="page">
@@ -320,11 +325,12 @@ export function FluxoCaixa() {
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Dia</th><th>Qtd. vendas</th><th>Descontos</th><th>Entradas</th><th>Barra</th></tr>
+                  <tr><th>Dia</th><th>Qtd. vendas</th><th>Descontos</th><th>Entradas</th><th>Barra</th><th></th></tr>
                 </thead>
                 <tbody>
                   {diasFluxo.filter(d => d.qtdVendas > 0).map(d => (
-                    <tr key={d.label} style={d.isHoje ? { background: 'var(--accent-bg)' } : {}}>
+                    <tr key={d.label} onClick={() => setDiaDetalhado(d.dia)}
+                      style={{ cursor: 'pointer', ...(d.isHoje ? { background: 'var(--accent-bg)' } : {}) }}>
                       <td>
                         <span style={{ fontWeight: d.isHoje ? 600 : 400 }}>
                           {fmtDia(d.dia)}
@@ -339,10 +345,11 @@ export function FluxoCaixa() {
                           <div style={{ height: '100%', borderRadius: 3, background: 'var(--green)', width: `${(d.entradas / maxDia) * 100}%`, opacity: 0.8 }} />
                         </div>
                       </td>
+                      <td style={{ width: 30, textAlign: 'center', color: 'var(--text-3)' }}>›</td>
                     </tr>
                   ))}
                   {diasFluxo.filter(d => d.qtdVendas > 0).length === 0 && (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-3)', padding: '32px 0' }}>Nenhuma venda neste mês.</td></tr>
+                    <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-3)', padding: '32px 0' }}>Nenhuma venda neste mês.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -354,7 +361,8 @@ export function FluxoCaixa() {
             {diasFluxo.filter(d => d.qtdVendas > 0).length === 0 ? (
               <div className="card" style={{ textAlign: 'center', color: 'var(--text-3)', padding: '32px' }}>Nenhuma venda neste mês.</div>
             ) : diasFluxo.filter(d => d.qtdVendas > 0).map(d => (
-              <div key={d.label} className="fc-card-mobile" style={d.isHoje ? { background: 'var(--accent-bg)', borderColor: 'var(--accent-border)' } : {}}>
+              <div key={d.label} className="fc-card-mobile" onClick={() => setDiaDetalhado(d.dia)}
+                style={{ cursor: 'pointer', ...(d.isHoje ? { background: 'var(--accent-bg)', borderColor: 'var(--accent-border)' } : {}) }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <span style={{ fontWeight: 600, fontSize: 13 }}>{fmtDia(d.dia)}</span>
@@ -492,6 +500,67 @@ export function FluxoCaixa() {
             })}
           </div>
         </>
+      )}
+
+      {/* Modal detalhe do dia */}
+      {diaDetalhado && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDiaDetalhado(null)}>
+          <div className="modal" style={{ maxWidth: 640 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>
+                Vendas — {diaDetalhado.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+              </h2>
+              <button className="btn-ghost" onClick={() => setDiaDetalhado(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, padding: '10px 14px', background: 'var(--bg-3)', borderRadius: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{vendasDiaDetalhado.length} venda(s)</span>
+                <span style={{ fontWeight: 700, color: 'var(--green)' }}>
+                  {fmt(vendasDiaDetalhado.reduce((s, v) => s + v.totalFinal, 0))}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[...vendasDiaDetalhado].sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime()).map(v => (
+                  <div key={v.id} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                          {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 500 }}>{v.nomeCliente || 'Sem cliente'}</span>
+                      </div>
+                      <span style={{ fontWeight: 700, color: 'var(--green)' }}>{fmt(v.totalFinal)}</span>
+                    </div>
+                    <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                      {v.itens.map(i => (
+                        <div key={i.produtoId}>{i.nomeProduto} ×{fmtQtdItem(i.produtoId, i.quantidade)}</div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      {parseFormas(v.formasPagamento).length > 0 ? (
+                        parseFormas(v.formasPagamento).map((f: any, idx: number) => (
+                          <span key={idx} style={{ marginRight: 6 }}>
+                            <span className={`badge badge-${f.forma === 'pix' ? 'blue' : f.forma === 'dinheiro' ? 'green' : 'accent'}`}>
+                              {fmtForma(f)}
+                            </span>
+                            <span style={{ color: 'var(--text-3)', marginLeft: 4, fontSize: 11 }}>{fmt(f.valor)}</span>
+                          </span>
+                        ))
+                      ) : (
+                        <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
+                          {LABEL_PAG[v.formaPagamento] ?? v.formaPagamento}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setDiaDetalhado(null)}>Fechar</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
