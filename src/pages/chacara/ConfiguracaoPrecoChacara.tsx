@@ -176,7 +176,7 @@ export function ConfiguracaoPrecoChacara() {
                   type="number"
                   min={0}
                   step={campo.tipo === 'moeda' ? '0.01' : '1'}
-                  value={config[campo.chave]}
+                  value={config[campo.chave] === 0 ? '' : config[campo.chave]}
                   onChange={e => atualizarCampo(campo.chave, e.target.value)}
                   onFocus={e => e.target.select()}
                   style={{
@@ -259,8 +259,8 @@ export function ConfiguracaoPrecoChacara() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Até quantas pessoas</label>
-                  <input type="number" min={1} value={formFaixa.pessoasAte}
-                    onChange={e => setFormFaixa(f => ({ ...f, pessoasAte: Number(e.target.value) }))}
+                  <input type="number" min={1} value={formFaixa.pessoasAte === 0 ? '' : formFaixa.pessoasAte}
+                    onChange={e => setFormFaixa(f => ({ ...f, pessoasAte: e.target.value === '' ? 0 : Number(e.target.value) }))}
                     onFocus={e => e.target.select()} />
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
                     Ex: 50, 100, 200, 500, 1000 — a reserva usa a menor faixa que cobre a quantidade de pessoas escolhida.
@@ -268,20 +268,20 @@ export function ConfiguracaoPrecoChacara() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Diária segunda a quinta (R$)</label>
-                  <input type="number" min={0} step={0.01} value={formFaixa.valorDiariaSemana}
-                    onChange={e => setFormFaixa(f => ({ ...f, valorDiariaSemana: Number(e.target.value) }))}
+                  <input type="number" min={0} step={0.01} value={formFaixa.valorDiariaSemana === 0 ? '' : formFaixa.valorDiariaSemana}
+                    onChange={e => setFormFaixa(f => ({ ...f, valorDiariaSemana: e.target.value === '' ? 0 : Number(e.target.value) }))}
                     onFocus={e => e.target.select()} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Diária sexta a domingo, 1 dia (R$)</label>
-                  <input type="number" min={0} step={0.01} value={formFaixa.valorDiariaFimSemana}
-                    onChange={e => setFormFaixa(f => ({ ...f, valorDiariaFimSemana: Number(e.target.value) }))}
+                  <input type="number" min={0} step={0.01} value={formFaixa.valorDiariaFimSemana === 0 ? '' : formFaixa.valorDiariaFimSemana}
+                    onChange={e => setFormFaixa(f => ({ ...f, valorDiariaFimSemana: e.target.value === '' ? 0 : Number(e.target.value) }))}
                     onFocus={e => e.target.select()} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Pacote 2 dias fim de semana — sex+sáb ou sáb+dom (R$)</label>
-                  <input type="number" min={0} step={0.01} value={formFaixa.valorPacote2DiasFimSemana}
-                    onChange={e => setFormFaixa(f => ({ ...f, valorPacote2DiasFimSemana: Number(e.target.value) }))}
+                  <input type="number" min={0} step={0.01} value={formFaixa.valorPacote2DiasFimSemana === 0 ? '' : formFaixa.valorPacote2DiasFimSemana}
+                    onChange={e => setFormFaixa(f => ({ ...f, valorPacote2DiasFimSemana: e.target.value === '' ? 0 : Number(e.target.value) }))}
                     onFocus={e => e.target.select()} />
                 </div>
               </div>
