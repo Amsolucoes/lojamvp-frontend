@@ -22,6 +22,12 @@ interface Servico {
   ativo: boolean;
 }
 
+interface OrigemVenda {
+  id: string;
+  nome: string;
+  ordem: number;
+}
+
 interface AgendamentoPendente {
   id: string;
   servicoId: string;
@@ -80,6 +86,17 @@ export function Caixa() {
   const [clienteId, setClienteId]     = useState('');
   const [buscaCli, setBuscaCli]       = useState('');
   const [showCli, setShowCli]         = useState(false);
+
+  function hojeStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+  const [dataVenda, setDataVenda]     = useState(hojeStr());
+  const [origens, setOrigens]         = useState<OrigemVenda[]>([]);
+  const [origemVendaId, setOrigemVendaId] = useState('');
+  const [modalOrigens, setModalOrigens] = useState(false);
+  const [formOrigem, setFormOrigem]   = useState({ nome: '', ordem: 0, ativa: true });
+  const [editandoOrigem, setEditandoOrigem] = useState<OrigemVenda | null>(null);
+  const [confirmDelOrigem, setConfirmDelOrigem] = useState<OrigemVenda | null>(null);
   const buscaRef = useRef<HTMLInputElement>(null);
   const [variacoesDisponiveis, setVariacoesDisponiveis] = useState<{prodId: string; vars: VariacaoItem[]}[]>([]);
   const [modalVariacao, setModalVariacao] = useState<{prodId: string; nomeProd: string} | null>(null);
@@ -130,6 +147,12 @@ export function Caixa() {
     if (!temServicos) return;
     api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
   }, [temServicos]);
+
+  function carregarOrigens() {
+    api.get<OrigemVenda[]>('/api/origens-venda').then(setOrigens).catch(() => {});
+  }
+
+  useEffect(() => { carregarOrigens(); }, []);
 
   const prodsFiltrados = produtos.filter(p =>
     p.ativo && p.estoque > 0 &&
@@ -420,6 +443,51 @@ export function Caixa() {
     }
   }
 
+  function abrirNovaOrigem() {
+    setEditandoOrigem(null);
+    setFormOrigem({ nome: '', ordem: 0, ativa: true });
+  }
+
+  function abrirEditarOrigem(o: OrigemVenda) {
+    setEditandoOrigem(o);
+    setFormOrigem({ nome: o.nome, ordem: o.ordem, ativa: true });
+  }
+
+  async function salvarOrigem() {
+    if (!formOrigem.nome.trim()) { toastErro('Digite o nome da origem.'); return; }
+    try {
+      if (editandoOrigem) await api.put(`/api/origens-venda/${editandoOrigem.id}`, formOrigem);
+      else await api.post('/api/origens-venda', formOrigem);
+      carregarOrigens();
+      abrirNovaOrigem();
+      toastSucesso('Origem salva!');
+    } catch (e) {
+      toastErro((e as Error).message);
+    }
+  }
+
+  async function excluirOrigem() {
+    if (!confirmDelOrigem) return;
+    try {
+      const res = await api.delete<any>(`/api/origens-venda/${confirmDelOrigem.id}`);
+      carregarOrigens();
+      setConfirmDelOrigem(null);
+      toastSucesso(res?.mensagem ?? 'Origem removida.');
+    } catch (e) {
+      toastErro((e as Error).message);
+    }
+  }
+
+  async function usarOrigensPadrao() {
+    try {
+      await api.post('/api/origens-venda/seed-padrao', {});
+      carregarOrigens();
+      toastSucesso('Origens padrão criadas!');
+    } catch (e) {
+      toastErro((e as Error).message);
+    }
+  }
+
   async function finalizarVenda() {
     if (carrinho.length === 0) { toastErro('Adicione produtos ou serviços ao carrinho.'); return; }
     const venda = {
@@ -440,6 +508,8 @@ export function Caixa() {
       desconto:       descontoVal,
       totalFinal:     total,
       creditoUsado:   creditoUsado > 0 ? creditoUsado : null,
+      dataVenda:      dataVenda || undefined,
+      origemVendaId:  origemVendaId || null,
       formaPagamento: formas[0].forma,
       parcelas:       formas[0].parcelas ?? 1,
       formasPagamento: JSON.stringify(formas.map(f => ({ forma: f.forma, valor: duasFormas ? f.valor : total, parcelas: f.parcelas ?? 1 }))),
@@ -472,6 +542,8 @@ export function Caixa() {
     setFormas([{ forma: 'dinheiro', valor: 0 }]);
     setDuasFormas(false);
     setUsarCredito(false);
+    setDataVenda(hojeStr());
+    setOrigemVendaId('');
   }
 
   // Vendas do dia
@@ -802,6 +874,28 @@ export function Caixa() {
             )}
         </div>
 
+        {/* Data e origem da venda */}
+        <div className="card cx-section">
+          <div className="cx-section-title">Data e origem</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="form-group">
+              <label className="form-label">Data da venda</label>
+              <input type="date" value={dataVenda} max={hojeStr()}
+                onChange={e => setDataVenda(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Origem <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select style={{ flex: 1 }} value={origemVendaId} onChange={e => setOrigemVendaId(e.target.value)}>
+                  <option value="">Não informar</option>
+                  {origens.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
+                </select>
+                <button type="button" className="btn-secondary" onClick={() => { abrirNovaOrigem(); setModalOrigens(true); }}>Gerenciar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Desconto */}
         <div className="card cx-section">
           <div className="cx-section-title">Desconto</div>
@@ -1003,6 +1097,73 @@ export function Caixa() {
                     </button>
                   ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal gestão de origens de venda */}
+      {modalOrigens && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalOrigens(false)}>
+          <div className="modal" style={{ maxWidth: 440 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Origens de venda</h2>
+              <button className="btn-ghost" onClick={() => setModalOrigens(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              {origens.length === 0 && (
+                <button className="btn-secondary" style={{ width: '100%', marginBottom: 16 }} onClick={usarOrigensPadrao}>
+                  Usar padrão (Loja física, Site, WhatsApp)
+                </button>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+                {origens.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma origem cadastrada.</p>
+                ) : origens.map(o => (
+                  <div key={o.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
+                    <span style={{ fontSize: 13 }}>{o.nome}</span>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="btn-ghost" onClick={() => abrirEditarOrigem(o)}>Editar</button>
+                      <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmDelOrigem(o)}><Trash2 size={13} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoOrigem ? 'Editar origem' : 'Nova origem'}</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input style={{ flex: 1 }} value={formOrigem.nome} onChange={e => setFormOrigem(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Instagram" />
+                  <button className="btn-primary" onClick={salvarOrigem}>{editandoOrigem ? 'Salvar' : 'Adicionar'}</button>
+                  {editandoOrigem && <button className="btn-secondary" onClick={abrirNovaOrigem}>Cancelar</button>}
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalOrigens(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar exclusão de origem */}
+      {confirmDelOrigem && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmDelOrigem(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir origem</h2>
+              <button className="btn-ghost" onClick={() => setConfirmDelOrigem(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir <strong style={{ color: 'var(--text-1)' }}>{confirmDelOrigem.nome}</strong>?
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+                Se já tiver vendas com essa origem, ela será apenas desativada em vez de excluída.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmDelOrigem(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={excluirOrigem}>Excluir</button>
             </div>
           </div>
         </div>
