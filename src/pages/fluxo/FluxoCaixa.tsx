@@ -86,6 +86,7 @@ export function FluxoCaixa() {
   );
   const totalHoje    = vendasHoje.reduce((s, v) => s + v.totalFinal, 0);
   const descontosHoje = vendasHoje.reduce((s, v) => s + v.desconto, 0);
+  const lucroHoje    = vendasHoje.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0);
   const ticketHoje   = vendasHoje.length > 0 ? totalHoje / vendasHoje.length : 0;
 
   const totalEntMes   = diasFluxo.reduce((s, d) => s + d.entradas, 0);
@@ -93,7 +94,7 @@ export function FluxoCaixa() {
   const totalLucroMes = diasFluxo.reduce((s, d) => s + d.lucro, 0);
   const diasComVenda  = diasFluxo.filter(d => d.qtdVendas > 0).length;
   const mediaVendaDia = diasComVenda > 0 ? totalEntMes / diasComVenda : 0;
-  const maxDia        = Math.max(...diasFluxo.map(d => d.entradas), 1);
+  const maxDia        = Math.max(...diasFluxo.map(d => Math.max(d.entradas, d.lucro)), 1);
 
   const mesesFluxo = Array.from({ length: 12 }, (_, m) => {
     const vendasMes = vendas.filter(v => {
@@ -112,7 +113,7 @@ export function FluxoCaixa() {
   const totalEntAno  = mesesFluxo.reduce((s, m) => s + m.entradas, 0);
   const totalDescAno = mesesFluxo.reduce((s, m) => s + m.descontos, 0);
   const totalLucroAno = mesesFluxo.reduce((s, m) => s + m.lucro, 0);
-  const maxMes       = Math.max(...mesesFluxo.map(m => m.entradas), 1);
+  const maxMes       = Math.max(...mesesFluxo.map(m => Math.max(m.entradas, m.lucro)), 1);
 
   function navMes(delta: number) {
     let nm = mesRef + delta, na = anoRef;
@@ -165,6 +166,11 @@ export function FluxoCaixa() {
               <div className="stat-label"><TrendingDown size={12} style={{ verticalAlign: -1 }} /> Descontos</div>
               <div className="stat-value" style={{ fontSize: 20, color: 'var(--red)' }}>{fmt(descontosHoje)}</div>
               <div className="stat-sub">hoje</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label"><DollarSign size={12} style={{ verticalAlign: -1 }} /> Lucro líquido</div>
+              <div className="stat-value" style={{ fontSize: 20, color: 'var(--accent)' }}>{fmt(lucroHoje)}</div>
+              <div className="stat-sub">vendas − custo</div>
             </div>
           </div>
 
@@ -329,15 +335,26 @@ export function FluxoCaixa() {
             <div className="fc-chart">
               {diasFluxo.map(d => (
                 <div key={d.label} className={`fc-col${d.isHoje ? ' hoje' : ''}${d.isFuturo ? ' futuro' : ''}`}>
-                  <div className="fc-col-valor">
-                    {d.entradas > 0 && <span className="fc-col-tip">{fmt(d.entradas)}</span>}
-                    <div className="fc-bar"
-                      style={{ height: `${Math.max(d.entradas > 0 ? 4 : 0, (d.entradas / maxDia) * 100)}%` }} />
+                  <div className="fc-col-valor" style={{ display: 'flex', alignItems: 'flex-end', gap: 2, justifyContent: 'center' }}>
+                    <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                      {d.entradas > 0 && <span className="fc-col-tip">{fmt(d.entradas)}</span>}
+                      <div className="fc-bar"
+                        style={{ height: `${Math.max(d.entradas > 0 ? 4 : 0, (d.entradas / maxDia) * 100)}%`, width: '100%' }} />
+                    </div>
+                    <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                      {d.lucro > 0 && <span className="fc-col-tip">{fmt(d.lucro)}</span>}
+                      <div className="fc-bar"
+                        style={{ height: `${Math.max(d.lucro > 0 ? 4 : 0, (d.lucro / maxDia) * 100)}%`, width: '100%', background: 'var(--accent)' }} />
+                    </div>
                   </div>
                   <div className="fc-col-label">{d.dia.getDate()}</div>
                   {d.isHoje && <div className="fc-hoje-dot" />}
                 </div>
               ))}
+            </div>
+            <div style={{ display: 'flex', gap: 16, justifyContent: 'center', fontSize: 11, color: 'var(--text-3)', marginTop: 10 }}>
+              <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--green)', marginRight: 4 }} />Entradas</span>
+              <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--accent)', marginRight: 4 }} />Lucro</span>
             </div>
           </div>
 
@@ -460,16 +477,27 @@ export function FluxoCaixa() {
                 const isFuturo   = anoRef > hoje.getFullYear() || (anoRef === hoje.getFullYear() && m.mes > hoje.getMonth());
                 return (
                   <div key={m.mes} className={`fc-col${isMesAtual ? ' hoje' : ''}${isFuturo ? ' futuro' : ''}`}>
-                    <div className="fc-col-valor">
-                      {m.entradas > 0 && <span className="fc-col-tip">{fmt(m.entradas)}</span>}
-                      <div className="fc-bar"
-                        style={{ height: `${Math.max(m.entradas > 0 ? 4 : 0, (m.entradas / maxMes) * 100)}%` }} />
+                    <div className="fc-col-valor" style={{ display: 'flex', alignItems: 'flex-end', gap: 2, justifyContent: 'center' }}>
+                      <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                        {m.entradas > 0 && <span className="fc-col-tip">{fmt(m.entradas)}</span>}
+                        <div className="fc-bar"
+                          style={{ height: `${Math.max(m.entradas > 0 ? 4 : 0, (m.entradas / maxMes) * 100)}%`, width: '100%' }} />
+                      </div>
+                      <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                        {m.lucro > 0 && <span className="fc-col-tip">{fmt(m.lucro)}</span>}
+                        <div className="fc-bar"
+                          style={{ height: `${Math.max(m.lucro > 0 ? 4 : 0, (m.lucro / maxMes) * 100)}%`, width: '100%', background: 'var(--accent)' }} />
+                      </div>
                     </div>
                     <div className="fc-col-label">{m.label}</div>
                     {isMesAtual && <div className="fc-hoje-dot" />}
                   </div>
                 );
               })}
+            </div>
+            <div style={{ display: 'flex', gap: 16, justifyContent: 'center', fontSize: 11, color: 'var(--text-3)', marginTop: 10 }}>
+              <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--green)', marginRight: 4 }} />Entradas</span>
+              <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--accent)', marginRight: 4 }} />Lucro</span>
             </div>
           </div>
 
