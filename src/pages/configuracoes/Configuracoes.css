@@ -1,6 +1,9 @@
 .config-grid {
   column-width: 420px;
   column-gap: 20px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .config-grid > .card {
