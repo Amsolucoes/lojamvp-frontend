@@ -1,5 +1,5 @@
 .chacara-card-wide {
-  max-width: 760px;
+  max-width: 1400px;
 }
 
 .chacara-grid-2 {
@@ -15,5 +15,11 @@
 @media (max-width: 680px) {
   .chacara-grid-2 {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1600px) {
+  .chacara-grid-2 {
+    grid-template-columns: 1fr 1fr 1fr;
   }
 }
