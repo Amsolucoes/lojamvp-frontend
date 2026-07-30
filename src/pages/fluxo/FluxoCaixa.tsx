@@ -189,7 +189,7 @@ export function FluxoCaixa() {
                 <div className="fc-table-desktop">
                   <table>
                     <thead>
-                      <tr><th>Horário</th><th>Cliente</th><th>Itens</th><th>Pagamento</th><th>Total</th></tr>
+                      <tr><th>Horário</th><th>Cliente</th><th>Origem</th><th>Itens</th><th>Pagamento</th><th>Total</th></tr>
                     </thead>
                     <tbody>
                       {[...vendasHoje].sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime()).map(v => (
@@ -198,6 +198,9 @@ export function FluxoCaixa() {
                             {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </td>
                           <td style={{ fontSize: 13 }}>{v.nomeCliente || '—'}</td>
+                          <td style={{ fontSize: 12 }}>
+                            {v.origemNome ? <span className="badge badge-accent">{v.origemNome}</span> : <span style={{ color: 'var(--text-3)' }}>—</span>}
+                          </td>
                           <td style={{ fontSize: 12, color: 'var(--text-2)' }}>
                             {v.itens.map(i => (
                               <div key={i.produtoId}>{i.nomeProduto} ×{fmtQtdItem(i.produtoId, i.quantidade)}</div>
@@ -239,6 +242,11 @@ export function FluxoCaixa() {
                         </div>
                         <span style={{ fontWeight: 700, color: 'var(--green)' }}>{fmt(v.totalFinal)}</span>
                       </div>
+                      {v.origemNome && (
+                        <div style={{ marginTop: 4 }}>
+                          <span className="badge badge-accent" style={{ fontSize: 10 }}>{v.origemNome}</span>
+                        </div>
+                      )}
                       <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-2)' }}>
                         {v.itens.map(i => (
                           <div key={i.produtoId}>{i.nomeProduto} ×{fmtQtdItem(i.produtoId, i.quantidade)}</div>
@@ -337,12 +345,12 @@ export function FluxoCaixa() {
                 <div key={d.label} className={`fc-col${d.isHoje ? ' hoje' : ''}${d.isFuturo ? ' futuro' : ''}`}>
                   <div className="fc-col-valor">
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, width: '100%', flex: 1 }}>
-                      <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                      <div className="fc-bar-wrap" style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
                         {d.entradas > 0 && <span className="fc-col-tip">{fmt(d.entradas)}</span>}
                         <div className="fc-bar"
                           style={{ height: `${Math.max(d.entradas > 0 ? 4 : 0, (d.entradas / maxDia) * 100)}%`, width: '100%' }} />
                       </div>
-                      <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                      <div className="fc-bar-wrap" style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
                         {d.lucro > 0 && <span className="fc-col-tip">{fmt(d.lucro)}</span>}
                         <div className="fc-bar"
                           style={{ height: `${Math.max(d.lucro > 0 ? 4 : 0, (d.lucro / maxDia) * 100)}%`, width: '100%', background: 'var(--accent)' }} />
@@ -481,16 +489,16 @@ export function FluxoCaixa() {
                   <div key={m.mes} className={`fc-col${isMesAtual ? ' hoje' : ''}${isFuturo ? ' futuro' : ''}`}>
                     <div className="fc-col-valor">
                       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, width: '100%', flex: 1 }}>
-                        <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
-                          {m.entradas > 0 && <span className="fc-col-tip">{fmt(m.entradas)}</span>}
-                          <div className="fc-bar"
-                            style={{ height: `${Math.max(m.entradas > 0 ? 4 : 0, (m.entradas / maxMes) * 100)}%`, width: '100%' }} />
-                        </div>
-                        <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
-                          {m.lucro > 0 && <span className="fc-col-tip">{fmt(m.lucro)}</span>}
-                          <div className="fc-bar"
-                            style={{ height: `${Math.max(m.lucro > 0 ? 4 : 0, (m.lucro / maxMes) * 100)}%`, width: '100%', background: 'var(--accent)' }} />
-                        </div>
+                        <div className="fc-bar-wrap" style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                        {m.entradas > 0 && <span className="fc-col-tip">{fmt(m.entradas)}</span>}
+                        <div className="fc-bar"
+                          style={{ height: `${Math.max(m.entradas > 0 ? 4 : 0, (m.entradas / maxMes) * 100)}%`, width: '100%' }} />
+                      </div>
+                      <div className="fc-bar-wrap" style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                        {m.lucro > 0 && <span className="fc-col-tip">{fmt(m.lucro)}</span>}
+                        <div className="fc-bar"
+                          style={{ height: `${Math.max(m.lucro > 0 ? 4 : 0, (m.lucro / maxMes) * 100)}%`, width: '100%', background: 'var(--accent)' }} />
+                      </div>
                       </div>
                     </div>
                     <div className="fc-col-label">{m.label}</div>
@@ -613,6 +621,9 @@ export function FluxoCaixa() {
                           {new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 500 }}>{v.nomeCliente || 'Sem cliente'}</span>
+                        {v.origemNome && (
+                          <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 6 }}>{v.origemNome}</span>
+                        )}
                       </div>
                       <span style={{ fontWeight: 700, color: 'var(--green)' }}>{fmt(v.totalFinal)}</span>
                     </div>

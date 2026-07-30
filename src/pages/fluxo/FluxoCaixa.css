@@ -59,7 +59,7 @@
   justify-content: flex-end;
   position: relative;
 }
-.fc-col-valor:hover .fc-col-tip { opacity: 1; }
+.fc-bar-wrap:hover .fc-col-tip { opacity: 1; }
 
 .fc-col-tip {
   position: absolute;
