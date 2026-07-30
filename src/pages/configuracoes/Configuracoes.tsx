@@ -294,9 +294,11 @@ export function Configuracoes() {
         </div>
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))', gap: 20, alignItems: 'start' }}>
+
       {/* Identidade da loja */}
       {!loadingIdentidade && (
-        <div className="card" style={{ maxWidth: 520, marginBottom: 20 }}>
+        <div className="card" style={{ marginBottom: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Identidade da loja</div>
           <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>
             Logo, nome e cor aparecem na tela de login e no topo do sistema.
@@ -365,7 +367,7 @@ export function Configuracoes() {
       )}
 
       {/* Aparência */}
-      <div className="card" style={{ maxWidth: 520, marginBottom: 20 }}>
+      <div className="card" style={{ marginBottom: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Aparência</div>
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>
           Essa escolha é só sua — fica salva neste navegador, não muda pra outras pessoas que usam o sistema.
@@ -384,7 +386,7 @@ export function Configuracoes() {
       </div>
 
       {/* E-mail de acesso */}
-      <div className="card" style={{ maxWidth: 520, marginBottom: 20 }}>
+      <div className="card" style={{ marginBottom: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 600 }}>E-mail de acesso</div>
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4, marginBottom: 16 }}>
           ⚠️ Ao trocar, você passará a entrar no sistema com o novo e-mail.
@@ -412,7 +414,7 @@ export function Configuracoes() {
       </div>
 
       {/* Senha */}
-      <div className="card" style={{ maxWidth: 520, marginBottom: 20 }}>
+      <div className="card" style={{ marginBottom: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Senha</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="form-group">
@@ -441,7 +443,7 @@ export function Configuracoes() {
 
       {/* Agendamento online */}
       {temServicos && (
-        <div className="card" style={{ maxWidth: 520, marginBottom: 20 }}>
+        <div className="card" style={{ marginBottom: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Agendamento online</div>
           <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4, marginBottom: 16 }}>
             Deixe seus clientes agendarem sozinhos por um link. Divulgue no Instagram, WhatsApp, onde quiser.
@@ -500,7 +502,7 @@ export function Configuracoes() {
       )}
 
       {/* Módulos */}
-      <div className="card" style={{ maxWidth: 520 }}>
+      <div className="card" style={{ marginBottom: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Módulos ativos</div>
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
           Ative ou desative módulos do sistema. Cada módulo altera o valor da sua mensalidade.
@@ -619,7 +621,7 @@ export function Configuracoes() {
       </div>
 
       {temChacaraReservas && (
-        <div className="card" style={{ maxWidth: 520, marginTop: 20 }}>
+        <div className="card" style={{ marginBottom: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Link do site da chácara</div>
           <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>
             Este é o link que você vai divulgar pros clientes reservarem online.
@@ -657,6 +659,8 @@ export function Configuracoes() {
           </button>
         </div>
       )}
+
+      </div>
 
       {/* Modal confirmação de módulo */}
       {modalModulo && (
