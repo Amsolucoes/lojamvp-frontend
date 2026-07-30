@@ -216,6 +216,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       formasPagamento: (v as any).formasPagamento ?? null,
       creditoUsado:    (v as any).creditoUsado ?? null,
       troco:           v.troco ?? null,
+      dataVenda:       (v as any).dataVenda ?? null,
+      origemVendaId:   (v as any).origemVendaId ?? null,
     };
 
     const nova = await api.post<any>('/api/vendas', payload);
