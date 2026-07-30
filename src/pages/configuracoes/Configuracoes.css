@@ -1,5 +1,5 @@
 .config-grid {
-  column-count: 1;
+  column-width: 420px;
   column-gap: 20px;
 }
 
@@ -8,12 +8,4 @@
   margin-bottom: 20px;
   width: 100%;
   display: inline-block;
-}
-
-@media (min-width: 700px) {
-  .config-grid { column-count: 2; }
-}
-
-@media (min-width: 1700px) {
-  .config-grid { column-count: 3; }
 }
