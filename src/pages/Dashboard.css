@@ -83,3 +83,7 @@
   .dash-stats { grid-template-columns: repeat(2, 1fr); }
   .dash-grid  { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 900px) {
+  .dash-chacara-grid { grid-template-columns: 1fr !important; }
+}
