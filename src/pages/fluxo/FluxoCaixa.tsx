@@ -347,12 +347,12 @@ export function FluxoCaixa() {
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, width: '100%', flex: 1 }}>
                       <div className="fc-bar-wrap" style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
                         {d.entradas > 0 && <span className="fc-col-tip">{fmt(d.entradas)}</span>}
-                        <div className="fc-bar"
+                        <div className="fc-bar fc-bar-entradas"
                           style={{ height: `${Math.max(d.entradas > 0 ? 4 : 0, (d.entradas / maxDia) * 100)}%`, width: '100%' }} />
                       </div>
                       <div className="fc-bar-wrap" style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
                         {d.lucro > 0 && <span className="fc-col-tip">{fmt(d.lucro)}</span>}
-                        <div className="fc-bar"
+                        <div className="fc-bar fc-bar-lucro"
                           style={{ height: `${Math.max(d.lucro > 0 ? 4 : 0, (d.lucro / maxDia) * 100)}%`, width: '100%', background: 'var(--accent)' }} />
                       </div>
                     </div>
@@ -491,12 +491,12 @@ export function FluxoCaixa() {
                       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, width: '100%', flex: 1 }}>
                         <div className="fc-bar-wrap" style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
                         {m.entradas > 0 && <span className="fc-col-tip">{fmt(m.entradas)}</span>}
-                        <div className="fc-bar"
+                        <div className="fc-bar fc-bar-entradas"
                           style={{ height: `${Math.max(m.entradas > 0 ? 4 : 0, (m.entradas / maxMes) * 100)}%`, width: '100%' }} />
                       </div>
                       <div className="fc-bar-wrap" style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
                         {m.lucro > 0 && <span className="fc-col-tip">{fmt(m.lucro)}</span>}
-                        <div className="fc-bar"
+                        <div className="fc-bar fc-bar-lucro"
                           style={{ height: `${Math.max(m.lucro > 0 ? 4 : 0, (m.lucro / maxMes) * 100)}%`, width: '100%', background: 'var(--accent)' }} />
                       </div>
                       </div>
