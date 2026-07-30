@@ -79,6 +79,7 @@ function mapVenda(v: any): Venda {
     formasPagamento: v.formasPagamento,
     parcelas: v.parcelas,
     troco: v.troco, criadaEm: v.criadaEm,
+    origemNome: v.origemNome,
     itens: (v.itens ?? []).map((i: any) => ({
       produtoId: i.produtoId ?? null,
       servicoId: i.servicoId ?? null,
