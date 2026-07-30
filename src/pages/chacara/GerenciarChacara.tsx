@@ -35,7 +35,8 @@ export function GerenciarChacara() {
     descricao: '', endereco: '', comodidades: '', comodidadesExtras: '', mapaEmbedUrl: '',
     locadorNome: '', locadorRg: '', locadorCpf: '', locadorEndereco: '', locadorTelefone: '', cidadeAssinatura: '',
   });
-  const [salvandoInfo, setSalvandoInfo] = useState(false);
+  const [salvandoDescricao, setSalvandoDescricao] = useState(false);
+  const [salvandoLocador, setSalvandoLocador] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const { sucesso, erro: toastErro } = useToast();
@@ -109,16 +110,29 @@ export function GerenciarChacara() {
     setInfo(i => ({ ...i, comodidades: nova.join(',') }));
   }
 
-  async function salvarInfo() {
-    setSalvandoInfo(true);
+  async function salvarDescricao() {
+    setSalvandoDescricao(true);
     try {
       const atualizado = await api.put<Info>('/api/chacara/info', info);
       setInfo(atualizado);
-      sucesso('Informações da chácara salvas.');
+      sucesso('Descrição e comodidades salvas.');
     } catch (e) {
       toastErro((e as Error).message);
     } finally {
-      setSalvandoInfo(false);
+      setSalvandoDescricao(false);
+    }
+  }
+
+  async function salvarLocador() {
+    setSalvandoLocador(true);
+    try {
+      const atualizado = await api.put<Info>('/api/chacara/info', info);
+      setInfo(atualizado);
+      sucesso('Meus dados salvos.');
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setSalvandoLocador(false);
     }
   }
 
@@ -227,8 +241,8 @@ export function GerenciarChacara() {
               placeholder={'Uma por linha, ex:\nLago para pesca\nQuadra de vôlei'} />
           </div>
 
-          <button className="btn-primary chacara-full" onClick={salvarInfo} disabled={salvandoInfo} style={{ alignSelf: 'flex-start' }}>
-            {salvandoInfo ? 'Salvando...' : 'Salvar informações'}
+          <button className="btn-primary chacara-full" onClick={salvarDescricao} disabled={salvandoDescricao} style={{ alignSelf: 'flex-start' }}>
+            {salvandoDescricao ? 'Salvando...' : 'Salvar informações'}
           </button>
         </div>
       </div>
@@ -270,8 +284,8 @@ export function GerenciarChacara() {
                 placeholder="Ex: Campo Grande – MS" />
             </div>
           </div>
-          <button className="btn-primary chacara-full" onClick={salvarInfo} disabled={salvandoInfo} style={{ alignSelf: 'flex-start' }}>
-            {salvandoInfo ? 'Salvando...' : 'Salvar meus dados'}
+          <button className="btn-primary chacara-full" onClick={salvarLocador} disabled={salvandoLocador} style={{ alignSelf: 'flex-start' }}>
+            {salvandoLocador ? 'Salvando...' : 'Salvar meus dados'}
           </button>
         </div>
       </div>
