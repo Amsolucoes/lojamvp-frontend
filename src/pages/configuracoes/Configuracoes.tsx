@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { aplicarTema, carregarTemaSalvo, TEMAS, Tema } from '../../utils/tema';
 import { api } from '../../services/api';
-import { X } from 'lucide-react';
+import { X, Save, Upload } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
+
+const CLOUDINARY_CLOUD = 'dnwnwshvq';
+const CLOUDINARY_PRESET = 'loja-logos';
 
 type ModuloPreco = {
   id: string;
@@ -21,6 +24,7 @@ const MODULOS_DESCRICAO: Record<string, string> = {
   nf:         'Importação de notas fiscais em XML com match automático por GTIN e revisão manual.',
   etiquetas:  'Impressão de etiquetas de produtos com código de barras.',
   chacara_reservas: 'Agenda de reservas com pagamento online, contrato automático e aviso de check-out.',
+  funcionarios: 'Comissão de profissionais, fechamento de pagamento e integração com o Financeiro.',
 };
 
 type SessaoLoja = {
@@ -45,13 +49,13 @@ export function Configuracoes() {
   const [modulosPreco, setModulosPreco] = useState<ModuloPreco[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-  const { temCorretora, temProdutos, soFinanceiro, temChacaraReservas, tipoPlano } = useApp();
+  const { temCorretora, temProdutos, soFinanceiro, temChacaraReservas, temServicos, tipoPlano } = useApp();
   const [mensalidadeAtual, setMensalidadeAtual] = useState(0);
   const [slugChacara, setSlugChacara] = useState('');
   const [slugAtual, setSlugAtual] = useState('');
   const [salvandoSlug, setSalvandoSlug] = useState(false);
   const [erroSlug, setErroSlug] = useState('');
-  const { erro: toastErro } = useToast();
+  const { erro: toastErro, sucesso: toastSucesso } = useToast();
 
   // modal de confirmação
   const [modalModulo, setModalModulo] = useState<{
@@ -61,6 +65,33 @@ export function Configuracoes() {
     novaLista: string[];
   } | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // ── Identidade da loja (logo/nome/cor) ──────────────────────────
+  const [formIdentidade, setFormIdentidade] = useState({ nome: '', corPrimaria: '#6366f1', logoUrl: '' });
+  const [loadingIdentidade, setLoadingIdentidade] = useState(true);
+  const [savingIdentidade, setSavingIdentidade] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [identidadeOk, setIdentidadeOk] = useState(false);
+  const [identidadeErro, setIdentidadeErro] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // ── E-mail de acesso ─────────────────────────────────────────────
+  const [emailForm, setEmailForm] = useState({ novoEmail: '', senhaAtual: '' });
+  const [trocandoEmail, setTrocandoEmail] = useState(false);
+  const [emailOk, setEmailOk] = useState('');
+  const [emailErro, setEmailErro] = useState('');
+
+  // ── Senha ────────────────────────────────────────────────────────
+  const [senhaForm, setSenhaForm] = useState({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
+  const [trocandoSenha, setTrocandoSenha] = useState(false);
+  const [senhaOk, setSenhaOk] = useState('');
+  const [senhaErro, setSenhaErro] = useState('');
+
+  // ── Agendamento online ───────────────────────────────────────────
+  const [agConfig, setAgConfig] = useState({ ativo: false, confirmacao: 'aprovacao', slug: '' });
+  const [salvandoAg, setSalvandoAg] = useState(false);
+  const [agOk, setAgOk] = useState('');
+  const [agErro, setAgErro] = useState('');
 
   useEffect(() => {
     api.get<ModuloPreco[]>('/api/modulos-preco').then(setModulosPreco).catch(() => {});
@@ -73,6 +104,11 @@ export function Configuracoes() {
         setSlugAtual(res.slug);
         setSlugChacara(res.slug);
       }
+      setAgConfig({
+        ativo: res?.agendamentoOnlineAtivo ?? false,
+        confirmacao: res?.agendamentoOnlineConfirmacao ?? 'aprovacao',
+        slug: res?.slug ?? '',
+      });
       if (res?.modulosAlteradoEm) {
         // calcula diasRestantes de cooldown para cada módulo
         const agora = new Date();
@@ -84,7 +120,111 @@ export function Configuracoes() {
         setCooldowns(cd);
       }
     }).catch(() => {});
-}, []);
+  }, []);
+
+  useEffect(() => {
+    api.get<any>('/api/cliente/config').then(res => {
+      setFormIdentidade({ nome: res.nome ?? '', corPrimaria: res.corPrimaria ?? '#6366f1', logoUrl: res.logoUrl ?? '' });
+    }).catch(() => {}).finally(() => setLoadingIdentidade(false));
+  }, []);
+
+  async function uploadLogo(file: File) {
+    setUploading(true); setIdentidadeErro('');
+    try {
+      const data = new FormData();
+      data.append('file', file);
+      data.append('upload_preset', CLOUDINARY_PRESET);
+      data.append('folder', 'logos');
+
+      const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: data });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message ?? 'Erro no upload');
+      setFormIdentidade(f => ({ ...f, logoUrl: json.secure_url }));
+    } catch (e) {
+      setIdentidadeErro('Erro ao fazer upload: ' + (e as Error).message);
+    } finally { setUploading(false); }
+  }
+
+  async function salvarIdentidade() {
+    setSavingIdentidade(true); setIdentidadeErro(''); setIdentidadeOk(false);
+    try {
+      await api.patch('/api/cliente/config', formIdentidade);
+      setIdentidadeOk(true);
+      setTimeout(() => setIdentidadeOk(false), 3000);
+    } catch (e) { setIdentidadeErro((e as Error).message); }
+    finally { setSavingIdentidade(false); }
+  }
+
+  async function trocarEmail() {
+    setEmailErro(''); setEmailOk('');
+    if (!emailForm.novoEmail.trim() || !emailForm.senhaAtual) {
+      setEmailErro('Preencha o novo e-mail e sua senha atual.');
+      return;
+    }
+    setTrocandoEmail(true);
+    try {
+      await api.patch('/api/cliente/email', emailForm);
+      setEmailOk('E-mail atualizado! Use o novo e-mail no próximo login.');
+      setEmailForm({ novoEmail: '', senhaAtual: '' });
+    } catch (e) {
+      setEmailErro((e as Error).message);
+    } finally {
+      setTrocandoEmail(false);
+    }
+  }
+
+  async function trocarSenha() {
+    setSenhaErro(''); setSenhaOk('');
+    if (!senhaForm.senhaAtual || !senhaForm.novaSenha) {
+      setSenhaErro('Preencha todos os campos.');
+      return;
+    }
+    if (senhaForm.novaSenha.length < 8) {
+      setSenhaErro('A nova senha deve ter pelo menos 8 caracteres.');
+      return;
+    }
+    if (senhaForm.novaSenha !== senhaForm.confirmarSenha) {
+      setSenhaErro('A confirmação não confere.');
+      return;
+    }
+    setTrocandoSenha(true);
+    try {
+      await api.post('/api/auth/trocar-senha', { senhaAtual: senhaForm.senhaAtual, novaSenha: senhaForm.novaSenha });
+      setSenhaOk('Senha alterada com sucesso!');
+      setSenhaForm({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
+    } catch (e) {
+      setSenhaErro((e as Error).message);
+    } finally {
+      setTrocandoSenha(false);
+    }
+  }
+
+  async function salvarAgendamento() {
+    setAgErro(''); setAgOk('');
+    if (agConfig.ativo && !agConfig.slug.trim()) {
+      setAgErro('Defina um link (slug) antes de ativar.');
+      return;
+    }
+    setSalvandoAg(true);
+    try {
+      const res = await api.patch<any>('/api/loja/agendamento-online', {
+        ativo: agConfig.ativo,
+        confirmacao: agConfig.confirmacao,
+        slug: agConfig.slug.trim() || null,
+      });
+      setAgConfig({
+        ativo: res.agendamentoOnlineAtivo,
+        confirmacao: res.agendamentoOnlineConfirmacao,
+        slug: res.slug ?? '',
+      });
+      setAgOk('Configuração salva!');
+      setTimeout(() => setAgOk(''), 3000);
+    } catch (e) {
+      setAgErro((e as Error).message);
+    } finally {
+      setSalvandoAg(false);
+    }
+  }
 
   function handleToggle(mod: ModuloPreco, marcado: boolean) {
     const novaLista = marcado
@@ -150,9 +290,79 @@ export function Configuracoes() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Configurações</h1>
-          <p className="page-subtitle">Preferências pessoais de uso do sistema</p>
+          <p className="page-subtitle">Preferências pessoais e da loja</p>
         </div>
       </div>
+
+      {/* Identidade da loja */}
+      {!loadingIdentidade && (
+        <div className="card" style={{ maxWidth: 520, marginBottom: 20 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Identidade da loja</div>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>
+            Logo, nome e cor aparecem na tela de login e no topo do sistema.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="form-group">
+              <label className="form-label">Logo da loja</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 4 }}>
+                <div style={{
+                  width: 80, height: 80, borderRadius: 'var(--radius)',
+                  border: '1px solid var(--border)', background: 'var(--bg-3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  overflow: 'hidden', flexShrink: 0,
+                }}>
+                  {formIdentidade.logoUrl
+                    ? <img src={formIdentidade.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    : <span style={{ fontSize: 28 }}>✦</span>}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                  <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f); }} />
+                  <button className="btn-secondary" onClick={() => fileRef.current?.click()} disabled={uploading}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {uploading
+                      ? <><div className="spinner" style={{ width: 14, height: 14 }} /> Enviando...</>
+                      : <><Upload size={14} /> Upload da logo</>}
+                  </button>
+                  {formIdentidade.logoUrl && (
+                    <button className="btn-ghost" onClick={() => setFormIdentidade(f => ({ ...f, logoUrl: '' }))}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--red)', fontSize: 12 }}>
+                      <X size={12} /> Remover logo
+                    </button>
+                  )}
+                  <p style={{ fontSize: 11, color: 'var(--text-3)' }}>PNG, JPG ou SVG. Recomendado: 200x200px</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Nome da loja</label>
+              <input value={formIdentidade.nome} onChange={e => setFormIdentidade(f => ({ ...f, nome: e.target.value }))} />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Cor principal</label>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <input type="color" value={formIdentidade.corPrimaria}
+                  onChange={e => setFormIdentidade(f => ({ ...f, corPrimaria: e.target.value }))}
+                  style={{ width: 48, height: 40, padding: 2, flex: 'none' }} />
+                <input value={formIdentidade.corPrimaria}
+                  onChange={e => setFormIdentidade(f => ({ ...f, corPrimaria: e.target.value }))}
+                  placeholder="#6366f1" />
+              </div>
+              <div style={{ marginTop: 8, height: 6, borderRadius: 3, background: formIdentidade.corPrimaria, opacity: .8 }} />
+            </div>
+
+            {identidadeErro && <p style={{ color: 'var(--red)', fontSize: 13 }}>{identidadeErro}</p>}
+            {identidadeOk && <p style={{ color: 'var(--green)', fontSize: 13 }}>✓ Salvo!</p>}
+
+            <button className="btn-primary" onClick={salvarIdentidade} disabled={savingIdentidade}
+              style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Save size={15} /> {savingIdentidade ? 'Salvando...' : 'Salvar identidade'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Aparência */}
       <div className="card" style={{ maxWidth: 520, marginBottom: 20 }}>
@@ -172,6 +382,122 @@ export function Configuracoes() {
           ))}
         </div>
       </div>
+
+      {/* E-mail de acesso */}
+      <div className="card" style={{ maxWidth: 520, marginBottom: 20 }}>
+        <div style={{ fontSize: 15, fontWeight: 600 }}>E-mail de acesso</div>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4, marginBottom: 16 }}>
+          ⚠️ Ao trocar, você passará a entrar no sistema com o novo e-mail.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label">Novo e-mail</label>
+            <input type="email" value={emailForm.novoEmail}
+              onChange={e => setEmailForm(f => ({ ...f, novoEmail: e.target.value }))}
+              placeholder="novo@email.com" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Sua senha atual</label>
+            <input type="password" value={emailForm.senhaAtual}
+              onChange={e => setEmailForm(f => ({ ...f, senhaAtual: e.target.value }))}
+              placeholder="Confirme com sua senha" />
+          </div>
+          {emailErro && <p style={{ color: 'var(--red)', fontSize: 13 }}>{emailErro}</p>}
+          {emailOk && <p style={{ color: 'var(--green)', fontSize: 13 }}>✓ {emailOk}</p>}
+          <button className="btn-secondary" onClick={trocarEmail} disabled={trocandoEmail}
+            style={{ alignSelf: 'flex-start' }}>
+            {trocandoEmail ? 'Trocando...' : 'Trocar e-mail'}
+          </button>
+        </div>
+      </div>
+
+      {/* Senha */}
+      <div className="card" style={{ maxWidth: 520, marginBottom: 20 }}>
+        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Senha</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label">Senha atual</label>
+            <input type="password" value={senhaForm.senhaAtual}
+              onChange={e => setSenhaForm(f => ({ ...f, senhaAtual: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Nova senha</label>
+            <input type="password" value={senhaForm.novaSenha}
+              onChange={e => setSenhaForm(f => ({ ...f, novaSenha: e.target.value }))} placeholder="Mínimo 8 caracteres" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Confirmar nova senha</label>
+            <input type="password" value={senhaForm.confirmarSenha}
+              onChange={e => setSenhaForm(f => ({ ...f, confirmarSenha: e.target.value }))} />
+          </div>
+          {senhaErro && <p style={{ color: 'var(--red)', fontSize: 13 }}>{senhaErro}</p>}
+          {senhaOk && <p style={{ color: 'var(--green)', fontSize: 13 }}>✓ {senhaOk}</p>}
+          <button className="btn-secondary" onClick={trocarSenha} disabled={trocandoSenha}
+            style={{ alignSelf: 'flex-start' }}>
+            {trocandoSenha ? 'Trocando...' : 'Alterar senha'}
+          </button>
+        </div>
+      </div>
+
+      {/* Agendamento online */}
+      {temServicos && (
+        <div className="card" style={{ maxWidth: 520, marginBottom: 20 }}>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>Agendamento online</div>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4, marginBottom: 16 }}>
+            Deixe seus clientes agendarem sozinhos por um link. Divulgue no Instagram, WhatsApp, onde quiser.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
+              <input type="checkbox" checked={agConfig.ativo}
+                style={{ width: 16, height: 16, margin: 0, flexShrink: 0 }}
+                onChange={e => setAgConfig(c => ({ ...c, ativo: e.target.checked }))} />
+              <span>Ativar agendamento online</span>
+            </label>
+
+            <div className="form-group">
+              <label className="form-label">Seu link personalizado</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>app.aldevsoftware.com.br/agendar/</span>
+                <input value={agConfig.slug}
+                  onChange={e => setAgConfig(c => ({ ...c, slug: e.target.value }))}
+                  placeholder="minha-loja" style={{ flex: 1, minWidth: 140 }} />
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                Use letras, números e hífens. Ex: banho-da-ana
+              </p>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Quando o cliente agenda</label>
+              <select value={agConfig.confirmacao}
+                onChange={e => setAgConfig(c => ({ ...c, confirmacao: e.target.value }))}>
+                <option value="aprovacao">Preciso aprovar cada agendamento</option>
+                <option value="automatico">Confirmar automaticamente</option>
+              </select>
+            </div>
+
+            {agConfig.ativo && agConfig.slug && (
+              <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <span style={{ fontSize: 12, wordBreak: 'break-all' }}>
+                  app.aldevsoftware.com.br/agendar/{agConfig.slug}
+                </span>
+                <button className="btn-ghost" style={{ flexShrink: 0, fontSize: 12 }}
+                  onClick={() => navigator.clipboard.writeText(`https://app.aldevsoftware.com.br/agendar/${agConfig.slug}`)}>
+                  Copiar
+                </button>
+              </div>
+            )}
+
+            {agErro && <p style={{ color: 'var(--red)', fontSize: 13 }}>{agErro}</p>}
+            {agOk && <p style={{ color: 'var(--green)', fontSize: 13 }}>✓ {agOk}</p>}
+
+            <button className="btn-primary" onClick={salvarAgendamento} disabled={salvandoAg}
+              style={{ alignSelf: 'flex-start' }}>
+              {salvandoAg ? 'Salvando...' : 'Salvar agendamento online'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Módulos */}
       <div className="card" style={{ maxWidth: 520 }}>
