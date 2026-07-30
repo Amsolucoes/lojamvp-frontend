@@ -367,7 +367,11 @@ export function FluxoCaixa() {
                           <div style={{ height: '100%', borderRadius: 3, background: 'var(--green)', width: `${(d.entradas / maxDia) * 100}%`, opacity: 0.8 }} />
                         </div>
                       </td>
-                      <td style={{ width: 30, textAlign: 'center', color: 'var(--text-3)' }}>›</td>
+                      <td style={{ width: 100 }}>
+                        <button className="btn-ghost" style={{ fontSize: 12 }} onClick={e => { e.stopPropagation(); setDiaDetalhado(d.dia); }}>
+                          Detalhes
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {diasFluxo.filter(d => d.qtdVendas > 0).length === 0 && (
@@ -403,6 +407,10 @@ export function FluxoCaixa() {
                 <div style={{ marginTop: 8, height: 4, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
                   <div style={{ height: '100%', borderRadius: 2, background: 'var(--green)', width: `${(d.entradas / maxDia) * 100}%` }} />
                 </div>
+                <button className="btn-secondary" style={{ width: '100%', marginTop: 10, fontSize: 12 }}
+                  onClick={e => { e.stopPropagation(); setDiaDetalhado(d.dia); }}>
+                  Ver detalhes das vendas
+                </button>
               </div>
             ))}
           </div>
