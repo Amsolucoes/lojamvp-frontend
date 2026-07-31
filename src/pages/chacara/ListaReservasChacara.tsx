@@ -197,11 +197,15 @@ export function ListaReservasChacara() {
     setErroEdicao('');
     setSalvandoEdicao(true);
     try {
-      await api.put(`/api/chacara/reservas/${modalEditar.id}`, {
+      const res = await api.put<{ aviso?: string | null }>(`/api/chacara/reservas/${modalEditar.id}`, {
         ...formEditar,
         valorManual: ajustarValorManual ? valorManual : null,
       });
-      sucesso('Reserva atualizada.');
+      if (res?.aviso) {
+        toastErro(res.aviso);
+      } else {
+        sucesso('Reserva atualizada.');
+      }
       setModalEditar(null);
       carregar();
     } catch (e) {
