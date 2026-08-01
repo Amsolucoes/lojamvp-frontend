@@ -427,7 +427,7 @@ export function FluxoCaixa() {
                   <tr><th>Dia</th><th>Qtd. vendas</th><th>Descontos</th><th>Lucro</th><th>Ajuste caixa</th><th>Entradas</th><th>Barra</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {diasFluxo.filter(d => d.qtdVendas > 0).map(d => (
+                  {diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0).map(d => (
                     <tr key={d.label} onClick={() => setDiaDetalhado(d.dia)}
                       style={{ cursor: 'pointer', ...(d.isHoje ? { background: 'var(--accent-bg)' } : {}) }}>
                       <td>
@@ -455,7 +455,7 @@ export function FluxoCaixa() {
                       </td>
                     </tr>
                   ))}
-                  {diasFluxo.filter(d => d.qtdVendas > 0).length === 0 && (
+                  {diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0).length === 0 && (
                     <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-3)', padding: '32px 0' }}>Nenhuma venda neste mês.</td></tr>
                   )}
                 </tbody>
@@ -465,9 +465,9 @@ export function FluxoCaixa() {
 
           {/* Cards mobile — dias */}
           <div className="fc-cards-mobile" style={{ marginTop: 16 }}>
-            {diasFluxo.filter(d => d.qtdVendas > 0).length === 0 ? (
+            {diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0).length === 0 ? (
               <div className="card" style={{ textAlign: 'center', color: 'var(--text-3)', padding: '32px' }}>Nenhuma venda neste mês.</div>
-            ) : diasFluxo.filter(d => d.qtdVendas > 0).map(d => (
+            ) : diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0).map(d => (
               <div key={d.label} className="fc-card-mobile" onClick={() => setDiaDetalhado(d.dia)}
                 style={{ cursor: 'pointer', ...(d.isHoje ? { background: 'var(--accent-bg)', borderColor: 'var(--accent-border)' } : {}) }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
