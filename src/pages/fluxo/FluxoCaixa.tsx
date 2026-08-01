@@ -98,9 +98,10 @@ export function FluxoCaixa() {
     return {
       dia,
       label: `${String(i + 1).padStart(2, '0')}/${String(mesRef + 1).padStart(2, '0')}`,
-      entradas:  vendasDia.reduce((s, v) => s + v.totalFinal, 0) + entradasManuaisDia - sangriasDia,
+      entradas:  vendasDia.reduce((s, v) => s + v.totalFinal, 0),
       descontos: vendasDia.reduce((s, v) => s + v.desconto, 0),
-      lucro:     vendasDia.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0) + entradasManuaisDia - sangriasDia,
+      lucro:     vendasDia.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0),
+      ajusteCaixa: entradasManuaisDia - sangriasDia,
       qtdVendas: vendasDia.length,
       isHoje:   diaStr === hoje.toDateString(),
       isFuturo: dia > hoje,
@@ -113,10 +114,11 @@ export function FluxoCaixa() {
   const movimentosHoje = movimentos.filter(m => new Date(m.data).toDateString() === hoje.toDateString());
   const entradasManuaisHoje = movimentosHoje.filter(m => m.tipo === 'entrada').reduce((s, m) => s + m.valor, 0);
   const sangriasHoje = movimentosHoje.filter(m => m.tipo === 'saida').reduce((s, m) => s + m.valor, 0);
-  const totalHoje    = vendasHoje.reduce((s, v) => s + v.totalFinal, 0) + entradasManuaisHoje - sangriasHoje;
+  const ajusteCaixaHoje = entradasManuaisHoje - sangriasHoje;
+  const totalHoje    = vendasHoje.reduce((s, v) => s + v.totalFinal, 0);
   const descontosHoje = vendasHoje.reduce((s, v) => s + v.desconto, 0);
-  const lucroHoje    = vendasHoje.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0) + entradasManuaisHoje - sangriasHoje;
-  const ticketHoje   = vendasHoje.length > 0 ? (vendasHoje.reduce((s, v) => s + v.totalFinal, 0)) / vendasHoje.length : 0;
+  const lucroHoje    = vendasHoje.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0);
+  const ticketHoje   = vendasHoje.length > 0 ? totalHoje / vendasHoje.length : 0;
 
   const totalEntMes   = diasFluxo.reduce((s, d) => s + d.entradas, 0);
   const totalDescMes  = diasFluxo.reduce((s, d) => s + d.descontos, 0);
@@ -138,9 +140,10 @@ export function FluxoCaixa() {
     const sangriasMes = movMes.filter(mv => mv.tipo === 'saida').reduce((s, mv) => s + mv.valor, 0);
     return {
       mes: m, label: MESES[m].slice(0, 3),
-      entradas:  vendasMes.reduce((s, v) => s + v.totalFinal, 0) + entradasManuaisMes - sangriasMes,
+      entradas:  vendasMes.reduce((s, v) => s + v.totalFinal, 0),
       descontos: vendasMes.reduce((s, v) => s + v.desconto, 0),
-      lucro:     vendasMes.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0) + entradasManuaisMes - sangriasMes,
+      lucro:     vendasMes.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0),
+      ajusteCaixa: entradasManuaisMes - sangriasMes,
       qtdVendas: vendasMes.length,
     };
   });
@@ -207,6 +210,19 @@ export function FluxoCaixa() {
               <div className="stat-value" style={{ fontSize: 20, color: 'var(--accent)' }}>{fmt(lucroHoje)}</div>
               <div className="stat-sub">vendas − custo</div>
             </div>
+            {(entradasManuaisHoje > 0 || sangriasHoje > 0) && (
+              <div className="stat-card" style={ajusteCaixaHoje < 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
+                <div className="stat-label">↕️ Ajustes de caixa</div>
+                <div className="stat-value" style={{ fontSize: 20, color: ajusteCaixaHoje >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                  {ajusteCaixaHoje >= 0 ? '+' : ''}{fmt(ajusteCaixaHoje)}
+                </div>
+                <div className="stat-sub">
+                  {entradasManuaisHoje > 0 && `+${fmt(entradasManuaisHoje)} entrada`}
+                  {entradasManuaisHoje > 0 && sangriasHoje > 0 && ' · '}
+                  {sangriasHoje > 0 && `-${fmt(sangriasHoje)} sangria`}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -408,7 +424,7 @@ export function FluxoCaixa() {
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Dia</th><th>Qtd. vendas</th><th>Descontos</th><th>Lucro</th><th>Entradas</th><th>Barra</th><th></th></tr>
+                  <tr><th>Dia</th><th>Qtd. vendas</th><th>Descontos</th><th>Lucro</th><th>Ajuste caixa</th><th>Entradas</th><th>Barra</th><th></th></tr>
                 </thead>
                 <tbody>
                   {diasFluxo.filter(d => d.qtdVendas > 0).map(d => (
@@ -423,6 +439,9 @@ export function FluxoCaixa() {
                       <td style={{ color: 'var(--text-2)' }}>{d.qtdVendas}</td>
                       <td style={{ color: 'var(--red)', fontSize: 13 }}>{d.descontos > 0 ? `− ${fmt(d.descontos)}` : '—'}</td>
                       <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(d.lucro)}</td>
+                      <td style={{ fontSize: 13, color: d.ajusteCaixa === 0 ? 'var(--text-3)' : d.ajusteCaixa > 0 ? 'var(--green)' : 'var(--red)' }}>
+                        {d.ajusteCaixa === 0 ? '—' : `${d.ajusteCaixa > 0 ? '+' : ''}${fmt(d.ajusteCaixa)}`}
+                      </td>
                       <td style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(d.entradas)}</td>
                       <td style={{ width: 120 }}>
                         <div style={{ height: 6, background: 'var(--bg-3)', borderRadius: 3, overflow: 'hidden' }}>
@@ -437,7 +456,7 @@ export function FluxoCaixa() {
                     </tr>
                   ))}
                   {diasFluxo.filter(d => d.qtdVendas > 0).length === 0 && (
-                    <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-3)', padding: '32px 0' }}>Nenhuma venda neste mês.</td></tr>
+                    <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-3)', padding: '32px 0' }}>Nenhuma venda neste mês.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -466,6 +485,14 @@ export function FluxoCaixa() {
                   <span style={{ color: 'var(--text-3)' }}>Lucro</span>
                   <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{fmt(d.lucro)}</span>
                 </div>
+                {d.ajusteCaixa !== 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, fontSize: 12 }}>
+                    <span style={{ color: 'var(--text-3)' }}>Ajuste de caixa</span>
+                    <span style={{ color: d.ajusteCaixa > 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
+                      {d.ajusteCaixa > 0 ? '+' : ''}{fmt(d.ajusteCaixa)}
+                    </span>
+                  </div>
+                )}
                 <div style={{ marginTop: 8, height: 4, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
                   <div style={{ height: '100%', borderRadius: 2, background: 'var(--green)', width: `${(d.entradas / maxDia) * 100}%` }} />
                 </div>
@@ -553,7 +580,7 @@ export function FluxoCaixa() {
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Mês</th><th>Vendas</th><th>Descontos</th><th>Lucro</th><th>Entradas</th><th>Barra</th></tr>
+                  <tr><th>Mês</th><th>Vendas</th><th>Descontos</th><th>Lucro</th><th>Ajuste caixa</th><th>Entradas</th><th>Barra</th></tr>
                 </thead>
                 <tbody>
                   {mesesFluxo.map(m => {
@@ -570,6 +597,9 @@ export function FluxoCaixa() {
                         <td style={{ color: 'var(--red)', fontSize: 13 }}>{m.descontos > 0 ? `− ${fmt(m.descontos)}` : '—'}</td>
                         <td style={{ fontWeight: 600, color: m.entradas > 0 ? 'var(--accent)' : 'var(--text-3)' }}>
                           {m.entradas > 0 ? fmt(m.lucro) : '—'}
+                        </td>
+                        <td style={{ fontSize: 13, color: m.ajusteCaixa === 0 ? 'var(--text-3)' : m.ajusteCaixa > 0 ? 'var(--green)' : 'var(--red)' }}>
+                          {m.ajusteCaixa === 0 ? '—' : `${m.ajusteCaixa > 0 ? '+' : ''}${fmt(m.ajusteCaixa)}`}
                         </td>
                         <td style={{ fontWeight: 600, color: m.entradas > 0 ? 'var(--green)' : 'var(--text-3)' }}>
                           {m.entradas > 0 ? fmt(m.entradas) : '—'}
@@ -611,6 +641,14 @@ export function FluxoCaixa() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, fontSize: 12 }}>
                       <span style={{ color: 'var(--text-3)' }}>Lucro</span>
                       <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{fmt(m.lucro)}</span>
+                    </div>
+                  )}
+                  {m.ajusteCaixa !== 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, fontSize: 12 }}>
+                      <span style={{ color: 'var(--text-3)' }}>Ajuste de caixa</span>
+                      <span style={{ color: m.ajusteCaixa > 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
+                        {m.ajusteCaixa > 0 ? '+' : ''}{fmt(m.ajusteCaixa)}
+                      </span>
                     </div>
                   )}
                   {m.entradas > 0 && (
