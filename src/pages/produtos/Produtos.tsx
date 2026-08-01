@@ -217,8 +217,9 @@ export function Produtos() {
       } else return;
 
       for (const v of variacoes) {
-        if (v.id) await api.put(`/api/produtos/${produtoId}/variacoes/${v.id}`, v);
-        else      await api.post(`/api/produtos/${produtoId}/variacoes`, v);
+        const payload = usarCodigoPorVariacao ? v : { ...v, codigoBarras: '' };
+        if (v.id) await api.put(`/api/produtos/${produtoId}/variacoes/${v.id}`, payload);
+        else      await api.post(`/api/produtos/${produtoId}/variacoes`, payload);
       }
 
       await recarregar();
