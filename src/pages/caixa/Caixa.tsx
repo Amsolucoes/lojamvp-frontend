@@ -28,6 +28,11 @@ interface OrigemVenda {
   ordem: number;
 }
 
+interface ContaBancaria {
+  id: string;
+  nome: string;
+}
+
 interface AgendamentoPendente {
   id: string;
   servicoId: string;
@@ -70,8 +75,12 @@ function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function hojeStrMovimento() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function Caixa() {
-  const { produtos, clientes, registrarVenda, vendas, recarregar, temProdutos, temServicos, soServicos } = useApp();
+  const { produtos, clientes, registrarVenda, vendas, recarregar, temProdutos, temServicos, soServicos , temFinanceiro} = useApp();
 
   const { sucesso: toastSucesso, erro: toastErro } = useToast();
 
@@ -94,6 +103,14 @@ export function Caixa() {
   const [origens, setOrigens]         = useState<OrigemVenda[]>([]);
   const [origemVendaId, setOrigemVendaId] = useState('');
   const [modalOrigens, setModalOrigens] = useState(false);
+
+  const [modalMovimento, setModalMovimento] = useState(false);
+  const [tipoMovimento, setTipoMovimento] = useState<'entrada' | 'saida'>('entrada');
+  const [formMovimento, setFormMovimento] = useState({
+    valor: 0, data: hojeStrMovimento(), origemVendaId: '', observacao: '', contaBancariaId: '',
+  });
+  const [contas, setContas] = useState<ContaBancaria[]>([]);
+  const [salvandoMovimento, setSalvandoMovimento] = useState(false);
   const [formOrigem, setFormOrigem]   = useState({ nome: '', ordem: 0, ativa: true });
   const [editandoOrigem, setEditandoOrigem] = useState<OrigemVenda | null>(null);
   const [confirmDelOrigem, setConfirmDelOrigem] = useState<OrigemVenda | null>(null);
@@ -153,6 +170,10 @@ export function Caixa() {
   }
 
   useEffect(() => { carregarOrigens(); }, []);
+  useEffect(() => {
+    if (!temFinanceiro) return;
+    api.get<ContaBancaria[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+  }, [temFinanceiro]);
 
   const prodsFiltrados = produtos.filter(p =>
     p.ativo && p.estoque > 0 &&
@@ -488,6 +509,33 @@ export function Caixa() {
     }
   }
 
+  function abrirModalMovimento(tipo: 'entrada' | 'saida') {
+    setTipoMovimento(tipo);
+    setFormMovimento({ valor: 0, data: hojeStrMovimento(), origemVendaId: '', observacao: '', contaBancariaId: '' });
+    setModalMovimento(true);
+  }
+
+  async function salvarMovimento() {
+    if (formMovimento.valor <= 0) { toastErro('Informe um valor maior que zero.'); return; }
+    setSalvandoMovimento(true);
+    try {
+      await api.post('/api/movimentos-caixa', {
+        tipo: tipoMovimento,
+        valor: formMovimento.valor,
+        data: formMovimento.data,
+        origemVendaId: formMovimento.origemVendaId || null,
+        observacao: formMovimento.observacao.trim() || null,
+        contaBancariaId: formMovimento.contaBancariaId || null,
+      });
+      toastSucesso(tipoMovimento === 'entrada' ? 'Entrada registrada!' : 'Sangria registrada!');
+      setModalMovimento(false);
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setSalvandoMovimento(false);
+    }
+  }
+
   async function finalizarVenda() {
     if (carrinho.length === 0) { toastErro('Adicione produtos ou serviços ao carrinho.'); return; }
     const venda = {
@@ -566,7 +614,13 @@ export function Caixa() {
               Hoje: {fmt(totalDia)} em {vendasHoje.length} venda(s)
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button className="btn-secondary" style={{ color: 'var(--green)' }} onClick={() => abrirModalMovimento('entrada')}>
+              ⬆️ Entrada
+            </button>
+            <button className="btn-secondary" style={{ color: 'var(--red)' }} onClick={() => abrirModalMovimento('saida')}>
+              ⬇️ Sangria
+            </button>
             {temProdutos && (
               <button className="btn-secondary" onClick={() => setModalTroca(true)}>
                 🔄 Troca
@@ -1164,6 +1218,73 @@ export function Caixa() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setConfirmDelOrigem(null)}>Cancelar</button>
               <button className="btn-danger" onClick={excluirOrigem}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Entrada/Sangria */}
+      {modalMovimento && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMovimento(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: tipoMovimento === 'entrada' ? 'var(--green)' : 'var(--red)' }}>
+                {tipoMovimento === 'entrada' ? '⬆️ Entrada de caixa' : '⬇️ Sangria de caixa'}
+              </h2>
+              <button className="btn-ghost" onClick={() => setModalMovimento(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="cx-tipo-toggle">
+                  <button type="button" className={tipoMovimento === 'entrada' ? 'active' : ''} onClick={() => setTipoMovimento('entrada')}>Entrada</button>
+                  <button type="button" className={tipoMovimento === 'saida' ? 'active' : ''} onClick={() => setTipoMovimento('saida')}>Sangria</button>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Valor (R$) *</label>
+                  <input type="number" min={0} step={0.01} value={formMovimento.valor || ''}
+                    onChange={e => setFormMovimento(f => ({ ...f, valor: +e.target.value }))} autoFocus />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Data</label>
+                  <input type="date" value={formMovimento.data} max={hojeStrMovimento()}
+                    onChange={e => setFormMovimento(f => ({ ...f, data: e.target.value }))} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Origem <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <select value={formMovimento.origemVendaId} onChange={e => setFormMovimento(f => ({ ...f, origemVendaId: e.target.value }))}>
+                    <option value="">Não informar</option>
+                    {origens.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
+                  </select>
+                </div>
+
+                {temFinanceiro && contas.length > 0 && (
+                  <div className="form-group">
+                    <label className="form-label">Conta bancária <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                    <select value={formMovimento.contaBancariaId} onChange={e => setFormMovimento(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                      <option value="">Não lançar no Financeiro</option>
+                      {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </select>
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                      Se escolher uma conta, esse movimento também ajusta o saldo dela no Financeiro.
+                    </p>
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Observação <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <input value={formMovimento.observacao} onChange={e => setFormMovimento(f => ({ ...f, observacao: e.target.value }))}
+                    placeholder="Ex: troco inicial do dia" />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalMovimento(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarMovimento} disabled={salvandoMovimento}>
+                {salvandoMovimento ? 'Salvando...' : tipoMovimento === 'entrada' ? 'Registrar entrada' : 'Registrar sangria'}
+              </button>
             </div>
           </div>
         </div>

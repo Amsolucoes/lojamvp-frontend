@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, Calendar, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../services/api';
 import './FluxoCaixa.css';
 
 function fmt(n: number) {
@@ -45,8 +46,30 @@ function calcularLucroVenda(v: any, produtos: any[]): number {
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
+interface MovimentoCaixa {
+  id: string;
+  tipo: 'entrada' | 'saida';
+  valor: number;
+  data: string;
+  origemNome: string | null;
+  observacao: string | null;
+}
+
 export function FluxoCaixa() {
   const { vendas, produtos } = useApp();
+  const [movimentos, setMovimentos] = useState<MovimentoCaixa[]>([]);
+
+  useEffect(() => {
+    api.get<MovimentoCaixa[]>('/api/movimentos-caixa').then(setMovimentos).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function aoReceberPullToRefresh() {
+      api.get<MovimentoCaixa[]>('/api/movimentos-caixa').then(setMovimentos).catch(() => {});
+    }
+    window.addEventListener('pullToRefresh', aoReceberPullToRefresh);
+    return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
+  }, []);
 
   function fmtQtdItem(produtoId: string, qtd: number): string {
     const prod = produtos.find(p => p.id === produtoId);
@@ -69,12 +92,15 @@ export function FluxoCaixa() {
     const dia    = new Date(anoRef, mesRef, i + 1);
     const diaStr = dia.toDateString();
     const vendasDia = vendas.filter(v => new Date(v.criadaEm).toDateString() === diaStr);
+    const movDia = movimentos.filter(m => new Date(m.data).toDateString() === diaStr);
+    const entradasManuaisDia = movDia.filter(m => m.tipo === 'entrada').reduce((s, m) => s + m.valor, 0);
+    const sangriasDia = movDia.filter(m => m.tipo === 'saida').reduce((s, m) => s + m.valor, 0);
     return {
       dia,
       label: `${String(i + 1).padStart(2, '0')}/${String(mesRef + 1).padStart(2, '0')}`,
-      entradas:  vendasDia.reduce((s, v) => s + v.totalFinal, 0),
+      entradas:  vendasDia.reduce((s, v) => s + v.totalFinal, 0) + entradasManuaisDia - sangriasDia,
       descontos: vendasDia.reduce((s, v) => s + v.desconto, 0),
-      lucro:     vendasDia.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0),
+      lucro:     vendasDia.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0) + entradasManuaisDia - sangriasDia,
       qtdVendas: vendasDia.length,
       isHoje:   diaStr === hoje.toDateString(),
       isFuturo: dia > hoje,
@@ -84,10 +110,13 @@ export function FluxoCaixa() {
   const vendasHoje = vendas.filter(v => 
     new Date(v.criadaEm).toDateString() === hoje.toDateString()
   );
-  const totalHoje    = vendasHoje.reduce((s, v) => s + v.totalFinal, 0);
+  const movimentosHoje = movimentos.filter(m => new Date(m.data).toDateString() === hoje.toDateString());
+  const entradasManuaisHoje = movimentosHoje.filter(m => m.tipo === 'entrada').reduce((s, m) => s + m.valor, 0);
+  const sangriasHoje = movimentosHoje.filter(m => m.tipo === 'saida').reduce((s, m) => s + m.valor, 0);
+  const totalHoje    = vendasHoje.reduce((s, v) => s + v.totalFinal, 0) + entradasManuaisHoje - sangriasHoje;
   const descontosHoje = vendasHoje.reduce((s, v) => s + v.desconto, 0);
-  const lucroHoje    = vendasHoje.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0);
-  const ticketHoje   = vendasHoje.length > 0 ? totalHoje / vendasHoje.length : 0;
+  const lucroHoje    = vendasHoje.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0) + entradasManuaisHoje - sangriasHoje;
+  const ticketHoje   = vendasHoje.length > 0 ? (vendasHoje.reduce((s, v) => s + v.totalFinal, 0)) / vendasHoje.length : 0;
 
   const totalEntMes   = diasFluxo.reduce((s, d) => s + d.entradas, 0);
   const totalDescMes  = diasFluxo.reduce((s, d) => s + d.descontos, 0);
@@ -101,11 +130,17 @@ export function FluxoCaixa() {
       const d = new Date(v.criadaEm);
       return d.getFullYear() === anoRef && d.getMonth() === m;
     });
+    const movMes = movimentos.filter(mv => {
+      const d = new Date(mv.data);
+      return d.getFullYear() === anoRef && d.getMonth() === m;
+    });
+    const entradasManuaisMes = movMes.filter(mv => mv.tipo === 'entrada').reduce((s, mv) => s + mv.valor, 0);
+    const sangriasMes = movMes.filter(mv => mv.tipo === 'saida').reduce((s, mv) => s + mv.valor, 0);
     return {
       mes: m, label: MESES[m].slice(0, 3),
-      entradas:  vendasMes.reduce((s, v) => s + v.totalFinal, 0),
+      entradas:  vendasMes.reduce((s, v) => s + v.totalFinal, 0) + entradasManuaisMes - sangriasMes,
       descontos: vendasMes.reduce((s, v) => s + v.desconto, 0),
-      lucro:     vendasMes.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0),
+      lucro:     vendasMes.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0) + entradasManuaisMes - sangriasMes,
       qtdVendas: vendasMes.length,
     };
   });
