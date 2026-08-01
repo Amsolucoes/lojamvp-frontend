@@ -209,14 +209,62 @@ export function Caixa() {
     const codigo = buscaProd.trim();
     if (!codigo) return;
 
+    // 1. Tenta bater com código do produto principal (sem variação)
     const prod = produtos.find(p => p.ativo && p.estoque > 0 && p.codigoBarras === codigo);
-    if (!prod) return; // não bateu exato com nenhum código — deixa o comportamento normal (dropdown/clique)
+    if (prod) {
+      e.preventDefault();
+      await addProduto(prod.id);
+      setBuscaProd('');
+      setShowProd(false);
+      buscaRef.current?.focus();
+      return;
+    }
 
-    e.preventDefault();
-    await addProduto(prod.id);
-    setBuscaProd('');
-    setShowProd(false);
-    buscaRef.current?.focus();
+    // 2. Tenta bater com código de alguma variação (tamanho/cor específicos)
+    for (const p of produtos) {
+      if (!p.ativo) continue;
+      const variacao = (p as any).variacoes?.find((v: any) => v.ativo && v.codigoBarras === codigo);
+      if (variacao) {
+        e.preventDefault();
+        if (variacao.estoque <= 0) {
+          toastErro(`Sem estoque para "${p.nome}" (${[variacao.tamanho, variacao.cor].filter(Boolean).join(' / ')}).`);
+          return;
+        }
+        adicionarVariacaoPorCodigo(p, variacao);
+        setBuscaProd('');
+        setShowProd(false);
+        buscaRef.current?.focus();
+        return;
+      }
+    }
+    // Não bateu exato com nenhum código — deixa o comportamento normal (dropdown/clique)
+  }
+
+  function adicionarVariacaoPorCodigo(prod: any, variacao: any) {
+    const label = [variacao.tamanho, variacao.cor].filter(Boolean).join(' / ');
+    setCarrinho(prev => {
+      const existe = prev.find(i => i.tipo === 'produto' && i.produtoId === prod.id && i.variacaoId === variacao.id);
+      if (existe) {
+        if (existe.quantidade >= variacao.estoque) return prev;
+        return prev.map(i => i === existe
+          ? { ...i, quantidade: i.quantidade + 1, subtotal: (i.quantidade + 1) * i.precoUnitario }
+          : i
+        );
+      }
+      return [...prev, {
+        tipo: 'produto',
+        produtoId: prod.id,
+        nomeProduto: prod.nome + (label ? ` (${label})` : ''),
+        quantidade: 1,
+        precoUnitario: prod.precoVenda,
+        subtotal: prod.precoVenda,
+        estoqueDisp: variacao.estoque,
+        variacaoId: variacao.id,
+        variacaoLabel: label || undefined,
+        tipoVenda: prod.tipoVenda,
+        unidadeMedida: prod.unidadeMedida,
+      } as CarrinhoItem];
+    });
   }
 
   async function addProduto(prodId: string) {
