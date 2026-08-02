@@ -186,6 +186,11 @@ tr:hover .row-actions { opacity: 1; }
 @media (max-width: 480px) {
   .modal {
     max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .modal-body {
+    overflow-x: hidden !important;
   }
 
   .variacoes-scroll-wrap {
@@ -196,9 +201,7 @@ tr:hover .row-actions { opacity: 1; }
 
   .variacao-header-row,
   .variacao-row {
-    min-width: 0 !important;
-    grid-template-columns: 1fr 60px 80px 60px 60px 28px !important;
-    gap: 4px !important;
+    min-width: 420px !important;
   }
 }
 
