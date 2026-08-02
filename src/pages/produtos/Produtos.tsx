@@ -436,7 +436,7 @@ export function Produtos() {
       {/* Modal novo/editar */}
       {modal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>
-          <div className="modal">
+          <div className="modal" style={{ maxWidth: 800, maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>
                 {modal === 'novo' ? 'Novo produto' : 'Editar produto'}
