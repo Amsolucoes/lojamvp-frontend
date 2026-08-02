@@ -572,13 +572,13 @@ export function Produtos() {
                       </p>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '110px', catUsaCor && '1fr', usarCodigoPorVariacao && '1.4fr'].filter(Boolean).join(' ')} 90px 90px 32px`, gap: 8 }}>
+                        <div className="variacao-header-row" style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '110px', catUsaCor && '1fr', usarCodigoPorVariacao && '1.4fr'].filter(Boolean).join(' ')} 90px 90px 32px`, gap: 8 }}>
                         {[catUsaTamanho && 'Tamanho', catUsaCor && 'Cor', usarCodigoPorVariacao && 'Cód. barras', 'Estoque', 'Mín.', ''].filter(h => h !== false).map((h, i) => (
                             <div key={i} style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
                           ))}
                         </div>
                         {variacoes.map((v, i) => (
-                          <div key={i} style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '110px', catUsaCor && '1fr', usarCodigoPorVariacao && '1.4fr'].filter(Boolean).join(' ')} 90px 90px 32px`, gap: 8, alignItems: 'center' }}>
+                          <div key={i} className="variacao-row" style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '110px', catUsaCor && '1fr', usarCodigoPorVariacao && '1.4fr'].filter(Boolean).join(' ')} 90px 90px 32px`, gap: 8, alignItems: 'center' }}>
                             {catUsaTamanho && (
                               <select value={v.tamanho ?? ''} onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, tamanho: e.target.value } : x))}>
                                 <option value="">—</option>
@@ -592,12 +592,12 @@ export function Produtos() {
                                 onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, cor: e.target.value } : x))} />
                             )}
                             {usarCodigoPorVariacao && (
-                              <input value={v.codigoBarras ?? ''} placeholder="Opcional"
+                              <input value={v.codigoBarras ?? ''} placeholder="Cód. barras"
                                 onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, codigoBarras: e.target.value } : x))} />
                             )}
-                            <input type="number" min={0} value={v.estoque === 0 ? '' : v.estoque}
+                            <input type="number" min={0} placeholder="Estoque" value={v.estoque === 0 ? '' : v.estoque}
                               onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, estoque: e.target.value === '' ? 0 : +e.target.value } : x))} />
-                            <input type="number" min={0} value={v.estoqueMinimo === 0 ? '' : v.estoqueMinimo}
+                            <input type="number" min={0} placeholder="Mín." value={v.estoqueMinimo === 0 ? '' : v.estoqueMinimo}
                               onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, estoqueMinimo: +e.target.value } : x))} />
                             <button className="btn-ghost" style={{ color: 'var(--red)', padding: '4px' }}
                               onClick={() => setVariacoes(prev => prev.filter((_, j) => j !== i))}>✕</button>

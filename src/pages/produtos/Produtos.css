@@ -183,6 +183,30 @@ tr:hover .row-actions { opacity: 1; }
   }
 }
 
+@media (max-width: 480px) {
+  .modal {
+    max-width: 100% !important;
+  }
+
+  .variacao-header-row {
+    display: none !important;
+  }
+
+  .variacao-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .variacao-row > select,
+  .variacao-row > input {
+    flex: 1 1 100px !important;
+    min-width: 100px !important;
+  }
+  .variacao-row > button {
+    flex: 0 0 auto !important;
+  }
+}
+
 @media (min-width: 769px) {
   .modal {
     max-height: 88vh;
