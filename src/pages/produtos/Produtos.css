@@ -188,22 +188,15 @@ tr:hover .row-actions { opacity: 1; }
     max-width: 100% !important;
   }
 
-  .variacao-header-row {
-    display: none !important;
+  .variacoes-scroll-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
   }
 
+  .variacao-header-row,
   .variacao-row {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-  }
-  .variacao-row > select,
-  .variacao-row > input {
-    flex: 1 1 100px !important;
-    min-width: 100px !important;
-  }
-  .variacao-row > button {
-    flex: 0 0 auto !important;
+    min-width: 460px !important;
   }
 }
 
