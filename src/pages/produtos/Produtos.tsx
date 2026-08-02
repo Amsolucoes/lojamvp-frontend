@@ -572,13 +572,13 @@ export function Produtos() {
                       </p>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '1fr', catUsaCor && '1fr', usarCodigoPorVariacao && '1.3fr'].filter(Boolean).join(' ')} 80px 80px 32px`, gap: 6 }}>
-                          {[catUsaTamanho && 'Tamanho', catUsaCor && 'Cor', usarCodigoPorVariacao && 'Cód. barras', 'Estoque', 'Mín.', ''].filter(h => h !== false).map((h, i) => (
+                        <div style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '110px', catUsaCor && '1fr', usarCodigoPorVariacao && '1.4fr'].filter(Boolean).join(' ')} 90px 90px 32px`, gap: 8 }}>
+                        {[catUsaTamanho && 'Tamanho', catUsaCor && 'Cor', usarCodigoPorVariacao && 'Cód. barras', 'Estoque', 'Mín.', ''].filter(h => h !== false).map((h, i) => (
                             <div key={i} style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
                           ))}
                         </div>
                         {variacoes.map((v, i) => (
-                          <div key={i} style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '1fr', catUsaCor && '1fr', usarCodigoPorVariacao && '1.3fr'].filter(Boolean).join(' ')} 80px 80px 32px`, gap: 6, alignItems: 'center' }}>
+                          <div key={i} style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '110px', catUsaCor && '1fr', usarCodigoPorVariacao && '1.4fr'].filter(Boolean).join(' ')} 90px 90px 32px`, gap: 8, alignItems: 'center' }}>
                             {catUsaTamanho && (
                               <select value={v.tamanho ?? ''} onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, tamanho: e.target.value } : x))}>
                                 <option value="">—</option>
