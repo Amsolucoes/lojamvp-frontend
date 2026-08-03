@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3 } from 'lucide-react';
 import { api } from '../../services/api';
+import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { useToast } from '../../context/ToastContext';
 import { BANCOS, BankBadge } from '../../utils/bancos';
 import './Financeiro.css';
@@ -1433,28 +1434,22 @@ export function Financeiro() {
 
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <input
-                    list="lista-categorias-lanc"
+                  <AutocompleteInput
                     value={categoriasDaAba.find(c => c.id === formLanc.categoriaId)?.nome ?? formLanc.categoriaTexto ?? ''}
-                    onChange={e => {
-                      const texto = e.target.value;
+                    options={categoriasDaAba.map(c => c.nome)}
+                    onChange={texto => {
                       const encontrada = categoriasDaAba.find(c => c.nome.toLowerCase() === texto.toLowerCase());
                       setFormLanc(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
                   />
-                  <datalist id="lista-categorias-lanc">
-                    {categoriasDaAba.map(c => <option key={c.id} value={c.nome} />)}
-                  </datalist>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Descrição *</label>
-                  <input list="lista-descricoes-lanc" value={formLanc.descricao} onChange={e => setFormLanc(f => ({ ...f, descricao: e.target.value }))}
+                  <AutocompleteInput value={formLanc.descricao} options={descricoesRecentes}
+                    onChange={v => setFormLanc(f => ({ ...f, descricao: v }))}
                     placeholder={aba === 'pagar' ? 'Ex: Aluguel do estúdio' : 'Ex: Venda avulsa'} />
-                  <datalist id="lista-descricoes-lanc">
-                    {descricoesRecentes.map(d => <option key={d} value={d} />)}
-                  </datalist>
                 </div>
 
                 <div className="form-group">
@@ -2177,11 +2172,8 @@ export function Financeiro() {
                   ))}
                 </div>
 
-                <select value={formCompra.categoriaId} onChange={e => setFormCompra(f => ({ ...f, categoriaId: e.target.value }))}>
-                  <option value="">Sem categoria</option>
-                  {categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-                </select>
-                <input value={formCompra.observacao} onChange={e => setFormCompra(f => ({ ...f, observacao: e.target.value }))} placeholder="Observação (opcional)" />
+                <AutocompleteInput value={formCompra.descricao} options={descricoesRecentesCartao}
+                  onChange={v => setFormCompra(f => ({ ...f, descricao: v }))} placeholder="Ex: Netflix" />
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))}
@@ -2202,10 +2194,15 @@ export function Financeiro() {
                   </div>
                 )}
 
-                <select value={formCompra.categoriaId} onChange={e => setFormCompra(f => ({ ...f, categoriaId: e.target.value }))}>
-                  <option value="">Sem categoria</option>
-                  {categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-                </select>
+                <AutocompleteInput
+                  value={categorias.find(c => c.id === formCompra.categoriaId)?.nome ?? formCompra.categoriaTexto ?? ''}
+                  options={categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => c.nome)}
+                  onChange={texto => {
+                    const encontrada = categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                    setFormCompra(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
+                  }}
+                  placeholder="Categoria (digite ou escolha)..."
+                />
                 <input value={formCompra.observacao} onChange={e => setFormCompra(f => ({ ...f, observacao: e.target.value }))} placeholder="Observação (opcional)" />
 
                 {formCompra.modo === 'fixa' && (
@@ -2506,23 +2503,20 @@ export function Financeiro() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <input
-                    list="lista-categorias-edit"
+                  <AutocompleteInput
                     value={categorias.find(c => c.id === formEdit.categoriaId)?.nome ?? formEdit.categoriaTexto ?? ''}
-                    onChange={e => {
-                      const texto = e.target.value;
+                    options={categorias.map(c => c.nome)}
+                    onChange={texto => {
                       const encontrada = categorias.find(c => c.nome.toLowerCase() === texto.toLowerCase());
                       setFormEdit(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
                   />
-                  <datalist id="lista-categorias-edit">
-                    {categorias.map(c => <option key={c.id} value={c.nome} />)}
-                  </datalist>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Descrição *</label>
-                  <input list="lista-descricoes-lanc" value={formEdit.descricao} onChange={e => setFormEdit(f => ({ ...f, descricao: e.target.value }))} />
+                  <AutocompleteInput value={formEdit.descricao} options={descricoesRecentes}
+                    onChange={v => setFormEdit(f => ({ ...f, descricao: v }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Observação</label>
