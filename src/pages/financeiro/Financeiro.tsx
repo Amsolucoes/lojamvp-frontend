@@ -664,7 +664,7 @@ export function Financeiro() {
   const [modalPagarFatura, setModalPagarFatura] = useState(false);
   const [formPagFatura, setFormPagFatura] = useState({
     modo: 'total' as 'total' | 'parcial' | 'parcelado', valorPago: '', totalParcelas: '3',
-    valorEntrada: '', primeiraParcela: '',
+    valorEntrada: '', primeiraParcela: '', contaBancariaId: '',
   });
   const [editandoItemCartao, setEditandoItemCartao] = useState<ItemFaturaDetalhe | null>(null);
   const [formEditItemCartao, setFormEditItemCartao] = useState({ descricao: '', valor: '', dataCompra: '', categoriaId: '', observacao: '' });
@@ -1903,7 +1903,10 @@ export function Financeiro() {
                     </span>
                     {faturaDados.total > 0 && (
                       faturaDados.status === 'pendente'
-                        ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => setModalPagarFatura(true)}>Pagar</button>
+                        ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => {
+                            setFormPagFatura(f => ({ ...f, contaBancariaId: faturaAberta.contaBancariaId }));
+                            setModalPagarFatura(true);
+                          }}>Pagar</button>
                         : <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => pagarFaturaModal('desfazer')}>Desfazer</button>
                     )}
                   </div>
@@ -2112,6 +2115,12 @@ export function Financeiro() {
               <button className="btn-ghost" onClick={() => setModalPagarFatura(false)}><X size={16} /></button>
             </div>
             <div className="modal-body">
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label className="form-label">Pagar com a conta</label>
+                <select value={formPagFatura.contaBancariaId} onChange={e => setFormPagFatura(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                  {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                 {[
                   { v: 'total', t: 'Pagar tudo' },
@@ -2176,12 +2185,13 @@ export function Financeiro() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalPagarFatura(false)}>Cancelar</button>
               <button className="btn-primary" onClick={() => {
-                if (formPagFatura.modo === 'total') pagarFaturaModal('total');
-                else if (formPagFatura.modo === 'parcial') pagarFaturaModal('parcial', { valorPago: parseFloat(formPagFatura.valorPago) || 0 });
+                if (formPagFatura.modo === 'total') pagarFaturaModal('total', { contaBancariaId: formPagFatura.contaBancariaId || null });
+                else if (formPagFatura.modo === 'parcial') pagarFaturaModal('parcial', { valorPago: parseFloat(formPagFatura.valorPago) || 0, contaBancariaId: formPagFatura.contaBancariaId || null });
                 else pagarFaturaModal('parcelado', {
                   totalParcelas: parseInt(formPagFatura.totalParcelas) || 3,
                   valorEntrada: parseFloat(formPagFatura.valorEntrada) || 0,
                   primeiraParcela: formPagFatura.primeiraParcela || null,
+                  contaBancariaId: formPagFatura.contaBancariaId || null,
                 });
               }}>
                 Confirmar
