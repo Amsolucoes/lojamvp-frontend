@@ -1436,7 +1436,7 @@ export function Financeiro() {
                   <label className="form-label">Categoria</label>
                   <AutocompleteInput
                     value={categoriasDaAba.find(c => c.id === formLanc.categoriaId)?.nome ?? formLanc.categoriaTexto ?? ''}
-                    options={categoriasDaAba.map(c => c.nome)}
+                    options={categoriasDaAba.map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
                       const encontrada = categoriasDaAba.find(c => c.nome.toLowerCase() === texto.toLowerCase());
                       setFormLanc(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
@@ -2196,7 +2196,7 @@ export function Financeiro() {
 
                 <AutocompleteInput
                   value={categorias.find(c => c.id === formCompra.categoriaId)?.nome ?? formCompra.categoriaTexto ?? ''}
-                  options={categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => c.nome)}
+                  options={categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => ({ value: c.nome, icone: c.icone }))}
                   onChange={texto => {
                     const encontrada = categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').find(c => c.nome.toLowerCase() === texto.toLowerCase());
                     setFormCompra(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
@@ -2505,7 +2505,7 @@ export function Financeiro() {
                   <label className="form-label">Categoria</label>
                   <AutocompleteInput
                     value={categorias.find(c => c.id === formEdit.categoriaId)?.nome ?? formEdit.categoriaTexto ?? ''}
-                    options={categorias.map(c => c.nome)}
+                    options={categorias.map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
                       const encontrada = categorias.find(c => c.nome.toLowerCase() === texto.toLowerCase());
                       setFormEdit(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));

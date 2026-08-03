@@ -1,8 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 
+interface Opcao {
+  value: string;
+  icone?: string | null;
+}
+
 interface Props {
   value: string;
-  options: string[];
+  options: (string | Opcao)[];
   onChange: (value: string) => void;
   placeholder?: string;
 }
@@ -19,9 +24,11 @@ export function AutocompleteInput({ value, options, onChange, placeholder }: Pro
     return () => document.removeEventListener('mousedown', aoClicarFora);
   }, []);
 
+  const normalizadas: Opcao[] = options.map(o => typeof o === 'string' ? { value: o } : o);
+
   const filtradas = value
-    ? options.filter(o => o.toLowerCase().includes(value.toLowerCase()) && o.toLowerCase() !== value.toLowerCase())
-    : options;
+    ? normalizadas.filter(o => o.value.toLowerCase().includes(value.toLowerCase()) && o.value.toLowerCase() !== value.toLowerCase())
+    : normalizadas;
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -39,11 +46,11 @@ export function AutocompleteInput({ value, options, onChange, placeholder }: Pro
           marginTop: 4, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-lg)',
         }}>
           {filtradas.map(op => (
-            <div key={op}
+            <div key={op.value}
               onMouseDown={e => e.preventDefault()}
-              onClick={() => { onChange(op); setAberto(false); }}
+              onClick={() => { onChange(op.value); setAberto(false); }}
               style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
-              {op}
+              {op.icone ? `${op.icone} ` : ''}{op.value}
             </div>
           ))}
         </div>
