@@ -119,6 +119,7 @@ export function Financeiro() {
   const [contas, setContas] = useState<Conta[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [descricoesRecentes, setDescricoesRecentes] = useState<string[]>([]);
+  const [descricoesRecentesCartao, setDescricoesRecentesCartao] = useState<string[]>([]);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [receberUnificado, setReceberUnificado] = useState<any[]>([]);
   const [resumo, setResumo] = useState<{ pagar: Resumo; receber: Resumo } | null>(null);
@@ -158,7 +159,7 @@ export function Financeiro() {
   const [formCompra, setFormCompra] = useState({
     modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
     descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10),
-    categoriaId: '', totalParcelas: '2', observacao: '',
+    categoriaId: '', categoriaTexto: '', totalParcelas: '2', observacao: '',
   });
 
   const [modalLancamento, setModalLancamento] = useState(false);
@@ -169,7 +170,7 @@ export function Financeiro() {
   const [formTransf, setFormTransf] = useState({ contaOrigemId: '', contaDestinoId: '', valor: '', registrar: true, observacao: '' });
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
-  const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '', observacao: '' });
+  const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEdit, setSalvandoEdit] = useState(false);
   const [escopoEdit, setEscopoEdit] = useState<'unica' | 'todas' | null>(null);
 
@@ -467,11 +468,13 @@ export function Financeiro() {
     setFormEdit({
       contaBancariaId: l.contaBancariaId ?? '',
       categoriaId: l.categoriaId ?? '',
+      categoriaTexto: l.categoriaNome ?? '',
       descricao: l.descricao,
       valor: String(l.valor),
       vencimento: l.vencimento ? l.vencimento.slice(0, 10) : '',
       observacao: l.observacao ?? '',
     });
+    api.get<string[]>(`/api/financeiro/lancamentos/descricoes?tipo=${aba}`).then(setDescricoesRecentes).catch(() => {});
   }
 
   async function salvarEdicaoLancamento(modo: 'unica' | 'todas') {
@@ -627,7 +630,7 @@ export function Financeiro() {
           diaCompra: diaEscolhido,
         });
       }
-      setFormCompra({ modo: 'avulsa', descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '', totalParcelas: '2', observacao: '' });
+      setFormCompra({ modo: 'avulsa', descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '', categoriaTexto: '', totalParcelas: '2', observacao: '' });
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarLancamentos();
       sucesso('Compra lançada!');
@@ -1925,7 +1928,10 @@ export function Financeiro() {
             </div>
             <div className="modal-body">
               <div style={{ position: 'sticky', bottom: 8, zIndex: 5, display: 'flex', justifyContent: 'center', marginBottom: 8, pointerEvents: 'none' }}>
-                <button onClick={() => setModalLancarCompra(true)} title="Lançar compra" style={{
+                <button onClick={() => {
+                  setModalLancarCompra(true);
+                  api.get<string[]>('/api/financeiro/cartoes/lancamentos/descricoes').then(setDescricoesRecentesCartao).catch(() => {});
+                }} title="Lançar compra" style={{
                   width: 52, height: 52, borderRadius: '50%',
                   background: 'var(--accent)', color: '#fff', border: 'none',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2171,7 +2177,11 @@ export function Financeiro() {
                   ))}
                 </div>
 
-                <input value={formCompra.descricao} onChange={e => setFormCompra(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Netflix" />
+                <select value={formCompra.categoriaId} onChange={e => setFormCompra(f => ({ ...f, categoriaId: e.target.value }))}>
+                  <option value="">Sem categoria</option>
+                  {categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
+                </select>
+                <input value={formCompra.observacao} onChange={e => setFormCompra(f => ({ ...f, observacao: e.target.value }))} placeholder="Observação (opcional)" />
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))}
@@ -2496,14 +2506,23 @@ export function Financeiro() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <select value={formEdit.categoriaId} onChange={e => setFormEdit(f => ({ ...f, categoriaId: e.target.value }))}>
-                    <option value="">Sem categoria</option>
-                    {categorias.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-                  </select>
+                  <input
+                    list="lista-categorias-edit"
+                    value={categorias.find(c => c.id === formEdit.categoriaId)?.nome ?? formEdit.categoriaTexto ?? ''}
+                    onChange={e => {
+                      const texto = e.target.value;
+                      const encontrada = categorias.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      setFormEdit(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
+                    }}
+                    placeholder="Digite ou escolha..."
+                  />
+                  <datalist id="lista-categorias-edit">
+                    {categorias.map(c => <option key={c.id} value={c.nome} />)}
+                  </datalist>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Descrição *</label>
-                  <input value={formEdit.descricao} onChange={e => setFormEdit(f => ({ ...f, descricao: e.target.value }))} />
+                  <input list="lista-descricoes-lanc" value={formEdit.descricao} onChange={e => setFormEdit(f => ({ ...f, descricao: e.target.value }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Observação</label>
