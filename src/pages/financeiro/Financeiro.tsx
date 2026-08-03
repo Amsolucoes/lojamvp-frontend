@@ -118,6 +118,7 @@ export function Financeiro() {
 
   const [contas, setContas] = useState<Conta[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [descricoesRecentes, setDescricoesRecentes] = useState<string[]>([]);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [receberUnificado, setReceberUnificado] = useState<any[]>([]);
   const [resumo, setResumo] = useState<{ pagar: Resumo; receber: Resumo } | null>(null);
@@ -174,7 +175,7 @@ export function Financeiro() {
 
   const [formLanc, setFormLanc] = useState({
     modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
-    contaBancariaId: '', categoriaId: '', descricao: '', valor: '', observacao: '',
+    contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', observacao: '',
     vencimento: new Date().toISOString().slice(0, 10),
     totalParcelas: '2', diaVencimento: '10',
     tipoParcelamento: 'quantidade' as 'quantidade' | 'dataFim',
@@ -370,7 +371,7 @@ export function Financeiro() {
   // ── Lançamento ──────────────────────────────────────────────────
   function abrirNovoLancamento() {
     setFormLanc({
-      modo: 'avulsa', contaBancariaId: contas[0]?.id ?? '', categoriaId: '',
+      modo: 'avulsa', contaBancariaId: contas[0]?.id ?? '', categoriaId: '', categoriaTexto: '',
       descricao: '', valor: '', observacao: '',
       vencimento: new Date().toISOString().slice(0, 10),
       totalParcelas: '2', diaVencimento: '10',
@@ -380,6 +381,7 @@ export function Financeiro() {
       avisar: true,
     });
     setModalLancamento(true);
+    api.get<string[]>(`/api/financeiro/lancamentos/descricoes?tipo=${aba}`).then(setDescricoesRecentes).catch(() => {});
   }
 
   async function salvarLancamento() {
@@ -1428,16 +1430,28 @@ export function Financeiro() {
 
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <select value={formLanc.categoriaId} onChange={e => setFormLanc(f => ({ ...f, categoriaId: e.target.value }))}>
-                    <option value="">Sem categoria</option>
-                    {categoriasDaAba.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-                  </select>
+                  <input
+                    list="lista-categorias-lanc"
+                    value={categoriasDaAba.find(c => c.id === formLanc.categoriaId)?.nome ?? formLanc.categoriaTexto ?? ''}
+                    onChange={e => {
+                      const texto = e.target.value;
+                      const encontrada = categoriasDaAba.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      setFormLanc(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
+                    }}
+                    placeholder="Digite ou escolha..."
+                  />
+                  <datalist id="lista-categorias-lanc">
+                    {categoriasDaAba.map(c => <option key={c.id} value={c.nome} />)}
+                  </datalist>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Descrição *</label>
-                  <input value={formLanc.descricao} onChange={e => setFormLanc(f => ({ ...f, descricao: e.target.value }))}
+                  <input list="lista-descricoes-lanc" value={formLanc.descricao} onChange={e => setFormLanc(f => ({ ...f, descricao: e.target.value }))}
                     placeholder={aba === 'pagar' ? 'Ex: Aluguel do estúdio' : 'Ex: Venda avulsa'} />
+                  <datalist id="lista-descricoes-lanc">
+                    {descricoesRecentes.map(d => <option key={d} value={d} />)}
+                  </datalist>
                 </div>
 
                 <div className="form-group">
