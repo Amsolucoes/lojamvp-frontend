@@ -400,7 +400,8 @@ export function DashboardFinanceiro() {
             {cartoesResumo.map(c => {
               const pct = c.limite > 0 ? Math.min(100, (c.usado / c.limite) * 100) : 0;
               return (
-                <div key={c.id} className="stat-card" style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : 'var(--border)' }}>
+                <div key={c.id} className="stat-card" style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : 'var(--border)', cursor: 'pointer' }}
+                  onClick={() => navigate(`/financeiro?abrirFatura=${c.id}`)}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div className="stat-label">{c.nome}</div>
                     {c.qtdCompras > 0 && (

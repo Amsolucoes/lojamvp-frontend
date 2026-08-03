@@ -281,6 +281,19 @@ export function Financeiro() {
     }
   }, []);
 
+  // Veio do Dashboard clicando num cartão específico — abre a fatura dele direto
+  useEffect(() => {
+    const cartaoId = searchParams.get('abrirFatura');
+    if (!cartaoId || cartoes.length === 0) return;
+    const cartao = cartoes.find(c => c.id === cartaoId);
+    if (cartao) {
+      abrirFatura(cartao);
+      const novosParams = new URLSearchParams(searchParams);
+      novosParams.delete('abrirFatura');
+      setSearchParams(novosParams, { replace: true });
+    }
+  }, [cartoes, searchParams]);
+
   function navMes(delta: number) {
     let nm = mesRef + delta, na = anoRef;
     if (nm < 0) { nm = 11; na--; }
