@@ -210,16 +210,25 @@ tr:hover .row-actions { opacity: 1; }
     box-sizing: border-box !important;
   }
 
-  .variacao-header-row,
-  .variacao-row {
-    min-width: 340px;
-  }
-
   .variacao-header-row > *,
   .variacao-row > select,
   .variacao-row > input,
   .variacao-row > button {
     min-width: 0 !important;
+  }
+
+  .variacoes-dica-scroll {
+    display: block;
+    font-size: 11px;
+    color: var(--text-3);
+    text-align: center;
+    margin-top: 6px;
+  }
+}
+
+@media (min-width: 481px) {
+  .variacoes-dica-scroll {
+    display: none;
   }
 }
 
