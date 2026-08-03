@@ -141,12 +141,13 @@ export function Financeiro() {
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
   const [modalLancarCompra, setModalLancarCompra] = useState(false);
   const [faturaDados, setFaturaDados] = useState<{
-    vencimento: string; total: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
+    vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
     parcelasFinanciamento?: {
       id: string; descricao: string; valor: number; vencimento: string; status: string;
       numeroParcela: number; totalParcelas: number; contaBancariaId: string; categoriaId: string | null;
       observacao: string | null; modo: string; mesOrigemFatura: number | null; anoOrigemFatura: number | null;
     }[];
+    antecipados?: { id: string; valor: number; data: string; contaBancariaId: string; observacao: string | null }[];
   } | null>(null);
   const [faturaAno, setFaturaAno] = useState(new Date().getFullYear());
   const [faturaMes, setFaturaMes] = useState(new Date().getMonth() + 1);
@@ -666,6 +667,9 @@ export function Financeiro() {
     modo: 'total' as 'total' | 'parcial' | 'parcelado', valorPago: '', totalParcelas: '3',
     valorEntrada: '', primeiraParcela: '', contaBancariaId: '',
   });
+  const [modalAntecipado, setModalAntecipado] = useState(false);
+  const [formAntecipado, setFormAntecipado] = useState({ valor: '', data: new Date().toISOString().slice(0, 10), contaBancariaId: '', observacao: '' });
+  const [confirmExcluirAntecipado, setConfirmExcluirAntecipado] = useState<{ id: string; valor: number } | null>(null);
   const [editandoItemCartao, setEditandoItemCartao] = useState<ItemFaturaDetalhe | null>(null);
   const [formEditItemCartao, setFormEditItemCartao] = useState({ descricao: '', valor: '', dataCompra: '', categoriaId: '', observacao: '' });
   const [confirmExcluirItemCartao, setConfirmExcluirItemCartao] = useState<ItemFaturaDetalhe | null>(null);
@@ -680,6 +684,48 @@ export function Financeiro() {
       carregarContas();
       setModalPagarFatura(false);
       sucesso('Fatura atualizada!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  function abrirNovoAntecipado() {
+    setFormAntecipado({ valor: '', data: new Date().toISOString().slice(0, 10), contaBancariaId: faturaAberta?.contaBancariaId ?? '', observacao: '' });
+    setModalAntecipado(true);
+  }
+
+  async function lancarAntecipado() {
+    if (!faturaAberta) return;
+    if (!formAntecipado.valor || parseFloat(formAntecipado.valor) <= 0) { erro('Informe um valor válido.'); return; }
+    if (!formAntecipado.contaBancariaId) { erro('Escolha a conta de origem.'); return; }
+    try {
+      await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/fatura/antecipado?ano=${faturaAno}&mes=${faturaMes}`, {
+        valor: parseFloat(formAntecipado.valor),
+        data: formAntecipado.data,
+        contaBancariaId: formAntecipado.contaBancariaId,
+        observacao: formAntecipado.observacao || null,
+      });
+      setModalAntecipado(false);
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarLancamentos();
+      carregarResumo();
+      carregarContas();
+      sucesso('Pagamento antecipado registrado!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function excluirAntecipado() {
+    if (!confirmExcluirAntecipado || !faturaAberta) return;
+    try {
+      await api.delete(`/api/financeiro/cartoes/fatura/antecipado/${confirmExcluirAntecipado.id}`);
+      setConfirmExcluirAntecipado(null);
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarLancamentos();
+      carregarResumo();
+      carregarContas();
+      sucesso('Pagamento antecipado excluído!');
     } catch (e) {
       erro((e as Error).message);
     }
@@ -1884,32 +1930,66 @@ export function Financeiro() {
               )}
 
               {faturaDados && (
-                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 12, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Total do ciclo</div>
-                    <div style={{ fontWeight: 700, fontSize: 18 }}>{fmt(faturaDados.total)}</div>
+                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Total do ciclo</div>
+                      <div style={{ fontWeight: 700, fontSize: 18 }}>{fmt(faturaDados.total)}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className={`badge ${
+                        faturaDados.status === 'pago' ? 'badge-green'
+                        : faturaDados.status === 'financiada' ? 'badge-blue'
+                        : faturaDados.status === 'parcial' ? 'badge-yellow'
+                        : 'badge-accent'
+                      }`}>
+                        {faturaDados.status === 'pago' ? 'Fatura paga'
+                          : faturaDados.status === 'financiada' ? 'Parcelada'
+                          : faturaDados.status === 'parcial' ? 'Paga parcialmente'
+                          : 'Pendente'}
+                      </span>
+                      {faturaDados.total > 0 && (
+                        faturaDados.status === 'pendente'
+                          ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => {
+                              setFormPagFatura(f => ({ ...f, contaBancariaId: faturaAberta.contaBancariaId }));
+                              setModalPagarFatura(true);
+                            }}>Pagar</button>
+                          : <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => pagarFaturaModal('desfazer')}>Desfazer</button>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className={`badge ${
-                      faturaDados.status === 'pago' ? 'badge-green'
-                      : faturaDados.status === 'financiada' ? 'badge-blue'
-                      : faturaDados.status === 'parcial' ? 'badge-yellow'
-                      : 'badge-accent'
-                    }`}>
-                      {faturaDados.status === 'pago' ? 'Fatura paga'
-                        : faturaDados.status === 'financiada' ? 'Parcelada'
-                        : faturaDados.status === 'parcial' ? 'Paga parcialmente'
-                        : 'Pendente'}
-                    </span>
-                    {faturaDados.total > 0 && (
-                      faturaDados.status === 'pendente'
-                        ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => {
-                            setFormPagFatura(f => ({ ...f, contaBancariaId: faturaAberta.contaBancariaId }));
-                            setModalPagarFatura(true);
-                          }}>Pagar</button>
-                        : <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => pagarFaturaModal('desfazer')}>Desfazer</button>
-                    )}
-                  </div>
+
+                  {faturaDados.status === 'pendente' && (
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>💸 Pagamentos antecipados</span>
+                        <button className="btn-ghost" style={{ fontSize: 11 }} onClick={abrirNovoAntecipado}><Plus size={12} /> Adiantar</button>
+                      </div>
+                      {faturaDados.antecipados && faturaDados.antecipados.length > 0 ? (
+                        <>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                            {faturaDados.antecipados.map(a => (
+                              <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                                <span style={{ color: 'var(--text-2)' }}>
+                                  {new Date(a.data).toLocaleDateString('pt-BR')} {a.observacao ? `— ${a.observacao}` : ''}
+                                </span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  {fmt(a.valor)}
+                                  <button className="btn-ghost" style={{ padding: 2, color: 'var(--red)' }} onClick={() => setConfirmExcluirAntecipado({ id: a.id, valor: a.valor })}><Trash2 size={12} /></button>
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                            <span style={{ color: 'var(--text-3)' }}>Falta pagar</span>
+                            <strong>{fmt(faturaDados.restante ?? faturaDados.total)}</strong>
+                          </div>
+                        </>
+                      ) : (
+                        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>Nenhum adiantamento nesta fatura ainda.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2106,6 +2186,71 @@ export function Financeiro() {
         </div>
       )}
 
+      {/* Modal lançar pagamento antecipado da fatura */}
+      {modalAntecipado && faturaAberta && faturaDados && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalAntecipado(false)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Adiantar pagamento — {faturaAberta.nome}</h2>
+              <button className="btn-ghost" onClick={() => setModalAntecipado(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 14 }}>
+                Falta pagar: <strong style={{ color: 'var(--text-1)' }}>{fmt(faturaDados.restante ?? faturaDados.total)}</strong>
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Valor adiantado (R$)</label>
+                  <input type="number" min={0.01} max={(faturaDados.restante ?? faturaDados.total) - 0.01} step={0.01}
+                    value={formAntecipado.valor} onChange={e => setFormAntecipado(f => ({ ...f, valor: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Data do pagamento</label>
+                  <input type="date" max={new Date().toISOString().slice(0, 10)} value={formAntecipado.data}
+                    onChange={e => setFormAntecipado(f => ({ ...f, data: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Conta de origem</label>
+                  <select value={formAntecipado.contaBancariaId} onChange={e => setFormAntecipado(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Observação <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <input value={formAntecipado.observacao} onChange={e => setFormAntecipado(f => ({ ...f, observacao: e.target.value }))} placeholder="Ex: adiantei parte porque recebi um extra" />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalAntecipado(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={lancarAntecipado}>Registrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar exclusão de pagamento antecipado */}
+      {confirmExcluirAntecipado && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirAntecipado(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir adiantamento</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluirAntecipado(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir o adiantamento de <strong style={{ color: 'var(--text-1)' }}>{fmt(confirmExcluirAntecipado.valor)}</strong>? O valor volta a compor o saldo da conta.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluirAntecipado(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={excluirAntecipado}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal escolher forma de pagar a fatura */}
       {modalPagarFatura && faturaAberta && faturaDados && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalPagarFatura(false)}>
@@ -2136,9 +2281,15 @@ export function Financeiro() {
                 ))}
               </div>
 
+              {faturaDados.totalAntecipado ? (
+                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 12 }}>
+                  Já foi antecipado {fmt(faturaDados.totalAntecipado)}. Falta {fmt(faturaDados.restante ?? faturaDados.total)}.
+                </p>
+              ) : null}
+
               {formPagFatura.modo === 'total' && (
                 <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
-                  Vai debitar {fmt(faturaDados.total)} da conta vinculada ao cartão agora.
+                  Vai debitar {fmt(faturaDados.restante ?? faturaDados.total)} da conta escolhida agora.
                 </p>
               )}
 
@@ -2146,7 +2297,7 @@ export function Financeiro() {
                 <>
                   <div className="form-group">
                     <label className="form-label">Quanto vai pagar agora (R$)</label>
-                    <input type="number" min={0.01} max={faturaDados.total - 0.01} step={0.01}
+                    <input type="number" min={0.01} max={(faturaDados.restante ?? faturaDados.total) - 0.01} step={0.01}
                       value={formPagFatura.valorPago}
                       onChange={e => setFormPagFatura(f => ({ ...f, valorPago: e.target.value }))} />
                   </div>
