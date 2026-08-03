@@ -551,7 +551,7 @@ export function Produtos() {
 
                 {/* Variações */}
                 {!catSemGrade && (
-                  <div style={{ gridColumn: '1/-1' }}>
+                  <div className="variacoes-secao" style={{ gridColumn: '1/-1' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
                       <label className="form-label" style={{ margin: 0 }}>
                         Variações ({[catUsaTamanho && 'Tamanho', catUsaCor && 'Cor'].filter(Boolean).join(' / ')})
@@ -571,7 +571,7 @@ export function Produtos() {
                         Nenhuma variação cadastrada. Clique em "+ Adicionar".
                       </p>
                     ) : (
-                      <div className={usarCodigoPorVariacao ? 'variacoes-scroll-wrap' : ''} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div className="variacoes-scroll-wrap" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <div className="variacao-header-row" style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '110px', catUsaCor && '1fr', usarCodigoPorVariacao && '1.4fr'].filter(Boolean).join(' ')} 90px 90px 32px`, gap: 8 }}>
                         {[catUsaTamanho && 'Tamanho', catUsaCor && 'Cor', usarCodigoPorVariacao && 'Cód. barras', 'Estoque', 'Mín.', ''].filter(h => h !== false).map((h, i) => (
                             <div key={i} style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>

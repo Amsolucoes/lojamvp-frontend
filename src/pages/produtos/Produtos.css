@@ -194,6 +194,13 @@ tr:hover .row-actions { opacity: 1; }
     width: 100% !important;
   }
 
+  /* Impede que qualquer elemento na cadeia force o modal a crescer além da tela */
+  .form-grid,
+  .variacoes-secao,
+  .variacoes-scroll-wrap {
+    min-width: 0 !important;
+  }
+
   .variacoes-scroll-wrap {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
@@ -205,7 +212,14 @@ tr:hover .row-actions { opacity: 1; }
 
   .variacao-header-row,
   .variacao-row {
-    min-width: 420px !important;
+    min-width: 340px;
+  }
+
+  .variacao-header-row > *,
+  .variacao-row > select,
+  .variacao-row > input,
+  .variacao-row > button {
+    min-width: 0 !important;
   }
 }
 
