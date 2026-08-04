@@ -36,6 +36,7 @@ export function Estoque() {
   const [obsAjuste, setObsAjuste] = useState('');
   const [modalVariacaoEntrada, setModalVariacaoEntrada] = useState<{ produto: Produto } | null>(null);
   const [filtroMov, setFiltroMov] = useState<'todos' | 'entrada' | 'saida' | 'ajuste'>('todos');
+  const [buscaMov, setBuscaMov] = useState('');
 
     // Paginação visão geral
   const [pagVisao, setPagVisao] = useState(1);
@@ -148,7 +149,8 @@ export function Estoque() {
 
   const movOrdenados = [...movimentos]
     .reverse()
-    .filter(m => filtroMov === 'todos' || m.tipo === filtroMov);
+    .filter(m => filtroMov === 'todos' || m.tipo === filtroMov)
+    .filter(m => m.nomeProduto.toLowerCase().includes(buscaMov.toLowerCase()));
 
   // Paginação — visão geral
   const totalPagVisao = Math.max(1, Math.ceil(prodsFiltrados.length / porPagVisao));
@@ -161,7 +163,7 @@ export function Estoque() {
   const movPaginados = movOrdenados.slice((pagMovSegura - 1) * porPagMov, pagMovSegura * porPagMov);
 
   useEffect(() => { setPagVisao(1); }, [busca, filtro, porPagVisao]);
-  useEffect(() => { setPagMov(1); }, [filtroMov, porPagMov]);
+  useEffect(() => { setPagMov(1); }, [filtroMov, buscaMov, porPagMov]);
   
   return (
     <div className="page">
@@ -371,8 +373,13 @@ export function Estoque() {
       {aba === 'movimentos' && (
         <>
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          {/* Filtro de tipo */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {/* Busca + Filtro de tipo */}
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="search-wrap" style={{ maxWidth: 260 }}>
+              <Search size={14} className="search-icon" />
+              <input className="search-input" placeholder="Buscar produto..."
+                value={buscaMov} onChange={e => setBuscaMov(e.target.value)} />
+            </div>
             {[
               { value: 'todos',   label: 'Todos'    },
               { value: 'entrada', label: '↓ Entradas' },
