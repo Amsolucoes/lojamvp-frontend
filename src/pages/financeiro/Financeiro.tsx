@@ -137,6 +137,7 @@ export function Financeiro() {
 
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [cartoesResumo, setCartoesResumo] = useState<Record<string, { usado: number; disponivel: number; qtdCompras: number; status: string }>>({});
+  const [carregandoCartoes, setCarregandoCartoes] = useState(true);
   const [modalCartoes, setModalCartoes] = useState(false);
   const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
   const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
@@ -233,12 +234,15 @@ export function Financeiro() {
   }
 
   function carregarCartoes() {
-    api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {});
-    api.get<any[]>('/api/financeiro/cartoes-resumo').then(lista => {
-      const mapa: Record<string, any> = {};
-      lista.forEach(c => { mapa[c.id] = { usado: c.usado, disponivel: c.disponivel, qtdCompras: c.qtdCompras, status: c.status }; });
-      setCartoesResumo(mapa);
-    }).catch(() => {});
+    setCarregandoCartoes(true);
+    Promise.all([
+      api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {}),
+      api.get<any[]>('/api/financeiro/cartoes-resumo').then(lista => {
+        const mapa: Record<string, any> = {};
+        lista.forEach(c => { mapa[c.id] = { usado: c.usado, disponivel: c.disponivel, qtdCompras: c.qtdCompras, status: c.status }; });
+        setCartoesResumo(mapa);
+      }).catch(() => {}),
+    ]).finally(() => setCarregandoCartoes(false));
   }
 
   async function carregarResumo() {
@@ -1823,7 +1827,11 @@ export function Financeiro() {
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-                {cartoes.length === 0 ? (
+                {carregandoCartoes ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
+                    <div className="spinner" />
+                  </div>
+                ) : cartoes.length === 0 ? (
                   <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhum cartão cadastrado.</p>
                 ) : cartoes.map(c => {
                   const r = cartoesResumo[c.id];
