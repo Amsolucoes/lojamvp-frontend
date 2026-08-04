@@ -89,6 +89,7 @@ export function Sidebar() {
   const temNf = modulos.includes('nf') && temProdutos;
   const temFuncionarios = modulos.includes('funcionarios') && tipoPlano !== 'chacara';
   const temChacaraReservas = modulos.includes('chacara_reservas');
+  const temCupomNaoFiscal = modulos.includes('cupom_nao_fiscal');
 
   const NAV = [
     { to: '/',           icon: LayoutDashboard, label: 'Dashboard'      },
