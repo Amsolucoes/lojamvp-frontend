@@ -1829,7 +1829,7 @@ export function Financeiro() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
                 {carregandoCartoes ? (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
-                    <div className="spinner" />
+                    <div className="layout-spinner" style={{ width: 28, height: 28 }} />
                   </div>
                 ) : cartoes.length === 0 ? (
                   <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhum cartão cadastrado.</p>
