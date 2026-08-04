@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3 } from 'lucide-react';
 import { api } from '../../services/api';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
+import { InputMoeda } from '../../components/InputMoeda';
 import { useToast } from '../../context/ToastContext';
 import { BANCOS, BankBadge } from '../../utils/bancos';
 import './Financeiro.css';
@@ -720,6 +721,8 @@ export function Financeiro() {
   async function lancarAntecipado() {
     if (!faturaAberta) return;
     if (!formAntecipado.valor || parseFloat(formAntecipado.valor) <= 0) { erro('Informe um valor válido.'); return; }
+    const limiteAntecipado = (faturaDados?.restante ?? faturaDados?.total ?? 0) - 0.01;
+    if (parseFloat(formAntecipado.valor) > limiteAntecipado) { erro(`O valor não pode passar de ${fmt(limiteAntecipado)}.`); return; }
     if (!formAntecipado.contaBancariaId) { erro('Escolha a conta de origem.'); return; }
     try {
       await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/fatura/antecipado?ano=${faturaAno}&mes=${faturaMes}`, {
@@ -1465,15 +1468,13 @@ export function Financeiro() {
                   {formLanc.modo === 'parcelada' ? (
                     <div className="form-group">
                       <label className="form-label">Valor da parcela (R$) *</label>
-                      <input type="number" min={0} step={0.01} value={formLanc.valor}
-                        onChange={e => setFormLanc(f => ({ ...f, valor: e.target.value }))} />
+                      <InputMoeda value={parseFloat(formLanc.valor) || 0} onChange={v => setFormLanc(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                     </div>
                   ) : (
                     <>
                       <div className="form-group">
                         <label className="form-label">Valor (R$) *</label>
-                        <input type="number" min={0} step={0.01} value={formLanc.valor}
-                          onChange={e => setFormLanc(f => ({ ...f, valor: e.target.value }))} />
+                        <InputMoeda value={parseFloat(formLanc.valor) || 0} onChange={v => setFormLanc(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                       </div>
 
                       {formLanc.modo === 'fixa' ? (
@@ -1829,7 +1830,7 @@ export function Financeiro() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
                 {carregandoCartoes ? (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
-                    <div className="layout-spinner" style={{ width: 28, height: 28 }} />
+                    <div className="layout-spinner" />
                   </div>
                 ) : cartoes.length === 0 ? (
                   <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhum cartão cadastrado.</p>
@@ -1879,7 +1880,7 @@ export function Financeiro() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div className="form-group">
                       <label className="form-label">Limite (R$)</label>
-                      <input type="number" step={0.01} value={formCartao.limite} onChange={e => setFormCartao(f => ({ ...f, limite: e.target.value }))} />
+                      <InputMoeda value={parseFloat(formCartao.limite) || 0} onChange={v => setFormCartao(f => ({ ...f, limite: String(v) }))} placeholder="0,00" />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Conta de pagamento</label>
@@ -2184,7 +2185,7 @@ export function Financeiro() {
                   onChange={v => setFormCompra(f => ({ ...f, descricao: v }))} placeholder="Ex: Netflix" />
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))}
+                  <InputMoeda value={parseFloat(formCompra.valor) || 0} onChange={v => setFormCompra(f => ({ ...f, valor: String(v) }))}
                     placeholder={formCompra.modo === 'parcelada' ? 'Valor da parcela' : 'Valor'} />
 
                   {formCompra.modo === 'parcelada' ? (
@@ -2243,8 +2244,7 @@ export function Financeiro() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Valor adiantado (R$)</label>
-                  <input type="number" min={0.01} max={(faturaDados.restante ?? faturaDados.total) - 0.01} step={0.01}
-                    value={formAntecipado.valor} onChange={e => setFormAntecipado(f => ({ ...f, valor: e.target.value }))} />
+                  <InputMoeda value={parseFloat(formAntecipado.valor) || 0} onChange={v => setFormAntecipado(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Data do pagamento</label>
@@ -2339,9 +2339,7 @@ export function Financeiro() {
                 <>
                   <div className="form-group">
                     <label className="form-label">Quanto vai pagar agora (R$)</label>
-                    <input type="number" min={0.01} max={(faturaDados.restante ?? faturaDados.total) - 0.01} step={0.01}
-                      value={formPagFatura.valorPago}
-                      onChange={e => setFormPagFatura(f => ({ ...f, valorPago: e.target.value }))} />
+                    <InputMoeda value={parseFloat(formPagFatura.valorPago) || 0} onChange={v => setFormPagFatura(f => ({ ...f, valorPago: String(v) }))} placeholder="0,00" />
                   </div>
                   <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
                     O restante (com os juros do cartão) entra automaticamente na próxima fatura.
@@ -2379,7 +2377,15 @@ export function Financeiro() {
               <button className="btn-secondary" onClick={() => setModalPagarFatura(false)}>Cancelar</button>
               <button className="btn-primary" onClick={() => {
                 if (formPagFatura.modo === 'total') pagarFaturaModal('total', { contaBancariaId: formPagFatura.contaBancariaId || null });
-                else if (formPagFatura.modo === 'parcial') pagarFaturaModal('parcial', { valorPago: parseFloat(formPagFatura.valorPago) || 0, contaBancariaId: formPagFatura.contaBancariaId || null });
+                else if (formPagFatura.modo === 'parcial') {
+                  const valorParcial = parseFloat(formPagFatura.valorPago) || 0;
+                  const limiteParcial = (faturaDados?.restante ?? faturaDados?.total ?? 0) - 0.01;
+                  if (valorParcial <= 0 || valorParcial > limiteParcial) {
+                    erro(`Informe um valor entre R$ 0,01 e ${fmt(limiteParcial)}.`);
+                    return;
+                  }
+                  pagarFaturaModal('parcial', { valorPago: valorParcial, contaBancariaId: formPagFatura.contaBancariaId || null });
+                }
                 else pagarFaturaModal('parcelado', {
                   totalParcelas: parseInt(formPagFatura.totalParcelas) || 3,
                   valorEntrada: parseFloat(formPagFatura.valorEntrada) || 0,
@@ -2422,7 +2428,7 @@ export function Financeiro() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group">
                     <label className="form-label">Valor (R$)</label>
-                    <input type="number" min={0} step={0.01} value={formEditItemCartao.valor} onChange={e => setFormEditItemCartao(f => ({ ...f, valor: e.target.value }))} />
+                    <InputMoeda value={parseFloat(formEditItemCartao.valor) || 0} onChange={v => setFormEditItemCartao(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Data</label>
@@ -2533,7 +2539,7 @@ export function Financeiro() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group">
                     <label className="form-label">Valor (R$) *</label>
-                    <input type="number" min={0} step={0.01} value={formEdit.valor} onChange={e => setFormEdit(f => ({ ...f, valor: e.target.value }))} />
+                    <InputMoeda value={parseFloat(formEdit.valor) || 0} onChange={v => setFormEdit(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Vencimento</label>
