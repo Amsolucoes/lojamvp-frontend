@@ -159,6 +159,12 @@ function DashboardLoja() {
           <div className="stat-label">Vendas hoje</div>
           <div className="stat-value">{fmt(totalHoje)}</div>
           <div className="stat-sub">{vendasHoje.length} transação(ões)</div>
+          {ajusteCaixaHoje !== 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: 12 }}>
+              <span style={{ color: 'var(--text-3)' }}>Total do dia</span>
+              <strong>{fmt(totalHoje + ajusteCaixaHoje)}</strong>
+            </div>
+          )}
         </div>
         <div className="stat-card">
           <div className="stat-label">Produtos ativos</div>

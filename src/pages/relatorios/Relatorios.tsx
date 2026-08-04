@@ -227,6 +227,12 @@ export function Relatorios() {
           <div className="stat-label"><ShoppingCart size={12} style={{ verticalAlign: -1 }} /> Total vendido</div>
           <div className="stat-value">{fmt(totalVendido)}</div>
           <div className="stat-sub">{vendasFiltradas.length} venda(s)</div>
+          {ajusteLiquido !== 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: 12 }}>
+              <span style={{ color: 'var(--text-3)' }}>Total do período</span>
+              <strong>{fmt(totalVendido + ajusteLiquido)}</strong>
+            </div>
+          )}
         </div>
         <div className="stat-card">
           <div className="stat-label"><TrendingUp size={12} style={{ verticalAlign: -1 }} /> Ticket médio</div>
