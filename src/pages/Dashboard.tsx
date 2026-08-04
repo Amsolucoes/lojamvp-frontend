@@ -60,12 +60,30 @@ export function Dashboard() {
   );
 }
 
+interface MovimentoCaixa {
+  id: string;
+  tipo: 'entrada' | 'saida';
+  valor: number;
+  data: string;
+  origemNome: string | null;
+  observacao: string | null;
+}
+
 function DashboardLoja() {
   const { produtos, clientes, vendas, temServicos } = useApp();
+  const [movimentos, setMovimentos] = useState<MovimentoCaixa[]>([]);
+
+  useEffect(() => {
+    api.get<MovimentoCaixa[]>('/api/movimentos-caixa').then(setMovimentos).catch(() => {});
+  }, []);
 
   const hoje = new Date().toDateString();
   const vendasHoje = vendas.filter(v => new Date(v.criadaEm).toDateString() === hoje);
   const totalHoje = vendasHoje.reduce((s, v) => s + v.totalFinal, 0);
+  const movimentosHoje = movimentos.filter(m => new Date(m.data).toDateString() === hoje);
+  const entradasManuaisHoje = movimentosHoje.filter(m => m.tipo === 'entrada').reduce((s, m) => s + m.valor, 0);
+  const sangriasHoje = movimentosHoje.filter(m => m.tipo === 'saida').reduce((s, m) => s + m.valor, 0);
+  const ajusteCaixaHoje = entradasManuaisHoje - sangriasHoje;
   const alertasEstoque = produtos.filter(p => p.ativo && p.estoque <= p.estoqueMinimo);
   const produtosAtivos = produtos.filter(p => p.ativo).length;
 
@@ -164,6 +182,19 @@ function DashboardLoja() {
             <div className="stat-label">Assinantes</div>
             <div className="stat-value">{assinantes.length}</div>
             <div className="stat-sub">{fmt(receitaRecorrente)}/mês recorrente</div>
+          </div>
+        )}
+        {(entradasManuaisHoje > 0 || sangriasHoje > 0) && (
+          <div className="stat-card" style={ajusteCaixaHoje < 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
+            <div className="stat-label">↕️ Ajustes de caixa hoje</div>
+            <div className="stat-value" style={{ fontSize: 20, color: ajusteCaixaHoje >= 0 ? 'var(--green)' : 'var(--red)' }}>
+              {ajusteCaixaHoje >= 0 ? '+' : ''}{fmt(ajusteCaixaHoje)}
+            </div>
+            <div className="stat-sub">
+              {entradasManuaisHoje > 0 && `+${fmt(entradasManuaisHoje)} entrada`}
+              {entradasManuaisHoje > 0 && sangriasHoje > 0 && ' · '}
+              {sangriasHoje > 0 && `-${fmt(sangriasHoje)} sangria`}
+            </div>
           </div>
         )}
       </div>

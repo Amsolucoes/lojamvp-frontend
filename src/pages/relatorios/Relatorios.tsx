@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { BarChart2, TrendingUp, Package, ShoppingCart, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BarChart2, TrendingUp, Package, ShoppingCart, Calendar, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../services/api';
 import './Relatorios.css';
 
 function fmt(n: number) {
@@ -33,8 +34,22 @@ const labelPag: Record<string, string> = {
   dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito',
 };
 
+interface MovimentoCaixa {
+  id: string;
+  tipo: 'entrada' | 'saida';
+  valor: number;
+  data: string;
+  origemNome: string | null;
+  observacao: string | null;
+}
+
 export function Relatorios() {
   const { vendas, produtos, trocas } = useApp();
+  const [movimentos, setMovimentos] = useState<MovimentoCaixa[]>([]);
+
+  useEffect(() => {
+    api.get<MovimentoCaixa[]>('/api/movimentos-caixa').then(setMovimentos).catch(() => {});
+  }, []);
 
   function fmtQtdProd(produtoId: string, qtd: number): string {
     const prod = produtos.find(p => p.id === produtoId);
@@ -151,6 +166,21 @@ export function Relatorios() {
     return dataTroca >= diasAtras(dias);
   });
 
+  const movimentosFiltrados = movimentos.filter(m => {
+    const dataMov = new Date(m.data);
+    if (periodo === 'custom') {
+      if (dataInicio && dataMov < new Date(dataInicio + 'T00:00:00')) return false;
+      if (dataFim && dataMov > new Date(dataFim + 'T23:59:59')) return false;
+      return true;
+    }
+    if (periodo === 'tudo') return true;
+    const dias = periodo === '7d' ? 7 : periodo === '30d' ? 30 : 90;
+    return dataMov >= diasAtras(dias);
+  });
+  const totalEntradasMov = movimentosFiltrados.filter(m => m.tipo === 'entrada').reduce((s, m) => s + m.valor, 0);
+  const totalSangriasMov = movimentosFiltrados.filter(m => m.tipo === 'saida').reduce((s, m) => s + m.valor, 0);
+  const ajusteLiquido = totalEntradasMov - totalSangriasMov;
+
   return (
     <div className="page">
       <div className="page-header">
@@ -216,6 +246,19 @@ export function Relatorios() {
           <div className="stat-value" style={{ fontSize: 20, color: 'var(--red)' }}>{fmt(totalDesconto)}</div>
           <div className="stat-sub">concedidos no período</div>
         </div>
+        {movimentosFiltrados.length > 0 && (
+          <div className="stat-card" style={ajusteLiquido < 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
+            <div className="stat-label">↕️ Ajustes de caixa</div>
+            <div className="stat-value" style={{ fontSize: 20, color: ajusteLiquido >= 0 ? 'var(--green)' : 'var(--red)' }}>
+              {ajusteLiquido >= 0 ? '+' : ''}{fmt(ajusteLiquido)}
+            </div>
+            <div className="stat-sub">
+              {totalEntradasMov > 0 && `+${fmt(totalEntradasMov)} entrada`}
+              {totalEntradasMov > 0 && totalSangriasMov > 0 && ' · '}
+              {totalSangriasMov > 0 && `-${fmt(totalSangriasMov)} sangria`}
+            </div>
+          </div>
+        )}
       </div>
 
       {vendasFiltradas.length === 0 ? (
@@ -352,6 +395,31 @@ export function Relatorios() {
                   ))}
               </div>
             </div>
+
+            {/* Entradas e sangrias */}
+            {movimentosFiltrados.length > 0 && (
+              <div className="card rel-card">
+                <div className="rel-card-title">↕️ Entradas e sangrias</div>
+                {[...movimentosFiltrados].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).slice(0, 10).map(m => (
+                  <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {m.tipo === 'entrada'
+                        ? <ArrowUpCircle size={14} style={{ color: 'var(--green)' }} />
+                        : <ArrowDownCircle size={14} style={{ color: 'var(--red)' }} />}
+                      <div>
+                        <div style={{ fontSize: 13 }}>{m.observacao || (m.tipo === 'entrada' ? 'Entrada' : 'Sangria')}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                          {new Date(m.data).toLocaleDateString('pt-BR')}{m.origemNome ? ` · ${m.origemNome}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: m.tipo === 'entrada' ? 'var(--green)' : 'var(--red)' }}>
+                      {m.tipo === 'entrada' ? '+' : '-'}{fmt(m.valor)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Últimas trocas */}
             {trocasFiltradas.length > 0 && (
