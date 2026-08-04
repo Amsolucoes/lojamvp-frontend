@@ -622,7 +622,7 @@ export function Caixa() {
       : 0;
 
     const vendaCriada = await registrarVenda(venda);
-    await recarregar();
+    await recarregar(true);
     carregarPendentes();
     toastSucesso(
       trocoVenda > 0
