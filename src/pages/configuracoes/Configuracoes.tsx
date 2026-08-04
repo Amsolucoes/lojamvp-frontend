@@ -547,6 +547,12 @@ export function Configuracoes() {
                 return false;
               }
 
+              // Cupom não fiscal só faz sentido pra quem tem Caixa (produtos ou serviços) —
+              // esconde de Financeiro Puro, Corretora, Turmas, Chácara
+              if (mod.chave === 'cupom_nao_fiscal' && !temProdutos && !temServicos && !modulosAtivos.includes(mod.chave)) {
+                return false;
+              }
+
               // Corretora, Serviços e Turmas são um grupo mutuamente exclusivo:
               // mostra os disponíveis até um ser ativado, depois esconde os outros
               if (grupoExclusivo.includes(mod.chave)) {
