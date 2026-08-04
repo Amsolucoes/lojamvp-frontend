@@ -18,6 +18,7 @@ type Reserva = {
   valor: number;
   valorPago: number;
   status: string;
+  expiraEm: string | null;
   contratoEnviadoEm: string | null;
   criadoEm: string;
 };
@@ -127,6 +128,20 @@ export function ListaReservasChacara() {
   }
 
   const [enviandoContrato, setEnviandoContrato] = useState<number | null>(null);
+  const [mantendoNegociacao, setMantendoNegociacao] = useState<number | null>(null);
+
+  async function manterEmNegociacao(r: Reserva) {
+    setMantendoNegociacao(r.id);
+    try {
+      await api.patch(`/api/chacara/reservas/${r.id}/manter-negociacao`, {});
+      sucesso('Reserva mantida em negociação — não expira mais sozinha.');
+      carregar();
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setMantendoNegociacao(null);
+    }
+  }
 
   async function enviarContrato(r: Reserva) {
     if (!r.clienteEmail) {
@@ -362,6 +377,18 @@ export function ListaReservasChacara() {
                     <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setModalExcluir(r)}>
                       <Trash2 size={14} />
                     </button>
+                    {r.status === 'pendente_pagamento' && (
+                      r.expiraEm ? (
+                        <button className="btn-secondary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
+                          onClick={() => manterEmNegociacao(r)} disabled={mantendoNegociacao === r.id}>
+                          <Calendar size={13} /> {mantendoNegociacao === r.id ? 'Salvando...' : 'Manter em negociação'}
+                        </button>
+                      ) : (
+                        <span className="badge badge-accent" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px' }}>
+                          🤝 Em negociação
+                        </span>
+                      )
+                    )}
                     {r.status === 'pendente_pagamento' && (
                       <button className="btn-primary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
                         onClick={() => abrirConfirmacao(r)} disabled={confirmando === r.id}>
