@@ -175,6 +175,7 @@ export function FluxoCaixa() {
       descontos: vendasDia.reduce((s, v) => s + v.desconto, 0),
       lucro:     vendasDia.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0),
       ajusteCaixa: entradasManuaisDia - sangriasDia,
+      total: vendasDia.reduce((s, v) => s + v.totalFinal, 0) + (entradasManuaisDia - sangriasDia),
       qtdVendas: vendasDia.length,
       isHoje:   diaStr === hoje.toDateString(),
       isFuturo: dia > hoje,
@@ -217,6 +218,7 @@ export function FluxoCaixa() {
       descontos: vendasMes.reduce((s, v) => s + v.desconto, 0),
       lucro:     vendasMes.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0),
       ajusteCaixa: entradasManuaisMes - sangriasMes,
+      total: vendasMes.reduce((s, v) => s + v.totalFinal, 0) + (entradasManuaisMes - sangriasMes),
       qtdVendas: vendasMes.length,
     };
   });
@@ -404,29 +406,37 @@ export function FluxoCaixa() {
 
           {/* Total resumo no rodapé */}
           {vendasHoje.length > 0 && (
-            <div className="card" style={{ marginTop: 16, padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
-                {vendasHoje.length} venda(s) · {(() => {
-                  const itens = vendasHoje.flatMap(v => v.itens);
-                  let un = 0;
-                  const frac: Record<string, number> = {};
-                  itens.forEach(i => {
-                    const prod = produtos.find(p => p.id === i.produtoId);
-                    if (prod?.tipoVenda === 'fracionado') {
-                      const u = prod.unidadeMedida ?? '';
-                      frac[u] = (frac[u] ?? 0) + i.quantidade;
-                    } else {
-                      un += i.quantidade;
-                    }
-                  });
-                  const partes = [
-                    un > 0 ? `${un} itens` : '',
-                    ...Object.entries(frac).map(([u, v]) => `${v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${u}`),
-                  ].filter(Boolean);
-                  return partes.length > 0 ? partes.join(' · ') + ' vendidos' : '0 itens vendidos';
-                })()}
-              </span>
-              <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--green)' }}>{fmt(totalHoje)}</span>
+            <div className="card" style={{ marginTop: 16, padding: '14px 20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
+                  {vendasHoje.length} venda(s) · {(() => {
+                    const itens = vendasHoje.flatMap(v => v.itens);
+                    let un = 0;
+                    const frac: Record<string, number> = {};
+                    itens.forEach(i => {
+                      const prod = produtos.find(p => p.id === i.produtoId);
+                      if (prod?.tipoVenda === 'fracionado') {
+                        const u = prod.unidadeMedida ?? '';
+                        frac[u] = (frac[u] ?? 0) + i.quantidade;
+                      } else {
+                        un += i.quantidade;
+                      }
+                    });
+                    const partes = [
+                      un > 0 ? `${un} itens` : '',
+                      ...Object.entries(frac).map(([u, v]) => `${v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${u}`),
+                    ].filter(Boolean);
+                    return partes.length > 0 ? partes.join(' · ') + ' vendidos' : '0 itens vendidos';
+                  })()}
+                </span>
+                <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--green)' }}>{fmt(totalHoje)}</span>
+              </div>
+              {ajusteCaixaHoje !== 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>Total do dia</span>
+                  <span style={{ fontWeight: 700, fontSize: 18 }}>{fmt(totalHoje + ajusteCaixaHoje)}</span>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -500,7 +510,7 @@ export function FluxoCaixa() {
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Dia</th><th>Qtd. vendas</th><th>Descontos</th><th>Lucro</th><th>Ajuste caixa</th><th>Entradas</th><th>Barra</th><th></th></tr>
+                  <tr><th>Dia</th><th>Qtd. vendas</th><th>Descontos</th><th>Lucro</th><th>Ajuste caixa</th><th>Entradas</th><th>Total</th><th>Barra</th><th></th></tr>
                 </thead>
                 <tbody>
                   {diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0).map(d => (
@@ -519,6 +529,7 @@ export function FluxoCaixa() {
                         {d.ajusteCaixa === 0 ? '—' : `${d.ajusteCaixa > 0 ? '+' : ''}${fmt(d.ajusteCaixa)}`}
                       </td>
                       <td style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(d.entradas)}</td>
+                      <td style={{ fontWeight: 700 }}>{fmt(d.total)}</td>
                       <td style={{ width: 120 }}>
                         <div style={{ height: 6, background: 'var(--bg-3)', borderRadius: 3, overflow: 'hidden' }}>
                           <div style={{ height: '100%', borderRadius: 3, background: 'var(--green)', width: `${(d.entradas / maxDia) * 100}%`, opacity: 0.8 }} />
@@ -569,6 +580,10 @@ export function FluxoCaixa() {
                     </span>
                   </div>
                 )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--border)', fontSize: 13 }}>
+                  <span style={{ fontWeight: 600 }}>Total</span>
+                  <span style={{ fontWeight: 700 }}>{fmt(d.total)}</span>
+                </div>
                 <div style={{ marginTop: 8, height: 4, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
                   <div style={{ height: '100%', borderRadius: 2, background: 'var(--green)', width: `${(d.entradas / maxDia) * 100}%` }} />
                 </div>
@@ -656,7 +671,7 @@ export function FluxoCaixa() {
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Mês</th><th>Vendas</th><th>Descontos</th><th>Lucro</th><th>Ajuste caixa</th><th>Entradas</th><th>Barra</th></tr>
+                  <tr><th>Mês</th><th>Vendas</th><th>Descontos</th><th>Lucro</th><th>Ajuste caixa</th><th>Entradas</th><th>Total</th><th>Barra</th></tr>
                 </thead>
                 <tbody>
                   {mesesFluxo.map(m => {
@@ -680,6 +695,7 @@ export function FluxoCaixa() {
                         <td style={{ fontWeight: 600, color: m.entradas > 0 ? 'var(--green)' : 'var(--text-3)' }}>
                           {m.entradas > 0 ? fmt(m.entradas) : '—'}
                         </td>
+                        <td style={{ fontWeight: 700 }}>{m.total !== 0 ? fmt(m.total) : '—'}</td>
                         <td style={{ width: 120 }}>
                           <div style={{ height: 6, background: 'var(--bg-3)', borderRadius: 3, overflow: 'hidden' }}>
                             <div style={{ height: '100%', borderRadius: 3, background: 'var(--green)', width: `${(m.entradas / maxMes) * 100}%`, opacity: 0.8 }} />
@@ -725,6 +741,12 @@ export function FluxoCaixa() {
                       <span style={{ color: m.ajusteCaixa > 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
                         {m.ajusteCaixa > 0 ? '+' : ''}{fmt(m.ajusteCaixa)}
                       </span>
+                    </div>
+                  )}
+                  {m.total !== 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--border)', fontSize: 13 }}>
+                      <span style={{ fontWeight: 600 }}>Total</span>
+                      <span style={{ fontWeight: 700 }}>{fmt(m.total)}</span>
                     </div>
                   )}
                   {m.entradas > 0 && (
