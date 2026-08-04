@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, Calendar, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, Calendar, X, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import './FluxoCaixa.css';
 
 function fmt(n: number) {
@@ -51,25 +52,96 @@ interface MovimentoCaixa {
   tipo: 'entrada' | 'saida';
   valor: number;
   data: string;
+  origemVendaId?: string | null;
   origemNome: string | null;
   observacao: string | null;
+  contaBancariaId?: string | null;
+}
+
+interface OrigemVenda {
+  id: string;
+  nome: string;
+}
+
+interface ContaBancaria {
+  id: string;
+  nome: string;
 }
 
 export function FluxoCaixa() {
-  const { vendas, produtos } = useApp();
+  const { vendas, produtos, temFinanceiro } = useApp();
+  const { sucesso: toastSucesso, erro: toastErro } = useToast();
   const [movimentos, setMovimentos] = useState<MovimentoCaixa[]>([]);
+  const [origens, setOrigens] = useState<OrigemVenda[]>([]);
+  const [contas, setContas] = useState<ContaBancaria[]>([]);
+  const [editandoMovimento, setEditandoMovimento] = useState<MovimentoCaixa | null>(null);
+  const [formEditMov, setFormEditMov] = useState({ tipo: 'entrada' as 'entrada' | 'saida', valor: 0, data: '', origemVendaId: '', observacao: '', contaBancariaId: '' });
+  const [salvandoEditMov, setSalvandoEditMov] = useState(false);
+  const [confirmDelMovimento, setConfirmDelMovimento] = useState<MovimentoCaixa | null>(null);
 
-  useEffect(() => {
+  function carregarMovimentos() {
     api.get<MovimentoCaixa[]>('/api/movimentos-caixa').then(setMovimentos).catch(() => {});
-  }, []);
+  }
+
+  useEffect(() => { carregarMovimentos(); }, []);
+  useEffect(() => { api.get<OrigemVenda[]>('/api/origens-venda').then(setOrigens).catch(() => {}); }, []);
+  useEffect(() => {
+    if (!temFinanceiro) return;
+    api.get<ContaBancaria[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+  }, [temFinanceiro]);
 
   useEffect(() => {
-    function aoReceberPullToRefresh() {
-      api.get<MovimentoCaixa[]>('/api/movimentos-caixa').then(setMovimentos).catch(() => {});
-    }
+    function aoReceberPullToRefresh() { carregarMovimentos(); }
     window.addEventListener('pullToRefresh', aoReceberPullToRefresh);
     return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
   }, []);
+
+  function abrirEditarMovimento(m: MovimentoCaixa) {
+    setEditandoMovimento(m);
+    setFormEditMov({
+      tipo: m.tipo,
+      valor: m.valor,
+      data: m.data.slice(0, 10),
+      origemVendaId: m.origemVendaId ?? '',
+      observacao: m.observacao ?? '',
+      contaBancariaId: m.contaBancariaId ?? '',
+    });
+  }
+
+  async function salvarEdicaoMovimento() {
+    if (!editandoMovimento) return;
+    if (formEditMov.valor <= 0) { toastErro('Informe um valor maior que zero.'); return; }
+    setSalvandoEditMov(true);
+    try {
+      await api.put(`/api/movimentos-caixa/${editandoMovimento.id}`, {
+        tipo: formEditMov.tipo,
+        valor: formEditMov.valor,
+        data: formEditMov.data,
+        origemVendaId: formEditMov.origemVendaId || null,
+        observacao: formEditMov.observacao.trim() || null,
+        contaBancariaId: formEditMov.contaBancariaId || null,
+      });
+      toastSucesso('Movimento atualizado!');
+      setEditandoMovimento(null);
+      carregarMovimentos();
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setSalvandoEditMov(false);
+    }
+  }
+
+  async function excluirMovimento() {
+    if (!confirmDelMovimento) return;
+    try {
+      await api.delete(`/api/movimentos-caixa/${confirmDelMovimento.id}`);
+      toastSucesso('Movimento excluído.');
+      setConfirmDelMovimento(null);
+      carregarMovimentos();
+    } catch (e) {
+      toastErro((e as Error).message);
+    }
+  }
 
   function fmtQtdItem(produtoId: string, qtd: number): string {
     const prod = produtos.find(p => p.id === produtoId);
@@ -164,6 +236,9 @@ export function FluxoCaixa() {
 
   const vendasDiaDetalhado = diaDetalhado
     ? vendas.filter(v => new Date(v.criadaEm).toDateString() === diaDetalhado.toDateString())
+    : [];
+  const movimentosDiaDetalhado = diaDetalhado
+    ? movimentos.filter(m => new Date(m.data).toDateString() === diaDetalhado.toDateString())
     : [];
 
   return (
@@ -724,9 +799,110 @@ export function FluxoCaixa() {
                   </div>
                 ))}
               </div>
+
+              {movimentosDiaDetalhado.length > 0 && (
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 10 }}>↕️ Entradas e sangrias</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {movimentosDiaDetalhado.map(m => (
+                      <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}>
+                        <div>
+                          <span style={{ fontWeight: 600, fontSize: 13, color: m.tipo === 'entrada' ? 'var(--green)' : 'var(--red)' }}>
+                            {m.tipo === 'entrada' ? '+' : '-'}{fmt(m.valor)}
+                          </span>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 8 }}>
+                            {m.observacao || (m.tipo === 'entrada' ? 'Entrada' : 'Sangria')}{m.origemNome ? ` · ${m.origemNome}` : ''}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarMovimento(m)}>Editar</button>
+                          <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmDelMovimento(m)}><Trash2 size={13} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setDiaDetalhado(null)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar movimento */}
+      {editandoMovimento && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditandoMovimento(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar movimento</h2>
+              <button className="btn-ghost" onClick={() => setEditandoMovimento(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="cx-tipo-toggle">
+                  <button type="button" className={formEditMov.tipo === 'entrada' ? 'active' : ''} onClick={() => setFormEditMov(f => ({ ...f, tipo: 'entrada' }))}>Entrada</button>
+                  <button type="button" className={formEditMov.tipo === 'saida' ? 'active' : ''} onClick={() => setFormEditMov(f => ({ ...f, tipo: 'saida' }))}>Sangria</button>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Valor (R$) *</label>
+                  <input type="number" min={0} step={0.01} value={formEditMov.valor || ''}
+                    onChange={e => setFormEditMov(f => ({ ...f, valor: +e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Data</label>
+                  <input type="date" value={formEditMov.data} max={new Date().toISOString().slice(0, 10)}
+                    onChange={e => setFormEditMov(f => ({ ...f, data: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Origem <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <select value={formEditMov.origemVendaId} onChange={e => setFormEditMov(f => ({ ...f, origemVendaId: e.target.value }))}>
+                    <option value="">Não informar</option>
+                    {origens.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
+                  </select>
+                </div>
+                {temFinanceiro && contas.length > 0 && (
+                  <div className="form-group">
+                    <label className="form-label">Conta bancária <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                    <select value={formEditMov.contaBancariaId} onChange={e => setFormEditMov(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                      <option value="">Não lançar no Financeiro</option>
+                      {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div className="form-group">
+                  <label className="form-label">Observação <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <input value={formEditMov.observacao} onChange={e => setFormEditMov(f => ({ ...f, observacao: e.target.value }))} />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setEditandoMovimento(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarEdicaoMovimento} disabled={salvandoEditMov}>
+                {salvandoEditMov ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar exclusão de movimento */}
+      {confirmDelMovimento && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmDelMovimento(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir movimento</h2>
+              <button className="btn-ghost" onClick={() => setConfirmDelMovimento(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir {confirmDelMovimento.tipo === 'entrada' ? 'a entrada' : 'a sangria'} de <strong style={{ color: 'var(--text-1)' }}>{fmt(confirmDelMovimento.valor)}</strong>?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmDelMovimento(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={excluirMovimento}>Excluir</button>
             </div>
           </div>
         </div>

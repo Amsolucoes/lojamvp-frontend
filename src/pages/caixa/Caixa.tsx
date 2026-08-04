@@ -34,6 +34,17 @@ interface ContaBancaria {
   nome: string;
 }
 
+interface MovimentoCaixaItem {
+  id: string;
+  tipo: 'entrada' | 'saida';
+  valor: number;
+  data: string;
+  origemVendaId?: string | null;
+  origemNome: string | null;
+  observacao: string | null;
+  contaBancariaId?: string | null;
+}
+
 interface AgendamentoPendente {
   id: string;
   servicoId: string;
@@ -114,6 +125,9 @@ export function Caixa() {
   });
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [salvandoMovimento, setSalvandoMovimento] = useState(false);
+  const [editandoMovimentoId, setEditandoMovimentoId] = useState<string | null>(null);
+  const [movimentosHoje, setMovimentosHoje] = useState<MovimentoCaixaItem[]>([]);
+  const [confirmDelMovimento, setConfirmDelMovimento] = useState<MovimentoCaixaItem | null>(null);
   const [formOrigem, setFormOrigem]   = useState({ nome: '', ordem: 0, ativa: true });
   const [editandoOrigem, setEditandoOrigem] = useState<OrigemVenda | null>(null);
   const [confirmDelOrigem, setConfirmDelOrigem] = useState<OrigemVenda | null>(null);
@@ -172,7 +186,12 @@ export function Caixa() {
     api.get<OrigemVenda[]>('/api/origens-venda').then(setOrigens).catch(() => {});
   }
 
-  useEffect(() => { carregarOrigens(); }, []);
+  function carregarMovimentosHoje() {
+    const hoje = hojeStrMovimento();
+    api.get<MovimentoCaixaItem[]>(`/api/movimentos-caixa?de=${hoje}&ate=${hoje}`).then(setMovimentosHoje).catch(() => {});
+  }
+
+  useEffect(() => { carregarOrigens(); carregarMovimentosHoje(); }, []);
   useEffect(() => {
     if (!temFinanceiro) return;
     api.get<ContaBancaria[]>('/api/financeiro/contas').then(setContas).catch(() => {});
@@ -561,8 +580,22 @@ export function Caixa() {
   }
 
   function abrirModalMovimento(tipo: 'entrada' | 'saida') {
+    setEditandoMovimentoId(null);
     setTipoMovimento(tipo);
     setFormMovimento({ valor: 0, data: hojeStrMovimento(), origemVendaId: '', observacao: '', contaBancariaId: '' });
+    setModalMovimento(true);
+  }
+
+  function abrirEditarMovimento(m: MovimentoCaixaItem) {
+    setEditandoMovimentoId(m.id);
+    setTipoMovimento(m.tipo);
+    setFormMovimento({
+      valor: m.valor,
+      data: m.data.slice(0, 10),
+      origemVendaId: m.origemVendaId ?? '',
+      observacao: m.observacao ?? '',
+      contaBancariaId: m.contaBancariaId ?? '',
+    });
     setModalMovimento(true);
   }
 
@@ -570,20 +603,39 @@ export function Caixa() {
     if (formMovimento.valor <= 0) { toastErro('Informe um valor maior que zero.'); return; }
     setSalvandoMovimento(true);
     try {
-      await api.post('/api/movimentos-caixa', {
+      const payload = {
         tipo: tipoMovimento,
         valor: formMovimento.valor,
         data: formMovimento.data,
         origemVendaId: formMovimento.origemVendaId || null,
         observacao: formMovimento.observacao.trim() || null,
         contaBancariaId: formMovimento.contaBancariaId || null,
-      });
-      toastSucesso(tipoMovimento === 'entrada' ? 'Entrada registrada!' : 'Sangria registrada!');
+      };
+      if (editandoMovimentoId) {
+        await api.put(`/api/movimentos-caixa/${editandoMovimentoId}`, payload);
+        toastSucesso('Movimento atualizado!');
+      } else {
+        await api.post('/api/movimentos-caixa', payload);
+        toastSucesso(tipoMovimento === 'entrada' ? 'Entrada registrada!' : 'Sangria registrada!');
+      }
       setModalMovimento(false);
+      carregarMovimentosHoje();
     } catch (e) {
       toastErro((e as Error).message);
     } finally {
       setSalvandoMovimento(false);
+    }
+  }
+
+  async function excluirMovimento() {
+    if (!confirmDelMovimento) return;
+    try {
+      await api.delete(`/api/movimentos-caixa/${confirmDelMovimento.id}`);
+      toastSucesso('Movimento excluído.');
+      setConfirmDelMovimento(null);
+      carregarMovimentosHoje();
+    } catch (e) {
+      toastErro((e as Error).message);
     }
   }
 
@@ -692,6 +744,32 @@ export function Caixa() {
             )}
           </div>
         </div>
+
+        {movimentosHoje.length > 0 && (
+          <div className="card" style={{ marginBottom: 8, padding: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
+              ↕️ Movimentos de hoje
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {movimentosHoje.map(m => (
+                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6 }}>
+                  <div>
+                    <span style={{ fontSize: 13, color: m.tipo === 'entrada' ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
+                      {m.tipo === 'entrada' ? '+' : '-'}{fmt(m.valor)}
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 8 }}>
+                      {m.observacao || (m.tipo === 'entrada' ? 'Entrada' : 'Sangria')}{m.origemNome ? ` · ${m.origemNome}` : ''}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarMovimento(m)}>Editar</button>
+                    <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmDelMovimento(m)}><Trash2 size={13} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Busca de produto */}
         {temProdutos && (
@@ -1288,7 +1366,7 @@ export function Caixa() {
           <div className="modal" style={{ maxWidth: 420 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600, color: tipoMovimento === 'entrada' ? 'var(--green)' : 'var(--red)' }}>
-                {tipoMovimento === 'entrada' ? '⬆️ Entrada de caixa' : '⬇️ Sangria de caixa'}
+                {editandoMovimentoId ? 'Editar movimento' : (tipoMovimento === 'entrada' ? '⬆️ Entrada de caixa' : '⬇️ Sangria de caixa')}
               </h2>
               <button className="btn-ghost" onClick={() => setModalMovimento(false)}><X size={16} /></button>
             </div>
@@ -1342,8 +1420,29 @@ export function Caixa() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalMovimento(false)}>Cancelar</button>
               <button className="btn-primary" onClick={salvarMovimento} disabled={salvandoMovimento}>
-                {salvandoMovimento ? 'Salvando...' : tipoMovimento === 'entrada' ? 'Registrar entrada' : 'Registrar sangria'}
+                {salvandoMovimento ? 'Salvando...' : editandoMovimentoId ? 'Salvar alterações' : tipoMovimento === 'entrada' ? 'Registrar entrada' : 'Registrar sangria'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar exclusão de movimento */}
+      {confirmDelMovimento && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmDelMovimento(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir movimento</h2>
+              <button className="btn-ghost" onClick={() => setConfirmDelMovimento(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir {confirmDelMovimento.tipo === 'entrada' ? 'a entrada' : 'a sangria'} de <strong style={{ color: 'var(--text-1)' }}>{fmt(confirmDelMovimento.valor)}</strong>?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmDelMovimento(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={excluirMovimento}>Excluir</button>
             </div>
           </div>
         </div>
