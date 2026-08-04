@@ -5,6 +5,7 @@ import { ItemVenda, FormaPagamento, Venda } from '../../types';
 import { api } from '@/services/api';
 import { useToast } from '../../context/ToastContext';
 import { CupomNaoFiscal } from '../../components/CupomNaoFiscal';
+import { InputMoeda } from '../../components/InputMoeda';
 import './Caixa.css';
 
 interface VariacaoItem {
@@ -1379,8 +1380,7 @@ export function Caixa() {
 
                 <div className="form-group">
                   <label className="form-label">Valor (R$) *</label>
-                  <input type="number" min={0} step={0.01} value={formMovimento.valor || ''}
-                    onChange={e => setFormMovimento(f => ({ ...f, valor: +e.target.value }))} autoFocus />
+                  <InputMoeda value={formMovimento.valor} onChange={v => setFormMovimento(f => ({ ...f, valor: v }))} placeholder="0,00" autoFocus />
                 </div>
 
                 <div className="form-group">

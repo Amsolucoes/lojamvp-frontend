@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, Calend
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { InputMoeda } from '../../components/InputMoeda';
 import './FluxoCaixa.css';
 
 function fmt(n: number) {
@@ -847,8 +848,7 @@ export function FluxoCaixa() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Valor (R$) *</label>
-                  <input type="number" min={0} step={0.01} value={formEditMov.valor || ''}
-                    onChange={e => setFormEditMov(f => ({ ...f, valor: +e.target.value }))} />
+                  <InputMoeda value={formEditMov.valor} onChange={v => setFormEditMov(f => ({ ...f, valor: v }))} placeholder="0,00" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Data</label>
