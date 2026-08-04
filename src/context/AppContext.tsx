@@ -36,7 +36,7 @@ interface AppCtx {
   updateCliente: (id: string, c: Partial<Cliente>)       => Promise<void>;
   deleteCliente: (id: string)                            => Promise<void>;
 
-  registrarVenda: (v: Omit<Venda, 'id' | 'criadaEm'>) => Promise<void>;
+  registrarVenda: (v: Omit<Venda, 'id' | 'criadaEm'>) => Promise<Venda>;
 
   ajustarEstoque: (
     produtoId: string,
@@ -224,7 +224,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     const nova = await api.post<any>('/api/vendas', payload);
-    setVendas(prev => [mapVenda(nova), ...prev]);
+    const vendaMapeada = mapVenda(nova);
+    setVendas(prev => [vendaMapeada, ...prev]);
 
     // Atualiza estoque local (só itens de produto baixam estoque)
     nova.itens.forEach((item: any) => {
@@ -248,6 +249,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         criadoEm: nova.criadaEm,
       }));
     setMovimentos(prev => [...novosMovs, ...prev]);
+
+    return vendaMapeada;
   }
 
   async function ajustarEstoque(

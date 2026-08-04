@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, User, Scissors } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, User, Scissors, Printer } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { ItemVenda, FormaPagamento } from '../../types';
+import { ItemVenda, FormaPagamento, Venda } from '../../types';
 import { api } from '@/services/api';
 import { useToast } from '../../context/ToastContext';
+import { CupomNaoFiscal } from '../../components/CupomNaoFiscal';
 import './Caixa.css';
 
 interface VariacaoItem {
@@ -80,7 +81,9 @@ function hojeStrMovimento() {
 }
 
 export function Caixa() {
-  const { produtos, clientes, registrarVenda, vendas, recarregar, temProdutos, temServicos, soServicos , temFinanceiro} = useApp();
+  const { produtos, clientes, registrarVenda, vendas, recarregar, temProdutos, temServicos, soServicos, temFinanceiro, temCupomNaoFiscal, nomeLoja } = useApp();
+  const [cupomVenda, setCupomVenda] = useState<Venda | null>(null);
+  const [modalCupom, setModalCupom] = useState(false);
 
   const { sucesso: toastSucesso, erro: toastErro } = useToast();
 
@@ -618,7 +621,7 @@ export function Caixa() {
       ? Math.max(0, parseFloat(valorPago.replace(',', '.')) - total)
       : 0;
 
-    await registrarVenda(venda);
+    const vendaCriada = await registrarVenda(venda);
     await recarregar();
     carregarPendentes();
     toastSucesso(
@@ -626,7 +629,15 @@ export function Caixa() {
         ? `Venda registrada! Troco: ${fmt(trocoVenda)}`
         : `Venda registrada! ${fmt(total)}`
     );
+    if (temCupomNaoFiscal) {
+      setCupomVenda(vendaCriada);
+      setModalCupom(true);
+    }
     limpar();
+  }
+
+  function imprimirCupom() {
+    window.print();
   }
 
   function limpar() {
@@ -1533,6 +1544,32 @@ export function Caixa() {
           </div>
         </div>
       )}
+
+      {/* Modal cupom não fiscal */}
+      {modalCupom && cupomVenda && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCupom(false)}>
+          <div className="modal" style={{ maxWidth: 360 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Venda concluída!</h2>
+              <button className="btn-ghost" onClick={() => setModalCupom(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--accent)', marginBottom: 8 }}>
+                {fmt(cupomVenda.totalFinal)}
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Deseja imprimir o cupom não fiscal?</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalCupom(false)}>Fechar</button>
+              <button className="btn-primary" onClick={imprimirCupom} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Printer size={15} /> Imprimir cupom
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <CupomNaoFiscal venda={cupomVenda} nomeLoja={nomeLoja} />
 
       {/* Modal variação na troca */}
       {modalVarTroca && (
