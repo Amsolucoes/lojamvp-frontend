@@ -19,15 +19,20 @@ type MesResumo = {
   diasOcupados: number; diasNoMes: number;
   percentualOcupado: number; percentualLivre: number;
   receita: number; pago: number; pendente: number;
+  qtdNegociacao: number; diasOcupadosNegociacao: number;
+  percentualNegociacao: number; valorNegociacao: number;
 };
 
 type DadosDashboard = {
   totalReservas: number;
   totalPago: number;
   totalPendente: number;
+  totalNegociacao: number;
+  totalPendenteNegociacao: number;
   meses: MesResumo[];
   proximasReservas: Reserva[];
   pendentes: Pendente[];
+  reservasEmNegociacao: Reserva[];
 };
 
 export function DashboardChacara() {
@@ -50,8 +55,11 @@ export function DashboardChacara() {
       <div className="dash-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 20 }}>
         <div className="stat-card">
           <div className="stat-label"><Calendar size={12} style={{ verticalAlign: -1 }} /> Total de aluguéis</div>
-          <div className="stat-value">{dados?.totalReservas ?? 0}</div>
-          <div className="stat-sub">confirmados (histórico completo)</div>
+          <div className="stat-value">{(dados?.totalReservas ?? 0) + (dados?.totalNegociacao ?? 0)}</div>
+          <div className="stat-sub">
+            {dados?.totalReservas ?? 0} confirmado(s)
+            {(dados?.totalNegociacao ?? 0) > 0 && <> · <span style={{ color: 'var(--accent)' }}>{dados?.totalNegociacao} em negociação</span></>}
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-label"><DollarSign size={12} style={{ verticalAlign: -1 }} /> Total pago</div>
@@ -63,7 +71,13 @@ export function DashboardChacara() {
           <div className="stat-value" style={{ color: dados && dados.totalPendente > 0 ? 'var(--yellow)' : undefined }}>
             {fmt(dados?.totalPendente ?? 0)}
           </div>
-          <div className="stat-sub">saldo a receber</div>
+          <div className="stat-sub">saldo a receber (confirmados)</div>
+          {(dados?.totalPendenteNegociacao ?? 0) > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+              <span style={{ color: 'var(--accent)' }}>Em negociação</span>
+              <strong style={{ color: 'var(--accent)' }}>{fmt(dados?.totalPendenteNegociacao ?? 0)}</strong>
+            </div>
+          )}
         </div>
       </div>
 
@@ -97,11 +111,13 @@ export function DashboardChacara() {
                       <div style={{ height: 10, background: 'var(--bg-3)', borderRadius: 5, overflow: 'hidden', display: 'flex' }}>
                         {pctPago > 0 && <div style={{ height: '100%', width: `${pctPago}%`, background: 'var(--green)' }} title={`Pago: ${fmt(m.pago)}`} />}
                         {pctPendente > 0 && <div style={{ height: '100%', width: `${pctPendente}%`, background: 'var(--yellow, #d97706)' }} title={`Pendente: ${fmt(m.pendente)}`} />}
+                        {m.percentualNegociacao > 0 && <div style={{ height: '100%', width: `${m.percentualNegociacao}%`, background: 'var(--accent)' }} title={`Em negociação: ${fmt(m.valorNegociacao)}`} />}
                       </div>
 
                       <div style={{ textAlign: 'right', fontSize: 11, lineHeight: 1.5, minWidth: 92 }}>
                         <div style={{ color: 'var(--green)' }}>{fmt(m.pago)}</div>
                         {m.pendente > 0 && <div style={{ color: 'var(--yellow)' }}>{fmt(m.pendente)}</div>}
+                        {m.valorNegociacao > 0 && <div style={{ color: 'var(--accent)' }}>{fmt(m.valorNegociacao)}</div>}
                       </div>
                     </div>
                   );
@@ -138,6 +154,30 @@ export function DashboardChacara() {
               </div>
             )}
           </div>
+
+          {dados && dados.reservasEmNegociacao.length > 0 && (
+            <div className="card">
+              <div className="dash-card-header">
+                <div className="dash-card-title" style={{ color: 'var(--accent)' }}><Calendar size={15} /> Reservas em Negociação</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {dados.reservasEmNegociacao.map(r => (
+                  <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                    <div>
+                      <div style={{ fontWeight: 500, fontSize: 13 }}>{r.clienteNome}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{fmtData(r.dataInicio)} — {fmtData(r.dataFim)} · {r.pessoas} pessoa(s)</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(r.valor)}</div>
+                      {r.saldoPendente > 0 && (
+                        <div style={{ fontSize: 11, color: 'var(--yellow)' }}>Falta {fmt(r.saldoPendente)}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {dados && dados.pendentes.length > 0 && (
             <div className="card">
