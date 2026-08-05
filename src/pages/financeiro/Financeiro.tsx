@@ -435,6 +435,7 @@ export function Financeiro() {
       setModalLancamento(false);
       carregarLancamentos();
       carregarResumo();
+      carregarContas();
       sucesso('Lançamento criado!');
     } catch (e) {
       erro((e as Error).message);
