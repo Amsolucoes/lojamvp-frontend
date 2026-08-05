@@ -121,6 +121,7 @@ export function DashboardChacara() {
                       </div>
 
                       <div style={{ textAlign: 'right', fontSize: 11, lineHeight: 1.5, minWidth: 92 }}>
+                        <div style={{ fontWeight: 700, fontSize: 12 }}>{fmt(m.pago + m.pendente + m.valorNegociacao)}</div>
                         <div style={{ color: 'var(--green)' }}>{fmt(m.pago)}</div>
                         {m.pendente > 0 && <div style={{ color: 'var(--yellow)' }}>{fmt(m.pendente)}</div>}
                         {m.valorNegociacao > 0 && <div style={{ color: 'var(--accent)' }}>{fmt(m.valorNegociacao)}</div>}
