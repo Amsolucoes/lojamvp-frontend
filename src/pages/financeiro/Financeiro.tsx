@@ -1973,14 +1973,16 @@ export function Financeiro() {
               </div>
 
               {referenciasFatura && (
-                <div className="cx-tipo-toggle" style={{ marginBottom: 12 }}>
+                <div className="cx-tipo-toggle" style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
                   <button
                     className={faturaAno === referenciasFatura.fechada.ano && faturaMes === referenciasFatura.fechada.mes ? 'active' : ''}
+                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
                     onClick={() => irParaReferencia('fechada')}>
                     Fechada {referenciasFatura.fechada.status === 'pago' ? '(paga)' : '(a pagar)'}
                   </button>
                   <button
                     className={faturaAno === referenciasFatura.aberta.ano && faturaMes === referenciasFatura.aberta.mes ? 'active' : ''}
+                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
                     onClick={() => irParaReferencia('aberta')}>
                     Aberta (em andamento)
                   </button>
