@@ -98,7 +98,7 @@ export function BalancoMensal() {
 
       {aba === 'categoria' ? (
         carregando ? (
-          <div className="empty"><div className="spinner" /></div>
+          <div className="empty" style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
         ) : !balanco ? (
           <div className="empty"><p>Não foi possível carregar o balanço.</p></div>
         ) : (

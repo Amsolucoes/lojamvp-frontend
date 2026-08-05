@@ -62,11 +62,14 @@ export function DashboardFinanceiro() {
   const [resumo, setResumo] = useState<{ pagar: ResumoTipo; receber: ResumoTipo } | null>(null);
   const [anoRef, setAnoRef] = useState(new Date().getFullYear());
   const [resumoAnual, setResumoAnual] = useState<{ mes: number; pagar: number; receber: number; saldo: number }[]>([]);
+  const [carregandoAnual, setCarregandoAnual] = useState(true);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [cartoesResumo, setCartoesResumo] = useState<CartaoResumo[]>([]);
+  const [carregandoCartoesResumo, setCarregandoCartoesResumo] = useState(true);
+  const [carregandoContasDash, setCarregandoContasDash] = useState(true);
 
   useEffect(() => {
-    api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+    api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {}).finally(() => setCarregandoContasDash(false));
   }, []);
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -103,12 +106,13 @@ export function DashboardFinanceiro() {
   }, [mesResumo, anoResumo]);
 
   useEffect(() => {
-    api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {});
+    setCarregandoAnual(true);
+    api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {}).finally(() => setCarregandoAnual(false));
   }, [anoRef]);
 
   useEffect(() => {
     api.get<Alerta[]>('/api/financeiro/alertas-vencimento?dias=7').then(setAlertas).catch(() => {});
-    api.get<CartaoResumo[]>('/api/financeiro/cartoes-resumo').then(setCartoesResumo).catch(() => {});
+    api.get<CartaoResumo[]>('/api/financeiro/cartoes-resumo').then(setCartoesResumo).catch(() => {}).finally(() => setCarregandoCartoesResumo(false));
   }, []);
 
   useEffect(() => {
@@ -285,6 +289,12 @@ export function DashboardFinanceiro() {
           </div>
         </div>
 
+        {carregandoAnual ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
+            <div className="layout-spinner" />
+          </div>
+        ) : (
+        <>
         {/* Gráfico de barras — receita x despesa por mês */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 140, padding: '16px 4px 8px' }}>
           {(() => {
@@ -341,6 +351,8 @@ export function DashboardFinanceiro() {
             </div>
           ))}
         </div>
+        </>
+        )}
       </div>
 
       {alertas.length > 0 && (
@@ -391,11 +403,16 @@ export function DashboardFinanceiro() {
         </div>
       )}
 
-      {cartoesResumo.length > 0 && (
+      {(carregandoCartoesResumo || cartoesResumo.length > 0) && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="dash-card-header">
             <div className="dash-card-title"><CreditCard size={15} /> Cartões de crédito</div>
           </div>
+          {carregandoCartoesResumo ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
+              <div className="layout-spinner" />
+            </div>
+          ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
             {cartoesResumo.map(c => {
               const pct = c.limite > 0 ? Math.min(100, (c.usado / c.limite) * 100) : 0;
@@ -426,6 +443,7 @@ export function DashboardFinanceiro() {
               );
             })}
           </div>
+          )}
         </div>
       )}
 
@@ -433,7 +451,11 @@ export function DashboardFinanceiro() {
         <div className="dash-card-header">
           <div className="dash-card-title"><Wallet size={15} /> Contas bancárias</div>
         </div>
-        {contas.length === 0 ? (
+        {carregandoContasDash ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
+            <div className="layout-spinner" />
+          </div>
+        ) : contas.length === 0 ? (
           <div className="empty" style={{ padding: '30px 0' }}>
             <p>Nenhuma conta cadastrada ainda.</p>
             <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Acesse Financeiro para criar sua primeira conta.</p>
