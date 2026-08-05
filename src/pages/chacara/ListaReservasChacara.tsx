@@ -459,6 +459,15 @@ export function ListaReservasChacara() {
                       onClick={() => abrirAvaliarCliente(r)}>
                       <Star size={14} />
                     </button>
+                    {r.status === 'confirmada' && (
+                      <button className="btn-ghost" title="Copiar link de avaliação da chácara"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`https://app.aldevsoftware.com.br/chacara-site/SEU_SLUG/avaliar/${r.id}`);
+                          sucesso('Link copiado! Só trocar SEU_SLUG pelo slug da sua chácara.');
+                        }}>
+                        <Send size={14} />
+                      </button>
+                    )}
                     <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setModalExcluir(r)}>
                       <Trash2 size={14} />
                     </button>

@@ -18,6 +18,7 @@ import { Cadastro } from './pages/login/Cadastro';
 import { Suporte } from './pages/login/Suporte';
 import { AgendamentoPublico } from './pages/publico/AgendamentoPublico';
 import { SiteChacara } from './pages/publico/SiteChacara';
+import { AvaliarChacara } from './pages/publico/AvaliarChacara';
 import { Planos } from './pages/planos/Planos';
 import { Financeiro } from './pages/financeiro/Financeiro';
 import { BalancoMensal } from './pages/financeiro/BalancoMensal';
@@ -46,6 +47,7 @@ function Rotas() {
       <Routes>
         <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
         <Route path="/chacara-site/:slug" element={<SiteChacara />} />
+        <Route path="/chacara-site/:slug/avaliar/:reservaId" element={<AvaliarChacara />} />
       </Routes>
     );
   }
@@ -55,6 +57,7 @@ function Rotas() {
       <Routes>
         <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
         <Route path="/chacara-site/:slug" element={<SiteChacara />} />
+        <Route path="/chacara-site/:slug/avaliar/:reservaId" element={<AvaliarChacara />} />
         <Route path="/suporte" element={<Suporte />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/login" element={<Login />} />
@@ -68,6 +71,7 @@ function Rotas() {
       <Routes>
         <Route path="/agendar/:slug" element={<AgendamentoPublico />} />
         <Route path="/chacara-site/:slug" element={<SiteChacara />} />
+        <Route path="/chacara-site/:slug/avaliar/:reservaId" element={<AvaliarChacara />} />
         <Route path="/suporte" element={<Suporte />} />
         <Route element={<Layout />}>
           <Route index             element={<Dashboard />} />
