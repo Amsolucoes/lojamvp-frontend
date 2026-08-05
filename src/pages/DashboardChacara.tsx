@@ -66,18 +66,24 @@ export function DashboardChacara() {
           <div className="stat-value" style={{ color: 'var(--green)' }}>{fmt(dados?.totalPago ?? 0)}</div>
           <div className="stat-sub">já recebido</div>
         </div>
-        <div className="stat-card" style={dados && dados.totalPendente > 0 ? { borderColor: 'rgba(251,191,36,0.3)' } : {}}>
+        <div className="stat-card" style={dados && (dados.totalPendente + dados.totalPendenteNegociacao) > 0 ? { borderColor: 'rgba(251,191,36,0.3)' } : {}}>
           <div className="stat-label"><Clock size={12} style={{ verticalAlign: -1 }} /> Total pendente</div>
-          <div className="stat-value" style={{ color: dados && dados.totalPendente > 0 ? 'var(--yellow)' : undefined }}>
-            {fmt(dados?.totalPendente ?? 0)}
+          <div className="stat-value" style={{ color: dados && (dados.totalPendente + dados.totalPendenteNegociacao) > 0 ? 'var(--yellow)' : undefined }}>
+            {fmt((dados?.totalPendente ?? 0) + (dados?.totalPendenteNegociacao ?? 0))}
           </div>
-          <div className="stat-sub">saldo a receber (confirmados)</div>
-          {(dados?.totalPendenteNegociacao ?? 0) > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <span style={{ color: 'var(--accent)' }}>Em negociação</span>
-              <strong style={{ color: 'var(--accent)' }}>{fmt(dados?.totalPendenteNegociacao ?? 0)}</strong>
+          <div className="stat-sub">saldo a receber (confirmados + negociação)</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 11, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--yellow)' }}>Confirmados</span>
+              <strong style={{ color: 'var(--yellow)' }}>{fmt(dados?.totalPendente ?? 0)}</strong>
             </div>
-          )}
+            {(dados?.totalPendenteNegociacao ?? 0) > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--accent)' }}>Em negociação</span>
+                <strong style={{ color: 'var(--accent)' }}>{fmt(dados?.totalPendenteNegociacao ?? 0)}</strong>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -104,7 +110,7 @@ export function DashboardChacara() {
                         <div style={{ fontWeight: 600, textTransform: 'capitalize' }}>{MESES[m.mes - 1].slice(0, 3)} {m.ano}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
                           <BedDouble size={10} style={{ verticalAlign: -1, marginRight: 2 }} />
-                          {m.diasOcupados}/{m.diasNoMes}d
+                          {m.diasOcupados + m.diasOcupadosNegociacao}/{m.diasNoMes}d
                         </div>
                       </div>
 
