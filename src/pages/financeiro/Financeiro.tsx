@@ -1394,11 +1394,15 @@ export function Financeiro() {
               <button className="btn-ghost" onClick={() => setModalLancamento(false)}><X size={16} /></button>
             </div>
             <div className="modal-body">
-              <div className="cx-tipo-toggle" style={{ marginBottom: 14 }}>
-                <button type="button" className={!formLanc.jaPago ? 'active' : ''} onClick={() => setFormLanc(f => ({ ...f, jaPago: false }))}>
+              <div className="cx-tipo-toggle" style={{ marginBottom: 14, display: 'flex', gap: 8 }}>
+                <button type="button" className={!formLanc.jaPago ? 'active' : ''}
+                  style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+                  onClick={() => setFormLanc(f => ({ ...f, jaPago: false }))}>
                   Pendente
                 </button>
-                <button type="button" className={formLanc.jaPago ? 'active' : ''} onClick={() => setFormLanc(f => ({ ...f, jaPago: true, avisar: false }))}>
+                <button type="button" className={formLanc.jaPago ? 'active' : ''}
+                  style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+                  onClick={() => setFormLanc(f => ({ ...f, jaPago: true, avisar: false }))}>
                   {aba === 'pagar' ? '✓ Já paguei' : '✓ Já recebi'}
                 </button>
               </div>
