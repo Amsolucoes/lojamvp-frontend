@@ -87,8 +87,11 @@ export function ListaReservasChacara() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const ITENS_POR_PAGINA = 5;
 
+  const [slugLoja, setSlugLoja] = useState('');
+
   useEffect(() => {
     carregar();
+    api.get<any>('/api/loja/situacao').then(res => setSlugLoja(res?.slug ?? '')).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -462,8 +465,12 @@ export function ListaReservasChacara() {
                     {r.status === 'confirmada' && (
                       <button className="btn-ghost" title="Copiar link de avaliação da chácara"
                         onClick={() => {
-                          navigator.clipboard.writeText(`https://app.aldevsoftware.com.br/chacara-site/SEU_SLUG/avaliar/${r.id}`);
-                          sucesso('Link copiado! Só trocar SEU_SLUG pelo slug da sua chácara.');
+                          if (!slugLoja) {
+                            toastErro('Configure o link (slug) da chácara em Configurações antes de usar isso.');
+                            return;
+                          }
+                          navigator.clipboard.writeText(`https://app.aldevsoftware.com.br/chacara-site/${slugLoja}/avaliar/${r.id}`);
+                          sucesso('Link de avaliação copiado!');
                         }}>
                         <Send size={14} />
                       </button>
