@@ -147,6 +147,7 @@ export function Financeiro() {
 
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
   const [modalLancarCompra, setModalLancarCompra] = useState(false);
+  const [carregandoFatura, setCarregandoFatura] = useState(false);
   const [faturaDados, setFaturaDados] = useState<{
     vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
     parcelasFinanciamento?: {
@@ -572,11 +573,14 @@ export function Financeiro() {
 
   async function carregarFatura(cartaoId: string, ano: number, mes: number) {
     setFaturaDados(null);
+    setCarregandoFatura(true);
     try {
       const res = await api.get<any>(`/api/financeiro/cartoes/${cartaoId}/fatura?ano=${ano}&mes=${mes}`);
       setFaturaDados(res);
     } catch {
       setFaturaDados({ vencimento: '', total: 0, status: 'pendente', itens: [] });
+    } finally {
+      setCarregandoFatura(false);
     }
   }
 
@@ -2014,6 +2018,11 @@ export function Financeiro() {
                 </div>
               )}
 
+              {carregandoFatura && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
+                  <div className="layout-spinner" />
+                </div>
+              )}
               {faturaDados && (
                 <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
