@@ -193,6 +193,7 @@ export function Financeiro() {
 
   const [formConta, setFormConta] = useState({ nome: '', saldoInicial: '', banco: '', limite: '' });
   const [editandoConta, setEditandoConta] = useState<Conta | null>(null);
+  const [mostrarFormConta, setMostrarFormConta] = useState(false);
 
   const [formCat, setFormCat] = useState({ nome: '', tipo: 'ambos', icone: '' });
   const [editandoCategoria, setEditandoCategoria] = useState<Categoria | null>(null);
@@ -767,6 +768,7 @@ export function Financeiro() {
   function abrirEditarConta(c: Conta) {
     setEditandoConta(c);
     setFormConta({ nome: c.nome, saldoInicial: String(c.saldoInicial), banco: c.banco ?? '', limite: String(c.limite ?? '') });
+    setMostrarFormConta(true);
   }
   async function salvarConta() {
     if (!formConta.nome.trim()) { erro('Digite o nome da conta.'); return; }
@@ -1562,9 +1564,60 @@ export function Financeiro() {
           <div className="modal" style={{ maxWidth: 520 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>Contas bancárias</h2>
-              <button className="btn-ghost" onClick={() => setModalContas(false)}><X size={16} /></button>
+              <button className="btn-ghost" onClick={() => { setModalContas(false); setMostrarFormConta(false); setEditandoConta(null); }}><X size={16} /></button>
             </div>
             <div className="modal-body">
+              {!mostrarFormConta && (
+                <button className="btn-primary" style={{ width: '100%', marginBottom: 16 }}
+                  onClick={() => { setEditandoConta(null); setFormConta({ nome: '', saldoInicial: '', banco: '', limite: '' }); setMostrarFormConta(true); }}>
+                  + Nova conta
+                </button>
+              )}
+
+              {mostrarFormConta && (
+                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoConta ? 'Editar conta' : 'Nova conta'}</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 10 }}>
+                    <div className="form-group">
+                      <label className="form-label">Nome</label>
+                      <input value={formConta.nome} onChange={e => setFormConta(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Conta corrente" autoFocus />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Saldo inicial</label>
+                      <input type="number" step={0.01} value={formConta.saldoInicial} onChange={e => setFormConta(f => ({ ...f, saldoInicial: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Limite (cheque especial) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                    <input type="number" min={0} step={0.01} value={formConta.limite} onChange={e => setFormConta(f => ({ ...f, limite: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Banco</label>
+                    <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+                      <button type="button" onClick={() => setFormConta(f => ({ ...f, banco: '' }))}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: formConta.banco === '' ? 'var(--accent-bg)' : 'transparent', border: 'none', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
+                        Nenhum / não informar
+                      </button>
+                      {BANCOS.map(b => (
+                        <button key={b.id} type="button" onClick={() => setFormConta(f => ({ ...f, banco: b.id }))}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: formConta.banco === b.id ? 'var(--accent-bg)' : 'transparent', border: 'none', borderTop: '1px solid var(--border)', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
+                          <BankBadge bancoId={b.id} tamanho={18} />
+                          {b.nome}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <button className="btn-primary" onClick={async () => { await salvarConta(); setMostrarFormConta(false); }}>
+                      {editandoConta ? 'Salvar' : 'Adicionar conta'}
+                    </button>
+                    <button className="btn-secondary" onClick={() => { setEditandoConta(null); setFormConta({ nome: '', saldoInicial: '', banco: '', limite: '' }); setMostrarFormConta(false); }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
                 {contas.length === 0 ? (
                   <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma conta cadastrada.</p>
@@ -1592,44 +1645,6 @@ export function Financeiro() {
                   🔁 Transferir entre contas
                 </button>
               )}
-
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoConta ? 'Editar conta' : 'Nova conta'}</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 10 }}>
-                  <div className="form-group">
-                    <label className="form-label">Nome</label>
-                    <input value={formConta.nome} onChange={e => setFormConta(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Conta corrente" />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Saldo inicial</label>
-                    <input type="number" step={0.01} value={formConta.saldoInicial} onChange={e => setFormConta(f => ({ ...f, saldoInicial: e.target.value }))} />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Limite (cheque especial) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                  <input type="number" min={0} step={0.01} value={formConta.limite} onChange={e => setFormConta(f => ({ ...f, limite: e.target.value }))} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Banco</label>
-                  <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
-                    <button type="button" onClick={() => setFormConta(f => ({ ...f, banco: '' }))}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: formConta.banco === '' ? 'var(--accent-bg)' : 'transparent', border: 'none', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
-                      Nenhum / não informar
-                    </button>
-                    {BANCOS.map(b => (
-                      <button key={b.id} type="button" onClick={() => setFormConta(f => ({ ...f, banco: b.id }))}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: formConta.banco === b.id ? 'var(--accent-bg)' : 'transparent', border: 'none', borderTop: '1px solid var(--border)', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
-                        <BankBadge bancoId={b.id} tamanho={18} />
-                        {b.nome}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                  <button className="btn-primary" onClick={salvarConta}>{editandoConta ? 'Salvar' : 'Adicionar conta'}</button>
-                  {editandoConta && <button className="btn-secondary" onClick={abrirNovaConta}>Cancelar edição</button>}
-                </div>
-              </div>
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalContas(false)}>Fechar</button>
