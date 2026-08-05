@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight, AlertTriangle, Star } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatarTelefone, formatarCpf, formatarCep, buscarEnderecoPorCep } from '../../utils/mascaras';
@@ -23,6 +23,8 @@ type Reserva = {
   criadoEm: string;
   valorPrejuizo: number | null;
   observacaoPrejuizo: string | null;
+  notaCliente: number | null;
+  comentarioCliente: string | null;
 };
 
 function fmt(n: number) {
@@ -135,6 +137,33 @@ export function ListaReservasChacara() {
   const [modalPrejuizo, setModalPrejuizo] = useState<Reserva | null>(null);
   const [formPrejuizo, setFormPrejuizo] = useState({ valor: '', observacao: '' });
   const [salvandoPrejuizo, setSalvandoPrejuizo] = useState(false);
+
+  const [modalAvaliarCliente, setModalAvaliarCliente] = useState<Reserva | null>(null);
+  const [formAvaliarCliente, setFormAvaliarCliente] = useState({ nota: 0, comentario: '' });
+  const [salvandoAvaliacaoCliente, setSalvandoAvaliacaoCliente] = useState(false);
+
+  function abrirAvaliarCliente(r: Reserva) {
+    setFormAvaliarCliente({ nota: r.notaCliente ?? 0, comentario: r.comentarioCliente ?? '' });
+    setModalAvaliarCliente(r);
+  }
+
+  async function salvarAvaliacaoCliente() {
+    if (!modalAvaliarCliente) return;
+    setSalvandoAvaliacaoCliente(true);
+    try {
+      await api.patch(`/api/chacara/reservas/${modalAvaliarCliente.id}/avaliar-cliente`, {
+        nota: formAvaliarCliente.nota || null,
+        comentario: formAvaliarCliente.comentario.trim() || null,
+      });
+      sucesso('Avaliação salva.');
+      setModalAvaliarCliente(null);
+      carregar();
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setSalvandoAvaliacaoCliente(false);
+    }
+  }
 
   function abrirPrejuizo(r: Reserva) {
     setFormPrejuizo({
@@ -375,6 +404,12 @@ export function ListaReservasChacara() {
                           <AlertTriangle size={11} /> {fmt(r.valorPrejuizo)}
                         </span>
                       )}
+                      {r.notaCliente != null && (
+                        <span title={r.comentarioCliente ?? ''}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-bg)', padding: '2px 8px', borderRadius: 10 }}>
+                          <Star size={11} fill="currentColor" /> {r.notaCliente}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{r.clienteEmail} · {r.clienteTelefone}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 12, color: 'var(--text-2)' }}>
@@ -418,6 +453,11 @@ export function ListaReservasChacara() {
                       style={{ color: r.valorPrejuizo ? 'var(--red)' : undefined }}
                       onClick={() => abrirPrejuizo(r)}>
                       <AlertTriangle size={14} />
+                    </button>
+                    <button className="btn-ghost" title={r.notaCliente ? 'Editar avaliação do cliente' : 'Avaliar cliente'}
+                      style={{ color: r.notaCliente ? 'var(--accent)' : undefined }}
+                      onClick={() => abrirAvaliarCliente(r)}>
+                      <Star size={14} />
                     </button>
                     <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setModalExcluir(r)}>
                       <Trash2 size={14} />
@@ -727,6 +767,44 @@ export function ListaReservasChacara() {
               <button className="btn-secondary" onClick={() => setModalPrejuizo(null)}>Cancelar</button>
               <button className="btn-primary" onClick={salvarPrejuizo} disabled={salvandoPrejuizo}>
                 {salvandoPrejuizo ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal avaliar cliente */}
+      {modalAvaliarCliente && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalAvaliarCliente(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>⭐ Avaliar cliente</h2>
+              <button className="btn-ghost" onClick={() => setModalAvaliarCliente(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 14 }}>
+                Como foi a experiência com <strong>{modalAvaliarCliente.clienteNome}</strong>?
+              </p>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button key={n} type="button" onClick={() => setFormAvaliarCliente(f => ({ ...f, nota: n }))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <Star size={28} fill={n <= formAvaliarCliente.nota ? 'var(--accent)' : 'none'}
+                      color={n <= formAvaliarCliente.nota ? 'var(--accent)' : 'var(--border)'} />
+                  </button>
+                ))}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Comentário (opcional)</label>
+                <textarea rows={3} value={formAvaliarCliente.comentario}
+                  onChange={e => setFormAvaliarCliente(f => ({ ...f, comentario: e.target.value }))}
+                  placeholder="Ex: cliente pontual, deixou tudo limpo" />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalAvaliarCliente(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarAvaliacaoCliente} disabled={salvandoAvaliacaoCliente}>
+                {salvandoAvaliacaoCliente ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
           </div>
