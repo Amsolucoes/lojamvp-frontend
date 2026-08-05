@@ -196,6 +196,7 @@ export function Financeiro() {
 
   const [formCat, setFormCat] = useState({ nome: '', tipo: 'ambos', icone: '' });
   const [editandoCategoria, setEditandoCategoria] = useState<Categoria | null>(null);
+  const [mostrarFormCategoria, setMostrarFormCategoria] = useState(false);
   const [filtroCatModal, setFiltroCatModal] = useState<'todas' | 'pagar' | 'receber' | 'ambos'>('todas');
   const [paginaCat, setPaginaCat] = useState(1);
 
@@ -845,6 +846,7 @@ export function Financeiro() {
   function abrirEditarCategoria(c: Categoria) {
     setEditandoCategoria(c);
     setFormCat({ nome: c.nome, tipo: c.tipo, icone: c.icone ?? '' });
+    setMostrarFormCategoria(true);
   }
 
   async function salvarEdicaoCategoria() {
@@ -1747,9 +1749,47 @@ export function Financeiro() {
           <div className="modal" style={{ maxWidth: 460 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>Categorias financeiras</h2>
-              <button className="btn-ghost" onClick={() => setModalCategorias(false)}><X size={16} /></button>
+              <button className="btn-ghost" onClick={() => { setModalCategorias(false); setMostrarFormCategoria(false); setEditandoCategoria(null); }}><X size={16} /></button>
             </div>
             <div className="modal-body">
+              {!mostrarFormCategoria && (
+                <button className="btn-primary" style={{ width: '100%', marginBottom: 16 }}
+                  onClick={() => { setEditandoCategoria(null); setFormCat({ nome: '', tipo: 'ambos', icone: '' }); setMostrarFormCategoria(true); }}>
+                  + Nova categoria
+                </button>
+              )}
+
+              {mostrarFormCategoria && (
+                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoCategoria ? 'Editar categoria' : 'Nova categoria'}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <input value={formCat.nome} onChange={e => setFormCat(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Marketing" autoFocus />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <select style={{ flex: 1 }} value={formCat.tipo} onChange={e => setFormCat(f => ({ ...f, tipo: e.target.value }))}>
+                        <option value="ambos">Pagar e Receber</option>
+                        <option value="pagar">Só Pagar</option>
+                        <option value="receber">Só Receber</option>
+                      </select>
+                      <select style={{ width: 90 }} value={formCat.icone} onChange={e => setFormCat(f => ({ ...f, icone: e.target.value }))}>
+                        {ICONES_CATEGORIA.map(i => <option key={i} value={i}>{i}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn-primary" style={{ flex: 1 }} onClick={async () => {
+                        if (editandoCategoria) await salvarEdicaoCategoria();
+                        else await salvarCategoria();
+                        setMostrarFormCategoria(false);
+                      }}>
+                        {editandoCategoria ? 'Salvar alterações' : 'Adicionar categoria'}
+                      </button>
+                      <button className="btn-secondary" onClick={() => { setEditandoCategoria(null); setFormCat({ nome: '', tipo: 'ambos', icone: '' }); setMostrarFormCategoria(false); }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {categorias.length === 0 && (
                 <button className="btn-secondary" style={{ width: '100%', marginBottom: 16 }} onClick={seedCategoriasPadrao}>
                   Usar categorias padrão
@@ -1791,31 +1831,7 @@ export function Financeiro() {
                   </>
                 );
               })()}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoCategoria ? 'Editar categoria' : 'Nova categoria'}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <input value={formCat.nome} onChange={e => setFormCat(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Marketing" />
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <select style={{ flex: 1 }} value={formCat.tipo} onChange={e => setFormCat(f => ({ ...f, tipo: e.target.value }))}>
-                      <option value="ambos">Pagar e Receber</option>
-                      <option value="pagar">Só Pagar</option>
-                      <option value="receber">Só Receber</option>
-                    </select>
-                    <select style={{ width: 90 }} value={formCat.icone} onChange={e => setFormCat(f => ({ ...f, icone: e.target.value }))}>
-                      {ICONES_CATEGORIA.map(i => <option key={i} value={i}>{i}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn-primary" style={{ flex: 1 }} onClick={editandoCategoria ? salvarEdicaoCategoria : salvarCategoria}>
-                      {editandoCategoria ? 'Salvar alterações' : 'Adicionar categoria'}
-                    </button>
-                    {editandoCategoria && (
-                      <button className="btn-secondary" onClick={() => { setEditandoCategoria(null); setFormCat({ nome: '', tipo: 'ambos', icone: '' }); }}>Cancelar</button>
-                    )}
-                  </div>
-                </div>
               </div>
-            </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalCategorias(false)}>Fechar</button>
             </div>
