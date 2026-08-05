@@ -144,6 +144,7 @@ export function Financeiro() {
   const [modalCartoes, setModalCartoes] = useState(false);
   const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
   const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
+  const [mostrarFormCartao, setMostrarFormCartao] = useState(false);
 
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
   const [modalLancarCompra, setModalLancarCompra] = useState(false);
@@ -546,6 +547,7 @@ export function Financeiro() {
       contaBancariaId: c.contaBancariaId,
       taxaJurosMensal: String(c.taxaJurosMensal ?? 0),
     });
+    setMostrarFormCartao(true);
   }
 
   async function salvarCartao() {
@@ -1874,9 +1876,58 @@ export function Financeiro() {
           <div className="modal" style={{ maxWidth: 520 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>Cartões de crédito</h2>
-              <button className="btn-ghost" onClick={() => setModalCartoes(false)}><X size={16} /></button>
+              <button className="btn-ghost" onClick={() => { setModalCartoes(false); setMostrarFormCartao(false); }}><X size={16} /></button>
             </div>
             <div className="modal-body">
+              {!mostrarFormCartao && (
+                <button className="btn-primary" style={{ width: '100%', marginBottom: 16 }}
+                  onClick={() => { abrirNovoCartao(); setMostrarFormCartao(true); }}>
+                  + Novo cartão
+                </button>
+              )}
+
+              {mostrarFormCartao && (
+                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoCartao ? 'Editar cartão' : 'Novo cartão'}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <input value={formCartao.nome} onChange={e => setFormCartao(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Santander" autoFocus />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div className="form-group">
+                        <label className="form-label">Limite (R$)</label>
+                        <InputMoeda value={parseFloat(formCartao.limite) || 0} onChange={v => setFormCartao(f => ({ ...f, limite: String(v) }))} placeholder="0,00" />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Conta de pagamento</label>
+                        <select value={formCartao.contaBancariaId} onChange={e => setFormCartao(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                          <option value="">Selecione...</option>
+                          {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Dia de fechamento</label>
+                        <input type="number" min={1} max={28} value={formCartao.diaFechamento} onChange={e => setFormCartao(f => ({ ...f, diaFechamento: e.target.value }))} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Dia de vencimento</label>
+                        <input type="number" min={1} max={28} value={formCartao.diaVencimento} onChange={e => setFormCartao(f => ({ ...f, diaVencimento: e.target.value }))} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Taxa de juros (% ao mês)</label>
+                        <input type="number" min={0} step={0.01} value={formCartao.taxaJurosMensal} onChange={e => setFormCartao(f => ({ ...f, taxaJurosMensal: e.target.value }))} placeholder="Ex: 12.5" />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn-primary" onClick={async () => { await salvarCartao(); setMostrarFormCartao(false); }}>
+                        {editandoCartao ? 'Salvar' : 'Adicionar cartão'}
+                      </button>
+                      <button className="btn-secondary" onClick={() => { abrirNovoCartao(); setMostrarFormCartao(false); }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
                 {carregandoCartoes ? (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
@@ -1923,42 +1974,7 @@ export function Financeiro() {
                   );
                 })}
               </div>
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoCartao ? 'Editar cartão' : 'Novo cartão'}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <input value={formCartao.nome} onChange={e => setFormCartao(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Santander" />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div className="form-group">
-                      <label className="form-label">Limite (R$)</label>
-                      <InputMoeda value={parseFloat(formCartao.limite) || 0} onChange={v => setFormCartao(f => ({ ...f, limite: String(v) }))} placeholder="0,00" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Conta de pagamento</label>
-                      <select value={formCartao.contaBancariaId} onChange={e => setFormCartao(f => ({ ...f, contaBancariaId: e.target.value }))}>
-                        <option value="">Selecione...</option>
-                        {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Dia de fechamento</label>
-                      <input type="number" min={1} max={28} value={formCartao.diaFechamento} onChange={e => setFormCartao(f => ({ ...f, diaFechamento: e.target.value }))} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Dia de vencimento</label>
-                      <input type="number" min={1} max={28} value={formCartao.diaVencimento} onChange={e => setFormCartao(f => ({ ...f, diaVencimento: e.target.value }))} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Taxa de juros (% ao mês)</label>
-                      <input type="number" min={0} step={0.01} value={formCartao.taxaJurosMensal} onChange={e => setFormCartao(f => ({ ...f, taxaJurosMensal: e.target.value }))} placeholder="Ex: 12.5" />
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn-primary" onClick={salvarCartao}>{editandoCartao ? 'Salvar' : 'Adicionar cartão'}</button>
-                    {editandoCartao && <button className="btn-secondary" onClick={abrirNovoCartao}>Cancelar edição</button>}
-                  </div>
-                </div>
               </div>
-            </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalCartoes(false)}>Fechar</button>
             </div>
