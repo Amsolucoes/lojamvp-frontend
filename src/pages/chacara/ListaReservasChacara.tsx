@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatarTelefone, formatarCpf, formatarCep, buscarEnderecoPorCep } from '../../utils/mascaras';
@@ -21,6 +21,8 @@ type Reserva = {
   expiraEm: string | null;
   contratoEnviadoEm: string | null;
   criadoEm: string;
+  valorPrejuizo: number | null;
+  observacaoPrejuizo: string | null;
 };
 
 function fmt(n: number) {
@@ -129,6 +131,36 @@ export function ListaReservasChacara() {
 
   const [enviandoContrato, setEnviandoContrato] = useState<number | null>(null);
   const [mantendoNegociacao, setMantendoNegociacao] = useState<number | null>(null);
+
+  const [modalPrejuizo, setModalPrejuizo] = useState<Reserva | null>(null);
+  const [formPrejuizo, setFormPrejuizo] = useState({ valor: '', observacao: '' });
+  const [salvandoPrejuizo, setSalvandoPrejuizo] = useState(false);
+
+  function abrirPrejuizo(r: Reserva) {
+    setFormPrejuizo({
+      valor: r.valorPrejuizo ? String(r.valorPrejuizo) : '',
+      observacao: r.observacaoPrejuizo ?? '',
+    });
+    setModalPrejuizo(r);
+  }
+
+  async function salvarPrejuizo() {
+    if (!modalPrejuizo) return;
+    setSalvandoPrejuizo(true);
+    try {
+      await api.patch(`/api/chacara/reservas/${modalPrejuizo.id}/prejuizo`, {
+        valor: formPrejuizo.valor ? parseFloat(formPrejuizo.valor) : null,
+        observacao: formPrejuizo.observacao.trim() || null,
+      });
+      sucesso('Registro salvo.');
+      setModalPrejuizo(null);
+      carregar();
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setSalvandoPrejuizo(false);
+    }
+  }
 
   async function manterEmNegociacao(r: Reserva) {
     setMantendoNegociacao(r.id);
@@ -335,7 +367,15 @@ export function ListaReservasChacara() {
               <div key={r.id} className="card" style={{ padding: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{r.clienteNome}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {r.clienteNome}
+                      {r.valorPrejuizo != null && r.valorPrejuizo > 0 && (
+                        <span title={`Prejuízo: ${fmt(r.valorPrejuizo)}${r.observacaoPrejuizo ? ' — ' + r.observacaoPrejuizo : ''}`}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, color: 'var(--red)', background: 'rgba(248,113,113,0.12)', padding: '2px 8px', borderRadius: 10 }}>
+                          <AlertTriangle size={11} /> {fmt(r.valorPrejuizo)}
+                        </span>
+                      )}
+                    </div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{r.clienteEmail} · {r.clienteTelefone}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 12, color: 'var(--text-2)' }}>
                       <Calendar size={13} /> {fmtData(r.dataInicio)} — {fmtData(r.dataFim)} · {r.pessoas} pessoa(s)
@@ -373,6 +413,11 @@ export function ListaReservasChacara() {
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button className="btn-ghost" title="Editar" onClick={() => abrirEdicao(r)}>
                       <Pencil size={14} />
+                    </button>
+                    <button className="btn-ghost" title={r.valorPrejuizo ? 'Editar prejuízo' : 'Registrar prejuízo'}
+                      style={{ color: r.valorPrejuizo ? 'var(--red)' : undefined }}
+                      onClick={() => abrirPrejuizo(r)}>
+                      <AlertTriangle size={14} />
                     </button>
                     <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setModalExcluir(r)}>
                       <Trash2 size={14} />
@@ -645,6 +690,43 @@ export function ListaReservasChacara() {
               <button className="btn-secondary" onClick={() => setModalPagamento(null)}>Cancelar</button>
               <button className="btn-primary" onClick={registrarPagamento} disabled={salvandoPagamento}>
                 {salvandoPagamento ? 'Salvando...' : 'Registrar pagamento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal registrar prejuízo */}
+      {modalPrejuizo && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalPrejuizo(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>⚠️ Registrar prejuízo</h2>
+              <button className="btn-ghost" onClick={() => setModalPrejuizo(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 14 }}>
+                Reserva de <strong>{modalPrejuizo.clienteNome}</strong> — registro interno, não gera cobrança automática.
+              </p>
+              <div className="form-group">
+                <label className="form-label">Valor do prejuízo (R$)</label>
+                <input type="number" min={0} step={0.01} value={formPrejuizo.valor}
+                  onChange={e => setFormPrejuizo(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" />
+              </div>
+              <div className="form-group" style={{ marginTop: 12 }}>
+                <label className="form-label">O que aconteceu</label>
+                <textarea rows={3} value={formPrejuizo.observacao}
+                  onChange={e => setFormPrejuizo(f => ({ ...f, observacao: e.target.value }))}
+                  placeholder="Ex: sumiu a roupa de cama e a colcha" />
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>
+                Deixe o valor em branco e salve pra remover o aviso desta reserva.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalPrejuizo(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarPrejuizo} disabled={salvandoPrejuizo}>
+                {salvandoPrejuizo ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
           </div>
