@@ -1398,13 +1398,13 @@ export function Financeiro() {
                 <button type="button" className={!formLanc.jaPago ? 'active' : ''} onClick={() => setFormLanc(f => ({ ...f, jaPago: false }))}>
                   Pendente
                 </button>
-                <button type="button" className={formLanc.jaPago ? 'active' : ''} onClick={() => setFormLanc(f => ({ ...f, jaPago: true }))}>
+                <button type="button" className={formLanc.jaPago ? 'active' : ''} onClick={() => setFormLanc(f => ({ ...f, jaPago: true, avisar: false }))}>
                   {aba === 'pagar' ? '✓ Já paguei' : '✓ Já recebi'}
                 </button>
               </div>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', marginBottom: 14 }}>
-                <input type="checkbox" checked={formLanc.avisar} style={{ width: 16, height: 16, margin: 0 }}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: formLanc.jaPago ? 'not-allowed' : 'pointer', marginBottom: 14, opacity: formLanc.jaPago ? 0.5 : 1 }}>
+                <input type="checkbox" checked={formLanc.avisar} disabled={formLanc.jaPago} style={{ width: 16, height: 16, margin: 0 }}
                   onChange={e => setFormLanc(f => ({ ...f, avisar: e.target.checked }))} />
                 🔔 Me avisar por e-mail no dia do vencimento
               </label>
