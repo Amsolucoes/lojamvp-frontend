@@ -119,7 +119,9 @@ export function Financeiro() {
   });
 
   const [contas, setContas] = useState<Conta[]>([]);
+  const [carregandoContas, setCarregandoContas] = useState(true);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [carregandoCategorias, setCarregandoCategorias] = useState(true);
   const [descricoesRecentes, setDescricoesRecentes] = useState<string[]>([]);
   const [descricoesRecentesCartao, setDescricoesRecentesCartao] = useState<string[]>([]);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
@@ -204,11 +206,11 @@ export function Financeiro() {
   const [formAjuste, setFormAjuste] = useState({ tipo: 'entrada' as 'entrada' | 'saida' | 'ajuste', valor: '', novoSaldo: '', observacao: '' });
 
   async function carregarContas() {
-    api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+    api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {}).finally(() => setCarregandoContas(false));
   }
 
   async function carregarCategorias() {
-    api.get<Categoria[]>('/api/financeiro/categorias').then(setCategorias).catch(() => {});
+    api.get<Categoria[]>('/api/financeiro/categorias').then(setCategorias).catch(() => {}).finally(() => setCarregandoCategorias(false));
   }
 
   function periodoQuery() {
@@ -1619,7 +1621,11 @@ export function Financeiro() {
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-                {contas.length === 0 ? (
+                {carregandoContas ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
+                    <div className="layout-spinner" style={{ width: 28, height: 28 }} />
+                  </div>
+                ) : contas.length === 0 ? (
                   <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma conta cadastrada.</p>
                 ) : contas.map(c => (
                   <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, opacity: c.ativa ? 1 : 0.5 }}>
@@ -1818,7 +1824,11 @@ export function Financeiro() {
                   <button className={`cat-tab${filtroCatModal === 'ambos' ? ' active' : ''}`} onClick={() => setFiltroCatModal('ambos')}>Ambos</button>
                 </div>
               )}
-              {(() => {
+              {carregandoCategorias ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0', marginBottom: 12 }}>
+                  <div className="layout-spinner" style={{ width: 28, height: 28 }} />
+                </div>
+              ) : (() => {
                 const listaCat = categorias.filter(c => filtroCatModal === 'todas' || c.tipo === filtroCatModal);
                 const totalPagCat = Math.max(1, Math.ceil(listaCat.length / 15));
                 const pagAtualCat = Math.min(paginaCat, totalPagCat);
