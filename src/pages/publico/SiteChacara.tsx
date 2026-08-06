@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../../services/api';
 import { formatarTelefone, formatarCpf, formatarCep, emailValido, buscarEnderecoPorCep } from '../../utils/mascaras';
@@ -13,6 +13,10 @@ type DadosChacara = {
 };
 
 type Detalhamento = { valorEstadia: number; valorTaxaLimpeza: number; valorTotal: number; detalhamento: string[] };
+
+declare global {
+  interface Window { MercadoPago: any; }
+}
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -208,6 +212,25 @@ const CHAC_CSS = `
   font-family: 'Work Sans', sans-serif; text-align: center; padding: 24px;
 }
 
+.chac-pag-opcoes { display: flex; flex-direction: column; gap: 10px; }
+.chac-pag-opcao {
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  background: var(--chac-panel); border: 1.5px solid var(--chac-line); border-radius: 10px;
+  padding: 14px 16px; cursor: pointer; transition: border-color 0.15s;
+}
+.chac-pag-opcao:hover { border-color: var(--chac-accent, var(--chac-terra)); }
+.chac-pag-opcao strong { font-family: 'Zilla Slab', serif; font-size: 15px; color: var(--chac-green); }
+.chac-pag-opcao span { font-size: 12px; color: var(--chac-ink-soft); }
+
+.chac-pix-qr { width: 200px; height: 200px; border-radius: 10px; background: #fff; padding: 10px; margin: 14px auto; display: block; }
+.chac-pix-copiacola { display: flex; gap: 8px; margin: 10px 0; }
+.chac-pix-copiacola input { flex: 1; background: var(--chac-paper); border: 1px solid var(--chac-line); border-radius: 8px; padding: 8px 10px; font-size: 11px; color: var(--chac-ink-soft); }
+.chac-pix-copiacola button { background: var(--chac-accent, var(--chac-terra)); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; font-size: 12px; }
+.chac-pag-status { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 10px; }
+.chac-pag-check { color: var(--chac-green); font-weight: 700; }
+.chac-pag-aguardando { color: var(--chac-ink-soft); }
+.chac-pag-divisor { border-top: 1px dashed var(--chac-line); margin: 18px 0; }
+
 @media (prefers-reduced-motion: reduce) {
   .chac-root * { transition: none !important; animation: none !important; }
 }
@@ -232,7 +255,7 @@ export function SiteChacara() {
   const [mesCalendario, setMesCalendario] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [datasOcupadas, setDatasOcupadas] = useState<{ dataInicio: string; dataFim: string }[]>([]);
 
-  const [etapa, setEtapa] = useState<'datas' | 'dados' | 'sucesso'>('datas');
+  const [etapa, setEtapa] = useState<'datas' | 'dados' | 'pagamento' | 'sucesso'>('datas');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -243,6 +266,24 @@ export function SiteChacara() {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [reservaCriada, setReservaCriada] = useState<{ id: number; valor: number } | null>(null);
+
+  // ── Pagamento ──────────────────────────────────────────────────
+  const [formaPag, setFormaPag] = useState<'pix' | 'cartao' | 'combinado' | null>(null);
+  const [infoPagamento, setInfoPagamento] = useState<{ valorPix: number; valorCartao: number; parcelasMax: number } | null>(null);
+  const [escolhendoForma, setEscolhendoForma] = useState(false);
+
+  const [pixDados, setPixDados] = useState<{ qrCode: string; qrCodeBase64: string; valor: number } | null>(null);
+  const [pixStatus, setPixStatus] = useState<string | null>(null);
+  const [gerandoPix, setGerandoPix] = useState(false);
+
+  const [cartaoStatus, setCartaoStatus] = useState<string | null>(null);
+  const [erroCartao, setErroCartao] = useState('');
+  const brickInstanceRef = useRef<any>(null);
+  const parcelasEscolhidas = useRef(1);
+
+  const reservaConfirmada = (formaPag === 'pix' && pixStatus === 'approved')
+    || (formaPag === 'cartao' && cartaoStatus === 'approved')
+    || (formaPag === 'combinado' && pixStatus === 'approved' && cartaoStatus === 'approved');
 
   useEffect(() => {
     if (!slug) return;
@@ -301,6 +342,10 @@ export function SiteChacara() {
       setErro('Informe um e-mail válido.');
       return;
     }
+    if (!cpf.trim()) {
+      setErro('CPF é obrigatório para gerar o pagamento.');
+      return;
+    }
     setEnviando(true);
     setErro('');
     try {
@@ -310,11 +355,145 @@ export function SiteChacara() {
         clienteDocumento: cpf.trim() || null, clienteCep: cep.trim() || null, clienteEndereco: enderecoCliente.trim() || null,
       });
       setReservaCriada(res);
-      setEtapa('sucesso');
+      setEtapa('pagamento');
     } catch (e) {
       setErro((e as Error).message);
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function escolherFormaPagamento(forma: 'pix' | 'cartao' | 'combinado') {
+    if (!slug || !reservaCriada) return;
+    setEscolhendoForma(true);
+    setErro('');
+    try {
+      const res = await api.post<{ valorPix: number; valorCartao: number; parcelasMax: number }>(
+        `/api/publico/${slug}/chacara/reservas/${reservaCriada.id}/pagamento/escolher`,
+        { formaPagamento: forma }
+      );
+      setFormaPag(forma);
+      setInfoPagamento(res);
+      if (forma === 'pix' || forma === 'combinado') gerarPix();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setEscolhendoForma(false);
+    }
+  }
+
+  async function gerarPix() {
+    if (!slug || !reservaCriada) return;
+    setGerandoPix(true);
+    setErro('');
+    try {
+      const res = await api.post<{ valor: number; qrCode: string; qrCodeBase64: string }>(
+        `/api/publico/${slug}/chacara/reservas/${reservaCriada.id}/pagamento/pix`, {}
+      );
+      setPixDados(res);
+      setPixStatus('pending');
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setGerandoPix(false);
+    }
+  }
+
+  // Polling do status enquanto tiver alguma parte pendente
+  useEffect(() => {
+    if (etapa !== 'pagamento' || !reservaCriada || !slug) return;
+    if (reservaConfirmada) return;
+    if (!formaPag) return;
+
+    const intervalo = setInterval(async () => {
+      try {
+        const res = await api.get<{ status: string; mpStatusPix: string | null; mpStatusCartao: string | null }>(
+          `/api/publico/${slug}/chacara/reservas/${reservaCriada.id}/pagamento/status`
+        );
+        if (res.mpStatusPix) setPixStatus(res.mpStatusPix);
+        if (res.mpStatusCartao) setCartaoStatus(res.mpStatusCartao);
+      } catch {
+        // ignora falha pontual, tenta de novo no próximo ciclo
+      }
+    }, 5000);
+    return () => clearInterval(intervalo);
+  }, [etapa, reservaCriada, slug, formaPag, reservaConfirmada]);
+
+  // Vai pra tela de sucesso assim que tudo que era necessário for aprovado
+  useEffect(() => {
+    if (reservaConfirmada) setEtapa('sucesso');
+  }, [reservaConfirmada]);
+
+  // Monta o Payment Brick quando o cartão é necessário (cartao ou combinado)
+  useEffect(() => {
+    if (etapa !== 'pagamento' || !reservaCriada || !infoPagamento) return;
+    if (formaPag !== 'cartao' && formaPag !== 'combinado') return;
+    if (!window.MercadoPago) {
+      setErroCartao('Não foi possível carregar o pagamento por cartão. Recarregue a página.');
+      return;
+    }
+
+    const publicKey = import.meta.env.VITE_MP_PUBLIC_KEY;
+    const mp = new window.MercadoPago(publicKey, { locale: 'pt-BR' });
+    const bricksBuilder = mp.bricks();
+
+    async function montar() {
+      if (brickInstanceRef.current) {
+        brickInstanceRef.current.unmount();
+        brickInstanceRef.current = null;
+      }
+      brickInstanceRef.current = await bricksBuilder.create('payment', 'brick-cartao-chacara', {
+        initialization: {
+          amount: infoPagamento!.valorCartao,
+          payer: { email: email.trim() },
+        },
+        customization: {
+          paymentMethods: {
+            creditCard: 'all',
+            maxInstallments: infoPagamento!.parcelasMax,
+          },
+          visual: { style: { theme: 'default' } },
+        },
+        callbacks: {
+          onReady: () => {},
+          onError: (err: any) => {
+            console.error(err);
+            setErroCartao('Erro ao carregar o formulário de pagamento.');
+          },
+          onSubmit: ({ formData }: any) => {
+            return new Promise<void>((resolve, reject) => {
+              processarCartao(formData).then(resolve).catch(reject);
+            });
+          },
+        },
+      });
+    }
+    montar();
+
+    return () => {
+      if (brickInstanceRef.current) {
+        brickInstanceRef.current.unmount();
+        brickInstanceRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etapa, formaPag, infoPagamento]);
+
+  async function processarCartao(formData: any) {
+    if (!slug || !reservaCriada) return;
+    setErroCartao('');
+    try {
+      const res = await api.post<{ status: string }>(
+        `/api/publico/${slug}/chacara/reservas/${reservaCriada.id}/pagamento/cartao`,
+        { token: formData.token, parcelas: formData.installments }
+      );
+      setCartaoStatus(res.status);
+      if (res.status !== 'approved') {
+        setErroCartao('Pagamento em análise ou recusado. Aguarde ou tente novamente.');
+      }
+    } catch (e) {
+      setErroCartao((e as Error).message);
+      throw e; // deixa o Brick saber que falhou, pra reabilitar o formulário
     }
   }
 
@@ -549,13 +728,89 @@ export function SiteChacara() {
               </>
             )}
 
+            {etapa === 'pagamento' && reservaCriada && !formaPag && (
+              <>
+                <p style={{ fontSize: 13, color: 'var(--chac-ink-soft)', marginBottom: 14 }}>
+                  Sua reserva está segurada por 15 minutos. Escolha como pagar para confirmar:
+                </p>
+                <div className="chac-pag-opcoes">
+                  <button className="chac-pag-opcao" disabled={escolhendoForma} onClick={() => escolherFormaPagamento('pix')}>
+                    <strong>💠 Pix — sinal de 50%</strong>
+                    <span>Pague {fmt(reservaCriada.valor / 2)} agora e acerte o restante na chegada.</span>
+                  </button>
+                  <button className="chac-pag-opcao" disabled={escolhendoForma} onClick={() => escolherFormaPagamento('cartao')}>
+                    <strong>💳 Cartão — valor total parcelado</strong>
+                    <span>Pague {fmt(reservaCriada.valor)} em até {reservaCriada.valor <= 800 ? 2 : 3}x no cartão.</span>
+                  </button>
+                  <button className="chac-pag-opcao" disabled={escolhendoForma} onClick={() => escolherFormaPagamento('combinado')}>
+                    <strong>💠💳 Combinado — metade Pix, metade cartão</strong>
+                    <span>{fmt(reservaCriada.valor / 2)} no Pix + {fmt(reservaCriada.valor / 2)} no cartão à vista.</span>
+                  </button>
+                </div>
+                {erro && <p className="chac-error">{erro}</p>}
+              </>
+            )}
+
+            {etapa === 'pagamento' && formaPag && infoPagamento && (
+              <>
+                {(formaPag === 'pix' || formaPag === 'combinado') && (
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--chac-green)' }}>
+                      💠 Pix — {fmt(infoPagamento.valorPix)}
+                    </p>
+                    {gerandoPix ? (
+                      <p style={{ fontSize: 13, color: 'var(--chac-ink-soft)' }}>Gerando Pix...</p>
+                    ) : pixDados ? (
+                      <>
+                        {pixDados.qrCodeBase64 && (
+                          <img className="chac-pix-qr" src={`data:image/png;base64,${pixDados.qrCodeBase64}`} alt="QR Code Pix" />
+                        )}
+                        {pixDados.qrCode && (
+                          <div className="chac-pix-copiacola">
+                            <input readOnly value={pixDados.qrCode} onFocus={e => e.target.select()} />
+                            <button onClick={() => navigator.clipboard.writeText(pixDados.qrCode)}>Copiar</button>
+                          </div>
+                        )}
+                        <div className="chac-pag-status">
+                          {pixStatus === 'approved' ? (
+                            <span className="chac-pag-check">✓ Pix aprovado!</span>
+                          ) : (
+                            <span className="chac-pag-aguardando">Aguardando pagamento...</span>
+                          )}
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+
+                {formaPag === 'combinado' && <div className="chac-pag-divisor" />}
+
+                {(formaPag === 'cartao' || formaPag === 'combinado') && (
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--chac-green)' }}>
+                      💳 Cartão — {fmt(infoPagamento.valorCartao)}
+                      {formaPag === 'cartao' ? ` em até ${infoPagamento.parcelasMax}x` : ' à vista'}
+                    </p>
+                    {cartaoStatus === 'approved' ? (
+                      <p className="chac-pag-status"><span className="chac-pag-check">✓ Cartão aprovado!</span></p>
+                    ) : (
+                      <div id="brick-cartao-chacara" style={{ marginTop: 10 }} />
+                    )}
+                    {erroCartao && <p className="chac-error">{erroCartao}</p>}
+                  </div>
+                )}
+              </>
+            )}
+
             {etapa === 'sucesso' && reservaCriada && (
               <div className="chac-success">
-                <div className="chac-success-icon">⏳</div>
-                <h3 className="chac-success-title">Reserva criada!</h3>
+                <div className="chac-success-icon">✓</div>
+                <h3 className="chac-success-title">Reserva confirmada!</h3>
                 <p style={{ fontSize: 13, color: 'var(--chac-ink-soft)' }}>
-                  Sua reserva no valor de <strong>{fmt(reservaCriada.valor)}</strong> foi criada.
-                  Em breve o pagamento estará disponível aqui para confirmar sua data.
+                  {formaPag === 'pix'
+                    ? <>Recebemos o sinal de <strong>{fmt(reservaCriada.valor / 2)}</strong>. O restante você acerta na chegada.</>
+                    : <>Pagamento de <strong>{fmt(reservaCriada.valor)}</strong> confirmado. Sua data está garantida!</>}
+                  {' '}Você vai receber um e-mail com o contrato.
                 </p>
               </div>
             )}
