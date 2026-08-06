@@ -469,8 +469,9 @@ export function ListaReservasChacara() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {lista.map(r => {
             const statusInfo = STATUS_LABEL[r.status] ?? { label: r.status, cor: 'var(--text-3)' };
+            const expirada = r.status === 'expirada';
             return (
-              <div key={r.id} className="card" style={{ padding: 16 }}>
+              <div key={r.id} className="card" style={{ padding: 16, opacity: expirada ? 0.6 : 1, borderColor: expirada ? 'var(--border)' : undefined }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
