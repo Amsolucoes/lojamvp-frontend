@@ -363,6 +363,26 @@ export function SiteChacara() {
     }
   }
 
+  const [cancelando, setCancelando] = useState(false);
+
+  async function cancelarReserva() {
+    if (!slug || !reservaCriada) return;
+    if (!confirm('Tem certeza que deseja cancelar essa reserva?')) return;
+    setCancelando(true);
+    try {
+      await api.post(`/api/publico/${slug}/chacara/reservas/${reservaCriada.id}/cancelar`, {});
+      setReservaCriada(null);
+      setEtapa('datas');
+      setDataInicio('');
+      setDataFim('');
+      setFormaPag(null);
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setCancelando(false);
+    }
+  }
+
   async function escolherFormaPagamento(forma: 'pix' | 'cartao' | 'combinado') {
     if (!slug || !reservaCriada) return;
     setEscolhendoForma(true);
@@ -756,6 +776,9 @@ export function SiteChacara() {
                   </button>
                 </div>
                 {erro && <p className="chac-error">{erro}</p>}
+                <button className="chac-btn-ghost" style={{ marginTop: 16 }} onClick={cancelarReserva} disabled={cancelando}>
+                  {cancelando ? 'Cancelando...' : 'Não vou mais reservar — cancelar'}
+                </button>
               </>
             )}
 

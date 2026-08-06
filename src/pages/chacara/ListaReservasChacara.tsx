@@ -25,6 +25,7 @@ type Reserva = {
   observacaoPrejuizo: string | null;
   notaCliente: number | null;
   comentarioCliente: string | null;
+  motivoCancelamento: string | null;
 };
 
 function fmt(n: number) {
@@ -43,6 +44,14 @@ const STATUS_LABEL: Record<string, { label: string; cor: string }> = {
   cancelada: { label: 'Cancelada', cor: 'var(--red)' },
   expirada: { label: 'Expirada', cor: 'var(--text-3)' },
 };
+
+function labelStatus(r: Reserva) {
+  const base = STATUS_LABEL[r.status] ?? { label: r.status, cor: 'var(--text-3)' };
+  if (r.status === 'cancelada' && r.motivoCancelamento) {
+    return { label: r.motivoCancelamento, cor: base.cor };
+  }
+  return base;
+}
 
 export function ListaReservasChacara() {
   const [reservas, setReservas] = useState<Reserva[]>([]);
@@ -484,7 +493,7 @@ export function ListaReservasChacara() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {lista.map(r => {
-            const statusInfo = STATUS_LABEL[r.status] ?? { label: r.status, cor: 'var(--text-3)' };
+            const statusInfo = labelStatus(r);
             const expirada = r.status === 'expirada';
             return (
               <div key={r.id} className="card" style={{ padding: 16, opacity: expirada ? 0.6 : 1, borderColor: expirada ? 'var(--border)' : undefined }}>
