@@ -753,6 +753,18 @@ export function SiteChacara() {
 
             {etapa === 'pagamento' && formaPag && infoPagamento && (
               <>
+                <button className="chac-btn-ghost" style={{ marginBottom: 14 }}
+                  onClick={() => {
+                    setFormaPag(null);
+                    setInfoPagamento(null);
+                    setPixDados(null);
+                    setPixStatus(null);
+                    setCartaoStatus(null);
+                    setErroCartao('');
+                  }}>
+                  ← Escolher outra forma de pagamento
+                </button>
+
                 {(formaPag === 'pix' || formaPag === 'combinado') && (
                   <div>
                     <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--chac-green)' }}>
