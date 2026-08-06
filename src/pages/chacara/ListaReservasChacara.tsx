@@ -151,8 +151,6 @@ export function ListaReservasChacara() {
     }
   }
 
-  async function manterEmNegociacao(r: Reserva) {
-
   const [modalPrejuizo, setModalPrejuizo] = useState<Reserva | null>(null);
   const [formPrejuizo, setFormPrejuizo] = useState({ valor: '', observacao: '' });
   const [salvandoPrejuizo, setSalvandoPrejuizo] = useState(false);
