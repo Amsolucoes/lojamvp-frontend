@@ -730,6 +730,14 @@ export function SiteChacara() {
 
             {etapa === 'pagamento' && reservaCriada && !formaPag && (
               <>
+                {valor && (
+                  <div className="chac-summary" style={{ marginBottom: 14 }}>
+                    {valor.detalhamento.map((linha, i) => (
+                      <div key={i} className="chac-summary-line">{linha}</div>
+                    ))}
+                    <div className="chac-summary-total">Total: {fmt(valor.valorTotal)}</div>
+                  </div>
+                )}
                 <p style={{ fontSize: 13, color: 'var(--chac-ink-soft)', marginBottom: 14 }}>
                   Sua reserva está segurada por 15 minutos. Escolha como pagar para confirmar:
                 </p>
