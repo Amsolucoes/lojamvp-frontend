@@ -180,6 +180,22 @@ export function ListaReservasChacara() {
     setPaginaPerdidas(1);
   }
 
+  const [reativando, setReativando] = useState<number | null>(null);
+
+  async function reativarReserva(r: Reserva) {
+    setReativando(r.id);
+    try {
+      await api.patch(`/api/chacara/reservas/${r.id}/reativar`, {});
+      sucesso('Reserva reativada — 15 minutos pra pagar de novo.');
+      carregar();
+      if (modalPerdidas) carregarPerdidas();
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setReativando(null);
+    }
+  }
+
   async function marcarComoExpirada(r: Reserva) {
     setMarcandoExpirada(r.id);
     try {
@@ -553,6 +569,12 @@ export function ListaReservasChacara() {
                     <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setModalExcluir(r)}>
                       <Trash2 size={14} />
                     </button>
+                    {r.status === 'expirada' && (
+                      <button className="btn-secondary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
+                        onClick={() => reativarReserva(r)} disabled={reativando === r.id}>
+                        <Calendar size={13} /> {reativando === r.id ? 'Reativando...' : 'Reativar'}
+                      </button>
+                    )}
                     {r.status === 'pendente_pagamento' && (
                       r.expiraEm ? (
                         <>
@@ -946,7 +968,13 @@ export function ListaReservasChacara() {
                         <div style={{ fontWeight: 500, fontSize: 13 }}>{r.clienteNome}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{fmtData(r.dataInicio)} — {fmtData(r.dataFim)} · criada em {fmtData(r.criadoEm)}</div>
                       </div>
-                      <strong style={{ fontSize: 13 }}>{fmt(r.valor)}</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <strong style={{ fontSize: 13 }}>{fmt(r.valor)}</strong>
+                        <button className="btn-ghost" style={{ fontSize: 11 }}
+                          onClick={() => reativarReserva(r)} disabled={reativando === r.id}>
+                          {reativando === r.id ? 'Reativando...' : 'Reativar'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
