@@ -6,6 +6,7 @@ import { formatarTelefone, formatarCpf, formatarCep, emailValido, buscarEndereco
 type DadosChacara = {
   nome: string; logoUrl: string | null; corPrimaria: string;
   descricao: string; endereco: string; mapaEmbedUrl: string | null;
+  horaEntrada: string; horaSaida: string; avisosUso: string[];
   fotos: string[];
   comodidades: { chave: string; label: string }[];
   comodidadesExtras: string[];
@@ -704,6 +705,9 @@ export function SiteChacara() {
                     {valor.detalhamento.map((linha, i) => (
                       <div key={i} className="chac-summary-line">{linha}</div>
                     ))}
+                    <div className="chac-summary-line" style={{ marginTop: 6 }}>
+                      🕗 Entrada às {dados.horaEntrada} · Saída às {dados.horaSaida}
+                    </div>
                     <div className="chac-summary-total">Total: {fmt(valor.valorTotal)}</div>
                   </div>
                 )}
@@ -739,6 +743,19 @@ export function SiteChacara() {
                 <p style={{ fontSize: 11, color: 'var(--chac-ink-soft)', marginTop: -8, marginBottom: 12 }}>
                   CPF, CEP e endereço são usados para gerar seu contrato de locação.
                 </p>
+
+                {dados.avisosUso.length > 0 && (
+                  <div className="chac-summary" style={{ marginBottom: 14 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--chac-green)', marginBottom: 8 }}>
+                      ⚠️ Antes de confirmar, fique ciente:
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {dados.avisosUso.map((linha, i) => (
+                        <li key={i} className="chac-summary-line" style={{ fontSize: 12.5 }}>{linha}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {erro && <p className="chac-error">{erro}</p>}
 
