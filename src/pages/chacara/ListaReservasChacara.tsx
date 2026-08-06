@@ -138,6 +138,21 @@ export function ListaReservasChacara() {
   const [enviandoContrato, setEnviandoContrato] = useState<number | null>(null);
   const [mantendoNegociacao, setMantendoNegociacao] = useState<number | null>(null);
 
+  async function desfazerNegociacao(r: Reserva) {
+    setMantendoNegociacao(r.id);
+    try {
+      await api.patch(`/api/chacara/reservas/${r.id}/desfazer-negociacao`, {});
+      sucesso('Negociação desfeita — a reserva volta a expirar em 15 minutos.');
+      carregar();
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setMantendoNegociacao(null);
+    }
+  }
+
+  async function manterEmNegociacao(r: Reserva) {
+
   const [modalPrejuizo, setModalPrejuizo] = useState<Reserva | null>(null);
   const [formPrejuizo, setFormPrejuizo] = useState({ valor: '', observacao: '' });
   const [salvandoPrejuizo, setSalvandoPrejuizo] = useState(false);
@@ -486,9 +501,11 @@ export function ListaReservasChacara() {
                           <Calendar size={13} /> {mantendoNegociacao === r.id ? 'Salvando...' : 'Manter em negociação'}
                         </button>
                       ) : (
-                        <span className="badge badge-accent" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px' }}>
-                          🤝 Em negociação
-                        </span>
+                        <button className="btn-ghost" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}
+                          onClick={() => desfazerNegociacao(r)} disabled={mantendoNegociacao === r.id}
+                          title="Clique para voltar a expirar automaticamente">
+                          🤝 {mantendoNegociacao === r.id ? 'Salvando...' : 'Em negociação'}
+                        </button>
                       )
                     )}
                     {r.status === 'pendente_pagamento' && (
