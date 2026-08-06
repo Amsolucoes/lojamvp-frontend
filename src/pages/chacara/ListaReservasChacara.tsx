@@ -90,6 +90,17 @@ export function ListaReservasChacara() {
 
   const [slugLoja, setSlugLoja] = useState('');
 
+  const [modalPerdidas, setModalPerdidas] = useState(false);
+  const [perdidas, setPerdidas] = useState<Reserva[]>([]);
+  const [totalPerdidas, setTotalPerdidas] = useState(0);
+  const [carregandoPerdidas, setCarregandoPerdidas] = useState(false);
+  const [paginaPerdidas, setPaginaPerdidas] = useState(1);
+  const [periodoPerdidasTipo, setPeriodoPerdidasTipo] = useState<'mes' | 'todos'>('todos');
+  const [mesPerdidas, setMesPerdidas] = useState(hoje.getMonth());
+  const [anoPerdidas, setAnoPerdidas] = useState(hoje.getFullYear());
+  const [marcandoExpirada, setMarcandoExpirada] = useState<number | null>(null);
+  const PERDIDAS_POR_PAGINA = 10;
+
   useEffect(() => {
     carregar();
     api.get<any>('/api/loja/situacao').then(res => setSlugLoja(res?.slug ?? '')).catch(() => {});
@@ -137,6 +148,50 @@ export function ListaReservasChacara() {
 
   const [enviandoContrato, setEnviandoContrato] = useState<number | null>(null);
   const [mantendoNegociacao, setMantendoNegociacao] = useState<number | null>(null);
+
+  function carregarPerdidas() {
+    setCarregandoPerdidas(true);
+    const params = new URLSearchParams({ pagina: String(paginaPerdidas), porPagina: String(PERDIDAS_POR_PAGINA) });
+    if (periodoPerdidasTipo === 'mes') {
+      params.set('mes', String(mesPerdidas + 1));
+      params.set('ano', String(anoPerdidas));
+    }
+    api.get<{ itens: Reserva[]; total: number }>(`/api/chacara/reservas/perdidas?${params.toString()}`)
+      .then(res => { setPerdidas(res.itens); setTotalPerdidas(res.total); })
+      .catch(() => toastErro('Erro ao carregar reservas perdidas.'))
+      .finally(() => setCarregandoPerdidas(false));
+  }
+
+  function abrirPerdidas() {
+    setPaginaPerdidas(1);
+    setModalPerdidas(true);
+  }
+
+  useEffect(() => {
+    if (modalPerdidas) carregarPerdidas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalPerdidas, paginaPerdidas, periodoPerdidasTipo, mesPerdidas, anoPerdidas]);
+
+  function navMesPerdidas(delta: number) {
+    let nm = mesPerdidas + delta, na = anoPerdidas;
+    if (nm < 0) { nm = 11; na--; }
+    if (nm > 11) { nm = 0; na++; }
+    setMesPerdidas(nm); setAnoPerdidas(na);
+    setPaginaPerdidas(1);
+  }
+
+  async function marcarComoExpirada(r: Reserva) {
+    setMarcandoExpirada(r.id);
+    try {
+      await api.patch(`/api/chacara/reservas/${r.id}/marcar-expirada`, {});
+      sucesso('Reserva marcada como expirada.');
+      carregar();
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setMarcandoExpirada(null);
+    }
+  }
 
   async function desfazerNegociacao(r: Reserva) {
     setMantendoNegociacao(r.id);
@@ -373,9 +428,14 @@ export function ListaReservasChacara() {
           <h1 className="page-title">Reservas</h1>
           <p className="page-subtitle">Acompanhe e confirme as reservas da chácara</p>
         </div>
-        <button className="btn-primary" onClick={abrirNova}>
-          <Plus size={15} style={{ verticalAlign: -2 }} /> Nova reserva manual
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-secondary" onClick={abrirPerdidas}>
+            <X size={15} style={{ verticalAlign: -2 }} /> Reservas Perdidas
+          </button>
+          <button className="btn-primary" onClick={abrirNova}>
+            <Plus size={15} style={{ verticalAlign: -2 }} /> Nova reserva manual
+          </button>
+        </div>
       </div>
 
       <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -494,10 +554,17 @@ export function ListaReservasChacara() {
                     </button>
                     {r.status === 'pendente_pagamento' && (
                       r.expiraEm ? (
-                        <button className="btn-secondary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
-                          onClick={() => manterEmNegociacao(r)} disabled={mantendoNegociacao === r.id}>
-                          <Calendar size={13} /> {mantendoNegociacao === r.id ? 'Salvando...' : 'Manter em negociação'}
-                        </button>
+                        <>
+                          <button className="btn-secondary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
+                            onClick={() => manterEmNegociacao(r)} disabled={mantendoNegociacao === r.id}>
+                            <Calendar size={13} /> {mantendoNegociacao === r.id ? 'Salvando...' : 'Manter em negociação'}
+                          </button>
+                          <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--text-3)' }}
+                            onClick={() => marcarComoExpirada(r)} disabled={marcandoExpirada === r.id}
+                            title="Marcar como expirada agora, sem esperar o prazo">
+                            {marcandoExpirada === r.id ? 'Salvando...' : 'Marcar expirada'}
+                          </button>
+                        </>
                       ) : (
                         <button className="btn-ghost" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}
                           onClick={() => desfazerNegociacao(r)} disabled={mantendoNegociacao === r.id}
@@ -838,6 +905,62 @@ export function ListaReservasChacara() {
               <button className="btn-primary" onClick={salvarAvaliacaoCliente} disabled={salvandoAvaliacaoCliente}>
                 {salvandoAvaliacaoCliente ? 'Salvando...' : 'Salvar'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal reservas perdidas */}
+      {modalPerdidas && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalPerdidas(false)}>
+          <div className="modal" style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Reservas Perdidas ({totalPerdidas})</h2>
+              <button className="btn-ghost" onClick={() => setModalPerdidas(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div className="cx-tipo-toggle">
+                  <button className={periodoPerdidasTipo === 'todos' ? 'active' : ''} onClick={() => { setPeriodoPerdidasTipo('todos'); setPaginaPerdidas(1); }}>Todas</button>
+                  <button className={periodoPerdidasTipo === 'mes' ? 'active' : ''} onClick={() => { setPeriodoPerdidasTipo('mes'); setPaginaPerdidas(1); }}>Por mês</button>
+                </div>
+                {periodoPerdidasTipo === 'mes' && (
+                  <>
+                    <button className="btn-secondary" onClick={() => navMesPerdidas(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+                    <span style={{ fontWeight: 600, fontSize: 14, textTransform: 'capitalize' }}>{MESES[mesPerdidas]} {anoPerdidas}</span>
+                    <button className="btn-secondary" onClick={() => navMesPerdidas(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+                  </>
+                )}
+              </div>
+
+              {carregandoPerdidas ? (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Carregando...</p>
+              ) : perdidas.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Nenhuma reserva perdida encontrada.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {perdidas.map(r => (
+                    <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: 13 }}>{r.clienteNome}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{fmtData(r.dataInicio)} — {fmtData(r.dataFim)} · criada em {fmtData(r.criadoEm)}</div>
+                      </div>
+                      <strong style={{ fontSize: 13 }}>{fmt(r.valor)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {totalPerdidas > PERDIDAS_POR_PAGINA && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 16 }}>
+                  <button className="btn-secondary" disabled={paginaPerdidas <= 1} onClick={() => setPaginaPerdidas(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaPerdidas} / {Math.max(1, Math.ceil(totalPerdidas / PERDIDAS_POR_PAGINA))}</span>
+                  <button className="btn-secondary" disabled={paginaPerdidas >= Math.ceil(totalPerdidas / PERDIDAS_POR_PAGINA)} onClick={() => setPaginaPerdidas(p => p + 1)} style={{ padding: '4px 10px' }}>Próxima</button>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalPerdidas(false)}>Fechar</button>
             </div>
           </div>
         </div>
