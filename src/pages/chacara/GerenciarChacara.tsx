@@ -11,6 +11,7 @@ const LIMITE_FOTOS = 30;
 type Foto = { id: number; url: string; ordem: number };
 type Info = {
   descricao: string; endereco: string; comodidades: string; comodidadesExtras: string | null; mapaEmbedUrl: string | null;
+  horaEntrada: string; horaSaida: string; avisosUso: string | null;
   locadorNome: string | null; locadorRg: string | null; locadorCpf: string | null; locadorEndereco: string | null; locadorTelefone: string | null;
   cidadeAssinatura: string | null;
 };
@@ -33,6 +34,7 @@ export function GerenciarChacara() {
   const [uploading, setUploading] = useState(false);
   const [info, setInfo] = useState<Info>({
     descricao: '', endereco: '', comodidades: '', comodidadesExtras: '', mapaEmbedUrl: '',
+    horaEntrada: '08:00', horaSaida: '22:00', avisosUso: '',
     locadorNome: '', locadorRg: '', locadorCpf: '', locadorEndereco: '', locadorTelefone: '', cidadeAssinatura: '',
   });
   const [salvandoDescricao, setSalvandoDescricao] = useState(false);
@@ -239,6 +241,30 @@ export function GerenciarChacara() {
             <textarea rows={3} value={info.comodidadesExtras ?? ''}
               onChange={e => setInfo(i => ({ ...i, comodidadesExtras: e.target.value }))}
               placeholder={'Uma por linha, ex:\nLago para pesca\nQuadra de vôlei'} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Horário de entrada</label>
+              <input type="time" value={info.horaEntrada} onChange={e => setInfo(i => ({ ...i, horaEntrada: e.target.value }))} />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Horário de saída</label>
+              <input type="time" value={info.horaSaida} onChange={e => setInfo(i => ({ ...i, horaSaida: e.target.value }))} />
+            </div>
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: -8 }}>
+            Mostrado pro cliente no site — se ele reservar 2 dias, entrada continua sendo neste horário no 1º dia e saída neste horário no último dia.
+          </p>
+
+          <div className="form-group chacara-full">
+            <label className="form-label">Avisos e regras de uso (opcional)</label>
+            <textarea rows={8} value={info.avisosUso ?? ''}
+              onChange={e => setInfo(i => ({ ...i, avisosUso: e.target.value }))}
+              placeholder={'Uma regra por linha, ex:\nAo sair, guardar cadeiras e mesas no lugar\nFechar banheiros e quartos com a chave\nProibido narguilé em cima da mesa de madeira'} />
+            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+              Mostrado pro cliente antes de ele confirmar a reserva, pra ele estar ciente das regras.
+            </p>
           </div>
 
           <button className="btn-primary chacara-full" onClick={salvarDescricao} disabled={salvandoDescricao} style={{ alignSelf: 'flex-start' }}>
