@@ -39,6 +39,7 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Ag
 const STATUS_LABEL: Record<string, { label: string; cor: string }> = {
   pendente_pagamento: { label: 'Pendente', cor: 'var(--yellow)' },
   confirmada: { label: 'Confirmada', cor: 'var(--green)' },
+  confirmada_parcial: { label: 'Parcial (sinal pago)', cor: 'var(--yellow)' },
   cancelada: { label: 'Cancelada', cor: 'var(--red)' },
   expirada: { label: 'Expirada', cor: 'var(--text-3)' },
 };
@@ -421,12 +422,12 @@ export function ListaReservasChacara() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 700, fontSize: 16 }}>{fmt(r.valor)}</div>
-                    {r.status === 'confirmada' && r.valorPago < r.valor && (
+                    {(r.status === 'confirmada' || r.status === 'confirmada_parcial') && r.valorPago < r.valor && (
                       <div style={{ fontSize: 11, color: 'var(--yellow)' }}>
                         Pago: {fmt(r.valorPago)} · Falta: {fmt(r.valor - r.valorPago)}
                       </div>
                     )}
-                    {r.status === 'confirmada' && r.valorPago >= r.valor && (
+                    {(r.status === 'confirmada' || r.status === 'confirmada_parcial') && r.valorPago >= r.valor && (
                       <div style={{ fontSize: 11, color: 'var(--green)' }}>Pago integralmente</div>
                     )}
                     <span style={{ fontSize: 12, fontWeight: 600, color: statusInfo.cor }}>{statusInfo.label}</span>
@@ -496,7 +497,7 @@ export function ListaReservasChacara() {
                         <Check size={13} /> {confirmando === r.id ? 'Confirmando...' : 'Confirmar pagamento'}
                       </button>
                     )}
-                    {r.status === 'confirmada' && r.valorPago < r.valor && (
+                    {(r.status === 'confirmada' || r.status === 'confirmada_parcial') && r.valorPago < r.valor && (
                       <button className="btn-primary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
                         onClick={() => { setValorPagamento(r.valor - r.valorPago); setModalPagamento(r); }}>
                         <DollarSign size={13} /> Registrar saldo
