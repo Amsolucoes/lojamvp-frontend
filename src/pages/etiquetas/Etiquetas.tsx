@@ -38,8 +38,10 @@ export function Etiquetas() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [busca, setBusca] = useState('');
-  const [selecionados, setSelecionados] = useState<Record<string, number>>({}); // produtoId -> quantidade
+  const [selecionados, setSelecionados] = useState<Record<string, number>>({}); // chave -> quantidade
   const [modoImpressao, setModoImpressao] = useState<'a4' | 'termica'>('a4');
+  const [pagina, setPagina] = useState(1);
+  const ITENS_POR_PAGINA = 15;
 
   const [nomeLoja, setNomeLoja] = useState('');
   const [logoLoja, setLogoLoja] = useState('');
@@ -85,27 +87,64 @@ export function Etiquetas() {
     }
   }
 
-  const produtosFiltrados = produtos.filter(p =>
-    p.ativo && p.nome.toLowerCase().includes(busca.toLowerCase())
+  interface ItemEtiqueta {
+    chave: string;
+    nomeExibicao: string;
+    precoVenda: number;
+    codigoBarras: string | null;
+  }
+
+  // Cada produto vira 1 item — a não ser que tenha variações com código de barras próprio,
+  // aí cada variação vira uma linha selecionável separada (ex: Bermuda Tricô P/Azul, M/Preto...)
+  const todosItens: ItemEtiqueta[] = produtos.filter(p => p.ativo).flatMap(p => {
+    const variacoes = ((p as any).variacoes ?? []).filter((v: any) => v.ativo !== false);
+    if (variacoes.length > 0) {
+      return variacoes.map((v: any) => {
+        const label = [v.tamanho, v.cor].filter(Boolean).join(' / ');
+        return {
+          chave: `${p.id}-${v.id}`,
+          nomeExibicao: label ? `${p.nome} (${label})` : p.nome,
+          precoVenda: p.precoVenda,
+          codigoBarras: v.codigoBarras ?? null,
+        };
+      });
+    }
+    return [{
+      chave: p.id,
+      nomeExibicao: p.nome,
+      precoVenda: p.precoVenda,
+      codigoBarras: p.codigoBarras ?? null,
+    }];
+  });
+
+  const itensFiltrados = todosItens.filter(item =>
+    item.nomeExibicao.toLowerCase().includes(busca.toLowerCase()) ||
+    (item.codigoBarras ?? '').toLowerCase().includes(busca.toLowerCase())
   );
 
-  function toggleProduto(id: string) {
+  const totalPaginas = Math.max(1, Math.ceil(itensFiltrados.length / ITENS_POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const itensPaginados = itensFiltrados.slice((paginaSegura - 1) * ITENS_POR_PAGINA, paginaSegura * ITENS_POR_PAGINA);
+
+  useEffect(() => { setPagina(1); }, [busca]);
+
+  function toggleItem(chave: string) {
     setSelecionados(sel => {
       const novo = { ...sel };
-      if (novo[id]) delete novo[id];
-      else novo[id] = 1;
+      if (novo[chave]) delete novo[chave];
+      else novo[chave] = 1;
       return novo;
     });
   }
 
-  function alterarQtd(id: string, qtd: number) {
-    setSelecionados(sel => ({ ...sel, [id]: Math.max(1, qtd) }));
+  function alterarQtd(chave: string, qtd: number) {
+    setSelecionados(sel => ({ ...sel, [chave]: Math.max(1, qtd) }));
   }
 
-  const listaImpressao = Object.entries(selecionados).flatMap(([id, qtd]) => {
-    const produto = produtos.find(p => p.id === id);
-    if (!produto) return [];
-    return Array.from({ length: qtd }, (_, i) => ({ ...produto, chaveUnica: `${id}-${i}` }));
+  const listaImpressao = Object.entries(selecionados).flatMap(([chave, qtd]) => {
+    const item = todosItens.find(i => i.chave === chave);
+    if (!item) return [];
+    return Array.from({ length: qtd }, (_, i) => ({ ...item, chaveUnica: `${chave}-${i}` }));
   });
 
   function imprimir() {
@@ -172,14 +211,16 @@ export function Etiquetas() {
             </label>
             {config.incluirLogo && (
               <div style={{ marginLeft: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div className="cx-tipo-toggle" style={{ maxWidth: 300 }}>
+                <div className="cx-tipo-toggle" style={{ maxWidth: 340, display: 'flex', gap: 8 }}>
                   <button type="button" className={!config.usarLogoPropria ? 'active' : ''}
+                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
                     onClick={() => setConfig(c => c ? { ...c, usarLogoPropria: false } : c)}>
                     Logo da loja
                   </button>
                   <button type="button" className={config.usarLogoPropria ? 'active' : ''}
+                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
                     onClick={() => setConfig(c => c ? { ...c, usarLogoPropria: true } : c)}>
-                    Logo própria da etiqueta
+                    Logo própria
                   </button>
                 </div>
                 {config.usarLogoPropria && (
@@ -261,27 +302,27 @@ export function Etiquetas() {
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {produtosFiltrados.length === 0 ? (
+        {itensPaginados.length === 0 ? (
           <div className="empty" style={{ padding: '40px 0' }}><Tag size={28} /><p>Nenhum produto encontrado.</p></div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {produtosFiltrados.map(p => {
-              const marcado = !!selecionados[p.id];
+            {itensPaginados.map(item => {
+              const marcado = !!selecionados[item.chave];
               return (
-                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                <div key={item.chave} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
                   <input type="checkbox" checked={marcado} style={{ width: 16, height: 16, margin: 0 }}
-                    onChange={() => toggleProduto(p.id)} />
+                    onChange={() => toggleItem(item.chave)} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500, fontSize: 14 }}>{p.nome}</div>
+                    <div style={{ fontWeight: 500, fontSize: 14 }}>{item.nomeExibicao}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                      {fmt(p.precoVenda)}{p.codigoBarras ? ` · ${p.codigoBarras}` : ' · sem código de barras'}
+                      {fmt(item.precoVenda)}{item.codigoBarras ? ` · ${item.codigoBarras}` : ' · sem código de barras'}
                     </div>
                   </div>
                   {marcado && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Qtd:</span>
-                      <input type="number" min={1} value={selecionados[p.id]} style={{ width: 60 }}
-                        onChange={e => alterarQtd(p.id, +e.target.value)} />
+                      <input type="number" min={1} value={selecionados[item.chave]} style={{ width: 60 }}
+                        onChange={e => alterarQtd(item.chave, +e.target.value)} />
                     </div>
                   )}
                 </div>
@@ -291,6 +332,14 @@ export function Etiquetas() {
         )}
       </div>
 
+      {itensFiltrados.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 16 }}>
+          <button className="btn-secondary" disabled={paginaSegura <= 1} onClick={() => setPagina(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaSegura} / {totalPaginas}</span>
+          <button className="btn-secondary" disabled={paginaSegura >= totalPaginas} onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+        </div>
+      )}
+
       {/* Área de impressão — escondida na tela, só aparece via CSS @media print */}
       <div className="etq-impressao">
         <div className="etq-grid">
@@ -298,7 +347,7 @@ export function Etiquetas() {
             <div key={item.chaveUnica} className="etq-item" style={{ width: `${config.larguraMm}mm`, height: `${config.alturaMm}mm` }}>
               {config.incluirLogo && logoParaEtiqueta && <img className="etq-logo" src={logoParaEtiqueta} alt="" />}
               {config.incluirNomeMarca && nomeLoja && <div className="etq-marca">{nomeLoja}</div>}
-              {config.incluirNomeProduto && <div className="etq-produto">{item.nome}</div>}
+              {config.incluirNomeProduto && <div className="etq-produto">{item.nomeExibicao}</div>}
               {config.incluirPreco && <div className="etq-preco">{fmt(item.precoVenda)}</div>}
               {config.incluirCodigoBarras && item.codigoBarras && (
                 <img className="etq-barras" src={urlCodigoBarras(item.codigoBarras)} alt="" />
