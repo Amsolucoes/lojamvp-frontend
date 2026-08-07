@@ -22,6 +22,17 @@ interface ConfigEtiqueta {
   escalaFonte: number;
 }
 
+const TAMANHOS_PADRAO = [
+  { label: '30 x 20mm — pequena (bijuteria, acessórios)', largura: 30, altura: 20 },
+  { label: '33 x 22mm — pequena', largura: 33, altura: 22 },
+  { label: '40 x 25mm — padrão pequeno', largura: 40, altura: 25 },
+  { label: '40 x 30mm — mais usada (roupas, preço)', largura: 40, altura: 30 },
+  { label: '50 x 30mm — roupas (mais larga)', largura: 50, altura: 30 },
+  { label: '50 x 40mm — média', largura: 50, altura: 40 },
+  { label: '60 x 40mm — maior, mais espaço pro código de barras', largura: 60, altura: 40 },
+  { label: '100 x 50mm — grande (caixas, volumes)', largura: 100, altura: 50 },
+];
+
 const FONTES_DISPONIVEIS = [
   { valor: 'Arial, sans-serif', label: 'Arial' },
   { valor: "'Courier New', monospace", label: 'Courier New' },
@@ -299,6 +310,20 @@ export function Etiquetas() {
           </div>
 
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>Tamanho da etiqueta</div>
+          <div className="form-group" style={{ marginBottom: 14, maxWidth: 400 }}>
+            <label className="form-label">Tamanho padrão</label>
+            <select
+              value={TAMANHOS_PADRAO.findIndex(t => t.largura === config.larguraMm && t.altura === config.alturaMm)}
+              onChange={e => {
+                const idx = +e.target.value;
+                if (idx === -1) return;
+                const t = TAMANHOS_PADRAO[idx];
+                setConfig(c => c ? { ...c, larguraMm: t.largura, alturaMm: t.altura } : c);
+              }}>
+              <option value={-1}>Personalizado</option>
+              {TAMANHOS_PADRAO.map((t, i) => <option key={i} value={i}>{t.label}</option>)}
+            </select>
+          </div>
           <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
             <div className="form-group">
               <label className="form-label">Largura (mm)</label>
@@ -312,7 +337,7 @@ export function Etiquetas() {
             </div>
           </div>
           <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 16 }}>
-            Padrão comum de etiqueta térmica: 40x30mm ou 50x30mm. Verifique o tamanho da sua folha adesiva ou rolo.
+            Escolha um padrão acima, ou ajuste manualmente os campos de largura/altura pra um tamanho customizado.
           </p>
 
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>Estilo do texto</div>
