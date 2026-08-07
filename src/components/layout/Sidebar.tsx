@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
-  TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent } from 'lucide-react';
+  TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, 
+  FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent, Tag } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -89,6 +90,7 @@ export function Sidebar() {
   const temNf = modulos.includes('nf') && temProdutos;
   const temFuncionarios = modulos.includes('funcionarios') && tipoPlano !== 'chacara';
   const temChacaraReservas = modulos.includes('chacara_reservas');
+  const temEtiquetas = modulos.includes('etiquetas') && temProdutos;
   const temCupomNaoFiscal = modulos.includes('cupom_nao_fiscal');
 
   const NAV = [
@@ -100,6 +102,7 @@ export function Sidebar() {
     ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
     ...(temServicos || temTurmas ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
     ...(temProdutos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
+    ...(temEtiquetas ? [{ to: '/etiquetas', icon: Tag, label: 'Etiquetas' }] : []),
     ...(temNf ? [{ to: '/nf', label: 'Importar NF', icon: FileText }] : []),
     ...(temFuncionarios ? [{ to: '/funcionarios', label: 'Funcionários', icon: UserCog }] : []),
     ...(temFuncionarios ? [{ to: '/comissoes', label: 'Comissões', icon: Percent }] : []),
