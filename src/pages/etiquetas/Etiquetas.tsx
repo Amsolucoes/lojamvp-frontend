@@ -92,6 +92,7 @@ export function Etiquetas() {
     nomeExibicao: string;
     precoVenda: number;
     codigoBarras: string | null;
+    estoque: number;
   }
 
   // Cada produto vira 1 item — a não ser que tenha variações com código de barras próprio,
@@ -106,6 +107,7 @@ export function Etiquetas() {
           nomeExibicao: label ? `${p.nome} (${label})` : p.nome,
           precoVenda: p.precoVenda,
           codigoBarras: v.codigoBarras ?? null,
+          estoque: v.estoque ?? 0,
         };
       });
     }
@@ -114,6 +116,7 @@ export function Etiquetas() {
       nomeExibicao: p.nome,
       precoVenda: p.precoVenda,
       codigoBarras: p.codigoBarras ?? null,
+      estoque: p.estoque ?? 0,
     }];
   });
 
@@ -132,7 +135,10 @@ export function Etiquetas() {
     setSelecionados(sel => {
       const novo = { ...sel };
       if (novo[chave]) delete novo[chave];
-      else novo[chave] = 1;
+      else {
+        const item = todosItens.find(i => i.chave === chave);
+        novo[chave] = item && item.estoque > 0 ? item.estoque : 1;
+      }
       return novo;
     });
   }
@@ -323,6 +329,13 @@ export function Etiquetas() {
                       <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Qtd:</span>
                       <input type="number" min={1} value={selecionados[item.chave]} style={{ width: 60 }}
                         onChange={e => alterarQtd(item.chave, +e.target.value)} />
+                      {item.estoque > 0 && (
+                        <button type="button" className="btn-ghost" style={{ fontSize: 11, padding: '2px 6px' }}
+                          title={`Estoque: ${item.estoque}`}
+                          onClick={() => alterarQtd(item.chave, item.estoque)}>
+                          Usar estoque ({item.estoque})
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
