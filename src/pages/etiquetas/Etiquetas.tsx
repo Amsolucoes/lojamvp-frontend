@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Tag, Search, Printer, Settings, Upload, Eye } from 'lucide-react';
+import { Tag, Search, Printer, Settings, Upload, Eye, Plus, Star, Trash2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -7,7 +7,10 @@ import { useToast } from '../../context/ToastContext';
 const CLOUDINARY_CLOUD = 'dnwnwshvq';
 const CLOUDINARY_PRESET = 'loja-logos';
 
-interface ConfigEtiqueta {
+interface ModeloEtiqueta {
+  id: string;
+  nome: string;
+  padrao: boolean;
   incluirLogo: boolean;
   usarLogoPropria: boolean;
   logoEtiquetaUrl: string | null;
@@ -18,9 +21,18 @@ interface ConfigEtiqueta {
   larguraMm: number;
   alturaMm: number;
   corTexto: string;
+  corFundo: string;
   fonteFamilia: string;
   escalaFonte: number;
 }
+
+const MODELO_VAZIO: Omit<ModeloEtiqueta, 'id'> = {
+  nome: '', padrao: false,
+  incluirLogo: true, usarLogoPropria: false, logoEtiquetaUrl: null,
+  incluirNomeMarca: true, incluirNomeProduto: true, incluirPreco: true, incluirCodigoBarras: true,
+  larguraMm: 40, alturaMm: 30,
+  corTexto: '#000000', corFundo: '#FFFFFF', fonteFamilia: 'Arial, sans-serif', escalaFonte: 100,
+};
 
 const TAMANHOS_PADRAO = [
   { label: '30 x 20mm — pequena (bijuteria, acessórios)', largura: 30, altura: 20 },
@@ -63,43 +75,62 @@ export function Etiquetas() {
   const { produtos } = useApp();
   const { sucesso, erro } = useToast();
 
-  const [config, setConfig] = useState<ConfigEtiqueta | null>(null);
-  const [salvandoConfig, setSalvandoConfig] = useState(false);
+  const [modelos, setModelos] = useState<ModeloEtiqueta[]>([]);
+  const [carregandoModelos, setCarregandoModelos] = useState(true);
+  const [modeloAtivoId, setModeloAtivoId] = useState('');
+
+  const [modalModelos, setModalModelos] = useState(false);
+  const [mostrarFormModelo, setMostrarFormModelo] = useState(false);
+  const [editandoModeloId, setEditandoModeloId] = useState<string | null>(null);
+  const [formModelo, setFormModelo] = useState<Omit<ModeloEtiqueta, 'id'>>(MODELO_VAZIO);
+  const [salvandoModelo, setSalvandoModelo] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [mostrarConfig, setMostrarConfig] = useState(false);
+  const [confirmExcluir, setConfirmExcluir] = useState<ModeloEtiqueta | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [busca, setBusca] = useState('');
-  const [selecionados, setSelecionados] = useState<Record<string, number>>({}); // chave -> quantidade
+  const [selecionados, setSelecionados] = useState<Record<string, number>>({});
   const [modoImpressao, setModoImpressao] = useState<'a4' | 'termica'>('a4');
   const [pagina, setPagina] = useState(1);
-  const [itensPorPagina, setItensPorPagina] = useState(15);
+  const [itensPorPagina, setItensPorPagina] = useState(10);
   const [usarEstoqueAuto, setUsarEstoqueAuto] = useState(false);
 
   const [nomeLoja, setNomeLoja] = useState('');
   const [logoLoja, setLogoLoja] = useState('');
 
+  function carregarModelos() {
+    setCarregandoModelos(true);
+    api.get<ModeloEtiqueta[]>('/api/etiquetas/modelos')
+      .then(lista => {
+        setModelos(lista);
+        const padrao = lista.find(m => m.padrao) ?? lista[0];
+        if (padrao) setModeloAtivoId(atual => atual || padrao.id);
+      })
+      .catch(() => {})
+      .finally(() => setCarregandoModelos(false));
+  }
+
   useEffect(() => {
-    api.get<ConfigEtiqueta>('/api/etiquetas/configuracao').then(setConfig).catch(() => {});
+    carregarModelos();
     api.get<any>('/api/cliente/config').then(res => {
       setNomeLoja(res?.nome ?? '');
       setLogoLoja(res?.logoUrl ?? '');
     }).catch(() => {});
   }, []);
 
-  async function salvarConfig() {
-    if (!config) return;
-    setSalvandoConfig(true);
-    try {
-      const atualizado = await api.put<ConfigEtiqueta>('/api/etiquetas/configuracao', config);
-      setConfig(atualizado);
-      sucesso('Configuração salva!');
-      setMostrarConfig(false);
-    } catch (e) {
-      erro((e as Error).message);
-    } finally {
-      setSalvandoConfig(false);
-    }
+  const modeloAtivo = modelos.find(m => m.id === modeloAtivoId) ?? null;
+
+  // ── Gerenciar modelos (CRUD) ──────────────────────────────────
+  function abrirNovoModelo() {
+    setEditandoModeloId(null);
+    setFormModelo(MODELO_VAZIO);
+    setMostrarFormModelo(true);
+  }
+
+  function abrirEditarModelo(m: ModeloEtiqueta) {
+    setEditandoModeloId(m.id);
+    setFormModelo({ ...m });
+    setMostrarFormModelo(true);
   }
 
   async function uploadLogoPropria(file: File) {
@@ -112,7 +143,7 @@ export function Etiquetas() {
       const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: data });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message ?? 'Erro no upload');
-      setConfig(c => c ? { ...c, logoEtiquetaUrl: json.secure_url } : c);
+      setFormModelo(f => ({ ...f, logoEtiquetaUrl: json.secure_url }));
     } catch (e) {
       erro('Erro ao fazer upload: ' + (e as Error).message);
     } finally {
@@ -120,6 +151,46 @@ export function Etiquetas() {
     }
   }
 
+  async function salvarModelo() {
+    if (!formModelo.nome.trim()) { erro('Digite um nome pro modelo.'); return; }
+    setSalvandoModelo(true);
+    try {
+      if (editandoModeloId) await api.put(`/api/etiquetas/modelos/${editandoModeloId}`, formModelo);
+      else await api.post('/api/etiquetas/modelos', formModelo);
+      sucesso('Modelo salvo!');
+      setMostrarFormModelo(false);
+      carregarModelos();
+    } catch (e) {
+      erro((e as Error).message);
+    } finally {
+      setSalvandoModelo(false);
+    }
+  }
+
+  async function marcarPadrao(m: ModeloEtiqueta) {
+    try {
+      await api.patch(`/api/etiquetas/modelos/${m.id}/padrao`, {});
+      sucesso('Modelo padrão atualizado.');
+      carregarModelos();
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function excluirModelo() {
+    if (!confirmExcluir) return;
+    try {
+      await api.delete(`/api/etiquetas/modelos/${confirmExcluir.id}`);
+      sucesso('Modelo excluído.');
+      setConfirmExcluir(null);
+      if (modeloAtivoId === confirmExcluir.id) setModeloAtivoId('');
+      carregarModelos();
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  // ── Seleção de produtos ────────────────────────────────────────
   interface ItemEtiqueta {
     chave: string;
     nomeExibicao: string;
@@ -128,8 +199,6 @@ export function Etiquetas() {
     estoque: number;
   }
 
-  // Cada produto vira 1 item — a não ser que tenha variações com código de barras próprio,
-  // aí cada variação vira uma linha selecionável separada (ex: Bermuda Tricô P/Azul, M/Preto...)
   const todosItens: ItemEtiqueta[] = produtos.filter(p => p.ativo).flatMap(p => {
     const variacoes = ((p as any).variacoes ?? []).filter((v: any) => v.ativo !== false);
     if (variacoes.length > 0) {
@@ -187,47 +256,40 @@ export function Etiquetas() {
   });
 
   function imprimir() {
+    if (!modeloAtivo) { erro('Escolha um modelo de etiqueta.'); return; }
     if (listaImpressao.length === 0) { erro('Selecione ao menos um produto.'); return; }
     window.print();
   }
 
-  const logoParaEtiqueta = config?.usarLogoPropria ? config.logoEtiquetaUrl : logoLoja;
+  const logoParaEtiqueta = formModelo.usarLogoPropria ? formModelo.logoEtiquetaUrl : logoLoja;
+  const logoParaImpressao = modeloAtivo?.usarLogoPropria ? modeloAtivo.logoEtiquetaUrl : logoLoja;
 
-  if (!config) return <div className="page"><p>Carregando...</p></div>;
-
-  const escala = config.escalaFonte / 100;
-
-  function conteudoEtiqueta(nomeExibicao: string, precoVenda: number, codigoBarras: string | null) {
+  function conteudoEtiqueta(m: ModeloEtiqueta | Omit<ModeloEtiqueta, 'id'>, logo: string | null, nomeExibicao: string, precoVenda: number, codigoBarras: string | null) {
+    const escala = m.escalaFonte / 100;
     return (
       <>
-        {config!.incluirLogo && logoParaEtiqueta && <img className="etq-logo" src={logoParaEtiqueta} alt="" />}
-        {config!.incluirNomeMarca && nomeLoja && (
-          <div style={{ fontSize: 8 * escala, fontWeight: 700 }}>{nomeLoja}</div>
-        )}
-        {config!.incluirNomeProduto && (
-          <div style={{ fontSize: 7 * escala, marginTop: '1mm' }}>{nomeExibicao}</div>
-        )}
-        {config!.incluirPreco && (
-          <div style={{ fontSize: 11 * escala, fontWeight: 700, marginTop: '1mm' }}>{fmt(precoVenda)}</div>
-        )}
-        {config!.incluirCodigoBarras && codigoBarras && (
-          <img className="etq-barras" src={urlCodigoBarras(codigoBarras)} alt="" />
-        )}
+        {m.incluirLogo && logo && <img src={logo} alt="" style={{ maxWidth: '60%', maxHeight: '30%', objectFit: 'contain', marginBottom: '1mm' }} />}
+        {m.incluirNomeMarca && nomeLoja && <div style={{ fontSize: 8 * escala, fontWeight: 700 }}>{nomeLoja}</div>}
+        {m.incluirNomeProduto && <div style={{ fontSize: 7 * escala, marginTop: '1mm' }}>{nomeExibicao}</div>}
+        {m.incluirPreco && <div style={{ fontSize: 11 * escala, fontWeight: 700, marginTop: '1mm' }}>{fmt(precoVenda)}</div>}
+        {m.incluirCodigoBarras && codigoBarras && <img className="etq-barras" src={urlCodigoBarras(codigoBarras)} alt="" style={{ width: '90%', marginTop: '1mm' }} />}
       </>
     );
   }
 
-  const cssImpressao = modoImpressao === 'termica'
+  if (carregandoModelos) return <div className="page"><div className="layout-spinner" /></div>;
+
+  const cssImpressao = modeloAtivo ? (modoImpressao === 'termica'
     ? `
-      @page { size: ${config.larguraMm}mm ${config.alturaMm}mm; margin: 0; }
+      @page { size: ${modeloAtivo.larguraMm}mm ${modeloAtivo.alturaMm}mm; margin: 0; }
       .etq-grid { display: block; }
-      .etq-item { width: ${config.larguraMm}mm; height: ${config.alturaMm}mm; page-break-after: always; }
+      .etq-item { width: ${modeloAtivo.larguraMm}mm; height: ${modeloAtivo.alturaMm}mm; page-break-after: always; }
     `
     : `
       @page { size: A4; margin: 10mm; }
       .etq-grid { display: flex; flex-wrap: wrap; gap: 2mm; }
-      .etq-item { width: ${config.larguraMm}mm; height: ${config.alturaMm}mm; page-break-inside: avoid; }
-    `;
+      .etq-item { width: ${modeloAtivo.larguraMm}mm; height: ${modeloAtivo.alturaMm}mm; page-break-inside: avoid; }
+    `) : '';
 
   return (
     <div className="page">
@@ -243,189 +305,29 @@ export function Etiquetas() {
           border: 1px dashed #ccc; box-sizing: border-box; padding: 2mm;
           display: flex; flex-direction: column; align-items: center; justify-content: center;
           text-align: center; overflow: hidden;
-          font-family: ${config.fonteFamilia}; color: ${config.corTexto};
+          font-family: ${modeloAtivo?.fonteFamilia ?? 'Arial'}; color: ${modeloAtivo?.corTexto ?? '#000'};
+          background: ${modeloAtivo?.corFundo ?? '#fff'};
         }
-        .etq-item img.etq-logo { max-width: 60%; max-height: 30%; object-fit: contain; margin-bottom: 1mm; }
-        .etq-item img.etq-barras { width: 90%; margin-top: 1mm; }
       `}</style>
 
       <div className="page-header">
         <div>
           <h1 className="page-title">Etiquetas</h1>
-          <p className="page-subtitle">Configure e imprima etiquetas de preço dos produtos</p>
+          <p className="page-subtitle">Escolha um modelo, selecione os produtos e imprima</p>
         </div>
-        <button className="btn-secondary" onClick={() => setMostrarConfig(v => !v)}>
-          <Settings size={15} style={{ verticalAlign: -2 }} /> Configurar etiqueta
+        <button className="btn-secondary" onClick={() => setModalModelos(true)}>
+          <Settings size={15} style={{ verticalAlign: -2 }} /> Gerenciar modelos
         </button>
       </div>
 
-      {mostrarConfig && (
-        <div className="card" style={{ marginBottom: 16, padding: 20 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>O que aparece na etiqueta</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-              <input type="checkbox" checked={config.incluirLogo} style={{ width: 16, height: 16, margin: 0 }}
-                onChange={e => setConfig(c => c ? { ...c, incluirLogo: e.target.checked } : c)} />
-              Incluir logo
-            </label>
-            {config.incluirLogo && (
-              <div style={{ marginLeft: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div className="cx-tipo-toggle" style={{ maxWidth: 340, display: 'flex', gap: 8 }}>
-                  <button type="button" className={!config.usarLogoPropria ? 'active' : ''}
-                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
-                    onClick={() => setConfig(c => c ? { ...c, usarLogoPropria: false } : c)}>
-                    Logo da loja
-                  </button>
-                  <button type="button" className={config.usarLogoPropria ? 'active' : ''}
-                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
-                    onClick={() => setConfig(c => c ? { ...c, usarLogoPropria: true } : c)}>
-                    Logo própria
-                  </button>
-                </div>
-                {config.usarLogoPropria && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {config.logoEtiquetaUrl && (
-                      <img src={config.logoEtiquetaUrl} alt="Logo" style={{ width: 50, height: 50, objectFit: 'contain', border: '1px solid var(--border)', borderRadius: 6 }} />
-                    )}
-                    <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
-                      onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogoPropria(f); }} />
-                    <button className="btn-secondary" onClick={() => fileRef.current?.click()} disabled={uploadingLogo}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {uploadingLogo ? 'Enviando...' : <><Upload size={14} /> {config.logoEtiquetaUrl ? 'Trocar' : 'Enviar'} logo</>}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-              <input type="checkbox" checked={config.incluirNomeMarca} style={{ width: 16, height: 16, margin: 0 }}
-                onChange={e => setConfig(c => c ? { ...c, incluirNomeMarca: e.target.checked } : c)} />
-              Incluir nome da marca ({nomeLoja || 'sua loja'})
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-              <input type="checkbox" checked={config.incluirNomeProduto} style={{ width: 16, height: 16, margin: 0 }}
-                onChange={e => setConfig(c => c ? { ...c, incluirNomeProduto: e.target.checked } : c)} />
-              Incluir nome do produto
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-              <input type="checkbox" checked={config.incluirPreco} style={{ width: 16, height: 16, margin: 0 }}
-                onChange={e => setConfig(c => c ? { ...c, incluirPreco: e.target.checked } : c)} />
-              Incluir preço
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-              <input type="checkbox" checked={config.incluirCodigoBarras} style={{ width: 16, height: 16, margin: 0 }}
-                onChange={e => setConfig(c => c ? { ...c, incluirCodigoBarras: e.target.checked } : c)} />
-              Incluir código de barras
-            </label>
-          </div>
-
-          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>Tamanho da etiqueta</div>
-          <div className="form-group" style={{ marginBottom: 14, maxWidth: 400 }}>
-            <label className="form-label">Tamanho padrão</label>
-            <select
-              value={TAMANHOS_PADRAO.findIndex(t => t.largura === config.larguraMm && t.altura === config.alturaMm)}
-              onChange={e => {
-                const idx = +e.target.value;
-                if (idx === -1) return;
-                const t = TAMANHOS_PADRAO[idx];
-                setConfig(c => c ? { ...c, larguraMm: t.largura, alturaMm: t.altura } : c);
-              }}>
-              <option value={-1}>Personalizado</option>
-              {TAMANHOS_PADRAO.map((t, i) => <option key={i} value={i}>{t.label}</option>)}
-            </select>
-          </div>
-          <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
-            <div className="form-group">
-              <label className="form-label">Largura (mm)</label>
-              <input type="number" min={10} value={config.larguraMm}
-                onChange={e => setConfig(c => c ? { ...c, larguraMm: +e.target.value } : c)} style={{ width: 100 }} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Altura (mm)</label>
-              <input type="number" min={10} value={config.alturaMm}
-                onChange={e => setConfig(c => c ? { ...c, alturaMm: +e.target.value } : c)} style={{ width: 100 }} />
-            </div>
-          </div>
-          <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 16 }}>
-            Escolha um padrão acima, ou ajuste manualmente os campos de largura/altura pra um tamanho customizado.
-          </p>
-
-          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>Estilo do texto</div>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 20 }}>
-            <div className="form-group">
-              <label className="form-label">Cor do texto</label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input type="color" value={config.corTexto}
-                  onChange={e => setConfig(c => c ? { ...c, corTexto: e.target.value } : c)}
-                  style={{ width: 44, height: 36, padding: 2 }} />
-                <input value={config.corTexto}
-                  onChange={e => setConfig(c => c ? { ...c, corTexto: e.target.value } : c)}
-                  style={{ width: 90 }} />
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Fonte</label>
-              <select value={config.fonteFamilia} style={{ width: 200 }}
-                onChange={e => setConfig(c => c ? { ...c, fonteFamilia: e.target.value } : c)}>
-                {FONTES_DISPONIVEIS.map(f => <option key={f.valor} value={f.valor}>{f.label}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Tamanho do texto ({config.escalaFonte}%)</label>
-              <input type="range" min={50} max={300} step={10} value={config.escalaFonte}
-                onChange={e => setConfig(c => c ? { ...c, escalaFonte: +e.target.value } : c)}
-                style={{ width: 180 }} />
-            </div>
-          </div>
-
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Eye size={14} /> Pré-visualização
-          </div>
-          <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 20, marginBottom: 20, display: 'flex', justifyContent: 'center' }}>
-            <div
-              style={{
-                width: `${config.larguraMm}mm`, height: `${config.alturaMm}mm`,
-                border: '1px dashed #ccc', boxSizing: 'border-box', padding: '2mm',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                textAlign: 'center', overflow: 'hidden', background: '#fff',
-                fontFamily: config.fonteFamilia, color: config.corTexto,
-              }}
-            >
-              {config.incluirLogo && logoParaEtiqueta && (
-                <img src={logoParaEtiqueta} alt="" style={{ maxWidth: '60%', maxHeight: '30%', objectFit: 'contain', marginBottom: '1mm' }} />
-              )}
-              {config.incluirNomeMarca && nomeLoja && (
-                <div style={{ fontSize: 8 * escala, fontWeight: 700 }}>{nomeLoja}</div>
-              )}
-              {config.incluirNomeProduto && (
-                <div style={{ fontSize: 7 * escala, marginTop: '1mm' }}>Nome do produto</div>
-              )}
-              {config.incluirPreco && (
-                <div style={{ fontSize: 11 * escala, fontWeight: 700, marginTop: '1mm' }}>{fmt(29.9)}</div>
-              )}
-              {config.incluirCodigoBarras && (
-                <img src={urlCodigoBarras('7891234567895')} alt="" style={{ width: '90%', marginTop: '1mm' }} />
-              )}
-            </div>
-          </div>
-
-          <button className="btn-primary" onClick={salvarConfig} disabled={salvandoConfig}>
-            {salvandoConfig ? 'Salvando...' : 'Salvar configuração'}
-          </button>
-        </div>
-      )}
-
       <div className="card" style={{ marginBottom: 16, padding: 16 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-          <div className="search-wrap" style={{ maxWidth: 320, flex: 1 }}>
-            <Search size={14} className="search-icon" />
-            <input className="search-input" placeholder="Buscar produto..." value={busca} onChange={e => setBusca(e.target.value)} />
+          <div className="form-group" style={{ marginBottom: 0, minWidth: 220 }}>
+            <label className="form-label">Modelo de etiqueta</label>
+            <select value={modeloAtivoId} onChange={e => setModeloAtivoId(e.target.value)}>
+              {modelos.map(m => <option key={m.id} value={m.id}>{m.nome}{m.padrao ? ' ⭐' : ''}</option>)}
+            </select>
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            <input type="checkbox" checked={usarEstoqueAuto} style={{ width: 14, height: 14, margin: 0 }}
-              onChange={e => setUsarEstoqueAuto(e.target.checked)} />
-            Usar quantidade do estoque automaticamente
-          </label>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <div className="cx-tipo-toggle">
               <button className={modoImpressao === 'a4' ? 'active' : ''} onClick={() => setModoImpressao('a4')}>Folha A4</button>
@@ -435,6 +337,20 @@ export function Etiquetas() {
               <Printer size={15} /> Imprimir ({listaImpressao.length})
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16, padding: 16 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="search-wrap" style={{ maxWidth: 320, flex: 1 }}>
+            <Search size={14} className="search-icon" />
+            <input className="search-input" placeholder="Buscar produto ou código de barras..." value={busca} onChange={e => setBusca(e.target.value)} />
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={usarEstoqueAuto} style={{ width: 14, height: 14, margin: 0 }}
+              onChange={e => setUsarEstoqueAuto(e.target.checked)} />
+            Usar quantidade do estoque automaticamente
+          </label>
         </div>
       </div>
 
@@ -495,16 +411,231 @@ export function Etiquetas() {
         </div>
       )}
 
-      {/* Área de impressão — escondida na tela, só aparece via CSS @media print */}
-      <div className="etq-impressao">
-        <div className="etq-grid">
-          {listaImpressao.map(item => (
-            <div key={item.chaveUnica} className="etq-item" style={{ width: `${config.larguraMm}mm`, height: `${config.alturaMm}mm` }}>
-              {conteudoEtiqueta(item.nomeExibicao, item.precoVenda, item.codigoBarras)}
-            </div>
-          ))}
+      {/* Área de impressão — escondida na tela, aparece via CSS @media print */}
+      {modeloAtivo && (
+        <div className="etq-impressao">
+          <div className="etq-grid">
+            {listaImpressao.map(item => (
+              <div key={item.chaveUnica} className="etq-item" style={{ width: `${modeloAtivo.larguraMm}mm`, height: `${modeloAtivo.alturaMm}mm` }}>
+                {conteudoEtiqueta(modeloAtivo, logoParaImpressao, item.nomeExibicao, item.precoVenda, item.codigoBarras)}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Modal gerenciar modelos */}
+      {modalModelos && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalModelos(false)}>
+          <div className="modal" style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Modelos de etiqueta</h2>
+              <button className="btn-ghost" onClick={() => { setModalModelos(false); setMostrarFormModelo(false); }}><X size={16} /></button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
+              {!mostrarFormModelo && (
+                <button className="btn-primary" style={{ width: '100%', marginBottom: 16 }} onClick={abrirNovoModelo}>
+                  <Plus size={15} style={{ verticalAlign: -2 }} /> Novo modelo
+                </button>
+              )}
+
+              {mostrarFormModelo && (
+                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoModeloId ? 'Editar modelo' : 'Novo modelo'}</p>
+
+                  <div className="form-group">
+                    <label className="form-label">Nome do modelo</label>
+                    <input value={formModelo.nome} onChange={e => setFormModelo(f => ({ ...f, nome: e.target.value }))}
+                      placeholder="Ex: Roupa, Preço simples..." autoFocus />
+                  </div>
+
+                  <div style={{ fontSize: 13, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>O que aparece</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={formModelo.incluirLogo} style={{ width: 16, height: 16, margin: 0 }}
+                        onChange={e => setFormModelo(f => ({ ...f, incluirLogo: e.target.checked }))} />
+                      Incluir logo
+                    </label>
+                    {formModelo.incluirLogo && (
+                      <div style={{ marginLeft: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div className="cx-tipo-toggle" style={{ maxWidth: 340, display: 'flex', gap: 8 }}>
+                          <button type="button" className={!formModelo.usarLogoPropria ? 'active' : ''}
+                            style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+                            onClick={() => setFormModelo(f => ({ ...f, usarLogoPropria: false }))}>
+                            Logo da loja
+                          </button>
+                          <button type="button" className={formModelo.usarLogoPropria ? 'active' : ''}
+                            style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+                            onClick={() => setFormModelo(f => ({ ...f, usarLogoPropria: true }))}>
+                            Logo própria
+                          </button>
+                        </div>
+                        {formModelo.usarLogoPropria && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            {formModelo.logoEtiquetaUrl && (
+                              <img src={formModelo.logoEtiquetaUrl} alt="Logo" style={{ width: 50, height: 50, objectFit: 'contain', border: '1px solid var(--border)', borderRadius: 6 }} />
+                            )}
+                            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+                              onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogoPropria(f); }} />
+                            <button className="btn-secondary" onClick={() => fileRef.current?.click()} disabled={uploadingLogo}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              {uploadingLogo ? 'Enviando...' : <><Upload size={14} /> {formModelo.logoEtiquetaUrl ? 'Trocar' : 'Enviar'} logo</>}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={formModelo.incluirNomeMarca} style={{ width: 16, height: 16, margin: 0 }}
+                        onChange={e => setFormModelo(f => ({ ...f, incluirNomeMarca: e.target.checked }))} />
+                      Nome da marca ({nomeLoja || 'sua loja'})
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={formModelo.incluirNomeProduto} style={{ width: 16, height: 16, margin: 0 }}
+                        onChange={e => setFormModelo(f => ({ ...f, incluirNomeProduto: e.target.checked }))} />
+                      Nome do produto
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={formModelo.incluirPreco} style={{ width: 16, height: 16, margin: 0 }}
+                        onChange={e => setFormModelo(f => ({ ...f, incluirPreco: e.target.checked }))} />
+                      Preço
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={formModelo.incluirCodigoBarras} style={{ width: 16, height: 16, margin: 0 }}
+                        onChange={e => setFormModelo(f => ({ ...f, incluirCodigoBarras: e.target.checked }))} />
+                      Código de barras
+                    </label>
+                  </div>
+
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Tamanho</div>
+                  <div className="form-group" style={{ marginBottom: 10 }}>
+                    <select
+                      value={TAMANHOS_PADRAO.findIndex(t => t.largura === formModelo.larguraMm && t.altura === formModelo.alturaMm)}
+                      onChange={e => {
+                        const idx = +e.target.value;
+                        if (idx === -1) return;
+                        const t = TAMANHOS_PADRAO[idx];
+                        setFormModelo(f => ({ ...f, larguraMm: t.largura, alturaMm: t.altura }));
+                      }}>
+                      <option value={-1}>Personalizado</option>
+                      {TAMANHOS_PADRAO.map((t, i) => <option key={i} value={i}>{t.label}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                    <div className="form-group">
+                      <label className="form-label">Largura (mm)</label>
+                      <input type="number" min={10} value={formModelo.larguraMm}
+                        onChange={e => setFormModelo(f => ({ ...f, larguraMm: +e.target.value }))} style={{ width: 90 }} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Altura (mm)</label>
+                      <input type="number" min={10} value={formModelo.alturaMm}
+                        onChange={e => setFormModelo(f => ({ ...f, alturaMm: +e.target.value }))} style={{ width: 90 }} />
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Estilo</div>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 14 }}>
+                    <div className="form-group">
+                      <label className="form-label">Cor do texto</label>
+                      <input type="color" value={formModelo.corTexto}
+                        onChange={e => setFormModelo(f => ({ ...f, corTexto: e.target.value }))}
+                        style={{ width: 44, height: 36, padding: 2 }} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Cor de fundo</label>
+                      <input type="color" value={formModelo.corFundo}
+                        onChange={e => setFormModelo(f => ({ ...f, corFundo: e.target.value }))}
+                        style={{ width: 44, height: 36, padding: 2 }} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Fonte</label>
+                      <select value={formModelo.fonteFamilia} style={{ width: 180 }}
+                        onChange={e => setFormModelo(f => ({ ...f, fonteFamilia: e.target.value }))}>
+                        {FONTES_DISPONIVEIS.map(fnt => <option key={fnt.valor} value={fnt.valor}>{fnt.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Tamanho do texto ({formModelo.escalaFonte}%)</label>
+                      <input type="range" min={50} max={300} step={10} value={formModelo.escalaFonte}
+                        onChange={e => setFormModelo(f => ({ ...f, escalaFonte: +e.target.value }))}
+                        style={{ width: 160 }} />
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Eye size={13} /> Pré-visualização
+                  </div>
+                  <div style={{ background: 'var(--bg)', borderRadius: 8, padding: 16, marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+                    <div style={{
+                      width: `${formModelo.larguraMm}mm`, height: `${formModelo.alturaMm}mm`,
+                      border: '1px dashed #ccc', boxSizing: 'border-box', padding: '2mm',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      textAlign: 'center', overflow: 'hidden',
+                      fontFamily: formModelo.fonteFamilia, color: formModelo.corTexto, background: formModelo.corFundo,
+                    }}>
+                      {conteudoEtiqueta(formModelo, logoParaEtiqueta, 'Nome do produto', 29.9, '7891234567895')}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn-primary" onClick={salvarModelo} disabled={salvandoModelo}>
+                      {salvandoModelo ? 'Salvando...' : editandoModeloId ? 'Salvar alterações' : 'Criar modelo'}
+                    </button>
+                    <button className="btn-secondary" onClick={() => setMostrarFormModelo(false)}>Cancelar</button>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {modelos.map(m => (
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 500 }}>{m.nome}</span>
+                      {m.padrao && <span className="badge badge-accent" style={{ fontSize: 10 }}>Padrão</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {!m.padrao && (
+                        <button className="btn-ghost" title="Marcar como padrão" onClick={() => marcarPadrao(m)}>
+                          <Star size={14} />
+                        </button>
+                      )}
+                      <button className="btn-ghost" onClick={() => abrirEditarModelo(m)}>Editar</button>
+                      <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(m)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => { setModalModelos(false); setMostrarFormModelo(false); }}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar exclusão */}
+      {confirmExcluir && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluir(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir modelo</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluir(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir o modelo <strong style={{ color: 'var(--text-1)' }}>{confirmExcluir.nome}</strong>?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluir(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={excluirModelo}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
