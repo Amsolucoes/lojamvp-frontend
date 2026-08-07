@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Tag, Search, Printer, Settings, Upload } from 'lucide-react';
+import { Tag, Search, Printer, Settings, Upload, Eye } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -17,7 +17,19 @@ interface ConfigEtiqueta {
   incluirCodigoBarras: boolean;
   larguraMm: number;
   alturaMm: number;
+  corTexto: string;
+  fonteFamilia: string;
+  escalaFonte: number;
 }
+
+const FONTES_DISPONIVEIS = [
+  { valor: 'Arial, sans-serif', label: 'Arial' },
+  { valor: "'Courier New', monospace", label: 'Courier New' },
+  { valor: 'Georgia, serif', label: 'Georgia' },
+  { valor: 'Verdana, sans-serif', label: 'Verdana' },
+  { valor: "'Times New Roman', serif", label: 'Times New Roman' },
+  { valor: 'Tahoma, sans-serif', label: 'Tahoma' },
+];
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -162,6 +174,28 @@ export function Etiquetas() {
 
   if (!config) return <div className="page"><p>Carregando...</p></div>;
 
+  const escala = config.escalaFonte / 100;
+
+  function conteudoEtiqueta(nomeExibicao: string, precoVenda: number, codigoBarras: string | null) {
+    return (
+      <>
+        {config!.incluirLogo && logoParaEtiqueta && <img className="etq-logo" src={logoParaEtiqueta} alt="" />}
+        {config!.incluirNomeMarca && nomeLoja && (
+          <div style={{ fontSize: 8 * escala, fontWeight: 700 }}>{nomeLoja}</div>
+        )}
+        {config!.incluirNomeProduto && (
+          <div style={{ fontSize: 7 * escala, marginTop: '1mm' }}>{nomeExibicao}</div>
+        )}
+        {config!.incluirPreco && (
+          <div style={{ fontSize: 11 * escala, fontWeight: 700, marginTop: '1mm' }}>{fmt(precoVenda)}</div>
+        )}
+        {config!.incluirCodigoBarras && codigoBarras && (
+          <img className="etq-barras" src={urlCodigoBarras(codigoBarras)} alt="" />
+        )}
+      </>
+    );
+  }
+
   const cssImpressao = modoImpressao === 'termica'
     ? `
       @page { size: ${config.larguraMm}mm ${config.alturaMm}mm; margin: 0; }
@@ -187,12 +221,10 @@ export function Etiquetas() {
         .etq-item {
           border: 1px dashed #ccc; box-sizing: border-box; padding: 2mm;
           display: flex; flex-direction: column; align-items: center; justify-content: center;
-          text-align: center; overflow: hidden; font-family: Arial, sans-serif; color: #000;
+          text-align: center; overflow: hidden;
+          font-family: ${config.fonteFamilia}; color: ${config.corTexto};
         }
         .etq-item img.etq-logo { max-width: 60%; max-height: 30%; object-fit: contain; margin-bottom: 1mm; }
-        .etq-item .etq-marca { font-size: 8px; font-weight: 700; }
-        .etq-item .etq-produto { font-size: 7px; margin-top: 1mm; }
-        .etq-item .etq-preco { font-size: 11px; font-weight: 700; margin-top: 1mm; }
         .etq-item img.etq-barras { width: 90%; margin-top: 1mm; }
       `}</style>
 
@@ -283,6 +315,65 @@ export function Etiquetas() {
             Padrão comum de etiqueta térmica: 40x30mm ou 50x30mm. Verifique o tamanho da sua folha adesiva ou rolo.
           </p>
 
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>Estilo do texto</div>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 20 }}>
+            <div className="form-group">
+              <label className="form-label">Cor do texto</label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input type="color" value={config.corTexto}
+                  onChange={e => setConfig(c => c ? { ...c, corTexto: e.target.value } : c)}
+                  style={{ width: 44, height: 36, padding: 2 }} />
+                <input value={config.corTexto}
+                  onChange={e => setConfig(c => c ? { ...c, corTexto: e.target.value } : c)}
+                  style={{ width: 90 }} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Fonte</label>
+              <select value={config.fonteFamilia} style={{ width: 200 }}
+                onChange={e => setConfig(c => c ? { ...c, fonteFamilia: e.target.value } : c)}>
+                {FONTES_DISPONIVEIS.map(f => <option key={f.valor} value={f.valor}>{f.label}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Tamanho do texto ({config.escalaFonte}%)</label>
+              <input type="range" min={50} max={300} step={10} value={config.escalaFonte}
+                onChange={e => setConfig(c => c ? { ...c, escalaFonte: +e.target.value } : c)}
+                style={{ width: 180 }} />
+            </div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Eye size={14} /> Pré-visualização
+          </div>
+          <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 20, marginBottom: 20, display: 'flex', justifyContent: 'center' }}>
+            <div
+              style={{
+                width: `${config.larguraMm}mm`, height: `${config.alturaMm}mm`,
+                border: '1px dashed #ccc', boxSizing: 'border-box', padding: '2mm',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                textAlign: 'center', overflow: 'hidden', background: '#fff',
+                fontFamily: config.fonteFamilia, color: config.corTexto,
+              }}
+            >
+              {config.incluirLogo && logoParaEtiqueta && (
+                <img src={logoParaEtiqueta} alt="" style={{ maxWidth: '60%', maxHeight: '30%', objectFit: 'contain', marginBottom: '1mm' }} />
+              )}
+              {config.incluirNomeMarca && nomeLoja && (
+                <div style={{ fontSize: 8 * escala, fontWeight: 700 }}>{nomeLoja}</div>
+              )}
+              {config.incluirNomeProduto && (
+                <div style={{ fontSize: 7 * escala, marginTop: '1mm' }}>Nome do produto</div>
+              )}
+              {config.incluirPreco && (
+                <div style={{ fontSize: 11 * escala, fontWeight: 700, marginTop: '1mm' }}>{fmt(29.9)}</div>
+              )}
+              {config.incluirCodigoBarras && (
+                <img src={urlCodigoBarras('7891234567895')} alt="" style={{ width: '90%', marginTop: '1mm' }} />
+              )}
+            </div>
+          </div>
+
           <button className="btn-primary" onClick={salvarConfig} disabled={salvandoConfig}>
             {salvandoConfig ? 'Salvando...' : 'Salvar configuração'}
           </button>
@@ -358,13 +449,7 @@ export function Etiquetas() {
         <div className="etq-grid">
           {listaImpressao.map(item => (
             <div key={item.chaveUnica} className="etq-item" style={{ width: `${config.larguraMm}mm`, height: `${config.alturaMm}mm` }}>
-              {config.incluirLogo && logoParaEtiqueta && <img className="etq-logo" src={logoParaEtiqueta} alt="" />}
-              {config.incluirNomeMarca && nomeLoja && <div className="etq-marca">{nomeLoja}</div>}
-              {config.incluirNomeProduto && <div className="etq-produto">{item.nomeExibicao}</div>}
-              {config.incluirPreco && <div className="etq-preco">{fmt(item.precoVenda)}</div>}
-              {config.incluirCodigoBarras && item.codigoBarras && (
-                <img className="etq-barras" src={urlCodigoBarras(item.codigoBarras)} alt="" />
-              )}
+              {conteudoEtiqueta(item.nomeExibicao, item.precoVenda, item.codigoBarras)}
             </div>
           ))}
         </div>
