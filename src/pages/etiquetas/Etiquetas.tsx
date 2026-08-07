@@ -35,11 +35,20 @@ const TAMANHOS_PADRAO = [
 
 const FONTES_DISPONIVEIS = [
   { valor: 'Arial, sans-serif', label: 'Arial' },
-  { valor: "'Courier New', monospace", label: 'Courier New' },
-  { valor: 'Georgia, serif', label: 'Georgia' },
+  { valor: "'Arial Black', sans-serif", label: 'Arial Black (bem grossa)' },
   { valor: 'Verdana, sans-serif', label: 'Verdana' },
-  { valor: "'Times New Roman', serif", label: 'Times New Roman' },
   { valor: 'Tahoma, sans-serif', label: 'Tahoma' },
+  { valor: "'Trebuchet MS', sans-serif", label: 'Trebuchet MS' },
+  { valor: "'Segoe UI', sans-serif", label: 'Segoe UI' },
+  { valor: 'Calibri, sans-serif', label: 'Calibri' },
+  { valor: 'Georgia, serif', label: 'Georgia' },
+  { valor: "'Times New Roman', serif", label: 'Times New Roman' },
+  { valor: "'Palatino Linotype', serif", label: 'Palatino' },
+  { valor: 'Garamond, serif', label: 'Garamond' },
+  { valor: "'Courier New', monospace", label: 'Courier New (máquina de escrever)' },
+  { valor: "'Comic Sans MS', cursive", label: 'Comic Sans' },
+  { valor: "'Brush Script MT', cursive", label: 'Brush Script (cursiva)' },
+  { valor: 'Impact, sans-serif', label: 'Impact (bem chamativa)' },
 ];
 
 function fmt(n: number) {
@@ -64,7 +73,8 @@ export function Etiquetas() {
   const [selecionados, setSelecionados] = useState<Record<string, number>>({}); // chave -> quantidade
   const [modoImpressao, setModoImpressao] = useState<'a4' | 'termica'>('a4');
   const [pagina, setPagina] = useState(1);
-  const ITENS_POR_PAGINA = 15;
+  const [itensPorPagina, setItensPorPagina] = useState(15);
+  const [usarEstoqueAuto, setUsarEstoqueAuto] = useState(false);
 
   const [nomeLoja, setNomeLoja] = useState('');
   const [logoLoja, setLogoLoja] = useState('');
@@ -148,11 +158,11 @@ export function Etiquetas() {
     (item.codigoBarras ?? '').toLowerCase().includes(busca.toLowerCase())
   );
 
-  const totalPaginas = Math.max(1, Math.ceil(itensFiltrados.length / ITENS_POR_PAGINA));
+  const totalPaginas = Math.max(1, Math.ceil(itensFiltrados.length / itensPorPagina));
   const paginaSegura = Math.min(pagina, totalPaginas);
-  const itensPaginados = itensFiltrados.slice((paginaSegura - 1) * ITENS_POR_PAGINA, paginaSegura * ITENS_POR_PAGINA);
+  const itensPaginados = itensFiltrados.slice((paginaSegura - 1) * itensPorPagina, paginaSegura * itensPorPagina);
 
-  useEffect(() => { setPagina(1); }, [busca]);
+  useEffect(() => { setPagina(1); }, [busca, itensPorPagina]);
 
   function toggleItem(chave: string) {
     setSelecionados(sel => {
@@ -160,7 +170,7 @@ export function Etiquetas() {
       if (novo[chave]) delete novo[chave];
       else {
         const item = todosItens.find(i => i.chave === chave);
-        novo[chave] = item && item.estoque > 0 ? item.estoque : 1;
+        novo[chave] = usarEstoqueAuto && item && item.estoque > 0 ? item.estoque : 1;
       }
       return novo;
     });
@@ -411,6 +421,11 @@ export function Etiquetas() {
             <Search size={14} className="search-icon" />
             <input className="search-input" placeholder="Buscar produto..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={usarEstoqueAuto} style={{ width: 14, height: 14, margin: 0 }}
+              onChange={e => setUsarEstoqueAuto(e.target.checked)} />
+            Usar quantidade do estoque automaticamente
+          </label>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <div className="cx-tipo-toggle">
               <button className={modoImpressao === 'a4' ? 'active' : ''} onClick={() => setModoImpressao('a4')}>Folha A4</button>
@@ -462,10 +477,21 @@ export function Etiquetas() {
       </div>
 
       {itensFiltrados.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 16 }}>
-          <button className="btn-secondary" disabled={paginaSegura <= 1} onClick={() => setPagina(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
-          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaSegura} / {totalPaginas}</span>
-          <button className="btn-secondary" disabled={paginaSegura >= totalPaginas} onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button className="btn-secondary" disabled={paginaSegura <= 1} onClick={() => setPagina(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaSegura} / {totalPaginas}</span>
+            <button className="btn-secondary" disabled={paginaSegura >= totalPaginas} onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)' }}>
+            Por página:
+            <select value={itensPorPagina} onChange={e => setItensPorPagina(+e.target.value)} style={{ width: 70 }}>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={15}>15</option>
+              <option value={20}>20</option>
+            </select>
+          </label>
         </div>
       )}
 
