@@ -2698,18 +2698,26 @@ export function Financeiro() {
         && !modalAjuste && !modalTransferencia && (
       <div className="fin-fab-mobile-only" style={{
         position: 'fixed',
-        bottom: temProdutos ? 6 : 24,
+        bottom: temProdutos ? 'var(--bottom-nav-h)' : 24,
         left: '50%', transform: 'translateX(-50%)',
         zIndex: temProdutos ? 55 : 40,
       }}>
-        <button onClick={abrirNovoLancamento} style={{
-          width: temProdutos ? 48 : 56, height: temProdutos ? 48 : 56, borderRadius: '50%',
+        <button onClick={abrirNovoLancamento} style={temProdutos ? {
+          width: 56, height: 30, borderRadius: '28px 28px 0 0',
+          background: aba === 'pagar' ? 'var(--red-bg)' : 'var(--green-bg)',
+          border: `1px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}`,
+          borderBottom: 'none',
+          color: aba === 'pagar' ? 'var(--red)' : 'var(--green)',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+          paddingTop: 4, cursor: 'pointer',
+        } : {
+          width: 56, height: 56, borderRadius: '50%',
           background: aba === 'pagar' ? 'var(--red)' : 'var(--green)',
-          color: '#fff', border: temProdutos ? '3px solid var(--bg)' : 'none',
+          color: '#fff', border: 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: 'var(--shadow-lg)', cursor: 'pointer',
         }}>
-          <Plus size={temProdutos ? 22 : 26} />
+          <Plus size={temProdutos ? 18 : 26} />
         </button>
       </div>
       )}
