@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
   TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, 
-  FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent, Tag } from 'lucide-react';
+  FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent, Tag, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { carregarTemaSalvo } from '../../utils/tema';
+import { useBottomNavAction } from '../../utils/bottomNavAction';
 import './Sidebar.css';
 
 function iniciais(nome: string) {
@@ -128,6 +129,7 @@ export function Sidebar() {
   }
   const navResto = NAV.filter(item => !navPrimarios.includes(item));
   const [maisAberto, setMaisAberto] = useState(false);
+  const acaoBottomNav = useBottomNavAction();
 
   return (
     <>
@@ -176,7 +178,21 @@ export function Sidebar() {
 
       {/* Bottom nav mobile */}
       <nav className="bottom-nav">
-        {navPrimarios.map(({ to, icon: Icon, label }) => (
+        {navPrimarios.slice(0, 2).map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to} end={to === '/'}
+            className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
+            <Icon size={20} />
+            <span>{label}</span>
+            {label === 'Estoque' && alertas > 0 && <span className="bn-badge">{alertas}</span>}
+          </NavLink>
+        ))}
+        {acaoBottomNav && (
+          <button className="bottom-nav-fab" onClick={acaoBottomNav.aoClicar}
+            style={{ background: acaoBottomNav.corBg, borderColor: acaoBottomNav.corBorda, color: acaoBottomNav.corBorda }}>
+            <Plus size={18} />
+          </button>
+        )}
+        {navPrimarios.slice(2).map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to} end={to === '/'}
             className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
             <Icon size={20} />

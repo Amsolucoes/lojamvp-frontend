@@ -349,6 +349,20 @@ input, select, textarea {
     display: flex; align-items: center; justify-content: center;
     padding: 0 3px;
   }
+  .bottom-nav-fab {
+    width: 44px;
+    height: 26px;
+    border-radius: 22px 22px 0 0;
+    border: 1px solid;
+    border-bottom: none;
+    align-self: flex-end;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 3px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
 }
 @media (min-width: 769px) {
   .bottom-nav { display: none; }
