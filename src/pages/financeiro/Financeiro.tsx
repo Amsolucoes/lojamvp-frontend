@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { InputMoeda } from '../../components/InputMoeda';
 import { useToast } from '../../context/ToastContext';
+import { useApp } from '../../context/AppContext';
 import { BANCOS, BankBadge } from '../../utils/bancos';
 import './Financeiro.css';
 
@@ -102,6 +103,7 @@ function ehVencido(l: { status: string; vencimento: string }) {
 export function Financeiro() {
   const navigate = useNavigate();
   const { sucesso, erro } = useToast();
+  const { temProdutos } = useApp();
   const [searchParams, setSearchParams] = useSearchParams();
   const veioComAbaEspecifica = searchParams.get('aba') === 'pagar' || searchParams.get('aba') === 'receber' || searchParams.get('novo');
   const [aba, setAba] = useState<'pagar' | 'receber'>(() => {
@@ -2694,14 +2696,20 @@ export function Financeiro() {
       {!modalLancamento && !modalContas && !modalCartoes && !modalCategorias && !editandoLancamento && !confirmExcluir
         && !faturaAberta && !modalPagarFatura && !editandoItemCartao && !confirmExcluirItemCartao
         && !modalAjuste && !modalTransferencia && (
-      <div className="fin-fab-mobile-only" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 40 }}>
+      <div className="fin-fab-mobile-only" style={{
+        position: 'fixed',
+        bottom: temProdutos ? 6 : 24,
+        left: '50%', transform: 'translateX(-50%)',
+        zIndex: temProdutos ? 55 : 40,
+      }}>
         <button onClick={abrirNovoLancamento} style={{
-          width: 56, height: 56, borderRadius: '50%',
+          width: temProdutos ? 48 : 56, height: temProdutos ? 48 : 56, borderRadius: '50%',
           background: aba === 'pagar' ? 'var(--red)' : 'var(--green)',
-          color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', border: temProdutos ? '3px solid var(--bg)' : 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: 'var(--shadow-lg)', cursor: 'pointer',
         }}>
-          <Plus size={26} />
+          <Plus size={temProdutos ? 22 : 26} />
         </button>
       </div>
       )}

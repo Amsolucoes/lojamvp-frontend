@@ -137,6 +137,11 @@ export function Sidebar() {
           {logoEl}
           <div className="sidebar-logo-name">{nomeLoja}</div>
         </div>
+        {!temProdutos && (
+          <button className="btn-ghost" onClick={() => setMaisAberto(true)} style={{ padding: 8 }}>
+            <Menu size={22} />
+          </button>
+        )}
       </div>
 
       {/* Sidebar */}
@@ -174,7 +179,8 @@ export function Sidebar() {
         </div>
       </aside>
 
-      {/* Bottom nav mobile */}
+      {/* Bottom nav mobile — só pro módulo Loja por enquanto */}
+      {temProdutos && (
       <nav className="bottom-nav">
         {navPrimarios.map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to} end={to === '/'}
@@ -189,16 +195,17 @@ export function Sidebar() {
           <span>Mais</span>
         </button>
       </nav>
+      )}
 
       {maisAberto && (
         <div className="modal-overlay" onClick={() => setMaisAberto(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <span style={{ fontWeight: 600 }}>Mais opções</span>
+              <span style={{ fontWeight: 600 }}>{temProdutos ? 'Mais opções' : 'Menu'}</span>
               <button className="btn-ghost" onClick={() => setMaisAberto(false)}><X size={18} /></button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {navResto.map(({ to, icon: Icon, label }) => (
+              {(temProdutos ? navResto : NAV).map(({ to, icon: Icon, label }) => (
                 <NavLink key={to} to={to} end={to === '/'}
                   className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
                   onClick={() => setMaisAberto(false)}>
