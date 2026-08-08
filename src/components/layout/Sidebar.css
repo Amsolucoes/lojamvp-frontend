@@ -79,31 +79,7 @@
   width: 100%;
 }
 
-.sidebar-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.55);
-  z-index: 98;
-  backdrop-filter: blur(2px);
-  animation: fadeIn .15s;
-}
-
 @media (max-width: 768px) {
   .mobile-topbar { display: flex; }
-
-  .sidebar {
-    position: fixed;
-    left: -280px;
-    top: 0;
-    height: 100vh;
-    z-index: 99;
-    width: 260px;
-    transition: left .25s ease;
-    box-shadow: var(--shadow-lg);
-    padding-top: 12px;
-  }
-
-  .sidebar.sidebar-open { left: 0; }
-  .sidebar-overlay { display: block; }
+  .sidebar { display: none; }
 }

@@ -35,7 +35,6 @@ export function Sidebar() {
   }, []);
 
   const [logoUrl, setLogoUrl]       = useState('');
-  const [aberto, setAberto]         = useState(false);
   const [tipoPlano, setTipoPlano]   = useState('loja');
   const [modulos, setModulos]       = useState<string[]>([]);
 
@@ -119,6 +118,17 @@ export function Sidebar() {
     { to: '/configuracoes', icon: Settings, label: 'Configurações' },
   ];
 
+  const PRIORIDADE_MOBILE = ['/', '/produtos', '/caixa', '/clientes'];
+  const navPrimarios = PRIORIDADE_MOBILE
+    .map(to => NAV.find(item => item.to === to))
+    .filter(Boolean) as typeof NAV;
+  for (const item of NAV) {
+    if (navPrimarios.length >= 4) break;
+    if (!navPrimarios.includes(item)) navPrimarios.push(item);
+  }
+  const navResto = NAV.filter(item => !navPrimarios.includes(item));
+  const [maisAberto, setMaisAberto] = useState(false);
+
   return (
     <>
       {/* Topbar mobile */}
@@ -127,16 +137,10 @@ export function Sidebar() {
           {logoEl}
           <div className="sidebar-logo-name">{nomeLoja}</div>
         </div>
-        <button className="btn-ghost" onClick={() => setAberto(v => !v)} style={{ padding: 8 }}>
-          {aberto ? <X size={22} /> : <Menu size={22} />}
-        </button>
       </div>
 
-      {/* Overlay */}
-      {aberto && <div className="sidebar-overlay" onClick={() => setAberto(false)} />}
-
       {/* Sidebar */}
-      <aside className={`sidebar${aberto ? ' sidebar-open' : ''}`}>
+      <aside className="sidebar">
         <div className="sidebar-logo">
           {logoEl}
           <div>
@@ -148,8 +152,7 @@ export function Sidebar() {
         <nav className="sidebar-nav">
           {NAV.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} end={to === '/'}
-              className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-              onClick={() => setAberto(false)}>
+              className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
               <Icon size={16} />
               <span>{label}</span>
               {label === 'Estoque' && alertas > 0 && (
@@ -170,6 +173,47 @@ export function Sidebar() {
           </button>
         </div>
       </aside>
+
+      {/* Bottom nav mobile */}
+      <nav className="bottom-nav">
+        {navPrimarios.map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to} end={to === '/'}
+            className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
+            <Icon size={20} />
+            <span>{label}</span>
+            {label === 'Estoque' && alertas > 0 && <span className="bn-badge">{alertas}</span>}
+          </NavLink>
+        ))}
+        <button className="bottom-nav-item" onClick={() => setMaisAberto(true)}>
+          <Menu size={20} />
+          <span>Mais</span>
+        </button>
+      </nav>
+
+      {maisAberto && (
+        <div className="modal-overlay" onClick={() => setMaisAberto(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span style={{ fontWeight: 600 }}>Mais opções</span>
+              <button className="btn-ghost" onClick={() => setMaisAberto(false)}><X size={18} /></button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {navResto.map(({ to, icon: Icon, label }) => (
+                <NavLink key={to} to={to} end={to === '/'}
+                  className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+                  onClick={() => setMaisAberto(false)}>
+                  <Icon size={16} />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+              <button className="sidebar-link" onClick={logout} style={{ marginTop: 8, color: 'var(--red)' }}>
+                <LogOut size={16} />
+                <span>Sair ({usuario?.nome})</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

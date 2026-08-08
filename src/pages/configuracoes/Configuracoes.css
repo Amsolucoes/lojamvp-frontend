@@ -9,3 +9,7 @@
   width: 100%;
   display: inline-block;
 }
+
+@media (max-width: 768px) {
+  .config-grid { column-width: auto; column-count: 1; }
+}

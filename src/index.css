@@ -42,8 +42,9 @@
   --sidebar-w: 220px;
   --radius:    10px;
   --radius-sm: 6px;
-  --radius-lg: 14px;
-
+  --radius-lg: 16px;
+  --bottom-nav-h: 64px;
+  
   /* Sombras */
   --shadow:    0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
@@ -292,7 +293,11 @@ input, select, textarea {
 @media (max-width: 768px) {
   :root { --sidebar-w: 0px; }
   .layout { flex-direction: column; height: 100vh; }
-  .layout-main { overflow-y: auto; height: 100%; }
+  .layout-main {
+    overflow-y: auto;
+    height: 100%;
+    padding-bottom: var(--bottom-nav-h); /* não deixa conteúdo embaixo da nav */
+  }
   .page { padding: 16px; }
   .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
   .page-header .btn-primary { width: 100%; justify-content: center; }
@@ -303,6 +308,50 @@ input, select, textarea {
   table { min-width: 600px; }
   .form-grid { grid-template-columns: 1fr !important; }
   .form-grid > * { grid-column: 1 !important; }
+
+  /* Sidebar antiga vira drawer só do "Mais" — reaproveita mesma estrutura */
+  .sidebar { display: none; }
+  .mobile-topbar { display: flex; }
+
+  .bottom-nav {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: var(--bottom-nav-h);
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--text-3);
+    font-size: 10.5px;
+    font-weight: 500;
+    background: transparent;
+    position: relative;
+  }
+  .bottom-nav-item.active { color: var(--accent); }
+  .bottom-nav-item .bn-badge {
+    position: absolute;
+    top: 2px; right: calc(50% - 18px);
+    background: var(--red);
+    color: #fff;
+    font-size: 9px;
+    min-width: 15px;
+    height: 15px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 3px;
+  }
+}
+@media (min-width: 769px) {
+  .bottom-nav { display: none; }
 }
 @media (max-width: 480px) {
   .dash-stats, .est-stats, .rel-stats { grid-template-columns: 1fr !important; }
