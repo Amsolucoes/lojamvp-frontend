@@ -326,6 +326,23 @@ export function FinanceiroMobile() {
             )}
           </div>
 
+          {(() => {
+            const totalPago = linhasPagar.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
+            const totalAberto = linhasPagar.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                <div className="card fm-card">
+                  <div className="fm-card-kicker">A pagar</div>
+                  <div className="fm-valor-destaque" style={{ color: 'var(--red)' }}>{fmt(totalAberto)}</div>
+                </div>
+                <div className="card fm-card">
+                  <div className="fm-card-kicker">Pago</div>
+                  <div className="fm-valor-destaque" style={{ color: 'var(--green)' }}>{fmt(totalPago)}</div>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="fm-pills">
             {(['todos', 'pendente', 'vencido', 'pago'] as const).map(f => (
               <button key={f} className={`fm-pill${filtroStatus === f ? ' active' : ''}`} onClick={() => setFiltroStatus(f)}>
