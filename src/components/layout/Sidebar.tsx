@@ -181,7 +181,7 @@ export function Sidebar() {
 
       {/* Bottom nav mobile */}
       <nav className="bottom-nav">
-        {navPrimarios.map(({ to, icon: Icon, label }) => (
+        {navPrimarios.slice(0, Math.ceil(navPrimarios.length / 2)).map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to} end={to === '/'}
             className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
             <Icon size={18} />
@@ -189,10 +189,7 @@ export function Sidebar() {
             {label === 'Estoque' && alertas > 0 && <span className="bn-badge">{alertas}</span>}
           </NavLink>
         ))}
-        <button className="bottom-nav-item" onClick={() => setMaisAberto(true)}>
-          <Menu size={18} />
-          <span>Mais</span>
-        </button>
+
         {acaoBottomNav && (
           <>
             {acaoBottomNav.tipo === 'multipla' && popupAcaoAberto && (
@@ -218,6 +215,19 @@ export function Sidebar() {
             </button>
           </>
         )}
+
+        {navPrimarios.slice(Math.ceil(navPrimarios.length / 2)).map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to} end={to === '/'}
+            className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
+            <Icon size={18} />
+            <span>{label}</span>
+            {label === 'Estoque' && alertas > 0 && <span className="bn-badge">{alertas}</span>}
+          </NavLink>
+        ))}
+        <button className="bottom-nav-item" onClick={() => setMaisAberto(true)}>
+          <Menu size={18} />
+          <span>Mais</span>
+        </button>
       </nav>
 
       {maisAberto && (
