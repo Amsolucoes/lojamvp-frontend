@@ -303,6 +303,13 @@ export function FinanceiroMobile() {
       {tela === 'pagar' && (
         <>
           <div style={{ height: 4, borderRadius: 4, background: 'var(--red)', opacity: 0.7, marginBottom: 14 }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1)', margin: 0 }}>A Pagar</h2>
+            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+              onClick={() => navigate('/financeiro?aba=pagar&novo=pagar')}>
+              <Plus size={14} /> Novo
+            </button>
+          </div>
           <div className="card fm-card fm-pagar-filtro" style={{ marginBottom: 14 }}>
             <div className="cx-tipo-toggle" style={{ marginBottom: 10, display: 'flex' }}>
               <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
@@ -438,12 +445,6 @@ export function FinanceiroMobile() {
             <span>{label}</span>
           </button>
         ))}
-        {tela === 'pagar' && (
-          <button className="bottom-nav-fab" style={{ background: 'var(--red-bg)', borderColor: 'var(--red)', color: 'var(--red)' }}
-            onClick={() => navigate('/financeiro?aba=pagar&novo=pagar')}>
-            <Plus size={18} />
-          </button>
-        )}
         {ABAS.slice(2).map(({ key, label, Icon }) => (
           <button key={key} className={`bottom-nav-item${key === tela ? ' active' : ''}`} onClick={() => irPara(key)}>
             <Icon size={18} />
