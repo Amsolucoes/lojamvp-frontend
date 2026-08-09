@@ -4,6 +4,8 @@ import { Produto, Venda, ItemVenda } from '../types';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { DashboardFinanceiro } from './DashboardFinanceiro';
+import { FinanceiroMobile } from './FinanceiroMobile';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { DashboardCorretora } from './DashboardCorretora';
 import { DashboardTurmas } from './DashboardTurmas';
 import { DashboardChacara } from './DashboardChacara';
@@ -15,6 +17,7 @@ function fmt(n: number) {
 
 export function Dashboard() {
   const { temProdutos, temServicos, temTurmas, temFinanceiro, temCorretora, temChacaraReservas } = useApp();
+  const isMobile = useIsMobile();
 
   const abasDisponiveis = [
     ...(temProdutos || temServicos ? [{ chave: 'loja' as const, label: 'Loja', Icon: Store }] : []),
@@ -35,7 +38,7 @@ export function Dashboard() {
   // Só existe 1 dashboard aplicável — renderiza direto, sem abas
   if (abasDisponiveis.length <= 1) {
     const unica = abasDisponiveis[0]?.chave ?? 'loja';
-    if (unica === 'financeiro') return <DashboardFinanceiro />;
+    if (unica === 'financeiro') return isMobile ? <FinanceiroMobile /> : <DashboardFinanceiro />;
     if (unica === 'corretora') return <DashboardCorretora />;
     if (unica === 'turmas') return <DashboardTurmas />;
     if (unica === 'chacara') return <DashboardChacara />;

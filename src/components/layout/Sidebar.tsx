@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { carregarTemaSalvo } from '../../utils/tema';
 import { useBottomNavAction } from '../../utils/bottomNavAction';
+import { useMobileShellOverride } from '../../utils/mobileShellOverride';
 import './Sidebar.css';
 
 function iniciais(nome: string) {
@@ -130,6 +131,7 @@ export function Sidebar() {
   const navResto = NAV.filter(item => !navPrimarios.includes(item));
   const [maisAberto, setMaisAberto] = useState(false);
   const acaoBottomNav = useBottomNavAction();
+  const shellOverride = useMobileShellOverride();
   const [popupAcaoAberto, setPopupAcaoAberto] = useState(false);
 
   useEffect(() => { setPopupAcaoAberto(false); }, [acaoBottomNav]);
@@ -137,12 +139,14 @@ export function Sidebar() {
   return (
     <>
       {/* Topbar mobile */}
+      {!shellOverride && (
       <div className="mobile-topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {logoEl}
           <div className="sidebar-logo-name">{nomeLoja}</div>
         </div>
       </div>
+      )}
 
       {/* Sidebar */}
       <aside className="sidebar">
@@ -180,6 +184,7 @@ export function Sidebar() {
       </aside>
 
       {/* Bottom nav mobile */}
+      {!shellOverride && (
       <nav className="bottom-nav">
         {navPrimarios.slice(0, Math.ceil(navPrimarios.length / 2)).map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to} end={to === '/'}
@@ -229,6 +234,7 @@ export function Sidebar() {
           <span>Mais</span>
         </button>
       </nav>
+      )}
 
       {maisAberto && (
         <div className="modal-overlay" onClick={() => setMaisAberto(false)}>
