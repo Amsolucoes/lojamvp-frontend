@@ -441,15 +441,44 @@ export function FinanceiroMobile() {
           {(() => {
             const totalPago = linhasPagar.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
             const totalAberto = linhasPagar.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
+            const totalMes = totalPago + totalAberto;
+            const contasAberto = linhasPagar.filter(l => l.status !== 'pago' && l.origem === 'avulso').reduce((s, l) => s + l.valor, 0);
+            const cartoesAberto = Object.entries(
+              linhasPagar
+                .filter(l => l.status !== 'pago' && (l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada'))
+                .reduce((acc, l) => { const nome = l.cartaoNome ?? 'Cartão'; acc[nome] = (acc[nome] ?? 0) + l.valor; return acc; }, {} as Record<string, number>)
+            );
             return (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-                <div className="card fm-card">
-                  <div className="fm-card-kicker">A pagar</div>
-                  <div className="fm-valor-destaque" style={{ color: 'var(--red)' }}>{fmt(totalAberto)}</div>
-                </div>
-                <div className="card fm-card">
-                  <div className="fm-card-kicker">Pago</div>
-                  <div className="fm-valor-destaque" style={{ color: 'var(--green)' }}>{fmt(totalPago)}</div>
+              <div className="card fm-card" style={{ marginBottom: 14 }}>
+                <div className="fm-card-kicker" style={{ textAlign: 'center' }}>Total a pagar</div>
+                <div className="fm-valor-destaque" style={{ color: 'var(--red)', fontSize: 26, textAlign: 'center' }}>{fmt(totalAberto)}</div>
+
+                {(contasAberto > 0 || cartoesAberto.length > 0) && (
+                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                    {contasAberto > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                        <span style={{ color: 'var(--text-3)' }}>Contas</span>
+                        <span style={{ color: 'var(--text-2)' }}>{fmt(contasAberto)}</span>
+                      </div>
+                    )}
+                    {cartoesAberto.map(([nome, valor]) => (
+                      <div key={nome} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                        <span style={{ color: 'var(--text-3)' }}>💳 {nome}</span>
+                        <span style={{ color: 'var(--text-2)' }}>{fmt(valor)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Pago</div>
+                    <strong style={{ fontSize: 14 }}>{fmt(totalPago)}</strong>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Total do mês</div>
+                    <strong style={{ fontSize: 14 }}>{fmt(totalMes)}</strong>
+                  </div>
                 </div>
               </div>
             );

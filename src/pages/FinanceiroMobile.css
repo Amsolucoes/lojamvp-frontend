@@ -67,3 +67,14 @@
   overflow-y: auto;
   padding-right: 2px;
 }
+.fm-pagar-filtro { overflow: visible; padding: 14px 10px; }
+.fm-pagar-filtro .cx-tipo-toggle {
+  display: flex;
+  width: 100%;
+}
+.fm-pagar-filtro .cx-tipo-toggle button {
+  flex: 1;
+  text-align: center;
+  justify-content: center;
+  white-space: nowrap;
+}
