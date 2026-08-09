@@ -1029,7 +1029,7 @@ export function FinanceiroMobile() {
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{l.descricao}</div>
-                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
                                   {l.categoriaNome && <span className="fm-tag-neutra">{l.categoriaNome}</span>}
                                   <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
                                   {l.origem === 'plano' && <span className="fm-tag-neutra">Plano</span>}
