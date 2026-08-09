@@ -60,6 +60,7 @@ export function FinanceiroMobile() {
   const [menuAberto, setMenuAberto] = useState(false);
   const [tela, setTela] = useState<'visao' | 'pagar'>('visao');
   const [linhasPagar, setLinhasPagar] = useState<LinhaPagar[]>([]);
+  const [carregandoPagar, setCarregandoPagar] = useState(true);
   const [categoriasPagar, setCategoriasPagar] = useState<Categoria[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'vencido' | 'pago'>('todos');
   const [catFiltro, setCatFiltro] = useState('todas');
@@ -92,8 +93,9 @@ export function FinanceiroMobile() {
   }
 
   function recarregarPagar() {
+    setCarregandoPagar(true);
     api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?${periodoQueryPagar()}&modo=agrupado`)
-      .then(setLinhasPagar).catch(() => {});
+      .then(setLinhasPagar).catch(() => {}).finally(() => setCarregandoPagar(false));
   }
 
   function navMesPagar(delta: number) {
@@ -163,6 +165,7 @@ export function FinanceiroMobile() {
   }
 
   const [contas, setContas] = useState<Conta[]>([]);
+  const [carregandoVisao, setCarregandoVisao] = useState(true);
   const [resumo, setResumo] = useState<{ pagar: ResumoTipo; receber: ResumoTipo } | null>(null);
   const [resumoAnual, setResumoAnual] = useState<{ mes: number; pagar: number; receber: number; saldo: number }[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
@@ -170,10 +173,13 @@ export function FinanceiroMobile() {
   const anoRef = new Date().getFullYear();
 
   useEffect(() => {
-    api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
-    api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoRef}&mes=${new Date().getMonth() + 1}`).then(setResumo).catch(() => {});
-    api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {});
-    api.get<Alerta[]>('/api/financeiro/alertas-vencimento?dias=7').then(setAlertas).catch(() => {});
+    setCarregandoVisao(true);
+    Promise.all([
+      api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {}),
+      api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoRef}&mes=${new Date().getMonth() + 1}`).then(setResumo).catch(() => {}),
+      api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {}),
+      api.get<Alerta[]>('/api/financeiro/alertas-vencimento?dias=7').then(setAlertas).catch(() => {}),
+    ]).finally(() => setCarregandoVisao(false));
   }, []);
 
   useEffect(() => {
@@ -219,6 +225,9 @@ export function FinanceiroMobile() {
 
       <div className="fm-content">
       {tela === 'visao' && (
+        carregandoVisao ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}><div className="layout-spinner" /></div>
+        ) : (
       <>
         <div className="card fm-card">
           <div className="fm-card-kicker">Saldo por conta</div>
@@ -402,6 +411,7 @@ export function FinanceiroMobile() {
           ))}
         </div>
       </>
+        )
       )}
 
       {tela === 'pagar' && (
@@ -438,7 +448,9 @@ export function FinanceiroMobile() {
             )}
           </div>
 
-          {(() => {
+          {carregandoPagar ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+          ) : (() => {
             const totalPago = linhasPagar.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
             const totalAberto = linhasPagar.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
             const totalMes = totalPago + totalAberto;
@@ -500,7 +512,7 @@ export function FinanceiroMobile() {
             </select>
           )}
 
-          {(() => {
+          {carregandoPagar ? null : (() => {
             const filtrada = linhasPagar.filter(l => {
               const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
               const statusReal = ehVencido(l) ? 'vencido' : l.status;
