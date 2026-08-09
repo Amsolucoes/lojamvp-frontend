@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2 } from 'lucide-react';
+import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { setMobileShellOverride } from '../utils/mobileShellOverride';
@@ -8,6 +8,7 @@ import { BankBadge } from '../utils/bancos';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function fmt(n: number) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
 interface Conta { id: string; nome: string; saldoAtual: number; ativa: boolean; banco?: string | null; limite: number; }
@@ -54,6 +55,11 @@ export function FinanceiroMobile() {
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'vencido' | 'pago'>('todos');
   const [catFiltro, setCatFiltro] = useState('todas');
   const [paginaLista, setPaginaLista] = useState(1);
+  const [mesPagar, setMesPagar] = useState(new Date().getMonth());
+  const [anoPagar, setAnoPagar] = useState(new Date().getFullYear());
+  const [periodoTipo, setPeriodoTipo] = useState<'mes' | 'personalizado'>('mes');
+  const [periodoDe, setPeriodoDe] = useState(new Date().toISOString().slice(0, 10));
+  const [periodoAte, setPeriodoAte] = useState(new Date().toISOString().slice(0, 10));
   const itensPorPagina = 20;
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
@@ -65,19 +71,30 @@ export function FinanceiroMobile() {
     return () => setMobileShellOverride(false);
   }, []);
 
+  function periodoQueryPagar() {
+    if (periodoTipo === 'personalizado') return `de=${periodoDe}&ate=${periodoAte}`;
+    return `ano=${anoPagar}&mes=${mesPagar + 1}`;
+  }
+
   function recarregarPagar() {
-    const agora = new Date();
-    api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?ano=${agora.getFullYear()}&mes=${agora.getMonth() + 1}&modo=agrupado`)
+    api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?${periodoQueryPagar()}&modo=agrupado`)
       .then(setLinhasPagar).catch(() => {});
+  }
+
+  function navMesPagar(delta: number) {
+    let nm = mesPagar + delta, na = anoPagar;
+    if (nm < 0) { nm = 11; na--; }
+    if (nm > 11) { nm = 0; na++; }
+    setMesPagar(nm); setAnoPagar(na);
   }
 
   useEffect(() => {
     if (tela !== 'pagar') return;
     recarregarPagar();
     api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasPagar(cats.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos'))).catch(() => {});
-  }, [tela]);
+  }, [tela, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
 
-  useEffect(() => { setPaginaLista(1); }, [tela, filtroStatus, catFiltro]);
+  useEffect(() => { setPaginaLista(1); }, [tela, filtroStatus, catFiltro, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
 
   async function marcarPagamentoLocal(l: LinhaPagar, pago: boolean) {
     const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
@@ -215,6 +232,12 @@ export function FinanceiroMobile() {
           </div>
         )}
 
+        <button className="card fm-card fm-balanco-link" onClick={() => navigate('/financeiro/balanco')} style={{ width: '100%', textAlign: 'left', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <BarChart3 size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: 14, color: 'var(--text-1)' }}>Balanço mensal</span>
+          <span style={{ fontSize: 18, color: 'var(--text-3)' }}>›</span>
+        </button>
+
         <div className="card fm-card" style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="fm-card-kicker">Resumo do ano · {anoRef}</div>
@@ -279,6 +302,30 @@ export function FinanceiroMobile() {
 
       {tela === 'pagar' && (
         <>
+          <div className="card fm-card" style={{ marginBottom: 14 }}>
+            <div className="cx-tipo-toggle" style={{ marginBottom: 10 }}>
+              <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
+              <button className={periodoTipo === 'personalizado' ? 'active' : ''} onClick={() => {
+                setPeriodoTipo('personalizado');
+                setPeriodoDe(new Date(anoPagar, mesPagar, 1).toISOString().slice(0, 10));
+                setPeriodoAte(new Date(anoPagar, mesPagar + 1, 0).toISOString().slice(0, 10));
+              }}>Personalizado</button>
+            </div>
+            {periodoTipo === 'mes' ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                <button className="btn-secondary" onClick={() => navMesPagar(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+                <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesPagar]} {anoPagar}</span>
+                <button className="btn-secondary" onClick={() => navMesPagar(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="date" value={periodoDe} onChange={e => setPeriodoDe(e.target.value)} />
+                <span style={{ color: 'var(--text-3)' }}>até</span>
+                <input type="date" value={periodoAte} onChange={e => setPeriodoAte(e.target.value)} />
+              </div>
+            )}
+          </div>
+
           <div className="fm-pills">
             {(['todos', 'pendente', 'vencido', 'pago'] as const).map(f => (
               <button key={f} className={`fm-pill${filtroStatus === f ? ' active' : ''}`} onClick={() => setFiltroStatus(f)}>
