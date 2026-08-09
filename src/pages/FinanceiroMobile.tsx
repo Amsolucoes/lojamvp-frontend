@@ -238,12 +238,12 @@ export function FinanceiroMobile() {
             ))}
           </div>
           {categoriasPagar.length > 0 && (
-            <div className="fm-pills" style={{ marginBottom: 14 }}>
-              <button className={`fm-pill${catFiltro === 'todas' ? ' active' : ''}`} onClick={() => setCatFiltro('todas')}>Todas categorias</button>
+            <select value={catFiltro} onChange={e => setCatFiltro(e.target.value)} style={{ marginBottom: 14 }}>
+              <option value="todas">Todas categorias</option>
               {categoriasPagar.map(c => (
-                <button key={c.id} className={`fm-pill${catFiltro === c.nome ? ' active' : ''}`} onClick={() => setCatFiltro(c.nome)}>{c.icone} {c.nome}</button>
+                <option key={c.id} value={c.nome}>{c.icone} {c.nome}</option>
               ))}
-            </div>
+            </select>
           )}
 
           {(() => {
@@ -257,7 +257,8 @@ export function FinanceiroMobile() {
             return agruparPorData(filtrada).map(([dia, itens]) => (
               <div key={dia} style={{ marginBottom: 12 }}>
                 <div className="fm-dia-header">
-                  {dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
+                  <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
+                  <strong>{fmt(itens.reduce((s, i) => s + i.valor, 0))}</strong>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {itens.map(l => {
