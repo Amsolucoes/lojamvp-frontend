@@ -130,6 +130,9 @@ export function Sidebar() {
   const navResto = NAV.filter(item => !navPrimarios.includes(item));
   const [maisAberto, setMaisAberto] = useState(false);
   const acaoBottomNav = useBottomNavAction();
+  const [popupAcaoAberto, setPopupAcaoAberto] = useState(false);
+
+  useEffect(() => { setPopupAcaoAberto(false); }, [acaoBottomNav]);
 
   return (
     <>
@@ -178,32 +181,43 @@ export function Sidebar() {
 
       {/* Bottom nav mobile */}
       <nav className="bottom-nav">
-        {navPrimarios.slice(0, 2).map(({ to, icon: Icon, label }) => (
+        {navPrimarios.map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to} end={to === '/'}
             className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
-            <Icon size={20} />
-            <span>{label}</span>
-            {label === 'Estoque' && alertas > 0 && <span className="bn-badge">{alertas}</span>}
-          </NavLink>
-        ))}
-        {acaoBottomNav && (
-          <button className="bottom-nav-fab" onClick={acaoBottomNav.aoClicar}
-            style={{ background: acaoBottomNav.corBg, borderColor: acaoBottomNav.corBorda, color: acaoBottomNav.corBorda }}>
-            <Plus size={18} />
-          </button>
-        )}
-        {navPrimarios.slice(2).map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} end={to === '/'}
-            className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
-            <Icon size={20} />
+            <Icon size={18} />
             <span>{label}</span>
             {label === 'Estoque' && alertas > 0 && <span className="bn-badge">{alertas}</span>}
           </NavLink>
         ))}
         <button className="bottom-nav-item" onClick={() => setMaisAberto(true)}>
-          <Menu size={20} />
+          <Menu size={18} />
           <span>Mais</span>
         </button>
+        {acaoBottomNav && (
+          <>
+            {acaoBottomNav.tipo === 'multipla' && popupAcaoAberto && (
+              <>
+                <div className="bottom-nav-popup-overlay" onClick={() => setPopupAcaoAberto(false)} />
+                <div className="bottom-nav-popup">
+                  {acaoBottomNav.opcoes.map(op => (
+                    <button key={op.label} className="bottom-nav-popup-item"
+                      style={{ borderColor: op.cor, color: op.cor }}
+                      onClick={() => { op.aoClicar(); setPopupAcaoAberto(false); }}>
+                      {op.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <button className="bottom-nav-fab"
+              onClick={() => acaoBottomNav.tipo === 'unica' ? acaoBottomNav.aoClicar() : setPopupAcaoAberto(v => !v)}
+              style={acaoBottomNav.tipo === 'unica'
+                ? { background: acaoBottomNav.corBg, borderColor: acaoBottomNav.corBorda, color: acaoBottomNav.corBorda }
+                : { background: 'var(--accent-bg)', borderColor: 'var(--accent)', color: 'var(--accent)' }}>
+              <Plus size={18} style={acaoBottomNav.tipo === 'multipla' && popupAcaoAberto ? { transform: 'rotate(45deg)', transition: 'transform 0.15s' } : undefined} />
+            </button>
+          </>
+        )}
       </nav>
 
       {maisAberto && (

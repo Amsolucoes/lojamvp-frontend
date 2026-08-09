@@ -1,8 +1,9 @@
-import { Wallet, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, CreditCard, Clock, ArrowUp, ArrowDown, Plus } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, CreditCard, Clock, ArrowUp, ArrowDown } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { BANCOS, BankBadge } from '../utils/bancos';
+import { setBottomNavAction } from '../utils/bottomNavAction';
+import { BankBadge } from '../utils/bancos';
 import './Dashboard.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -57,7 +58,6 @@ interface ResumoTipo {
 
 export function DashboardFinanceiro() {
   const navigate = useNavigate();
-  const [fabAberto, setFabAberto] = useState(false);
   const [contas, setContas] = useState<Conta[]>([]);
   const [resumo, setResumo] = useState<{ pagar: ResumoTipo; receber: ResumoTipo } | null>(null);
   const [anoRef, setAnoRef] = useState(new Date().getFullYear());
@@ -70,6 +70,17 @@ export function DashboardFinanceiro() {
 
   useEffect(() => {
     api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {}).finally(() => setCarregandoContasDash(false));
+  }, []);
+
+  useEffect(() => {
+    setBottomNavAction({
+      tipo: 'multipla',
+      opcoes: [
+        { label: 'A Pagar', cor: 'var(--red)', aoClicar: () => navigate('/financeiro?aba=pagar&novo=pagar') },
+        { label: 'A Receber', cor: 'var(--green)', aoClicar: () => navigate('/financeiro?aba=receber&novo=receber') },
+      ],
+    });
+    return () => setBottomNavAction(null);
   }, []);
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -474,31 +485,6 @@ export function DashboardFinanceiro() {
           </div>
         )}
       </div>
-      <div className="dash-fab-spacer" />
-      {fabAberto && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 35 }} onClick={() => setFabAberto(false)} />
-      )}
-
-      <div className="fin-fab-mobile-only" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 40, flexDirection: 'column', alignItems: 'center', gap: 10 }}>        {fabAberto && (
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn-secondary" style={{ borderColor: 'var(--red)', color: 'var(--red)', boxShadow: 'var(--shadow-lg)' }}
-              onClick={() => navigate('/financeiro?aba=pagar&novo=pagar')}>
-              A Pagar
-            </button>
-            <button className="btn-secondary" style={{ borderColor: 'var(--green)', color: 'var(--green)', boxShadow: 'var(--shadow-lg)' }}
-              onClick={() => navigate('/financeiro?aba=receber&novo=receber')}>
-              A Receber
-            </button>
-          </div>
-        )}
-        <button onClick={() => setFabAberto(v => !v)} style={{
-          width: 56, height: 56, borderRadius: '50%', background: 'var(--accent)', color: '#fff',
-          border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: 'var(--shadow-lg)', cursor: 'pointer', transform: fabAberto ? 'rotate(45deg)' : 'none', transition: 'transform 0.15s',
-        }}>
-          <Plus size={26} />
-        </button>
       </div>
-    </div>
   );
 }

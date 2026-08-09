@@ -261,6 +261,7 @@ export function Financeiro() {
 
   useEffect(() => {
     setBottomNavAction({
+      tipo: 'unica',
       corBg: aba === 'pagar' ? 'var(--red-bg)' : 'var(--green-bg)',
       corBorda: aba === 'pagar' ? 'var(--red)' : 'var(--green)',
       aoClicar: abrirNovoLancamento,
