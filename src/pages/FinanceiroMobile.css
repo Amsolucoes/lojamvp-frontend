@@ -76,3 +76,13 @@
   justify-content: center;
   white-space: nowrap;
 }
+.fm-fab-novo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}

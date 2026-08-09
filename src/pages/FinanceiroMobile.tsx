@@ -513,11 +513,10 @@ export function FinanceiroMobile() {
       {tela === 'pagar' && (
         <>
           <div style={{ height: 4, borderRadius: 4, background: 'var(--red)', opacity: 0.7, marginBottom: 14 }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1)', margin: 0 }}>A Pagar</h2>
-            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+            <button className="fm-fab-novo" style={{ background: 'var(--red-bg)', borderColor: 'var(--red)', color: 'var(--red)' }}
               onClick={() => navigate('/financeiro?aba=pagar&novo=pagar')}>
-              <Plus size={14} /> Novo
+              <Plus size={20} />
             </button>
           </div>
           <div className="card fm-card fm-pagar-filtro" style={{ marginBottom: 14 }}>
@@ -925,11 +924,10 @@ export function FinanceiroMobile() {
       {tela === 'receber' && (
         <>
           <div style={{ height: 4, borderRadius: 4, background: 'var(--green)', opacity: 0.7, marginBottom: 14 }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1)', margin: 0 }}>A Receber</h2>
-            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+            <button className="fm-fab-novo" style={{ background: 'var(--green-bg)', borderColor: 'var(--green)', color: 'var(--green)' }}
               onClick={() => navigate('/financeiro?aba=receber&novo=receber')}>
-              <Plus size={14} /> Novo
+              <Plus size={20} />
             </button>
           </div>
 
