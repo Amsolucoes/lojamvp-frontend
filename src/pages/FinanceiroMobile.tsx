@@ -485,7 +485,7 @@ export function FinanceiroMobile() {
                 <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Pago</div>
-                    <strong style={{ fontSize: 14 }}>{fmt(totalPago)}</strong>
+                    <strong style={{ fontSize: 14, color: 'var(--green)' }}>{fmt(totalPago)}</strong>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Total do mês</div>
