@@ -21,6 +21,13 @@ interface LinhaPagar {
   numeroParcela: number | null; totalParcelas: number | null;
   origem: string; cartaoId: string | null; cartaoNome: string | null;
 }
+interface LinhaReceber {
+  id: string; descricao: string; observacao?: string | null;
+  categoriaNome: string | null; categoriaId: string | null; contaBancariaId: string | null;
+  modo: string; valor: number; vencimento: string; status: string;
+  numeroParcela: number | null; totalParcelas: number | null;
+  origem: string; // avulso | plano
+}
 interface Categoria { id: string; nome: string; tipo: string; icone: string | null; }
 interface ItemCategoriaBalanco { nome: string; icone: string; valor: number; }
 interface Balanco { receitas: ItemCategoriaBalanco[]; despesas: ItemCategoriaBalanco[]; totalReceitas: number; totalDespesas: number; saldo: number; }
@@ -58,7 +65,7 @@ export function FinanceiroMobile() {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
   const [menuAberto, setMenuAberto] = useState(false);
-  const [tela, setTela] = useState<'visao' | 'pagar'>('visao');
+  const [tela, setTela] = useState<'visao' | 'pagar' | 'receber'>('visao');
   const [linhasPagar, setLinhasPagar] = useState<LinhaPagar[]>([]);
   const [carregandoPagar, setCarregandoPagar] = useState(true);
   const [categoriasPagar, setCategoriasPagar] = useState<Categoria[]>([]);
@@ -82,6 +89,22 @@ export function FinanceiroMobile() {
   const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEdit, setSalvandoEdit] = useState(false);
 
+  const [linhasReceber, setLinhasReceber] = useState<LinhaReceber[]>([]);
+  const [carregandoReceber, setCarregandoReceber] = useState(true);
+  const [categoriasReceber, setCategoriasReceber] = useState<Categoria[]>([]);
+  const [filtroStatusReceber, setFiltroStatusReceber] = useState<'todos' | 'pendente' | 'pago'>('todos');
+  const [catFiltroReceber, setCatFiltroReceber] = useState('todas');
+  const [paginaListaReceber, setPaginaListaReceber] = useState(1);
+  const [mesReceber, setMesReceber] = useState(new Date().getMonth());
+  const [anoReceber, setAnoReceber] = useState(new Date().getFullYear());
+  const [periodoTipoReceber, setPeriodoTipoReceber] = useState<'mes' | 'personalizado'>('mes');
+  const [periodoDeReceber, setPeriodoDeReceber] = useState(new Date().toISOString().slice(0, 10));
+  const [periodoAteReceber, setPeriodoAteReceber] = useState(new Date().toISOString().slice(0, 10));
+  const [confirmExcluirReceber, setConfirmExcluirReceber] = useState<LinhaReceber | null>(null);
+  const [editandoReceber, setEditandoReceber] = useState<LinhaReceber | null>(null);
+  const [formEditReceber, setFormEditReceber] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '', observacao: '' });
+  const [salvandoEditReceber, setSalvandoEditReceber] = useState(false);
+
   useEffect(() => {
     setMobileShellOverride(true);
     return () => setMobileShellOverride(false);
@@ -103,6 +126,80 @@ export function FinanceiroMobile() {
     if (nm < 0) { nm = 11; na--; }
     if (nm > 11) { nm = 0; na++; }
     setMesPagar(nm); setAnoPagar(na);
+  }
+
+  function periodoQueryReceber() {
+    if (periodoTipoReceber === 'personalizado') {
+      return { de: new Date(periodoDeReceber).toISOString(), ate: new Date(periodoAteReceber).toISOString() };
+    }
+    return { de: new Date(anoReceber, mesReceber, 1).toISOString(), ate: new Date(anoReceber, mesReceber + 1, 0).toISOString() };
+  }
+
+  function recarregarReceber() {
+    setCarregandoReceber(true);
+    const { de, ate } = periodoQueryReceber();
+    api.get<LinhaReceber[]>(`/api/financeiro/receber-unificado?de=${de}&ate=${ate}`)
+      .then(setLinhasReceber).catch(() => {}).finally(() => setCarregandoReceber(false));
+  }
+
+  function navMesReceber(delta: number) {
+    let nm = mesReceber + delta, na = anoReceber;
+    if (nm < 0) { nm = 11; na--; }
+    if (nm > 11) { nm = 0; na++; }
+    setMesReceber(nm); setAnoReceber(na);
+  }
+
+  useEffect(() => {
+    if (tela !== 'receber') return;
+    recarregarReceber();
+    api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasReceber(cats.filter(c => c.tipo === 'receber' || c.tipo === 'ambos'))).catch(() => {});
+  }, [tela, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
+
+  useEffect(() => { setPaginaListaReceber(1); }, [tela, filtroStatusReceber, catFiltroReceber, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
+
+  async function marcarRecebimentoLocal(l: LinhaReceber, pago: boolean) {
+    try {
+      await api.post(`/api/financeiro/lancamentos/${l.id}/pagamento`, { pago });
+      recarregarReceber();
+    } catch {}
+  }
+
+  function abrirEditarReceber(l: LinhaReceber) {
+    setEditandoReceber(l);
+    setFormEditReceber({
+      contaBancariaId: l.contaBancariaId ?? '',
+      categoriaId: l.categoriaId ?? '',
+      descricao: l.descricao,
+      valor: String(l.valor),
+      vencimento: l.vencimento ? l.vencimento.slice(0, 10) : '',
+      observacao: l.observacao ?? '',
+    });
+  }
+
+  async function salvarEdicaoReceber(modo: 'unica' | 'todas') {
+    if (!editandoReceber) return;
+    setSalvandoEditReceber(true);
+    try {
+      await api.put(`/api/financeiro/lancamentos/${editandoReceber.id}?modo=${modo}`, {
+        descricao: formEditReceber.descricao.trim(),
+        categoriaId: formEditReceber.categoriaId || null,
+        contaBancariaId: formEditReceber.contaBancariaId,
+        valor: parseFloat(formEditReceber.valor),
+        vencimento: formEditReceber.vencimento,
+        observacao: formEditReceber.observacao || null,
+      });
+      setEditandoReceber(null);
+      recarregarReceber();
+    } catch {} finally { setSalvandoEditReceber(false); }
+  }
+
+  async function excluirReceber(modo: 'unica' | 'todas' = 'unica') {
+    if (!confirmExcluirReceber) return;
+    try {
+      await api.delete(`/api/financeiro/lancamentos/${confirmExcluirReceber.id}?modo=${modo}`);
+      setConfirmExcluirReceber(null);
+      recarregarReceber();
+    } catch {}
   }
 
   useEffect(() => {
@@ -208,8 +305,7 @@ export function FinanceiroMobile() {
   const proximos = alertas.slice(0, 4);
 
   function irPara(destino: typeof ABAS[number]['key']) {
-    if (destino === 'visao' || destino === 'pagar') { setTela(destino); return; }
-    if (destino === 'receber') { navigate('/financeiro?aba=receber'); return; }
+    if (destino === 'visao' || destino === 'pagar' || destino === 'receber') { setTela(destino); return; }
     navigate('/financeiro'); // Cartões/Contas: fase 4/5 — por ora usa os botoes do topo daquela tela
   }
 
@@ -701,6 +797,109 @@ export function FinanceiroMobile() {
         </div>
       )}
 
+      {editandoReceber && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditandoReceber(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar lançamento</h2>
+              <button className="btn-ghost" onClick={() => setEditandoReceber(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Conta bancária *</label>
+                  <select value={formEditReceber.contaBancariaId} onChange={e => setFormEditReceber(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Categoria</label>
+                  <select value={formEditReceber.categoriaId} onChange={e => setFormEditReceber(f => ({ ...f, categoriaId: e.target.value }))}>
+                    <option value="">Sem categoria</option>
+                    {categoriasReceber.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Descrição *</label>
+                  <input value={formEditReceber.descricao} onChange={e => setFormEditReceber(f => ({ ...f, descricao: e.target.value }))} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="form-group">
+                    <label className="form-label">Valor (R$) *</label>
+                    <input type="number" step={0.01} value={formEditReceber.valor} onChange={e => setFormEditReceber(f => ({ ...f, valor: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Vencimento</label>
+                    <input type="date" value={formEditReceber.vencimento} onChange={e => setFormEditReceber(f => ({ ...f, vencimento: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Observação</label>
+                  <input value={formEditReceber.observacao} onChange={e => setFormEditReceber(f => ({ ...f, observacao: e.target.value }))} />
+                </div>
+                {(editandoReceber.modo === 'fixa' || editandoReceber.modo === 'parcelada') && (
+                  <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                    {editandoReceber.modo === 'fixa'
+                      ? 'Esse é um lançamento fixo. Pode alterar só este mês, ou também os próximos.'
+                      : 'Essa é uma parcela. Pode alterar só esta, ou também as demais ainda não pagas.'}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setEditandoReceber(null)}>Cancelar</button>
+              {(editandoReceber.modo === 'fixa' || editandoReceber.modo === 'parcelada') ? (
+                <>
+                  <button className="btn-secondary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('unica')}>Só esta</button>
+                  <button className="btn-primary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('todas')}>
+                    {editandoReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-primary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('unica')}>Salvar</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmExcluirReceber && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirReceber(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir lançamento</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluirReceber(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir <strong style={{ color: 'var(--text-1)' }}>{confirmExcluirReceber.descricao}</strong>?
+              </p>
+              {(confirmExcluirReceber.modo === 'fixa' || confirmExcluirReceber.modo === 'parcelada') && (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>
+                  {confirmExcluirReceber.modo === 'fixa'
+                    ? 'É um lançamento fixo. Pode excluir só este mês, ou parar de gerar os próximos.'
+                    : 'É uma parcela. Pode excluir só esta, ou todas as futuras ainda não pagas.'}
+                </p>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluirReceber(null)}>Cancelar</button>
+              {(confirmExcluirReceber.modo === 'fixa' || confirmExcluirReceber.modo === 'parcelada') ? (
+                <>
+                  <button className="btn-secondary" onClick={() => excluirReceber('unica')}>Só esta</button>
+                  <button className="btn-danger" onClick={() => excluirReceber('todas')}>
+                    {confirmExcluirReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-danger" onClick={() => excluirReceber('unica')}>Excluir</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {menuAberto && (
         <div className="modal-overlay" onClick={() => setMenuAberto(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -721,6 +920,158 @@ export function FinanceiroMobile() {
             </div>
           </div>
         </div>
+      )}
+
+      {tela === 'receber' && (
+        <>
+          <div style={{ height: 4, borderRadius: 4, background: 'var(--green)', opacity: 0.7, marginBottom: 14 }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1)', margin: 0 }}>A Receber</h2>
+            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+              onClick={() => navigate('/financeiro?aba=receber&novo=receber')}>
+              <Plus size={14} /> Novo
+            </button>
+          </div>
+
+          <div className="card fm-card" style={{ marginBottom: 14, overflow: 'visible', padding: '14px 10px' }}>
+            <div className="cx-tipo-toggle" style={{ marginBottom: 10 }}>
+              <button className={periodoTipoReceber === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipoReceber('mes')}>Mês</button>
+              <button className={periodoTipoReceber === 'personalizado' ? 'active' : ''} onClick={() => {
+                setPeriodoTipoReceber('personalizado');
+                setPeriodoDeReceber(new Date(anoReceber, mesReceber, 1).toISOString().slice(0, 10));
+                setPeriodoAteReceber(new Date(anoReceber, mesReceber + 1, 0).toISOString().slice(0, 10));
+              }}>Personalizado</button>
+            </div>
+            {periodoTipoReceber === 'mes' ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                <button className="btn-secondary" onClick={() => navMesReceber(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+                <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesReceber]} {anoReceber}</span>
+                <button className="btn-secondary" onClick={() => navMesReceber(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="date" value={periodoDeReceber} onChange={e => setPeriodoDeReceber(e.target.value)} />
+                <span style={{ color: 'var(--text-3)' }}>até</span>
+                <input type="date" value={periodoAteReceber} onChange={e => setPeriodoAteReceber(e.target.value)} />
+              </div>
+            )}
+          </div>
+
+          {carregandoReceber ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+          ) : (() => {
+            const totalRecebido = linhasReceber.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
+            const totalAberto = linhasReceber.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
+            const totalMes = totalRecebido + totalAberto;
+            return (
+              <div className="card fm-card" style={{ marginBottom: 14 }}>
+                <div className="fm-card-kicker" style={{ textAlign: 'center' }}>Total a receber</div>
+                <div className="fm-valor-destaque" style={{ color: 'var(--green)', fontSize: 26, textAlign: 'center' }}>{fmt(totalAberto)}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Recebido</div>
+                    <strong style={{ fontSize: 14, color: 'var(--green)' }}>{fmt(totalRecebido)}</strong>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Total do mês</div>
+                    <strong style={{ fontSize: 14 }}>{fmt(totalMes)}</strong>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="fm-pills">
+            {(['todos', 'pendente', 'pago'] as const).map(f => (
+              <button key={f} className={`fm-pill${filtroStatusReceber === f ? ' active' : ''}`} onClick={() => setFiltroStatusReceber(f)}>
+                {f === 'todos' ? 'Todos' : f === 'pendente' ? 'Pendente' : 'Recebido'}
+              </button>
+            ))}
+          </div>
+          {categoriasReceber.length > 0 && (
+            <select value={catFiltroReceber} onChange={e => setCatFiltroReceber(e.target.value)} style={{ marginBottom: 14 }}>
+              <option value="todas">Todas categorias</option>
+              <option value="__plano__">💳 Mensalidades (Planos)</option>
+              {categoriasReceber.map(c => (
+                <option key={c.id} value={c.nome}>{c.icone} {c.nome}</option>
+              ))}
+            </select>
+          )}
+
+          {carregandoReceber ? null : (() => {
+            const filtrada = linhasReceber.filter(l => {
+              const catOk = catFiltroReceber === 'todas'
+                ? true
+                : catFiltroReceber === '__plano__'
+                ? l.origem === 'plano'
+                : l.origem === 'avulso' && l.categoriaNome === catFiltroReceber;
+              const statusOk = filtroStatusReceber === 'todos' || l.status === filtroStatusReceber;
+              return catOk && statusOk;
+            });
+            if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
+            const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
+            const paginaAtual = Math.min(paginaListaReceber, totalPaginas);
+            const pagina = filtrada.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina);
+            return (
+              <>
+                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{filtrada.length} lançamento{filtrada.length !== 1 ? 's' : ''}</p>
+                {agruparPorData(pagina).map(([dia, itens]) => (
+                  <div key={dia} style={{ marginBottom: 12 }}>
+                    <div className="fm-dia-header" style={{ color: 'var(--green)', background: 'var(--green-bg)', borderColor: 'rgba(74,222,128,0.3)' }}>
+                      <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
+                      <strong>{fmt(itens.reduce((s, i) => s + i.valor, 0))}</strong>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {itens.map(l => {
+                        const vencida = l.status === 'pendente' && new Date(l.vencimento) < new Date(new Date().toDateString());
+                        return (
+                          <div key={l.id} className="card fm-card-linha-completa">
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{l.descricao}</div>
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
+                                  {l.categoriaNome && <span className="fm-tag-neutra">{l.categoriaNome}</span>}
+                                  <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                                  {l.origem === 'plano' && <span className="fm-tag-neutra">Plano</span>}
+                                </div>
+                              </div>
+                              <div style={{ fontSize: 14, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{fmt(l.valor)}</div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                              <span className={`badge badge-${l.status === 'pago' ? 'green' : vencida ? 'red' : 'yellow'}`} style={{ fontSize: 10 }}>
+                                {l.status === 'pago' ? 'Recebido' : vencida ? 'Vencido' : 'Pendente'}
+                              </span>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                {l.origem === 'avulso' ? (
+                                  <>
+                                    <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => marcarRecebimentoLocal(l, l.status !== 'pago')}>
+                                      {l.status === 'pago' ? 'Desfazer' : 'Receber'}
+                                    </button>
+                                    <button className="btn-ghost" onClick={() => abrirEditarReceber(l)}>Editar</button>
+                                    <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluirReceber(l)}><Trash2 size={14} /></button>
+                                  </>
+                                ) : (
+                                  <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => navigate('/planos?aba=assinantes')}>Ver em Planos</button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {totalPaginas > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, margin: '16px 0' }}>
+                    <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaListaReceber(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
+                    <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaListaReceber(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </>
       )}
     </div>
   );
