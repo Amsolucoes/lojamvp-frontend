@@ -259,6 +259,8 @@ export function Financeiro() {
       .then(setResumo).catch(() => {});
   }
 
+  useEffect(() => { carregarContas(); carregarCategorias(); carregarCartoes(); }, []);
+
   useEffect(() => {
     setBottomNavAction({
       tipo: 'unica',
