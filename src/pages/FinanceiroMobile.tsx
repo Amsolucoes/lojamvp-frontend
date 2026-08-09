@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { setMobileShellOverride } from '../utils/mobileShellOverride';
@@ -22,6 +22,15 @@ interface LinhaPagar {
   origem: string; cartaoId: string | null; cartaoNome: string | null;
 }
 interface Categoria { id: string; nome: string; tipo: string; icone: string | null; }
+interface ItemCategoriaBalanco { nome: string; icone: string; valor: number; }
+interface Balanco { receitas: ItemCategoriaBalanco[]; despesas: ItemCategoriaBalanco[]; totalReceitas: number; totalDespesas: number; saldo: number; }
+
+const CORES_BALANCO = ['#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#f97316', '#06b6d4'];
+function corParaCategoria(nome: string) {
+  let hash = 0;
+  for (let i = 0; i < nome.length; i++) hash = nome.charCodeAt(i) + ((hash << 5) - hash);
+  return CORES_BALANCO[Math.abs(hash) % CORES_BALANCO.length];
+}
 
 function ehVencido(l: { status: string; vencimento: string }) {
   if (!l.vencimento) return false;
@@ -55,6 +64,12 @@ export function FinanceiroMobile() {
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'vencido' | 'pago'>('todos');
   const [catFiltro, setCatFiltro] = useState('todas');
   const [paginaLista, setPaginaLista] = useState(1);
+  const [mesBalanco, setMesBalanco] = useState(new Date().getMonth());
+  const [anoBalanco, setAnoBalanco] = useState(new Date().getFullYear());
+  const [abaBalanco, setAbaBalanco] = useState<'categoria' | 'conta'>('categoria');
+  const [balanco, setBalanco] = useState<Balanco | null>(null);
+  const [carregandoBalanco, setCarregandoBalanco] = useState(true);
+
   const [mesPagar, setMesPagar] = useState(new Date().getMonth());
   const [anoPagar, setAnoPagar] = useState(new Date().getFullYear());
   const [periodoTipo, setPeriodoTipo] = useState<'mes' | 'personalizado'>('mes');
@@ -161,6 +176,19 @@ export function FinanceiroMobile() {
     api.get<Alerta[]>('/api/financeiro/alertas-vencimento?dias=7').then(setAlertas).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    setCarregandoBalanco(true);
+    api.get<Balanco>(`/api/financeiro/balanco-por-categoria?ano=${anoBalanco}&mes=${mesBalanco + 1}`)
+      .then(setBalanco).catch(() => setBalanco(null)).finally(() => setCarregandoBalanco(false));
+  }, [anoBalanco, mesBalanco]);
+
+  function navMesBalanco(delta: number) {
+    let nm = mesBalanco + delta, na = anoBalanco;
+    if (nm < 0) { nm = 11; na--; }
+    if (nm > 11) { nm = 0; na++; }
+    setMesBalanco(nm); setAnoBalanco(na);
+  }
+
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
   const pagarAberto = (resumo?.pagar.totalPendente ?? 0) + (resumo?.pagar.totalVencido ?? 0);
   const receberAberto = (resumo?.receber.totalPendente ?? 0) + (resumo?.receber.totalVencido ?? 0);
@@ -213,12 +241,12 @@ export function FinanceiroMobile() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, margin: '14px 0' }}>
           <div className="card fm-card">
             <div className="fm-card-kicker">A pagar</div>
-            <div className="fm-valor-destaque">{fmt(pagarAberto)}</div>
+            <div className="fm-valor-destaque" style={{ color: 'var(--red)' }}>{fmt(pagarAberto)}</div>
             <div className="fm-card-meta">{resumo?.pagar.qtdPendente ?? 0} lançamento(s)</div>
           </div>
           <div className="card fm-card">
             <div className="fm-card-kicker">A receber</div>
-            <div className="fm-valor-destaque">{fmt(receberAberto)}</div>
+            <div className="fm-valor-destaque" style={{ color: 'var(--green)' }}>{fmt(receberAberto)}</div>
             <div className="fm-card-meta">{resumo?.receber.qtdPendente ?? 0} lançamento(s)</div>
           </div>
         </div>
@@ -232,11 +260,87 @@ export function FinanceiroMobile() {
           </div>
         )}
 
-        <button className="card fm-card fm-balanco-link" onClick={() => navigate('/financeiro/balanco')} style={{ width: '100%', textAlign: 'left', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <BarChart3 size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 14, color: 'var(--text-1)' }}>Balanço mensal</span>
-          <span style={{ fontSize: 18, color: 'var(--text-3)' }}>›</span>
-        </button>
+        <div className="card fm-card" style={{ marginBottom: 18 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="fm-card-kicker">Balanço mensal</div>
+            <button className="fm-link-btn" onClick={() => navigate('/financeiro/balanco')}>Ver completo ›</button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '10px 0' }}>
+            <button className="btn-secondary" onClick={() => navMesBalanco(-1)} style={{ padding: '4px 8px' }}><ChevronLeft size={14} /></button>
+            <span style={{ fontWeight: 600, fontSize: 13, textTransform: 'capitalize' }}>{MESES[mesBalanco]} {anoBalanco}</span>
+            <button className="btn-secondary" onClick={() => navMesBalanco(1)} style={{ padding: '4px 8px' }}><ChevronRight size={14} /></button>
+          </div>
+
+          <div className="cx-tipo-toggle" style={{ marginBottom: 10 }}>
+            <button className={abaBalanco === 'categoria' ? 'active' : ''} onClick={() => setAbaBalanco('categoria')}>Por categoria</button>
+            <button className={abaBalanco === 'conta' ? 'active' : ''} onClick={() => setAbaBalanco('conta')}>Saldo por conta</button>
+          </div>
+
+          <div className="fm-balanco-scroll">
+            {abaBalanco === 'categoria' ? (
+              carregandoBalanco ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}><div className="layout-spinner" style={{ width: 24, height: 24 }} /></div>
+              ) : !balanco ? (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Não foi possível carregar.</p>
+              ) : (
+                <>
+                  <div style={{ textAlign: 'center', marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Balanço</div>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: balanco.saldo >= 0 ? 'var(--green)' : 'var(--red)', margin: '4px 0 10px' }}>
+                      {balanco.saldo >= 0 ? '+' : '-'}{fmt(Math.abs(balanco.saldo))}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 24 }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                          <TrendingUp size={12} /> Receitas
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--green)' }}>{fmt(balanco.totalReceitas)}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                          <TrendingDown size={12} /> Despesas
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--red)' }}>{fmt(balanco.totalDespesas)}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div>
+                      {balanco.receitas.map(r => (
+                        <div key={r.nome} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: corParaCategoria(r.nome), flexShrink: 0 }} />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.nome}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)' }}>+{fmt(r.valor)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      {balanco.despesas.map(d => (
+                        <div key={d.nome} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: corParaCategoria(d.nome), flexShrink: 0 }} />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--red)' }}>-{fmt(d.valor)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )
+            ) : (
+              contas.filter(c => c.ativa).map(c => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}><BankBadge bancoId={c.banco} tamanho={16} /> {c.nome}</span>
+                  <strong style={{ fontSize: 13, color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
 
         <div className="card fm-card" style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
