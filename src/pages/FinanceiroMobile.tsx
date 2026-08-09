@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check } from 'lucide-react';
+import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { setMobileShellOverride } from '../utils/mobileShellOverride';
@@ -15,7 +15,7 @@ interface ResumoTipo { totalPago: number; qtdPago: number; totalPendente: number
 interface Alerta { id: string; descricao: string; tipo: string; valor: number; vencimento: string; origem: string; }
 interface LinhaPagar {
   id: string; descricao: string; observacao?: string | null;
-  categoriaNome: string | null; contaBancariaId: string | null;
+  categoriaNome: string | null; categoriaId: string | null; contaBancariaId: string | null;
   modo: string; valor: number; vencimento: string; status: string;
   numeroParcela: number | null; totalParcelas: number | null;
   origem: string; cartaoId: string | null; cartaoNome: string | null;
@@ -53,19 +53,31 @@ export function FinanceiroMobile() {
   const [categoriasPagar, setCategoriasPagar] = useState<Categoria[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'vencido' | 'pago'>('todos');
   const [catFiltro, setCatFiltro] = useState('todas');
+  const [paginaLista, setPaginaLista] = useState(1);
+  const itensPorPagina = 20;
+  const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
+  const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
+  const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '', observacao: '' });
+  const [salvandoEdit, setSalvandoEdit] = useState(false);
 
   useEffect(() => {
     setMobileShellOverride(true);
     return () => setMobileShellOverride(false);
   }, []);
 
-  useEffect(() => {
-    if (tela !== 'pagar') return;
+  function recarregarPagar() {
     const agora = new Date();
     api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?ano=${agora.getFullYear()}&mes=${agora.getMonth() + 1}&modo=agrupado`)
       .then(setLinhasPagar).catch(() => {});
+  }
+
+  useEffect(() => {
+    if (tela !== 'pagar') return;
+    recarregarPagar();
     api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasPagar(cats.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos'))).catch(() => {});
   }, [tela]);
+
+  useEffect(() => { setPaginaLista(1); }, [tela, filtroStatus, catFiltro]);
 
   async function marcarPagamentoLocal(l: LinhaPagar, pago: boolean) {
     const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
@@ -76,8 +88,45 @@ export function FinanceiroMobile() {
       } else {
         await api.post(`/api/financeiro/lancamentos/${l.id}/pagamento`, { pago });
       }
-      const agora = new Date();
-      api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?ano=${agora.getFullYear()}&mes=${agora.getMonth() + 1}&modo=agrupado`).then(setLinhasPagar).catch(() => {});
+      recarregarPagar();
+    } catch {}
+  }
+
+  function abrirEditar(l: LinhaPagar) {
+    setEditandoLancamento(l);
+    setFormEdit({
+      contaBancariaId: l.contaBancariaId ?? '',
+      categoriaId: l.categoriaId ?? '',
+      descricao: l.descricao,
+      valor: String(l.valor),
+      vencimento: l.vencimento ? l.vencimento.slice(0, 10) : '',
+      observacao: l.observacao ?? '',
+    });
+  }
+
+  async function salvarEdicao(modo: 'unica' | 'todas') {
+    if (!editandoLancamento) return;
+    setSalvandoEdit(true);
+    try {
+      await api.put(`/api/financeiro/lancamentos/${editandoLancamento.id}?modo=${modo}`, {
+        descricao: formEdit.descricao.trim(),
+        categoriaId: formEdit.categoriaId || null,
+        contaBancariaId: formEdit.contaBancariaId,
+        valor: parseFloat(formEdit.valor),
+        vencimento: formEdit.vencimento,
+        observacao: formEdit.observacao || null,
+      });
+      setEditandoLancamento(null);
+      recarregarPagar();
+    } catch {} finally { setSalvandoEdit(false); }
+  }
+
+  async function excluirLinha(modo: 'unica' | 'todas' = 'unica') {
+    if (!confirmExcluir) return;
+    try {
+      await api.delete(`/api/financeiro/lancamentos/${confirmExcluir.id}?modo=${modo}`);
+      setConfirmExcluir(null);
+      recarregarPagar();
     } catch {}
   }
 
@@ -254,36 +303,64 @@ export function FinanceiroMobile() {
               return catOk && statusOk;
             });
             if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
-            return agruparPorData(filtrada).map(([dia, itens]) => (
-              <div key={dia} style={{ marginBottom: 12 }}>
-                <div className="fm-dia-header">
-                  <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
-                  <strong>{fmt(itens.reduce((s, i) => s + i.valor, 0))}</strong>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {itens.map(l => {
-                    const status = ehVencido(l) ? 'vencido' : l.status;
-                    return (
-                      <div key={l.id} className="card fm-card-linha" onClick={() => marcarPagamentoLocal(l, l.status !== 'pago')} style={{ cursor: 'pointer' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{l.descricao}</div>
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
-                            {l.categoriaNome && <span className="fm-tag-neutra">{l.categoriaNome}</span>}
-                            <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+            const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
+            const paginaAtual = Math.min(paginaLista, totalPaginas);
+            const pagina = filtrada.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina);
+            return (
+              <>
+                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{filtrada.length} lançamento{filtrada.length !== 1 ? 's' : ''}</p>
+                {agruparPorData(pagina).map(([dia, itens]) => (
+                  <div key={dia} style={{ marginBottom: 12 }}>
+                    <div className="fm-dia-header">
+                      <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
+                      <strong>{fmt(itens.reduce((s, i) => s + i.valor, 0))}</strong>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {itens.map(l => {
+                        const status = ehVencido(l) ? 'vencido' : l.status;
+                        return (
+                          <div key={l.id} className="card fm-card-linha-completa">
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{l.descricao}</div>
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
+                                  {l.categoriaNome && <span className="fm-tag-neutra">{l.categoriaNome}</span>}
+                                  <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                                </div>
+                              </div>
+                              <div style={{ fontSize: 14, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{fmt(l.valor)}</div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                              <span className={`badge badge-${status === 'pago' ? 'green' : status === 'vencido' ? 'red' : 'yellow'}`} style={{ fontSize: 10 }}>
+                                {status === 'pago' ? 'Pago' : status === 'vencido' ? 'Vencido' : 'Pendente'}
+                              </span>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => marcarPagamentoLocal(l, l.status !== 'pago')}>
+                                  {l.status === 'pago' ? 'Desfazer' : 'Pagar'}
+                                </button>
+                                {l.origem === 'avulso' && (
+                                  <>
+                                    <button className="btn-ghost" onClick={() => abrirEditar(l)}>Editar</button>
+                                    <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(l)}><Trash2 size={14} /></button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                          <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{fmt(l.valor)}</div>
-                          <span className={`badge badge-${status === 'pago' ? 'green' : status === 'vencido' ? 'red' : 'yellow'}`} style={{ fontSize: 10 }}>
-                            {status === 'pago' ? 'Pago' : status === 'vencido' ? 'Vencido' : 'Pendente'}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ));
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {totalPaginas > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, margin: '16px 0' }}>
+                    <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaLista(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
+                    <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaLista(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+                  </div>
+                )}
+              </>
+            );
           })()}
         </>
       )}
@@ -309,6 +386,109 @@ export function FinanceiroMobile() {
           </button>
         ))}
       </nav>
+
+      {editandoLancamento && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditandoLancamento(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar lançamento</h2>
+              <button className="btn-ghost" onClick={() => setEditandoLancamento(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Conta bancária *</label>
+                  <select value={formEdit.contaBancariaId} onChange={e => setFormEdit(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Categoria</label>
+                  <select value={formEdit.categoriaId} onChange={e => setFormEdit(f => ({ ...f, categoriaId: e.target.value }))}>
+                    <option value="">Sem categoria</option>
+                    {categoriasPagar.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Descrição *</label>
+                  <input value={formEdit.descricao} onChange={e => setFormEdit(f => ({ ...f, descricao: e.target.value }))} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="form-group">
+                    <label className="form-label">Valor (R$) *</label>
+                    <input type="number" step={0.01} value={formEdit.valor} onChange={e => setFormEdit(f => ({ ...f, valor: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Vencimento</label>
+                    <input type="date" value={formEdit.vencimento} onChange={e => setFormEdit(f => ({ ...f, vencimento: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Observação</label>
+                  <input value={formEdit.observacao} onChange={e => setFormEdit(f => ({ ...f, observacao: e.target.value }))} />
+                </div>
+                {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') && (
+                  <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                    {editandoLancamento.modo === 'fixa'
+                      ? 'Esse é um lançamento fixo. Pode alterar só este mês, ou também os próximos.'
+                      : 'Essa é uma parcela. Pode alterar só esta, ou também as demais ainda não pagas.'}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setEditandoLancamento(null)}>Cancelar</button>
+              {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') ? (
+                <>
+                  <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicao('unica')}>Só esta</button>
+                  <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicao('todas')}>
+                    {editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicao('unica')}>Salvar</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmExcluir && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluir(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir lançamento</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluir(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir <strong style={{ color: 'var(--text-1)' }}>{confirmExcluir.descricao}</strong>?
+              </p>
+              {(confirmExcluir.modo === 'fixa' || confirmExcluir.modo === 'parcelada') && (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>
+                  {confirmExcluir.modo === 'fixa'
+                    ? 'É um lançamento fixo. Pode excluir só este mês, ou parar de gerar os próximos.'
+                    : 'É uma parcela. Pode excluir só esta, ou todas as futuras ainda não pagas.'}
+                </p>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluir(null)}>Cancelar</button>
+              {(confirmExcluir.modo === 'fixa' || confirmExcluir.modo === 'parcelada') ? (
+                <>
+                  <button className="btn-secondary" onClick={() => excluirLinha('unica')}>Só esta</button>
+                  <button className="btn-danger" onClick={() => excluirLinha('todas')}>
+                    {confirmExcluir.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-danger" onClick={() => excluirLinha('unica')}>Excluir</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {menuAberto && (
         <div className="modal-overlay" onClick={() => setMenuAberto(false)}>
