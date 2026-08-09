@@ -302,8 +302,9 @@ export function FinanceiroMobile() {
 
       {tela === 'pagar' && (
         <>
-          <div className="card fm-card" style={{ marginBottom: 14 }}>
-            <div className="cx-tipo-toggle" style={{ marginBottom: 10 }}>
+          <div style={{ height: 4, borderRadius: 4, background: 'var(--red)', opacity: 0.7, marginBottom: 14 }} />
+          <div className="card fm-card fm-pagar-filtro" style={{ marginBottom: 14 }}>
+            <div className="cx-tipo-toggle" style={{ marginBottom: 10, display: 'flex' }}>
               <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
               <button className={periodoTipo === 'personalizado' ? 'active' : ''} onClick={() => {
                 setPeriodoTipo('personalizado');
