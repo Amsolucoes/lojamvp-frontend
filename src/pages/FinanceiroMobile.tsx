@@ -676,6 +676,157 @@ export function FinanceiroMobile() {
           })()}
         </>
       )}
+
+      {tela === 'receber' && (
+        <>
+          <div style={{ height: 4, borderRadius: 4, background: 'var(--green)', opacity: 0.7, marginBottom: 14 }} />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+            <button className="fm-fab-novo" style={{ background: 'var(--green-bg)', borderColor: 'var(--green)', color: 'var(--green)' }}
+              onClick={() => navigate('/financeiro?aba=receber&novo=receber')}>
+              <Plus size={20} />
+            </button>
+          </div>
+
+          <div className="card fm-card" style={{ marginBottom: 14, overflow: 'visible', padding: '14px 10px' }}>
+            <div className="cx-tipo-toggle" style={{ marginBottom: 10 }}>
+              <button className={periodoTipoReceber === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipoReceber('mes')}>Mês</button>
+              <button className={periodoTipoReceber === 'personalizado' ? 'active' : ''} onClick={() => {
+                setPeriodoTipoReceber('personalizado');
+                setPeriodoDeReceber(new Date(anoReceber, mesReceber, 1).toISOString().slice(0, 10));
+                setPeriodoAteReceber(new Date(anoReceber, mesReceber + 1, 0).toISOString().slice(0, 10));
+              }}>Personalizado</button>
+            </div>
+            {periodoTipoReceber === 'mes' ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                <button className="btn-secondary" onClick={() => navMesReceber(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+                <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesReceber]} {anoReceber}</span>
+                <button className="btn-secondary" onClick={() => navMesReceber(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="date" value={periodoDeReceber} onChange={e => setPeriodoDeReceber(e.target.value)} />
+                <span style={{ color: 'var(--text-3)' }}>até</span>
+                <input type="date" value={periodoAteReceber} onChange={e => setPeriodoAteReceber(e.target.value)} />
+              </div>
+            )}
+          </div>
+
+          {carregandoReceber ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+          ) : (() => {
+            const totalRecebido = linhasReceber.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
+            const totalAberto = linhasReceber.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
+            const totalMes = totalRecebido + totalAberto;
+            return (
+              <div className="card fm-card" style={{ marginBottom: 14 }}>
+                <div className="fm-card-kicker" style={{ textAlign: 'center' }}>Total a receber</div>
+                <div className="fm-valor-destaque" style={{ color: 'var(--green)', fontSize: 26, textAlign: 'center' }}>{fmt(totalAberto)}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Recebido</div>
+                    <strong style={{ fontSize: 14, color: 'var(--green)' }}>{fmt(totalRecebido)}</strong>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Total do mês</div>
+                    <strong style={{ fontSize: 14 }}>{fmt(totalMes)}</strong>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="fm-pills">
+            {(['todos', 'pendente', 'pago'] as const).map(f => (
+              <button key={f} className={`fm-pill${filtroStatusReceber === f ? ' active' : ''}`} onClick={() => setFiltroStatusReceber(f)}>
+                {f === 'todos' ? 'Todos' : f === 'pendente' ? 'Pendente' : 'Recebido'}
+              </button>
+            ))}
+          </div>
+          {categoriasReceber.length > 0 && (
+            <select value={catFiltroReceber} onChange={e => setCatFiltroReceber(e.target.value)} style={{ marginBottom: 14 }}>
+              <option value="todas">Todas categorias</option>
+              <option value="__plano__">💳 Mensalidades (Planos)</option>
+              {categoriasReceber.map(c => (
+                <option key={c.id} value={c.nome}>{c.icone} {c.nome}</option>
+              ))}
+            </select>
+          )}
+
+          {carregandoReceber ? null : (() => {
+            const filtrada = linhasReceber.filter(l => {
+              const catOk = catFiltroReceber === 'todas'
+                ? true
+                : catFiltroReceber === '__plano__'
+                ? l.origem === 'plano'
+                : l.origem === 'avulso' && l.categoriaNome === catFiltroReceber;
+              const statusOk = filtroStatusReceber === 'todos' || l.status === filtroStatusReceber;
+              return catOk && statusOk;
+            });
+            if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
+            const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
+            const paginaAtual = Math.min(paginaListaReceber, totalPaginas);
+            const pagina = filtrada.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina);
+            return (
+              <>
+                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{filtrada.length} lançamento{filtrada.length !== 1 ? 's' : ''}</p>
+                {agruparPorData(pagina).map(([dia, itens]) => (
+                  <div key={dia} style={{ marginBottom: 12 }}>
+                    <div className="fm-dia-header" style={{ color: 'var(--green)', background: 'var(--green-bg)', borderColor: 'rgba(74,222,128,0.3)' }}>
+                      <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
+                      <strong>{fmt(itens.reduce((s, i) => s + i.valor, 0))}</strong>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {itens.map(l => {
+                        const vencida = l.status === 'pendente' && new Date(l.vencimento) < new Date(new Date().toDateString());
+                        return (
+                          <div key={l.id} className="card fm-card-linha-completa">
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{l.descricao}</div>
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+                                  {l.categoriaNome && <span className="fm-tag-neutra">{l.categoriaNome}</span>}
+                                  <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                                  {l.origem === 'plano' && <span className="fm-tag-neutra">Plano</span>}
+                                </div>
+                              </div>
+                              <div style={{ fontSize: 14, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{fmt(l.valor)}</div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                              <span className={`badge badge-${l.status === 'pago' ? 'green' : vencida ? 'red' : 'yellow'}`} style={{ fontSize: 10 }}>
+                                {l.status === 'pago' ? 'Recebido' : vencida ? 'Vencido' : 'Pendente'}
+                              </span>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                {l.origem === 'avulso' ? (
+                                  <>
+                                    <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => marcarRecebimentoLocal(l, l.status !== 'pago')}>
+                                      {l.status === 'pago' ? 'Desfazer' : 'Receber'}
+                                    </button>
+                                    <button className="btn-ghost" onClick={() => abrirEditarReceber(l)}>Editar</button>
+                                    <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluirReceber(l)}><Trash2 size={14} /></button>
+                                  </>
+                                ) : (
+                                  <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => navigate('/planos?aba=assinantes')}>Ver em Planos</button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {totalPaginas > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, margin: '16px 0' }}>
+                    <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaListaReceber(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
+                    <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaListaReceber(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </>
+      )}
       </div>
 
       <nav className="bottom-nav">
@@ -919,157 +1070,6 @@ export function FinanceiroMobile() {
             </div>
           </div>
         </div>
-      )}
-
-      {tela === 'receber' && (
-        <>
-          <div style={{ height: 4, borderRadius: 4, background: 'var(--green)', opacity: 0.7, marginBottom: 14 }} />
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-            <button className="fm-fab-novo" style={{ background: 'var(--green-bg)', borderColor: 'var(--green)', color: 'var(--green)' }}
-              onClick={() => navigate('/financeiro?aba=receber&novo=receber')}>
-              <Plus size={20} />
-            </button>
-          </div>
-
-          <div className="card fm-card" style={{ marginBottom: 14, overflow: 'visible', padding: '14px 10px' }}>
-            <div className="cx-tipo-toggle" style={{ marginBottom: 10 }}>
-              <button className={periodoTipoReceber === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipoReceber('mes')}>Mês</button>
-              <button className={periodoTipoReceber === 'personalizado' ? 'active' : ''} onClick={() => {
-                setPeriodoTipoReceber('personalizado');
-                setPeriodoDeReceber(new Date(anoReceber, mesReceber, 1).toISOString().slice(0, 10));
-                setPeriodoAteReceber(new Date(anoReceber, mesReceber + 1, 0).toISOString().slice(0, 10));
-              }}>Personalizado</button>
-            </div>
-            {periodoTipoReceber === 'mes' ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                <button className="btn-secondary" onClick={() => navMesReceber(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
-                <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesReceber]} {anoReceber}</span>
-                <button className="btn-secondary" onClick={() => navMesReceber(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input type="date" value={periodoDeReceber} onChange={e => setPeriodoDeReceber(e.target.value)} />
-                <span style={{ color: 'var(--text-3)' }}>até</span>
-                <input type="date" value={periodoAteReceber} onChange={e => setPeriodoAteReceber(e.target.value)} />
-              </div>
-            )}
-          </div>
-
-          {carregandoReceber ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
-          ) : (() => {
-            const totalRecebido = linhasReceber.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
-            const totalAberto = linhasReceber.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
-            const totalMes = totalRecebido + totalAberto;
-            return (
-              <div className="card fm-card" style={{ marginBottom: 14 }}>
-                <div className="fm-card-kicker" style={{ textAlign: 'center' }}>Total a receber</div>
-                <div className="fm-valor-destaque" style={{ color: 'var(--green)', fontSize: 26, textAlign: 'center' }}>{fmt(totalAberto)}</div>
-                <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Recebido</div>
-                    <strong style={{ fontSize: 14, color: 'var(--green)' }}>{fmt(totalRecebido)}</strong>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Total do mês</div>
-                    <strong style={{ fontSize: 14 }}>{fmt(totalMes)}</strong>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          <div className="fm-pills">
-            {(['todos', 'pendente', 'pago'] as const).map(f => (
-              <button key={f} className={`fm-pill${filtroStatusReceber === f ? ' active' : ''}`} onClick={() => setFiltroStatusReceber(f)}>
-                {f === 'todos' ? 'Todos' : f === 'pendente' ? 'Pendente' : 'Recebido'}
-              </button>
-            ))}
-          </div>
-          {categoriasReceber.length > 0 && (
-            <select value={catFiltroReceber} onChange={e => setCatFiltroReceber(e.target.value)} style={{ marginBottom: 14 }}>
-              <option value="todas">Todas categorias</option>
-              <option value="__plano__">💳 Mensalidades (Planos)</option>
-              {categoriasReceber.map(c => (
-                <option key={c.id} value={c.nome}>{c.icone} {c.nome}</option>
-              ))}
-            </select>
-          )}
-
-          {carregandoReceber ? null : (() => {
-            const filtrada = linhasReceber.filter(l => {
-              const catOk = catFiltroReceber === 'todas'
-                ? true
-                : catFiltroReceber === '__plano__'
-                ? l.origem === 'plano'
-                : l.origem === 'avulso' && l.categoriaNome === catFiltroReceber;
-              const statusOk = filtroStatusReceber === 'todos' || l.status === filtroStatusReceber;
-              return catOk && statusOk;
-            });
-            if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
-            const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
-            const paginaAtual = Math.min(paginaListaReceber, totalPaginas);
-            const pagina = filtrada.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina);
-            return (
-              <>
-                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{filtrada.length} lançamento{filtrada.length !== 1 ? 's' : ''}</p>
-                {agruparPorData(pagina).map(([dia, itens]) => (
-                  <div key={dia} style={{ marginBottom: 12 }}>
-                    <div className="fm-dia-header" style={{ color: 'var(--green)', background: 'var(--green-bg)', borderColor: 'rgba(74,222,128,0.3)' }}>
-                      <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
-                      <strong>{fmt(itens.reduce((s, i) => s + i.valor, 0))}</strong>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {itens.map(l => {
-                        const vencida = l.status === 'pendente' && new Date(l.vencimento) < new Date(new Date().toDateString());
-                        return (
-                          <div key={l.id} className="card fm-card-linha-completa">
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{l.descricao}</div>
-                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
-                                  {l.categoriaNome && <span className="fm-tag-neutra">{l.categoriaNome}</span>}
-                                  <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
-                                  {l.origem === 'plano' && <span className="fm-tag-neutra">Plano</span>}
-                                </div>
-                              </div>
-                              <div style={{ fontSize: 14, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{fmt(l.valor)}</div>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                              <span className={`badge badge-${l.status === 'pago' ? 'green' : vencida ? 'red' : 'yellow'}`} style={{ fontSize: 10 }}>
-                                {l.status === 'pago' ? 'Recebido' : vencida ? 'Vencido' : 'Pendente'}
-                              </span>
-                              <div style={{ display: 'flex', gap: 6 }}>
-                                {l.origem === 'avulso' ? (
-                                  <>
-                                    <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => marcarRecebimentoLocal(l, l.status !== 'pago')}>
-                                      {l.status === 'pago' ? 'Desfazer' : 'Receber'}
-                                    </button>
-                                    <button className="btn-ghost" onClick={() => abrirEditarReceber(l)}>Editar</button>
-                                    <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluirReceber(l)}><Trash2 size={14} /></button>
-                                  </>
-                                ) : (
-                                  <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => navigate('/planos?aba=assinantes')}>Ver em Planos</button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-                {totalPaginas > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, margin: '16px 0' }}>
-                    <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaListaReceber(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
-                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
-                    <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaListaReceber(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-        </>
       )}
     </div>
   );
