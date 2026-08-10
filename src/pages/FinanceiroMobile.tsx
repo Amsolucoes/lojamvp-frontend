@@ -928,7 +928,6 @@ export function FinanceiroMobile() {
           })()}
         </>
       )}
-      </div>
 
       {tela === 'cartoes' && (
         <>
@@ -952,9 +951,9 @@ export function FinanceiroMobile() {
                 return (
                   <div key={c.id} className="card fm-card" style={{ cursor: 'pointer', borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : undefined }}
                     onClick={() => abrirFatura(c)}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>{c.nome}</span>
-                      {r && r.qtdCompras > 0 && <span className="fm-tag-neutra">{r.qtdCompras} compra{r.qtdCompras > 1 ? 's' : ''}</span>}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', minWidth: 0 }}>{c.nome}</span>
+                      {r && r.qtdCompras > 0 && <span className="fm-tag-neutra" style={{ flexShrink: 0 }}>{r.qtdCompras} compra{r.qtdCompras > 1 ? 's' : ''}</span>}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>Fecha dia {c.diaFechamento} · Vence dia {c.diaVencimento}</div>
                     {r && (
@@ -973,12 +972,13 @@ export function FinanceiroMobile() {
                       </>
                     )}
                   </div>
-                );
+               );
               })}
             </div>
           )}
         </>
       )}
+      </div>
 
       <nav className="bottom-nav">
         {ABAS.slice(0, 2).map(({ key, label, Icon }) => (
