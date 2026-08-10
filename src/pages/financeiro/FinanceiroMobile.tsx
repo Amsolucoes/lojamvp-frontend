@@ -2293,10 +2293,10 @@ export function FinanceiroMobile() {
               <button className="btn-ghost" onClick={() => setMenuAberto(false)}><X size={18} /></button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <button className="sidebar-link" onClick={() => { setMenuAberto(false); navigate('/ajuda'); }}>
+              <button className="sidebar-link" onClick={() => { setMenuAberto(false); navigate('/ajuda?voltar=financeiro'); }}>
                 <HelpCircle size={16} /> <span>Central de Ajuda</span>
               </button>
-              <button className="sidebar-link" onClick={() => { setMenuAberto(false); navigate('/configuracoes'); }}>
+              <button className="sidebar-link" onClick={() => { setMenuAberto(false); navigate('/configuracoes?voltar=financeiro'); }}>
                 <Settings size={16} /> <span>Configurações</span>
               </button>
               <button className="sidebar-link" onClick={logout} style={{ marginTop: 8, color: 'var(--red)' }}>

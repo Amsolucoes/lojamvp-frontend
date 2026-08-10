@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { aplicarTema, carregarTemaSalvo, TEMAS, Tema } from '../../utils/tema';
 import { api } from '../../services/api';
-import { X, Save, Upload } from 'lucide-react';
+import { X, Save, Upload, ArrowLeft } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
 import './Configuracoes.css';
@@ -46,6 +47,9 @@ function getSessao(): SessaoLoja | null {
 }
 
 export function Configuracoes() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const veioDoFinanceiro = searchParams.get('voltar') === 'financeiro';
   const [temaAtual, setTemaAtual] = useState<Tema>(carregarTemaSalvo());
   const [modulosPreco, setModulosPreco] = useState<ModuloPreco[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
@@ -288,6 +292,11 @@ export function Configuracoes() {
 
   return (
     <div className="page">
+      {veioDoFinanceiro && (
+        <button className="btn-ghost" onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+          <ArrowLeft size={16} /> Voltar ao Financeiro
+        </button>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title">Configurações</h1>

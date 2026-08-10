@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { HelpCircle, Play } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { HelpCircle, Play, ArrowLeft } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 
@@ -19,6 +20,9 @@ interface CategoriaVideo {
 }
 
 export function CentralAjuda() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const veioDoFinanceiro = searchParams.get('voltar') === 'financeiro';
   const { modulosAtivos, temProdutos, temServicos, temFinanceiro, temTurmas, temCorretora, temNf, temChacaraReservas } = useApp();
   const [todosVideos, setTodosVideos] = useState<Video[]>([]);
   const [todasCategorias, setTodasCategorias] = useState<CategoriaVideo[]>([]);
@@ -68,6 +72,11 @@ export function CentralAjuda() {
 
   return (
     <div className="page">
+      {veioDoFinanceiro && (
+        <button className="btn-ghost" onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+          <ArrowLeft size={16} /> Voltar ao Financeiro
+        </button>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title">Central de Ajuda</h1>
