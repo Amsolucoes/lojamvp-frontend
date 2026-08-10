@@ -36,6 +36,11 @@ interface ItemCategoriaBalanco { nome: string; icone: string; valor: number; }
 interface Balanco { receitas: ItemCategoriaBalanco[]; despesas: ItemCategoriaBalanco[]; totalReceitas: number; totalDespesas: number; saldo: number; }
 
 const CORES_BALANCO = ['#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#f97316', '#06b6d4'];
+const ICONES_CATEGORIA = ['🏷️','💵','💰','🤑','$','🏠','💧','💡','📶','📦','👤','🧾','💳','🛒','📁','🍽️','🚗','🎓','🏥','🎮'
+    ,'✈️','🐾','🎁','📱','💊','⛽','🧹','🎬','📈','📉','🔧','🛠️','🎉','👶','💇','🐶'
+    ,'🏢','🏭','🏦','📚','🖥️','🖨️','☎️','🚚','🧴','🪑','🛋️','🧯','🩺','💼','🎨','🧵','✂️','🔌','🔋','🚿'
+    ,'🧼','🍔','☕','🍺','🍷','🎵','🎤','⚽','🏋️','🧘','🩹','🧠','⚖️','🌐','🔒','🧊','🧻','🪒','🚪','🌳'];
+
 function corParaCategoria(nome: string) {
   let hash = 0;
   for (let i = 0; i < nome.length; i++) hash = nome.charCodeAt(i) + ((hash << 5) - hash);
@@ -274,6 +279,9 @@ export function FinanceiroMobile() {
   useEffect(() => {
     if (tela !== 'cartoes') return;
     carregarCartoes();
+    if (categoriasPagar.length === 0) {
+      api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasPagar(cats.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos'))).catch(() => {});
+    }
   }, [tela]);
 
   function abrirEditarCartao(c: Cartao) {
@@ -654,6 +662,14 @@ export function FinanceiroMobile() {
   const [mostrarMesAMes, setMostrarMesAMes] = useState(false);
   const anoRef = new Date().getFullYear();
 
+  const [modalCategorias, setModalCategorias] = useState(false);
+  const [categoriasTodas, setCategoriasTodas] = useState<Categoria[]>([]);
+  const [carregandoCategoriasTodas, setCarregandoCategoriasTodas] = useState(true);
+  const [filtroCatModal, setFiltroCatModal] = useState<'todas' | 'pagar' | 'receber' | 'ambos'>('todas');
+  const [mostrarFormCategoria, setMostrarFormCategoria] = useState(false);
+  const [editandoCategoria, setEditandoCategoria] = useState<Categoria | null>(null);
+  const [formCat, setFormCat] = useState({ nome: '', tipo: 'ambos', icone: '🏷️' });
+
   useEffect(() => {
     setCarregandoContas(true);
     Promise.all([
@@ -685,6 +701,63 @@ export function FinanceiroMobile() {
     setMesBalanco(nm); setAnoBalanco(na);
   }
 
+  function carregarCategoriasTodas() {
+    setCarregandoCategoriasTodas(true);
+    api.get<Categoria[]>('/api/financeiro/categorias').then(setCategoriasTodas).catch(() => {}).finally(() => setCarregandoCategoriasTodas(false));
+  }
+
+  function abrirModalCategorias() {
+    setModalCategorias(true);
+    carregarCategoriasTodas();
+  }
+
+  function recarregarTodasListasCategoria() {
+    carregarCategoriasTodas();
+    if (tela === 'pagar' || categoriasPagar.length > 0) api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasPagar(cats.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos'))).catch(() => {});
+    if (tela === 'receber' || categoriasReceber.length > 0) api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasReceber(cats.filter(c => c.tipo === 'receber' || c.tipo === 'ambos'))).catch(() => {});
+  }
+
+  async function salvarCategoria() {
+    if (!formCat.nome.trim()) return;
+    try {
+      await api.post('/api/financeiro/categorias', { nome: formCat.nome.trim(), tipo: formCat.tipo, icone: formCat.icone });
+      setFormCat({ nome: '', tipo: 'ambos', icone: '🏷️' });
+      setMostrarFormCategoria(false);
+      recarregarTodasListasCategoria();
+    } catch {}
+  }
+
+  function abrirEditarCategoria(c: Categoria) {
+    setEditandoCategoria(c);
+    setFormCat({ nome: c.nome, tipo: c.tipo, icone: c.icone ?? '🏷️' });
+    setMostrarFormCategoria(true);
+  }
+
+  async function salvarEdicaoCategoria() {
+    if (!editandoCategoria || !formCat.nome.trim()) return;
+    try {
+      await api.put(`/api/financeiro/categorias/${editandoCategoria.id}`, { nome: formCat.nome.trim(), tipo: formCat.tipo, icone: formCat.icone });
+      setEditandoCategoria(null);
+      setFormCat({ nome: '', tipo: 'ambos', icone: '🏷️' });
+      setMostrarFormCategoria(false);
+      recarregarTodasListasCategoria();
+    } catch {}
+  }
+
+  async function excluirCategoria(c: Categoria) {
+    try {
+      await api.delete(`/api/financeiro/categorias/${c.id}`);
+      recarregarTodasListasCategoria();
+    } catch {}
+  }
+
+  async function seedCategoriasPadrao() {
+    try {
+      await api.post('/api/financeiro/categorias/seed-padrao', {});
+      recarregarTodasListasCategoria();
+    } catch {}
+  }
+
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
   const pagarAberto = (resumo?.pagar.totalPendente ?? 0) + (resumo?.pagar.totalVencido ?? 0);
   const receberAberto = (resumo?.receber.totalPendente ?? 0) + (resumo?.receber.totalVencido ?? 0);
@@ -707,7 +780,14 @@ export function FinanceiroMobile() {
           <h1 className="fm-titulo">Financeiro</h1>
           <p className="fm-subtitulo">{new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
         </div>
-        <button className="btn-ghost" onClick={() => setMenuAberto(true)}><Menu size={22} /></button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {tela === 'visao' && (
+            <button className="btn-ghost" style={{ fontSize: 12, border: '1px solid var(--border)', padding: '6px 10px' }} onClick={abrirModalCategorias}>
+              Categorias
+            </button>
+          )}
+          <button className="btn-ghost" onClick={() => setMenuAberto(true)}><Menu size={22} /></button>
+        </div>
       </div>
 
       <div className="fm-content">
@@ -2280,6 +2360,84 @@ export function FinanceiroMobile() {
               <button className="btn-primary" disabled={salvandoNovoLanc} onClick={salvarNovoLancamento}>
                 {salvandoNovoLanc ? 'Salvando...' : 'Criar lançamento'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalCategorias && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCategorias(false)}>
+          <div className="modal" style={{ maxWidth: 460 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Categorias</h2>
+              <button className="btn-ghost" onClick={() => { setModalCategorias(false); setMostrarFormCategoria(false); setEditandoCategoria(null); }}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              {!mostrarFormCategoria && (
+                <button className="btn-primary" style={{ width: '100%', marginBottom: 16 }}
+                  onClick={() => { setEditandoCategoria(null); setFormCat({ nome: '', tipo: 'ambos', icone: '🏷️' }); setMostrarFormCategoria(true); }}>
+                  + Nova categoria
+                </button>
+              )}
+
+              {mostrarFormCategoria && (
+                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoCategoria ? 'Editar categoria' : 'Nova categoria'}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <input value={formCat.nome} onChange={e => setFormCat(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Marketing" />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <select style={{ flex: 1 }} value={formCat.tipo} onChange={e => setFormCat(f => ({ ...f, tipo: e.target.value }))}>
+                        <option value="ambos">Pagar e Receber</option>
+                        <option value="pagar">Só Pagar</option>
+                        <option value="receber">Só Receber</option>
+                      </select>
+                      <select style={{ width: 80 }} value={formCat.icone} onChange={e => setFormCat(f => ({ ...f, icone: e.target.value }))}>
+                        {ICONES_CATEGORIA.map(i => <option key={i} value={i}>{i}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn-primary" style={{ flex: 1 }} onClick={() => editandoCategoria ? salvarEdicaoCategoria() : salvarCategoria()}>
+                        {editandoCategoria ? 'Salvar alterações' : 'Adicionar'}
+                      </button>
+                      <button className="btn-secondary" onClick={() => { setEditandoCategoria(null); setMostrarFormCategoria(false); }}>Cancelar</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {categoriasTodas.length === 0 && !carregandoCategoriasTodas && (
+                <button className="btn-secondary" style={{ width: '100%', marginBottom: 16 }} onClick={seedCategoriasPadrao}>
+                  Usar categorias padrão
+                </button>
+              )}
+
+              {categoriasTodas.length > 0 && (
+                <div className="cat-tabs" style={{ marginBottom: 12 }}>
+                  <button className={`cat-tab${filtroCatModal === 'todas' ? ' active' : ''}`} onClick={() => setFiltroCatModal('todas')}>Todas</button>
+                  <button className={`cat-tab${filtroCatModal === 'pagar' ? ' active' : ''}`} onClick={() => setFiltroCatModal('pagar')}>A pagar</button>
+                  <button className={`cat-tab${filtroCatModal === 'receber' ? ' active' : ''}`} onClick={() => setFiltroCatModal('receber')}>A receber</button>
+                  <button className={`cat-tab${filtroCatModal === 'ambos' ? ' active' : ''}`} onClick={() => setFiltroCatModal('ambos')}>Ambos</button>
+                </div>
+              )}
+
+              {carregandoCategoriasTodas ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}><div className="layout-spinner" /></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {categoriasTodas.filter(c => filtroCatModal === 'todas' || c.tipo === filtroCatModal).map(c => (
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
+                      <span style={{ fontSize: 13 }}>{c.icone} {c.nome} <span style={{ color: 'var(--text-3)', fontSize: 11 }}>({c.tipo})</span></span>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn-ghost" onClick={() => abrirEditarCategoria(c)}>Editar</button>
+                        <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => excluirCategoria(c)}><Trash2 size={13} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalCategorias(false)}>Fechar</button>
             </div>
           </div>
         </div>
