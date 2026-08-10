@@ -4,14 +4,14 @@ import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Me
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { setMobileShellOverride } from '../utils/mobileShellOverride';
-import { BankBadge } from '../utils/bancos';
+import { BankBadge, BANCOS } from '../utils/bancos';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function fmt(n: number) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
-interface Conta { id: string; nome: string; saldoAtual: number; ativa: boolean; banco?: string | null; limite: number; }
+interface Conta { id: string; nome: string; saldoInicial: number; saldoAtual: number; ativa: boolean; banco?: string | null; limite: number; }
 interface ResumoTipo { totalPago: number; qtdPago: number; totalPendente: number; qtdPendente: number; totalVencido: number; qtdVencido: number; }
 interface Alerta { id: string; descricao: string; tipo: string; valor: number; vencimento: string; origem: string; }
 interface LinhaPagar {
@@ -68,7 +68,7 @@ export function FinanceiroMobile() {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
   const [menuAberto, setMenuAberto] = useState(false);
-  const [tela, setTela] = useState<'visao' | 'pagar' | 'receber' | 'cartoes'>('visao');
+  const [tela, setTela] = useState<'visao' | 'pagar' | 'receber' | 'cartoes' | 'contas'>('visao');
   const [linhasPagar, setLinhasPagar] = useState<LinhaPagar[]>([]);
   const [carregandoPagar, setCarregandoPagar] = useState(true);
   const [categoriasPagar, setCategoriasPagar] = useState<Categoria[]>([]);
@@ -138,6 +138,14 @@ export function FinanceiroMobile() {
   const [modalAntecipado, setModalAntecipado] = useState(false);
   const [formAntecipado, setFormAntecipado] = useState({ valor: '', data: new Date().toISOString().slice(0, 10), contaBancariaId: '', observacao: '' });
   const [confirmExcluirAntecipado, setConfirmExcluirAntecipado] = useState<AntecipadoItem | null>(null);
+  const [mostrarFormConta, setMostrarFormConta] = useState(false);
+  const [editandoConta, setEditandoConta] = useState<Conta | null>(null);
+  const [formConta, setFormConta] = useState({ nome: '', saldoInicial: '', banco: '', limite: '' });
+  const [salvandoConta, setSalvandoConta] = useState(false);
+  const [modalAjuste, setModalAjuste] = useState<Conta | null>(null);
+  const [formAjuste, setFormAjuste] = useState({ tipo: 'entrada' as 'entrada' | 'saida' | 'ajuste', valor: '', novoSaldo: '', observacao: '' });
+  const [modalTransferencia, setModalTransferencia] = useState(false);
+  const [formTransf, setFormTransf] = useState({ contaOrigemId: '', contaDestinoId: '', valor: '', registrar: true, observacao: '' });
   useEffect(() => {
     setMobileShellOverride(true);
     return () => setMobileShellOverride(false);
@@ -427,6 +435,78 @@ export function FinanceiroMobile() {
     } catch {}
   }
 
+  function recarregarContas() {
+    api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+  }
+
+  function abrirNovaConta() {
+    setEditandoConta(null);
+    setFormConta({ nome: '', saldoInicial: '', banco: '', limite: '' });
+    setMostrarFormConta(true);
+  }
+
+  function abrirEditarConta(c: Conta) {
+    setEditandoConta(c);
+    setFormConta({ nome: c.nome, saldoInicial: String(c.saldoInicial), banco: c.banco ?? '', limite: String(c.limite ?? '') });
+    setMostrarFormConta(true);
+  }
+
+  async function salvarConta() {
+    if (!formConta.nome.trim()) return;
+    setSalvandoConta(true);
+    try {
+      const payload = { nome: formConta.nome.trim(), saldoInicial: parseFloat(formConta.saldoInicial) || 0, banco: formConta.banco || null, limite: parseFloat(formConta.limite) || 0 };
+      if (editandoConta) await api.put(`/api/financeiro/contas/${editandoConta.id}`, payload);
+      else await api.post('/api/financeiro/contas', payload);
+      setMostrarFormConta(false);
+      setEditandoConta(null);
+      recarregarContas();
+    } catch {} finally { setSalvandoConta(false); }
+  }
+
+  async function alternarConta(c: Conta) {
+    try {
+      await api.patch(`/api/financeiro/contas/${c.id}/ativo`, {});
+      recarregarContas();
+    } catch {}
+  }
+
+  function abrirAjuste(c: Conta) {
+    setModalAjuste(c);
+    setFormAjuste({ tipo: 'entrada', valor: '', novoSaldo: String(c.saldoAtual), observacao: '' });
+  }
+
+  async function salvarAjuste() {
+    if (!modalAjuste) return;
+    try {
+      await api.post(`/api/financeiro/contas/${modalAjuste.id}/ajuste`, {
+        tipo: formAjuste.tipo,
+        valor: formAjuste.tipo !== 'ajuste' ? parseFloat(formAjuste.valor) || 0 : null,
+        novoSaldo: parseFloat(formAjuste.novoSaldo) || 0,
+        observacao: formAjuste.observacao || null,
+      });
+      setModalAjuste(null);
+      recarregarContas();
+    } catch {}
+  }
+
+  async function salvarTransferencia() {
+    if (!formTransf.contaOrigemId || !formTransf.contaDestinoId || formTransf.contaOrigemId === formTransf.contaDestinoId) return;
+    if (!formTransf.valor || parseFloat(formTransf.valor) <= 0) return;
+    try {
+      await api.post('/api/financeiro/contas/transferencia', {
+        contaOrigemId: formTransf.contaOrigemId,
+        contaDestinoId: formTransf.contaDestinoId,
+        valor: parseFloat(formTransf.valor),
+        registrar: formTransf.registrar,
+        observacao: formTransf.observacao || null,
+      });
+      setModalTransferencia(false);
+      setFormTransf({ contaOrigemId: '', contaDestinoId: '', valor: '', registrar: true, observacao: '' });
+      recarregarContas();
+    } catch {}
+  }
+
   useEffect(() => {
     if (tela !== 'pagar') return;
     recarregarPagar();
@@ -540,10 +620,8 @@ export function FinanceiroMobile() {
   const proximos = alertas.slice(0, 4);
 
   function irPara(destino: typeof ABAS[number]['key']) {
-    if (destino === 'visao' || destino === 'pagar' || destino === 'receber' || destino === 'cartoes') { setTela(destino); return; }
-    navigate('/financeiro'); // Contas: fase 5 — por ora usa os botoes do topo daquela tela
+    setTela(destino);
   }
-
   return (
     <div className="fm-shell">
       <div className="fm-topbar">
@@ -1127,6 +1205,69 @@ export function FinanceiroMobile() {
                   </div>
                );
               })}
+            </div>
+          )}
+        </>
+      )}
+
+      {tela === 'contas' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1)', margin: 0 }}>Contas</h2>
+            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }} onClick={abrirNovaConta}>
+              <Plus size={14} /> Nova conta
+            </button>
+          </div>
+
+          {carregandoContas ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+          ) : contas.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nenhuma conta cadastrada.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {contas.map(c => (
+                <div key={c.id} className="card fm-card" style={{ opacity: c.ativa ? 1 : 0.5 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, color: 'var(--text-1)', minWidth: 0 }}>
+                      <BankBadge bancoId={c.banco} tamanho={18} /> {c.nome}
+                    </span>
+                    <strong style={{ fontSize: 15, color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
+                  </div>
+
+                  {c.limite > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ height: 5, background: 'var(--bg-3)', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: 3,
+                          width: `${Math.min(100, (Math.abs(Math.min(0, c.saldoAtual)) / c.limite) * 100)}%`,
+                          background: Math.abs(Math.min(0, c.saldoAtual)) >= c.limite ? 'var(--red)' : 'var(--yellow, #d97706)',
+                        }} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 4 }}>
+                        <span style={{ color: 'var(--text-3)' }}>Disponível</span>
+                        <span style={{ color: 'var(--text-2)' }}>{fmt(Math.max(0, c.limite - Math.abs(Math.min(0, c.saldoAtual))))}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                    <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirAjuste(c)}>Ajustar</button>
+                    <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirEditarConta(c)}>Editar</button>
+                    <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => alternarConta(c)}>{c.ativa ? 'Desativar' : 'Ativar'}</button>
+                  </div>
+                </div>
+              ))}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 4px', fontWeight: 600 }}>
+                <span>Total</span>
+                <strong style={{ color: saldoTotal >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(saldoTotal)}</strong>
+              </div>
+
+              {contas.filter(c => c.ativa).length >= 2 && (
+                <button className="btn-secondary" style={{ width: '100%' }} onClick={() => setModalTransferencia(true)}>
+                  🔁 Transferir entre contas
+                </button>
+              )}
             </div>
           )}
         </>
@@ -1767,6 +1908,143 @@ export function FinanceiroMobile() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setConfirmExcluirAntecipado(null)}>Cancelar</button>
               <button className="btn-danger" onClick={excluirAntecipado}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mostrarFormConta && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setMostrarFormConta(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>{editandoConta ? 'Editar conta' : 'Nova conta'}</h2>
+              <button className="btn-ghost" onClick={() => setMostrarFormConta(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Nome *</label>
+                  <input value={formConta.nome} onChange={e => setFormConta(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Conta corrente" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Saldo inicial</label>
+                  <input type="number" step={0.01} value={formConta.saldoInicial} onChange={e => setFormConta(f => ({ ...f, saldoInicial: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Limite (cheque especial) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <input type="number" min={0} step={0.01} value={formConta.limite} onChange={e => setFormConta(f => ({ ...f, limite: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Banco</label>
+                  <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+                    <button type="button" onClick={() => setFormConta(f => ({ ...f, banco: '' }))}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: formConta.banco === '' ? 'var(--accent-bg)' : 'transparent', border: 'none', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
+                      Nenhum
+                    </button>
+                    {BANCOS.map(b => (
+                      <button key={b.id} type="button" onClick={() => setFormConta(f => ({ ...f, banco: b.id }))}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: formConta.banco === b.id ? 'var(--accent-bg)' : 'transparent', border: 'none', borderTop: '1px solid var(--border)', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
+                        <BankBadge bancoId={b.id} tamanho={18} /> {b.nome}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setMostrarFormConta(false)}>Cancelar</button>
+              <button className="btn-primary" disabled={salvandoConta} onClick={salvarConta}>{editandoConta ? 'Salvar' : 'Adicionar conta'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalAjuste && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalAjuste(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Ajustar saldo — {modalAjuste.nome}</h2>
+              <button className="btn-ghost" onClick={() => setModalAjuste(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 14 }}>Saldo atual: <strong style={{ color: 'var(--text-1)' }}>{fmt(modalAjuste.saldoAtual)}</strong></p>
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label className="form-label">Tipo de ajuste</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[{ v: 'entrada', t: 'Entrada' }, { v: 'saida', t: 'Saída' }, { v: 'ajuste', t: 'Definir saldo' }].map(op => (
+                    <button key={op.v} type="button" className={op.v === formAjuste.tipo ? 'btn-primary' : 'btn-secondary'}
+                      style={{ flex: 1, fontSize: 12, padding: '8px 0' }}
+                      onClick={() => setFormAjuste(f => ({ ...f, tipo: op.v as any }))}>{op.t}</button>
+                  ))}
+                </div>
+              </div>
+              {formAjuste.tipo === 'ajuste' ? (
+                <div className="form-group">
+                  <label className="form-label">Novo saldo (R$)</label>
+                  <input type="number" step={0.01} value={formAjuste.novoSaldo} onChange={e => setFormAjuste(f => ({ ...f, novoSaldo: e.target.value }))} />
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label className="form-label">Valor (R$)</label>
+                  <input type="number" min={0} step={0.01} value={formAjuste.valor} onChange={e => setFormAjuste(f => ({ ...f, valor: e.target.value }))} />
+                </div>
+              )}
+              <div className="form-group" style={{ marginTop: 14 }}>
+                <label className="form-label">Observação</label>
+                <input value={formAjuste.observacao} onChange={e => setFormAjuste(f => ({ ...f, observacao: e.target.value }))} placeholder="Ex: Conferência de extrato" />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalAjuste(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarAjuste}>Salvar ajuste</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalTransferencia && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalTransferencia(false)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Transferir entre contas</h2>
+              <button className="btn-ghost" onClick={() => setModalTransferencia(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">De</label>
+                  <select value={formTransf.contaOrigemId} onChange={e => setFormTransf(f => ({ ...f, contaOrigemId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome} ({fmt(c.saldoAtual)})</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Para</label>
+                  <select value={formTransf.contaDestinoId} onChange={e => setFormTransf(f => ({ ...f, contaDestinoId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa && c.id !== formTransf.contaOrigemId).map(c => <option key={c.id} value={c.id}>{c.nome} ({fmt(c.saldoAtual)})</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Valor (R$)</label>
+                  <input type="number" min={0.01} step={0.01} value={formTransf.valor} onChange={e => setFormTransf(f => ({ ...f, valor: e.target.value }))} />
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={formTransf.registrar} style={{ width: 16, height: 16, margin: 0 }}
+                    onChange={e => setFormTransf(f => ({ ...f, registrar: e.target.checked }))} />
+                  Registrar no histórico
+                </label>
+                {formTransf.registrar && (
+                  <div className="form-group">
+                    <label className="form-label">Observação <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                    <input value={formTransf.observacao} onChange={e => setFormTransf(f => ({ ...f, observacao: e.target.value }))} placeholder="Ex: repasse mensal" />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalTransferencia(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarTransferencia}>Transferir</button>
             </div>
           </div>
         </div>
