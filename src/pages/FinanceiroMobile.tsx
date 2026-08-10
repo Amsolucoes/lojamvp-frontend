@@ -109,7 +109,8 @@ export function FinanceiroMobile() {
 
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [cartoesResumo, setCartoesResumo] = useState<Record<string, { usado: number; disponivel: number; qtdCompras: number; status: string }>>({});
-  const [carregandoCartoes, setCarregandoCartoes] = useState(true);
+  const [carregandoListaCartoes, setCarregandoListaCartoes] = useState(true);
+  const [carregandoResumoCartoes, setCarregandoResumoCartoes] = useState(true);
   const [modalNovoCartao, setModalNovoCartao] = useState(false);
   const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
   const [salvandoCartao, setSalvandoCartao] = useState(false);
@@ -218,15 +219,14 @@ export function FinanceiroMobile() {
   }
 
   function carregarCartoes() {
-    setCarregandoCartoes(true);
-    Promise.all([
-      api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {}),
-      api.get<any[]>('/api/financeiro/cartoes-resumo').then(lista => {
-        const mapa: Record<string, any> = {};
-        lista.forEach(c => { mapa[c.id] = { usado: c.usado, disponivel: c.disponivel, qtdCompras: c.qtdCompras, status: c.status }; });
-        setCartoesResumo(mapa);
-      }).catch(() => {}),
-    ]).finally(() => setCarregandoCartoes(false));
+    setCarregandoListaCartoes(true);
+    setCarregandoResumoCartoes(true);
+    api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {}).finally(() => setCarregandoListaCartoes(false));
+    api.get<any[]>('/api/financeiro/cartoes-resumo').then(lista => {
+      const mapa: Record<string, any> = {};
+      lista.forEach(c => { mapa[c.id] = { usado: c.usado, disponivel: c.disponivel, qtdCompras: c.qtdCompras, status: c.status }; });
+      setCartoesResumo(mapa);
+    }).catch(() => {}).finally(() => setCarregandoResumoCartoes(false));
   }
 
   useEffect(() => {
@@ -363,7 +363,9 @@ export function FinanceiroMobile() {
   }
 
   const [contas, setContas] = useState<Conta[]>([]);
-  const [carregandoVisao, setCarregandoVisao] = useState(true);
+  const [carregandoContas, setCarregandoContas] = useState(true);
+  const [carregandoResumoAnual, setCarregandoResumoAnual] = useState(true);
+  const [carregandoAlertas, setCarregandoAlertas] = useState(true);
   const [resumo, setResumo] = useState<{ pagar: ResumoTipo; receber: ResumoTipo } | null>(null);
   const [resumoAnual, setResumoAnual] = useState<{ mes: number; pagar: number; receber: number; saldo: number }[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
@@ -371,13 +373,21 @@ export function FinanceiroMobile() {
   const anoRef = new Date().getFullYear();
 
   useEffect(() => {
-    setCarregandoVisao(true);
+    setCarregandoContas(true);
     Promise.all([
       api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {}),
       api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoRef}&mes=${new Date().getMonth() + 1}`).then(setResumo).catch(() => {}),
-      api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {}),
-      api.get<Alerta[]>('/api/financeiro/alertas-vencimento?dias=7').then(setAlertas).catch(() => {}),
-    ]).finally(() => setCarregandoVisao(false));
+    ]).finally(() => setCarregandoContas(false));
+  }, []);
+
+  useEffect(() => {
+    setCarregandoResumoAnual(true);
+    api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {}).finally(() => setCarregandoResumoAnual(false));
+  }, []);
+
+  useEffect(() => {
+    setCarregandoAlertas(true);
+    api.get<Alerta[]>('/api/financeiro/alertas-vencimento?dias=7').then(setAlertas).catch(() => {}).finally(() => setCarregandoAlertas(false));
   }, []);
 
   useEffect(() => {
@@ -422,12 +432,12 @@ export function FinanceiroMobile() {
 
       <div className="fm-content">
       {tela === 'visao' && (
-        carregandoVisao ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}><div className="layout-spinner" /></div>
-        ) : (
       <>
         <div className="card fm-card">
           <div className="fm-card-kicker">Saldo por conta</div>
+          {carregandoContas ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0' }}><div className="layout-spinner" style={{ width: 22, height: 22 }} /></div>
+          ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
             {contas.filter(c => c.ativa).map(c => (
               <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
@@ -442,8 +452,13 @@ export function FinanceiroMobile() {
               <strong style={{ color: saldoTotal >= 0 ? 'var(--text-1)' : 'var(--red)' }}>{fmt(saldoTotal)}</strong>
             </div>
           </div>
+          )}
         </div>
 
+        {carregandoContas ? (
+          <div className="card fm-card" style={{ margin: '14px 0', display: 'flex', justifyContent: 'center', padding: 20 }}><div className="layout-spinner" /></div>
+        ) : (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, margin: '14px 0' }}>
           <div className="card fm-card">
             <div className="fm-card-kicker">A pagar</div>
@@ -464,6 +479,8 @@ export function FinanceiroMobile() {
               <span className="badge badge-red">{fmt(totalVencidoValor)}</span>
             </div>
           </div>
+        )}
+        </>
         )}
 
         <div className="card fm-card" style={{ marginBottom: 18 }}>
@@ -551,10 +568,16 @@ export function FinanceiroMobile() {
         <div className="card fm-card" style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="fm-card-kicker">Resumo do ano · {anoRef}</div>
+            {!carregandoResumoAnual && (
             <button className="fm-link-btn" onClick={() => setMostrarMesAMes(v => !v)}>
               {mostrarMesAMes ? 'Ocultar mês a mês' : 'Ver mês a mês'}
             </button>
+            )}
           </div>
+          {carregandoResumoAnual ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}><div className="layout-spinner" style={{ width: 24, height: 24 }} /></div>
+          ) : (
+          <>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
             <div>
               <div className="fm-label-fraco">Pago no ano</div>
@@ -587,11 +610,15 @@ export function FinanceiroMobile() {
               })}
             </div>
           )}
+          </>
+          )}
         </div>
 
         <h3 className="fm-secao-titulo">Próximos vencimentos</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-          {proximos.length === 0 ? (
+          {carregandoAlertas ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0' }}><div className="layout-spinner" style={{ width: 22, height: 22 }} /></div>
+          ) : proximos.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Nada vencendo nos próximos dias.</p>
           ) : proximos.map(p => (
             <div key={p.id} className="card fm-card-linha">
@@ -608,7 +635,6 @@ export function FinanceiroMobile() {
           ))}
         </div>
       </>
-        )
       )}
 
       {tela === 'pagar' && (
@@ -939,7 +965,7 @@ export function FinanceiroMobile() {
             </button>
           </div>
 
-          {carregandoCartoes ? (
+          {carregandoListaCartoes ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
           ) : cartoes.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nenhum cartão cadastrado.</p>
@@ -956,6 +982,9 @@ export function FinanceiroMobile() {
                       {r && r.qtdCompras > 0 && <span className="fm-tag-neutra" style={{ flexShrink: 0 }}>{r.qtdCompras} compra{r.qtdCompras > 1 ? 's' : ''}</span>}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>Fecha dia {c.diaFechamento} · Vence dia {c.diaVencimento}</div>
+                    {!r && carregandoResumoCartoes && (
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0' }}><div className="layout-spinner" style={{ width: 18, height: 18 }} /></div>
+                    )}
                     {r && (
                       <>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}>
