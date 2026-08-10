@@ -150,6 +150,18 @@ export function FinanceiroMobile() {
   const [formAjuste, setFormAjuste] = useState({ tipo: 'entrada' as 'entrada' | 'saida' | 'ajuste', valor: '', novoSaldo: '', observacao: '' });
   const [modalTransferencia, setModalTransferencia] = useState(false);
   const [formTransf, setFormTransf] = useState({ contaOrigemId: '', contaDestinoId: '', valor: '', registrar: true, observacao: '' });
+  const [modalNovoLanc, setModalNovoLanc] = useState<'pagar' | 'receber' | null>(null);
+  const [descricoesRecentesLanc, setDescricoesRecentesLanc] = useState<string[]>([]);
+  const [salvandoNovoLanc, setSalvandoNovoLanc] = useState(false);
+  const [formNovoLanc, setFormNovoLanc] = useState({
+    modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
+    contaBancariaId: '', categoriaId: '', descricao: '', valor: '', observacao: '',
+    vencimento: new Date().toISOString().slice(0, 10),
+    totalParcelas: '2', diaVencimento: '10',
+    tipoParcelamento: 'quantidade' as 'quantidade' | 'dataFim',
+    dataFim: new Date().toISOString().slice(0, 10),
+    jaPago: false, dataInicio: new Date().toISOString().slice(0, 10), avisar: true,
+  });
   useEffect(() => {
     setMobileShellOverride(true);
     return () => setMobileShellOverride(false);
@@ -511,6 +523,54 @@ export function FinanceiroMobile() {
     } catch {}
   }
 
+  function abrirNovoLancamento(aba: 'pagar' | 'receber') {
+    setFormNovoLanc({
+      modo: 'avulsa', contaBancariaId: contas[0]?.id ?? '', categoriaId: '', descricao: '', valor: '', observacao: '',
+      vencimento: new Date().toISOString().slice(0, 10), totalParcelas: '2', diaVencimento: '10',
+      tipoParcelamento: 'quantidade', dataFim: new Date().toISOString().slice(0, 10),
+      jaPago: false, dataInicio: new Date().toISOString().slice(0, 10), avisar: true,
+    });
+    setModalNovoLanc(aba);
+    api.get<string[]>(`/api/financeiro/lancamentos/descricoes?tipo=${aba}`).then(setDescricoesRecentesLanc).catch(() => {});
+  }
+
+  async function salvarNovoLancamento() {
+    if (!modalNovoLanc) return;
+    if (!formNovoLanc.contaBancariaId || !formNovoLanc.descricao.trim() || !formNovoLanc.valor) return;
+    setSalvandoNovoLanc(true);
+    try {
+      if (formNovoLanc.modo === 'avulsa') {
+        await api.post('/api/financeiro/lancamentos/avulso', {
+          contaBancariaId: formNovoLanc.contaBancariaId, tipo: modalNovoLanc,
+          descricao: formNovoLanc.descricao.trim(), categoriaId: formNovoLanc.categoriaId || null,
+          observacao: formNovoLanc.observacao || null, valor: parseFloat(formNovoLanc.valor), vencimento: formNovoLanc.vencimento,
+          jaPago: formNovoLanc.jaPago, avisar: formNovoLanc.avisar,
+        });
+      } else if (formNovoLanc.modo === 'parcelada') {
+        await api.post('/api/financeiro/lancamentos/parcelado', {
+          contaBancariaId: formNovoLanc.contaBancariaId, tipo: modalNovoLanc,
+          descricao: formNovoLanc.descricao.trim(), categoriaId: formNovoLanc.categoriaId || null,
+          observacao: formNovoLanc.observacao || null, valorParcela: parseFloat(formNovoLanc.valor),
+          totalParcelas: formNovoLanc.tipoParcelamento === 'quantidade' ? (parseInt(formNovoLanc.totalParcelas) || 2) : null,
+          dataFim: formNovoLanc.tipoParcelamento === 'dataFim' ? formNovoLanc.dataFim : null,
+          primeiroVencimento: formNovoLanc.vencimento, jaPago: formNovoLanc.jaPago, avisar: formNovoLanc.avisar,
+        });
+      } else {
+        await api.post('/api/financeiro/fixos', {
+          contaBancariaId: formNovoLanc.contaBancariaId, tipo: modalNovoLanc,
+          descricao: formNovoLanc.descricao.trim(), categoriaId: formNovoLanc.categoriaId || null,
+          observacao: formNovoLanc.observacao || null, valor: parseFloat(formNovoLanc.valor),
+          diaVencimento: parseInt(formNovoLanc.diaVencimento) || 10, jaPago: formNovoLanc.jaPago,
+          dataInicio: formNovoLanc.dataInicio || null, avisar: formNovoLanc.avisar,
+        });
+      }
+      const abaFechada = modalNovoLanc;
+      setModalNovoLanc(null);
+      if (abaFechada === 'pagar') recarregarPagar(); else recarregarReceber();
+      recarregarContas();
+    } catch {} finally { setSalvandoNovoLanc(false); }
+  }
+
   useEffect(() => {
     if (tela !== 'pagar') return;
     recarregarPagar();
@@ -848,7 +908,7 @@ export function FinanceiroMobile() {
           <div style={{ height: 4, borderRadius: 4, background: 'var(--red)', opacity: 0.7, marginBottom: 14 }} />
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
             <button className="fm-fab-novo" style={{ background: 'var(--red-bg)', borderColor: 'var(--red)', color: 'var(--red)' }}
-              onClick={() => navigate('/financeiro?aba=pagar&novo=pagar')}>
+              onClick={() => abrirNovoLancamento('pagar')}>
               <Plus size={20} />
             </button>
           </div>
@@ -1018,7 +1078,7 @@ export function FinanceiroMobile() {
           <div style={{ height: 4, borderRadius: 4, background: 'var(--green)', opacity: 0.7, marginBottom: 14 }} />
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
             <button className="fm-fab-novo" style={{ background: 'var(--green-bg)', borderColor: 'var(--green)', color: 'var(--green)' }}
-              onClick={() => navigate('/financeiro?aba=receber&novo=receber')}>
+              onClick={() => abrirNovoLancamento('receber')}>
               <Plus size={20} />
             </button>
           </div>
@@ -2063,6 +2123,146 @@ export function FinanceiroMobile() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalTransferencia(false)}>Cancelar</button>
               <button className="btn-primary" onClick={salvarTransferencia}>Transferir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalNovoLanc && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNovoLanc(null)}>
+          <div className="modal" style={{ maxWidth: 460 }}>
+            <div className="modal-header" style={{ borderBottom: `2px solid ${modalNovoLanc === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: modalNovoLanc === 'pagar' ? 'var(--red)' : 'var(--green)' }}>
+                {modalNovoLanc === 'pagar' ? '↓ Nova conta a pagar' : '↑ Nova conta a receber'}
+              </h2>
+              <button className="btn-ghost" onClick={() => setModalNovoLanc(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="cx-tipo-toggle" style={{ marginBottom: 14 }}>
+                <button type="button" className={!formNovoLanc.jaPago ? 'active' : ''}
+                  onClick={() => setFormNovoLanc(f => ({ ...f, jaPago: false }))}>Pendente</button>
+                <button type="button" className={formNovoLanc.jaPago ? 'active' : ''}
+                  onClick={() => setFormNovoLanc(f => ({ ...f, jaPago: true, avisar: false }))}>
+                  {modalNovoLanc === 'pagar' ? '✓ Já paguei' : '✓ Já recebi'}
+                </button>
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: formNovoLanc.jaPago ? 'not-allowed' : 'pointer', marginBottom: 14, opacity: formNovoLanc.jaPago ? 0.5 : 1 }}>
+                <input type="checkbox" checked={formNovoLanc.avisar} disabled={formNovoLanc.jaPago} style={{ width: 16, height: 16, margin: 0 }}
+                  onChange={e => setFormNovoLanc(f => ({ ...f, avisar: e.target.checked }))} />
+                🔔 Me avisar por e-mail no vencimento
+              </label>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Tipo</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[{ v: 'avulsa', t: 'Avulsa' }, { v: 'parcelada', t: 'Parcelada' }, { v: 'fixa', t: 'Fixa/recorrente' }].map(op => (
+                      <button key={op.v} type="button" className={op.v === formNovoLanc.modo ? 'btn-primary' : 'btn-secondary'}
+                        style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
+                        onClick={() => setFormNovoLanc(f => ({ ...f, modo: op.v as any }))}>{op.t}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Conta bancária *</label>
+                  <select value={formNovoLanc.contaBancariaId} onChange={e => setFormNovoLanc(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Categoria</label>
+                  <select value={formNovoLanc.categoriaId} onChange={e => setFormNovoLanc(f => ({ ...f, categoriaId: e.target.value }))}>
+                    <option value="">Sem categoria</option>
+                    {(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Descrição *</label>
+                  <input value={formNovoLanc.descricao} onChange={e => setFormNovoLanc(f => ({ ...f, descricao: e.target.value }))}
+                    placeholder={modalNovoLanc === 'pagar' ? 'Ex: Aluguel' : 'Ex: Venda avulsa'} list="fm-desc-lanc" />
+                  <datalist id="fm-desc-lanc">
+                    {descricoesRecentesLanc.map(d => <option key={d} value={d} />)}
+                  </datalist>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Observação <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <input value={formNovoLanc.observacao} onChange={e => setFormNovoLanc(f => ({ ...f, observacao: e.target.value }))} placeholder="Notas internas" />
+                </div>
+
+                <div style={{ display: formNovoLanc.modo === 'parcelada' ? 'block' : 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  {formNovoLanc.modo === 'parcelada' ? (
+                    <div className="form-group">
+                      <label className="form-label">Valor da parcela (R$) *</label>
+                      <input type="number" step={0.01} value={formNovoLanc.valor} onChange={e => setFormNovoLanc(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <label className="form-label">Valor (R$) *</label>
+                        <input type="number" step={0.01} value={formNovoLanc.valor} onChange={e => setFormNovoLanc(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" />
+                      </div>
+                      {formNovoLanc.modo === 'fixa' ? (
+                        <div className="form-group">
+                          <label className="form-label">Dia do vencimento</label>
+                          <input type="number" min={1} max={28} value={formNovoLanc.diaVencimento} onChange={e => setFormNovoLanc(f => ({ ...f, diaVencimento: e.target.value }))} />
+                        </div>
+                      ) : (
+                        <div className="form-group">
+                          <label className="form-label">Vencimento</label>
+                          <input type="date" value={formNovoLanc.vencimento} onChange={e => setFormNovoLanc(f => ({ ...f, vencimento: e.target.value }))} />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {formNovoLanc.modo === 'parcelada' && (
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <label className="form-label" style={{ margin: 0 }}>
+                        {formNovoLanc.tipoParcelamento === 'quantidade' ? 'Total de parcelas' : 'Até quando'}
+                      </label>
+                      <button type="button" className="btn-ghost" style={{ fontSize: 11, padding: '2px 6px' }}
+                        onClick={() => setFormNovoLanc(f => ({ ...f, tipoParcelamento: f.tipoParcelamento === 'quantidade' ? 'dataFim' : 'quantidade' }))}>
+                        {formNovoLanc.tipoParcelamento === 'quantidade' ? 'usar data fim' : 'usar quantidade'}
+                      </button>
+                    </div>
+                    {formNovoLanc.tipoParcelamento === 'quantidade' ? (
+                      <input type="number" min={2} max={120} value={formNovoLanc.totalParcelas} onChange={e => setFormNovoLanc(f => ({ ...f, totalParcelas: e.target.value }))} />
+                    ) : (
+                      <input type="date" value={formNovoLanc.dataFim} onChange={e => setFormNovoLanc(f => ({ ...f, dataFim: e.target.value }))} />
+                    )}
+                  </div>
+                )}
+                {formNovoLanc.modo === 'parcelada' && (
+                  <div className="form-group">
+                    <label className="form-label">Data da 1ª parcela</label>
+                    <input type="date" value={formNovoLanc.vencimento} onChange={e => setFormNovoLanc(f => ({ ...f, vencimento: e.target.value }))} />
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                      Gera {formNovoLanc.totalParcelas || 0} parcelas de {fmt(parseFloat(formNovoLanc.valor) || 0)}, uma por mês.
+                    </p>
+                  </div>
+                )}
+                {formNovoLanc.modo === 'fixa' && (
+                  <div className="form-group">
+                    <label className="form-label">Data de início <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                    <input type="date" value={formNovoLanc.dataInicio} onChange={e => setFormNovoLanc(f => ({ ...f, dataInicio: e.target.value }))} />
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Repete todo mês até desativar.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalNovoLanc(null)}>Cancelar</button>
+              <button className="btn-primary" disabled={salvandoNovoLanc} onClick={salvarNovoLancamento}>
+                {salvandoNovoLanc ? 'Salvando...' : 'Criar lançamento'}
+              </button>
             </div>
           </div>
         </div>
