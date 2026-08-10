@@ -1636,24 +1636,29 @@ export function FinanceiroMobile() {
                   {faturaDados.itens.length === 0 ? (
                     <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Nenhuma compra neste ciclo.</p>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {faturaDados.itens.map(i => (
-                        <div key={i.id} className="fm-card-linha" style={{ background: 'var(--bg-3)' }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13.5, color: 'var(--text-1)' }}>{i.descricao}</div>
-                            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
-                              {new Date(i.dataCompra).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                              {i.categoriaNome && ` · ${i.categoriaNome}`}
-                            </div>
-                          </div>
-                          <div style={{ fontSize: 14, color: 'var(--text-1)', marginRight: 8 }}>{fmt(i.valor)}</div>
-                          <div style={{ display: 'flex', gap: 2 }}>
-                            <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditarItemCartao(i)}>✎</button>
-                            <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluirItemCartao(i)}><Trash2 size={13} /></button>
-                          </div>
+                    agruparPorData(faturaDados.itens.map(i => ({ ...i, vencimento: i.dataCompra }))).map(([dia, itens]) => (
+                      <div key={dia} style={{ marginBottom: 12 }}>
+                        <div className="fm-dia-header">
+                          <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
+                          <strong>{fmt(itens.reduce((s, i) => s + i.valor, 0))}</strong>
                         </div>
-                      ))}
-                    </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {itens.map(i => (
+                            <div key={i.id} className="fm-card-linha" style={{ background: 'var(--bg-3)' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13.5, color: 'var(--text-1)' }}>{i.descricao}</div>
+                                {i.categoriaNome && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{i.categoriaNome}</div>}
+                              </div>
+                              <div style={{ fontSize: 14, color: 'var(--text-1)', marginRight: 8 }}>{fmt(i.valor)}</div>
+                              <div style={{ display: 'flex', gap: 2 }}>
+                                <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditarItemCartao(i)}>✎</button>
+                                <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluirItemCartao(i)}><Trash2 size={13} /></button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
                   )}
                 </>
               )}
