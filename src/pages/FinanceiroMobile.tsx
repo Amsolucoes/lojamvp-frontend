@@ -932,10 +932,11 @@ export function FinanceiroMobile() {
 
       {tela === 'cartoes' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-            <button className="fm-fab-novo" style={{ background: 'var(--accent-bg)', borderColor: 'var(--accent)', color: 'var(--accent)' }}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1)', margin: 0 }}>Cartões</h2>
+            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
               onClick={() => setModalNovoCartao(true)}>
-              <Plus size={20} />
+              <Plus size={14} /> Novo cartão
             </button>
           </div>
 
