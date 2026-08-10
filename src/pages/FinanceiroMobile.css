@@ -67,11 +67,11 @@
   padding-right: 2px;
 }
 .fm-pagar-filtro { overflow: visible; padding: 14px 10px; }
-.fm-card .cx-tipo-toggle {
+.cx-tipo-toggle {
   display: flex;
   width: 100%;
 }
-.fm-card .cx-tipo-toggle button {
+.cx-tipo-toggle button {
   flex: 1;
   text-align: center;
   justify-content: center;
