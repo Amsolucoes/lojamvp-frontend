@@ -31,6 +31,7 @@ interface LinhaReceber {
 interface Categoria { id: string; nome: string; tipo: string; icone: string | null; }
 interface Cartao { id: string; nome: string; limite: number; diaFechamento: number; diaVencimento: number; contaBancariaId: string; ativo: boolean; taxaJurosMensal: number; }
 interface ItemFaturaDetalhe { id: string; descricao: string; valor: number; dataCompra: string; categoriaNome: string | null; categoriaId: string | null; modo: string; observacao: string | null; }
+interface AntecipadoItem { id: string; valor: number; data: string; contaBancariaId: string; observacao: string | null; }
 interface ItemCategoriaBalanco { nome: string; icone: string; valor: number; }
 interface Balanco { receitas: ItemCategoriaBalanco[]; despesas: ItemCategoriaBalanco[]; totalReceitas: number; totalDespesas: number; saldo: number; }
 
@@ -115,12 +116,28 @@ export function FinanceiroMobile() {
   const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
   const [salvandoCartao, setSalvandoCartao] = useState(false);
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
-  const [faturaDados, setFaturaDados] = useState<{ vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; itens: ItemFaturaDetalhe[] } | null>(null);
-  const [carregandoFatura, setCarregandoFatura] = useState(false);
+  const [faturaDados, setFaturaDados] = useState<{ vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; itens: ItemFaturaDetalhe[]; antecipados?: AntecipadoItem[] } | null>(null);  const [carregandoFatura, setCarregandoFatura] = useState(false);
   const [faturaAno, setFaturaAno] = useState(new Date().getFullYear());
   const [faturaMes, setFaturaMes] = useState(new Date().getMonth() + 1);
   const [referenciasFatura, setReferenciasFatura] = useState<{ aberta: { ano: number; mes: number }; fechada: { ano: number; mes: number; total: number; status: string } } | null>(null);
-
+  const [modalLancarCompra, setModalLancarCompra] = useState(false);
+  const [descricoesRecentesCartao, setDescricoesRecentesCartao] = useState<string[]>([]);
+  const [formCompra, setFormCompra] = useState({
+    modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
+    descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10),
+    categoriaId: '', totalParcelas: '2',
+  });
+  const [editandoItemCartao, setEditandoItemCartao] = useState<ItemFaturaDetalhe | null>(null);
+  const [formEditItemCartao, setFormEditItemCartao] = useState({ descricao: '', valor: '', dataCompra: '', categoriaId: '' });
+  const [confirmExcluirItemCartao, setConfirmExcluirItemCartao] = useState<ItemFaturaDetalhe | null>(null);
+  const [modalPagarFatura, setModalPagarFatura] = useState(false);
+  const [formPagFatura, setFormPagFatura] = useState({
+    modo: 'total' as 'total' | 'parcial' | 'parcelado', valorPago: '', totalParcelas: '3',
+    valorEntrada: '', contaBancariaId: '',
+  });
+  const [modalAntecipado, setModalAntecipado] = useState(false);
+  const [formAntecipado, setFormAntecipado] = useState({ valor: '', data: new Date().toISOString().slice(0, 10), contaBancariaId: '', observacao: '' });
+  const [confirmExcluirAntecipado, setConfirmExcluirAntecipado] = useState<AntecipadoItem | null>(null);
   useEffect(() => {
     setMobileShellOverride(true);
     return () => setMobileShellOverride(false);
@@ -298,6 +315,113 @@ export function FinanceiroMobile() {
     if (!faturaAberta) return;
     try {
       await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/fatura/pagamento?ano=${faturaAno}&mes=${faturaMes}`, { modo: pago ? 'total' : 'desfazer' });
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarCartoes();
+    } catch {}
+  }
+
+  function abrirLancarCompra() {
+    setFormCompra({ modo: 'avulsa', descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '', totalParcelas: '2' });
+    setModalLancarCompra(true);
+    api.get<string[]>('/api/financeiro/cartoes/lancamentos/descricoes').then(setDescricoesRecentesCartao).catch(() => {});
+  }
+
+  async function lancarCompra() {
+    if (!faturaAberta) return;
+    if (!formCompra.descricao.trim() || !formCompra.valor) return;
+    try {
+      if (formCompra.modo === 'avulsa') {
+        await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/lancamentos`, {
+          descricao: formCompra.descricao.trim(), valor: parseFloat(formCompra.valor),
+          dataCompra: formCompra.dataCompra, categoriaId: formCompra.categoriaId || null,
+        });
+      } else if (formCompra.modo === 'parcelada') {
+        await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/lancamentos/parcelado`, {
+          descricao: formCompra.descricao.trim(), valorParcela: parseFloat(formCompra.valor),
+          totalParcelas: parseInt(formCompra.totalParcelas) || 2,
+          dataCompra: formCompra.dataCompra, categoriaId: formCompra.categoriaId || null,
+        });
+      } else {
+        const diaEscolhido = formCompra.dataCompra ? parseInt(formCompra.dataCompra.split('-')[2]) : 1;
+        await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/fixos`, {
+          descricao: formCompra.descricao.trim(), valor: parseFloat(formCompra.valor),
+          categoriaId: formCompra.categoriaId || null, diaCompra: diaEscolhido,
+        });
+      }
+      setModalLancarCompra(false);
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarCartoes();
+    } catch {}
+  }
+
+  function abrirEditarItemCartao(item: ItemFaturaDetalhe) {
+    setEditandoItemCartao(item);
+    setFormEditItemCartao({
+      descricao: item.descricao.replace(/\s\(\d+\/\d+\)$/, ''),
+      valor: String(item.valor),
+      dataCompra: item.dataCompra.slice(0, 10),
+      categoriaId: item.categoriaId ?? '',
+    });
+  }
+
+  async function salvarEdicaoItemCartao(modo: 'unica' | 'todas') {
+    if (!editandoItemCartao || !faturaAberta) return;
+    try {
+      await api.put(`/api/financeiro/cartoes/lancamentos/${editandoItemCartao.id}?modo=${modo}`, {
+        descricao: formEditItemCartao.descricao.trim(),
+        valor: parseFloat(formEditItemCartao.valor),
+        dataCompra: formEditItemCartao.dataCompra,
+        categoriaId: formEditItemCartao.categoriaId || null,
+      });
+      setEditandoItemCartao(null);
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+    } catch {}
+  }
+
+  async function excluirItemCartao(modo: 'unica' | 'todas') {
+    if (!confirmExcluirItemCartao || !faturaAberta) return;
+    try {
+      await api.delete(`/api/financeiro/cartoes/lancamentos/${confirmExcluirItemCartao.id}?modo=${modo}`);
+      setConfirmExcluirItemCartao(null);
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarCartoes();
+    } catch {}
+  }
+
+  async function pagarFaturaModal(modo: string, extra?: any) {
+    if (!faturaAberta) return;
+    try {
+      await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/fatura/pagamento?ano=${faturaAno}&mes=${faturaMes}`, { modo, ...extra });
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarCartoes();
+      setModalPagarFatura(false);
+    } catch {}
+  }
+
+  function abrirNovoAntecipado() {
+    setFormAntecipado({ valor: '', data: new Date().toISOString().slice(0, 10), contaBancariaId: faturaAberta?.contaBancariaId ?? '', observacao: '' });
+    setModalAntecipado(true);
+  }
+
+  async function lancarAntecipado() {
+    if (!faturaAberta) return;
+    if (!formAntecipado.valor || parseFloat(formAntecipado.valor) <= 0 || !formAntecipado.contaBancariaId) return;
+    try {
+      await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/fatura/antecipado?ano=${faturaAno}&mes=${faturaMes}`, {
+        valor: parseFloat(formAntecipado.valor), data: formAntecipado.data,
+        contaBancariaId: formAntecipado.contaBancariaId, observacao: formAntecipado.observacao || null,
+      });
+      setModalAntecipado(false);
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarCartoes();
+    } catch {}
+  }
+
+  async function excluirAntecipado() {
+    if (!confirmExcluirAntecipado || !faturaAberta) return;
+    try {
+      await api.delete(`/api/financeiro/cartoes/fatura/antecipado/${confirmExcluirAntecipado.id}`);
+      setConfirmExcluirAntecipado(null);
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarCartoes();
     } catch {}
@@ -1286,6 +1410,13 @@ export function FinanceiroMobile() {
               <button className="btn-ghost" onClick={() => setFaturaAberta(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+                <button className="fm-fab-novo" style={{ background: 'var(--accent-bg)', borderColor: 'var(--accent)', color: 'var(--accent)' }}
+                  onClick={abrirLancarCompra}>
+                  <Plus size={20} />
+                </button>
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 14 }}>
                 <button className="btn-secondary" onClick={() => navFaturaMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
                 <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{MESES[faturaMes - 1]} {faturaAno}</span>
@@ -1321,11 +1452,44 @@ export function FinanceiroMobile() {
                         </span>
                         {faturaDados.total > 0 && (
                           faturaDados.status === 'pendente'
-                            ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => pagarFaturaSimples(true)}>Pagar</button>
-                            : <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => pagarFaturaSimples(false)}>Desfazer</button>
+                            ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => {
+                                setFormPagFatura(f => ({ ...f, contaBancariaId: faturaAberta.contaBancariaId }));
+                                setModalPagarFatura(true);
+                              }}>Pagar</button>
+                            : <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => pagarFaturaModal('desfazer')}>Desfazer</button>
                         )}
                       </div>
                     </div>
+
+                    {faturaDados.status === 'pendente' && (
+                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>💸 Antecipados</span>
+                          <button className="btn-ghost" style={{ fontSize: 11 }} onClick={abrirNovoAntecipado}><Plus size={12} /> Adiantar</button>
+                        </div>
+                        {faturaDados.antecipados && faturaDados.antecipados.length > 0 ? (
+                          <>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                              {faturaDados.antecipados.map(a => (
+                                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                                  <span style={{ color: 'var(--text-2)' }}>{new Date(a.data).toLocaleDateString('pt-BR')} {a.observacao ? `— ${a.observacao}` : ''}</span>
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    {fmt(a.valor)}
+                                    <button className="btn-ghost" style={{ padding: 2, color: 'var(--red)' }} onClick={() => setConfirmExcluirAntecipado(a)}><Trash2 size={12} /></button>
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                              <span style={{ color: 'var(--text-3)' }}>Falta pagar</span>
+                              <strong>{fmt(faturaDados.restante ?? faturaDados.total)}</strong>
+                            </div>
+                          </>
+                        ) : (
+                          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>Nenhum adiantamento ainda.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {faturaDados.itens.length === 0 ? (
@@ -1341,7 +1505,11 @@ export function FinanceiroMobile() {
                               {i.categoriaNome && ` · ${i.categoriaNome}`}
                             </div>
                           </div>
-                          <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{fmt(i.valor)}</div>
+                          <div style={{ fontSize: 14, color: 'var(--text-1)', marginRight: 8 }}>{fmt(i.valor)}</div>
+                          <div style={{ display: 'flex', gap: 2 }}>
+                            <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditarItemCartao(i)}>✎</button>
+                            <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluirItemCartao(i)}><Trash2 size={13} /></button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1351,6 +1519,254 @@ export function FinanceiroMobile() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setFaturaAberta(null)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalLancarCompra && faturaAberta && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalLancarCompra(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Lançar compra — {faturaAberta.nome}</h2>
+              <button className="btn-ghost" onClick={() => setModalLancarCompra(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[{ v: 'avulsa', t: 'Avulsa' }, { v: 'parcelada', t: 'Parcelada' }, { v: 'fixa', t: 'Fixa/mensal' }].map(op => (
+                    <button key={op.v} type="button" className={op.v === formCompra.modo ? 'btn-primary' : 'btn-secondary'}
+                      style={{ flex: 1, fontSize: 12, padding: '8px 0' }}
+                      onClick={() => setFormCompra(f => ({ ...f, modo: op.v as any }))}>{op.t}</button>
+                  ))}
+                </div>
+                <input value={formCompra.descricao} onChange={e => setFormCompra(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Netflix" list="fm-desc-cartao" />
+                <datalist id="fm-desc-cartao">
+                  {descricoesRecentesCartao.map(d => <option key={d} value={d} />)}
+                </datalist>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))}
+                    placeholder={formCompra.modo === 'parcelada' ? 'Valor da parcela' : 'Valor'} />
+                  {formCompra.modo === 'parcelada' ? (
+                    <input type="number" min={2} max={24} value={formCompra.totalParcelas} onChange={e => setFormCompra(f => ({ ...f, totalParcelas: e.target.value }))} placeholder="Parcelas" />
+                  ) : (
+                    <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
+                  )}
+                </div>
+                <select value={formCompra.categoriaId} onChange={e => setFormCompra(f => ({ ...f, categoriaId: e.target.value }))}>
+                  <option value="">Sem categoria</option>
+                  {categoriasPagar.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
+                </select>
+                {formCompra.modo === 'fixa' && <p style={{ fontSize: 11, color: 'var(--text-3)' }}>Repete todo mês no dia escolhido, até desativar.</p>}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalLancarCompra(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={lancarCompra}>Adicionar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editandoItemCartao && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditandoItemCartao(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar compra</h2>
+              <button className="btn-ghost" onClick={() => setEditandoItemCartao(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Descrição</label>
+                  <input value={formEditItemCartao.descricao} onChange={e => setFormEditItemCartao(f => ({ ...f, descricao: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Categoria</label>
+                  <select value={formEditItemCartao.categoriaId} onChange={e => setFormEditItemCartao(f => ({ ...f, categoriaId: e.target.value }))}>
+                    <option value="">Sem categoria</option>
+                    {categoriasPagar.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="form-group">
+                    <label className="form-label">Valor (R$)</label>
+                    <input type="number" step={0.01} value={formEditItemCartao.valor} onChange={e => setFormEditItemCartao(f => ({ ...f, valor: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Data</label>
+                    <input type="date" value={formEditItemCartao.dataCompra} onChange={e => setFormEditItemCartao(f => ({ ...f, dataCompra: e.target.value }))} />
+                  </div>
+                </div>
+                {(editandoItemCartao.modo === 'fixa' || editandoItemCartao.modo === 'parcelada') && (
+                  <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                    {editandoItemCartao.modo === 'fixa' ? 'Compra fixa: pode alterar só este mês, ou também os próximos.' : 'Parcela: pode alterar só esta, ou também as futuras.'}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setEditandoItemCartao(null)}>Cancelar</button>
+              {(editandoItemCartao.modo === 'fixa' || editandoItemCartao.modo === 'parcelada') ? (
+                <>
+                  <button className="btn-secondary" onClick={() => salvarEdicaoItemCartao('unica')}>Só esta</button>
+                  <button className="btn-primary" onClick={() => salvarEdicaoItemCartao('todas')}>
+                    {editandoItemCartao.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-primary" onClick={() => salvarEdicaoItemCartao('unica')}>Salvar</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmExcluirItemCartao && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirItemCartao(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir compra</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluirItemCartao(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>Excluir <strong style={{ color: 'var(--text-1)' }}>{confirmExcluirItemCartao.descricao}</strong>?</p>
+              {(confirmExcluirItemCartao.modo === 'fixa' || confirmExcluirItemCartao.modo === 'parcelada') && (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>
+                  {confirmExcluirItemCartao.modo === 'fixa' ? 'Compra fixa: pode excluir só este mês, ou parar de gerar os próximos.' : 'Parcela: pode excluir só esta, ou todas as futuras.'}
+                </p>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluirItemCartao(null)}>Cancelar</button>
+              {(confirmExcluirItemCartao.modo === 'fixa' || confirmExcluirItemCartao.modo === 'parcelada') ? (
+                <>
+                  <button className="btn-secondary" onClick={() => excluirItemCartao('unica')}>Só esta</button>
+                  <button className="btn-danger" onClick={() => excluirItemCartao('todas')}>
+                    {confirmExcluirItemCartao.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-danger" onClick={() => excluirItemCartao('unica')}>Excluir</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalPagarFatura && faturaAberta && faturaDados && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalPagarFatura(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Pagar fatura — {fmt(faturaDados.total)}</h2>
+              <button className="btn-ghost" onClick={() => setModalPagarFatura(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label className="form-label">Pagar com a conta</label>
+                <select value={formPagFatura.contaBancariaId} onChange={e => setFormPagFatura(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                  {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                {[{ v: 'total', t: 'Pagar tudo' }, { v: 'parcial', t: 'Parcial' }, { v: 'parcelado', t: 'Parcelar' }].map(op => (
+                  <button key={op.v} type="button" className={op.v === formPagFatura.modo ? 'btn-primary' : 'btn-secondary'}
+                    style={{ flex: 1, fontSize: 12, padding: '8px 0' }}
+                    onClick={() => setFormPagFatura(f => ({ ...f, modo: op.v as any }))}>{op.t}</button>
+                ))}
+              </div>
+
+              {formPagFatura.modo === 'total' && (
+                <p style={{ fontSize: 13, color: 'var(--text-2)' }}>Vai debitar {fmt(faturaDados.restante ?? faturaDados.total)} agora.</p>
+              )}
+              {formPagFatura.modo === 'parcial' && (
+                <div className="form-group">
+                  <label className="form-label">Quanto vai pagar agora (R$)</label>
+                  <input type="number" step={0.01} value={formPagFatura.valorPago} onChange={e => setFormPagFatura(f => ({ ...f, valorPago: e.target.value }))} placeholder="0,00" />
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>O restante entra na próxima fatura, com os juros do cartão.</p>
+                </div>
+              )}
+              {formPagFatura.modo === 'parcelado' && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Entrada (R$) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                    <input type="number" step={0.01} value={formPagFatura.valorEntrada} onChange={e => setFormPagFatura(f => ({ ...f, valorEntrada: e.target.value }))} placeholder="0,00" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Em quantas parcelas</label>
+                    <input type="number" min={2} max={24} value={formPagFatura.totalParcelas} onChange={e => setFormPagFatura(f => ({ ...f, totalParcelas: e.target.value }))} />
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalPagarFatura(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={() => {
+                if (formPagFatura.modo === 'total') pagarFaturaModal('total', { contaBancariaId: formPagFatura.contaBancariaId || null });
+                else if (formPagFatura.modo === 'parcial') pagarFaturaModal('parcial', { valorPago: parseFloat(formPagFatura.valorPago) || 0, contaBancariaId: formPagFatura.contaBancariaId || null });
+                else pagarFaturaModal('parcelado', {
+                  totalParcelas: parseInt(formPagFatura.totalParcelas) || 3,
+                  valorEntrada: parseFloat(formPagFatura.valorEntrada) || 0,
+                  contaBancariaId: formPagFatura.contaBancariaId || null,
+                });
+              }}>Confirmar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalAntecipado && faturaAberta && faturaDados && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalAntecipado(false)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Adiantar pagamento</h2>
+              <button className="btn-ghost" onClick={() => setModalAntecipado(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 14 }}>
+                Falta pagar: <strong style={{ color: 'var(--text-1)' }}>{fmt(faturaDados.restante ?? faturaDados.total)}</strong>
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Valor adiantado (R$)</label>
+                  <input type="number" step={0.01} value={formAntecipado.valor} onChange={e => setFormAntecipado(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Data</label>
+                  <input type="date" max={new Date().toISOString().slice(0, 10)} value={formAntecipado.data} onChange={e => setFormAntecipado(f => ({ ...f, data: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Conta de origem</label>
+                  <select value={formAntecipado.contaBancariaId} onChange={e => setFormAntecipado(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalAntecipado(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={lancarAntecipado}>Registrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmExcluirAntecipado && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirAntecipado(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir adiantamento</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluirAntecipado(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir o adiantamento de <strong style={{ color: 'var(--text-1)' }}>{fmt(confirmExcluirAntecipado.valor)}</strong>?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluirAntecipado(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={excluirAntecipado}>Excluir</button>
             </div>
           </div>
         </div>
