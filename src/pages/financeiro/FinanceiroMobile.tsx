@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
-import { api } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import { setMobileShellOverride } from '../utils/mobileShellOverride';
-import { BankBadge, BANCOS } from '../utils/bancos';
+import { api } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { setMobileShellOverride } from '../../utils/mobileShellOverride';
+import { BankBadge, BANCOS } from '../../utils/bancos';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];

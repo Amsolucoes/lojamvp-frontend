@@ -4,7 +4,7 @@ import { Produto, Venda, ItemVenda } from '../types';
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { DashboardFinanceiro } from './DashboardFinanceiro';
-import { FinanceiroMobile } from './FinanceiroMobile';
+import { FinanceiroMobile } from './financeiro/FinanceiroMobile';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { DashboardCorretora } from './DashboardCorretora';
 import { DashboardTurmas } from './DashboardTurmas';
