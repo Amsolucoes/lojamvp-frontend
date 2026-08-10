@@ -55,6 +55,10 @@ function agruparPorData<T extends { vencimento: string }>(lista: T[]) {
   });
   return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
 }
+function iconeCategoria(categorias: { nome: string; icone: string | null }[], nome: string | null) {
+  if (!nome) return null;
+  return categorias.find(c => c.nome === nome)?.icone ?? null;
+}
 
 const ABAS = [
   { key: 'visao', label: 'Visão geral', Icon: LayoutDashboard },
@@ -963,9 +967,12 @@ export function FinanceiroMobile() {
                           <div key={l.id} className="card fm-card-linha-completa">
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{l.descricao}</div>
+                                <div style={{ fontSize: 14, color: 'var(--text-1)' }}>
+                                  {l.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
+                                  {l.descricao}
+                                </div>
                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
-                                  {l.categoriaNome && <span className="fm-tag-neutra">{l.categoriaNome}</span>}
+                                  {l.categoriaNome && <span className="fm-tag-neutra">{iconeCategoria(categoriasPagar, l.categoriaNome)} {l.categoriaNome}</span>}
                                   <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
                                 </div>
                               </div>
@@ -1111,9 +1118,12 @@ export function FinanceiroMobile() {
                           <div key={l.id} className="card fm-card-linha-completa">
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{l.descricao}</div>
+                                <div style={{ fontSize: 14, color: 'var(--text-1)' }}>
+                                  {l.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
+                                  {l.descricao}
+                                </div>
                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
-                                  {l.categoriaNome && <span className="fm-tag-neutra">{l.categoriaNome}</span>}
+                                  {l.categoriaNome && <span className="fm-tag-neutra">{iconeCategoria(categoriasReceber, l.categoriaNome)} {l.categoriaNome}</span>}
                                   <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
                                   {l.origem === 'plano' && <span className="fm-tag-neutra">Plano</span>}
                                 </div>
@@ -1646,8 +1656,11 @@ export function FinanceiroMobile() {
                           {itens.map(i => (
                             <div key={i.id} className="fm-card-linha" style={{ background: 'var(--bg-3)' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13.5, color: 'var(--text-1)' }}>{i.descricao}</div>
-                                {i.categoriaNome && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{i.categoriaNome}</div>}
+                                <div style={{ fontSize: 13.5, color: 'var(--text-1)' }}>
+                                  {i.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
+                                  {i.descricao}
+                                </div>
+                                {i.categoriaNome && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{iconeCategoria(categoriasPagar, i.categoriaNome)} {i.categoriaNome}</div>}
                               </div>
                               <div style={{ fontSize: 14, color: 'var(--text-1)', marginRight: 8 }}>{fmt(i.valor)}</div>
                               <div style={{ display: 'flex', gap: 2 }}>
