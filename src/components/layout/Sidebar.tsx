@@ -1,13 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
   TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, 
-  FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent, Tag, Plus } from 'lucide-react';
+  FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent, Tag } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { carregarTemaSalvo } from '../../utils/tema';
-import { useBottomNavAction } from '../../utils/bottomNavAction';
 import { useMobileShellOverride } from '../../utils/mobileShellOverride';
 import './Sidebar.css';
 
@@ -39,6 +38,8 @@ export function Sidebar() {
   const [logoUrl, setLogoUrl]       = useState('');
   const [tipoPlano, setTipoPlano]   = useState('loja');
   const [modulos, setModulos]       = useState<string[]>([]);
+  const [aberto, setAberto]         = useState(false);
+  const shellOverride = useMobileShellOverride();
 
   useEffect(() => {
     api.get<any>('/api/cliente/config').then(res => {
@@ -120,22 +121,6 @@ export function Sidebar() {
     { to: '/configuracoes', icon: Settings, label: 'Configurações' },
   ];
 
-  const PRIORIDADE_MOBILE = ['/', '/produtos', '/caixa', '/clientes'];
-  const navPrimarios = PRIORIDADE_MOBILE
-    .map(to => NAV.find(item => item.to === to))
-    .filter(Boolean) as typeof NAV;
-  for (const item of NAV) {
-    if (navPrimarios.length >= 4) break;
-    if (!navPrimarios.includes(item)) navPrimarios.push(item);
-  }
-  const navResto = NAV.filter(item => !navPrimarios.includes(item));
-  const [maisAberto, setMaisAberto] = useState(false);
-  const acaoBottomNav = useBottomNavAction();
-  const shellOverride = useMobileShellOverride();
-  const [popupAcaoAberto, setPopupAcaoAberto] = useState(false);
-
-  useEffect(() => { setPopupAcaoAberto(false); }, [acaoBottomNav]);
-
   return (
     <>
       {/* Topbar mobile */}
@@ -145,11 +130,19 @@ export function Sidebar() {
           {logoEl}
           <div className="sidebar-logo-name">{nomeLoja}</div>
         </div>
+        <button className="btn-ghost" onClick={() => setAberto(v => !v)} style={{ padding: 8 }}>
+          {aberto ? <X size={22} /> : <Menu size={22} />}
+        </button>
       </div>
       )}
 
+      {/* Overlay do drawer mobile */}
+      {!shellOverride && aberto && (
+        <div className="sidebar-overlay" onClick={() => setAberto(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar${aberto ? ' sidebar-open' : ''}`}>
         <div className="sidebar-logo">
           {logoEl}
           <div>
@@ -161,7 +154,8 @@ export function Sidebar() {
         <nav className="sidebar-nav">
           {NAV.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} end={to === '/'}
-              className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
+              className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+              onClick={() => setAberto(false)}>
               <Icon size={16} />
               <span>{label}</span>
               {label === 'Estoque' && alertas > 0 && (
@@ -182,84 +176,6 @@ export function Sidebar() {
           </button>
         </div>
       </aside>
-
-      {/* Bottom nav mobile */}
-      {!shellOverride && (
-      <nav className="bottom-nav">
-        {navPrimarios.slice(0, Math.ceil(navPrimarios.length / 2)).map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} end={to === '/'}
-            className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
-            <Icon size={18} />
-            <span>{label}</span>
-            {label === 'Estoque' && alertas > 0 && <span className="bn-badge">{alertas}</span>}
-          </NavLink>
-        ))}
-
-        {acaoBottomNav && (
-          <>
-            {acaoBottomNav.tipo === 'multipla' && popupAcaoAberto && (
-              <>
-                <div className="bottom-nav-popup-overlay" onClick={() => setPopupAcaoAberto(false)} />
-                <div className="bottom-nav-popup">
-                  {acaoBottomNav.opcoes.map(op => (
-                    <button key={op.label} className="bottom-nav-popup-item"
-                      style={{ borderColor: op.cor, color: op.cor }}
-                      onClick={() => { op.aoClicar(); setPopupAcaoAberto(false); }}>
-                      {op.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            <button className="bottom-nav-fab"
-              onClick={() => acaoBottomNav.tipo === 'unica' ? acaoBottomNav.aoClicar() : setPopupAcaoAberto(v => !v)}
-              style={acaoBottomNav.tipo === 'unica'
-                ? { background: acaoBottomNav.corBg, borderColor: acaoBottomNav.corBorda, color: acaoBottomNav.corBorda }
-                : { background: 'var(--accent-bg)', borderColor: 'var(--accent)', color: 'var(--accent)' }}>
-              <Plus size={18} style={acaoBottomNav.tipo === 'multipla' && popupAcaoAberto ? { transform: 'rotate(45deg)', transition: 'transform 0.15s' } : undefined} />
-            </button>
-          </>
-        )}
-
-        {navPrimarios.slice(Math.ceil(navPrimarios.length / 2)).map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} end={to === '/'}
-            className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
-            <Icon size={18} />
-            <span>{label}</span>
-            {label === 'Estoque' && alertas > 0 && <span className="bn-badge">{alertas}</span>}
-          </NavLink>
-        ))}
-        <button className="bottom-nav-item" onClick={() => setMaisAberto(true)}>
-          <Menu size={18} />
-          <span>Mais</span>
-        </button>
-      </nav>
-      )}
-
-      {maisAberto && (
-        <div className="modal-overlay" onClick={() => setMaisAberto(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <span style={{ fontWeight: 600 }}>Mais opções</span>
-              <button className="btn-ghost" onClick={() => setMaisAberto(false)}><X size={18} /></button>
-            </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {navResto.map(({ to, icon: Icon, label }) => (
-                <NavLink key={to} to={to} end={to === '/'}
-                  className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-                  onClick={() => setMaisAberto(false)}>
-                  <Icon size={16} />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
-              <button className="sidebar-link" onClick={logout} style={{ marginTop: 8, color: 'var(--red)' }}>
-                <LogOut size={16} />
-                <span>Sair ({usuario?.nome})</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
