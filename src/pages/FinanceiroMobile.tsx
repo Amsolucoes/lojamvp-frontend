@@ -29,6 +29,8 @@ interface LinhaReceber {
   origem: string; // avulso | plano
 }
 interface Categoria { id: string; nome: string; tipo: string; icone: string | null; }
+interface Cartao { id: string; nome: string; limite: number; diaFechamento: number; diaVencimento: number; contaBancariaId: string; ativo: boolean; taxaJurosMensal: number; }
+interface ItemFaturaDetalhe { id: string; descricao: string; valor: number; dataCompra: string; categoriaNome: string | null; categoriaId: string | null; modo: string; observacao: string | null; }
 interface ItemCategoriaBalanco { nome: string; icone: string; valor: number; }
 interface Balanco { receitas: ItemCategoriaBalanco[]; despesas: ItemCategoriaBalanco[]; totalReceitas: number; totalDespesas: number; saldo: number; }
 
@@ -65,7 +67,7 @@ export function FinanceiroMobile() {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
   const [menuAberto, setMenuAberto] = useState(false);
-  const [tela, setTela] = useState<'visao' | 'pagar' | 'receber'>('visao');
+  const [tela, setTela] = useState<'visao' | 'pagar' | 'receber' | 'cartoes'>('visao');
   const [linhasPagar, setLinhasPagar] = useState<LinhaPagar[]>([]);
   const [carregandoPagar, setCarregandoPagar] = useState(true);
   const [categoriasPagar, setCategoriasPagar] = useState<Categoria[]>([]);
@@ -104,6 +106,19 @@ export function FinanceiroMobile() {
   const [editandoReceber, setEditandoReceber] = useState<LinhaReceber | null>(null);
   const [formEditReceber, setFormEditReceber] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEditReceber, setSalvandoEditReceber] = useState(false);
+
+  const [cartoes, setCartoes] = useState<Cartao[]>([]);
+  const [cartoesResumo, setCartoesResumo] = useState<Record<string, { usado: number; disponivel: number; qtdCompras: number; status: string }>>({});
+  const [carregandoCartoes, setCarregandoCartoes] = useState(true);
+  const [modalNovoCartao, setModalNovoCartao] = useState(false);
+  const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
+  const [salvandoCartao, setSalvandoCartao] = useState(false);
+  const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
+  const [faturaDados, setFaturaDados] = useState<{ vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; itens: ItemFaturaDetalhe[] } | null>(null);
+  const [carregandoFatura, setCarregandoFatura] = useState(false);
+  const [faturaAno, setFaturaAno] = useState(new Date().getFullYear());
+  const [faturaMes, setFaturaMes] = useState(new Date().getMonth() + 1);
+  const [referenciasFatura, setReferenciasFatura] = useState<{ aberta: { ano: number; mes: number }; fechada: { ano: number; mes: number; total: number; status: string } } | null>(null);
 
   useEffect(() => {
     setMobileShellOverride(true);
@@ -199,6 +214,92 @@ export function FinanceiroMobile() {
       await api.delete(`/api/financeiro/lancamentos/${confirmExcluirReceber.id}?modo=${modo}`);
       setConfirmExcluirReceber(null);
       recarregarReceber();
+    } catch {}
+  }
+
+  function carregarCartoes() {
+    setCarregandoCartoes(true);
+    Promise.all([
+      api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {}),
+      api.get<any[]>('/api/financeiro/cartoes-resumo').then(lista => {
+        const mapa: Record<string, any> = {};
+        lista.forEach(c => { mapa[c.id] = { usado: c.usado, disponivel: c.disponivel, qtdCompras: c.qtdCompras, status: c.status }; });
+        setCartoesResumo(mapa);
+      }).catch(() => {}),
+    ]).finally(() => setCarregandoCartoes(false));
+  }
+
+  useEffect(() => {
+    if (tela !== 'cartoes') return;
+    carregarCartoes();
+  }, [tela]);
+
+  async function salvarNovoCartao() {
+    if (!formCartao.nome.trim() || !formCartao.contaBancariaId) return;
+    setSalvandoCartao(true);
+    try {
+      await api.post('/api/financeiro/cartoes', {
+        nome: formCartao.nome.trim(),
+        limite: parseFloat(formCartao.limite) || 0,
+        diaFechamento: parseInt(formCartao.diaFechamento) || 10,
+        diaVencimento: parseInt(formCartao.diaVencimento) || 15,
+        contaBancariaId: formCartao.contaBancariaId,
+        taxaJurosMensal: parseFloat(formCartao.taxaJurosMensal) || 0,
+      });
+      setModalNovoCartao(false);
+      setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
+      carregarCartoes();
+    } catch {} finally { setSalvandoCartao(false); }
+  }
+
+  async function carregarFatura(cartaoId: string, ano: number, mes: number) {
+    setFaturaDados(null);
+    setCarregandoFatura(true);
+    try {
+      const res = await api.get<any>(`/api/financeiro/cartoes/${cartaoId}/fatura?ano=${ano}&mes=${mes}`);
+      setFaturaDados(res);
+    } catch {
+      setFaturaDados({ vencimento: '', total: 0, status: 'pendente', itens: [] });
+    } finally {
+      setCarregandoFatura(false);
+    }
+  }
+
+  function abrirFatura(c: Cartao) {
+    const agora = new Date();
+    const ano = agora.getFullYear();
+    const mes = agora.getMonth() + 1;
+    setFaturaAberta(c);
+    setFaturaAno(ano);
+    setFaturaMes(mes);
+    carregarFatura(c.id, ano, mes);
+    api.get<any>(`/api/financeiro/cartoes/${c.id}/faturas-referencia`).then(setReferenciasFatura).catch(() => {});
+  }
+
+  function navFaturaMes(delta: number) {
+    if (!faturaAberta) return;
+    let novoMes = faturaMes + delta, novoAno = faturaAno;
+    if (novoMes < 1) { novoMes = 12; novoAno--; }
+    if (novoMes > 12) { novoMes = 1; novoAno++; }
+    setFaturaMes(novoMes);
+    setFaturaAno(novoAno);
+    carregarFatura(faturaAberta.id, novoAno, novoMes);
+  }
+
+  function irParaReferenciaFatura(tipo: 'aberta' | 'fechada') {
+    if (!faturaAberta || !referenciasFatura) return;
+    const ref = referenciasFatura[tipo];
+    setFaturaAno(ref.ano);
+    setFaturaMes(ref.mes);
+    carregarFatura(faturaAberta.id, ref.ano, ref.mes);
+  }
+
+  async function pagarFaturaSimples(pago: boolean) {
+    if (!faturaAberta) return;
+    try {
+      await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/fatura/pagamento?ano=${faturaAno}&mes=${faturaMes}`, { modo: pago ? 'total' : 'desfazer' });
+      carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarCartoes();
     } catch {}
   }
 
@@ -305,8 +406,8 @@ export function FinanceiroMobile() {
   const proximos = alertas.slice(0, 4);
 
   function irPara(destino: typeof ABAS[number]['key']) {
-    if (destino === 'visao' || destino === 'pagar' || destino === 'receber') { setTela(destino); return; }
-    navigate('/financeiro'); // Cartões/Contas: fase 4/5 — por ora usa os botoes do topo daquela tela
+    if (destino === 'visao' || destino === 'pagar' || destino === 'receber' || destino === 'cartoes') { setTela(destino); return; }
+    navigate('/financeiro'); // Contas: fase 5 — por ora usa os botoes do topo daquela tela
   }
 
   return (
@@ -829,6 +930,55 @@ export function FinanceiroMobile() {
       )}
       </div>
 
+      {tela === 'cartoes' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+            <button className="fm-fab-novo" style={{ background: 'var(--accent-bg)', borderColor: 'var(--accent)', color: 'var(--accent)' }}
+              onClick={() => setModalNovoCartao(true)}>
+              <Plus size={20} />
+            </button>
+          </div>
+
+          {carregandoCartoes ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+          ) : cartoes.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nenhum cartão cadastrado.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {cartoes.map(c => {
+                const r = cartoesResumo[c.id];
+                const pct = r && c.limite > 0 ? Math.min(100, (r.usado / c.limite) * 100) : 0;
+                return (
+                  <div key={c.id} className="card fm-card" style={{ cursor: 'pointer', borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : undefined }}
+                    onClick={() => abrirFatura(c)}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>{c.nome}</span>
+                      {r && r.qtdCompras > 0 && <span className="fm-tag-neutra">{r.qtdCompras} compra{r.qtdCompras > 1 ? 's' : ''}</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>Fecha dia {c.diaFechamento} · Vence dia {c.diaVencimento}</div>
+                    {r && (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}>
+                          <strong style={{ fontSize: 17, color: pct > 85 ? 'var(--red)' : 'var(--text-1)' }}>{fmt(r.usado)}</strong>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>/ {fmt(c.limite)}</span>
+                        </div>
+                        <div style={{ height: 6, background: 'var(--bg-3)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: pct > 85 ? 'var(--red)' : pct > 60 ? 'var(--yellow, #d97706)' : 'var(--accent)', borderRadius: 3 }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Disponível</span>
+                          <strong style={{ fontSize: 13, color: r.disponivel >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(r.disponivel)}</strong>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
       <nav className="bottom-nav">
         {ABAS.slice(0, 2).map(({ key, label, Icon }) => (
           <button key={key} className={`bottom-nav-item${key === tela ? ' active' : ''}`} onClick={() => irPara(key)}>
@@ -1045,6 +1195,132 @@ export function FinanceiroMobile() {
               ) : (
                 <button className="btn-danger" onClick={() => excluirReceber('unica')}>Excluir</button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalNovoCartao && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNovoCartao(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Novo cartão</h2>
+              <button className="btn-ghost" onClick={() => setModalNovoCartao(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Nome *</label>
+                  <input value={formCartao.nome} onChange={e => setFormCartao(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Santander" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Conta de pagamento *</label>
+                  <select value={formCartao.contaBancariaId} onChange={e => setFormCartao(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="form-group">
+                    <label className="form-label">Limite (R$)</label>
+                    <input type="number" step={0.01} value={formCartao.limite} onChange={e => setFormCartao(f => ({ ...f, limite: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Taxa juros (%/mês)</label>
+                    <input type="number" step={0.01} value={formCartao.taxaJurosMensal} onChange={e => setFormCartao(f => ({ ...f, taxaJurosMensal: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Dia fechamento</label>
+                    <input type="number" min={1} max={28} value={formCartao.diaFechamento} onChange={e => setFormCartao(f => ({ ...f, diaFechamento: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Dia vencimento</label>
+                    <input type="number" min={1} max={28} value={formCartao.diaVencimento} onChange={e => setFormCartao(f => ({ ...f, diaVencimento: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalNovoCartao(false)}>Cancelar</button>
+              <button className="btn-primary" disabled={salvandoCartao} onClick={salvarNovoCartao}>{salvandoCartao ? 'Salvando...' : 'Adicionar cartão'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {faturaAberta && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setFaturaAberta(null)}>
+          <div className="modal" style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Fatura — {faturaAberta.nome}</h2>
+              <button className="btn-ghost" onClick={() => setFaturaAberta(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 14 }}>
+                <button className="btn-secondary" onClick={() => navFaturaMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+                <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{MESES[faturaMes - 1]} {faturaAno}</span>
+                <button className="btn-secondary" onClick={() => navFaturaMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+              </div>
+
+              {referenciasFatura && (
+                <div className="cx-tipo-toggle" style={{ marginBottom: 12 }}>
+                  <button className={faturaAno === referenciasFatura.fechada.ano && faturaMes === referenciasFatura.fechada.mes ? 'active' : ''}
+                    onClick={() => irParaReferenciaFatura('fechada')}>
+                    Fechada {referenciasFatura.fechada.status === 'pago' ? '(paga)' : '(a pagar)'}
+                  </button>
+                  <button className={faturaAno === referenciasFatura.aberta.ano && faturaMes === referenciasFatura.aberta.mes ? 'active' : ''}
+                    onClick={() => irParaReferenciaFatura('aberta')}>
+                    Aberta
+                  </button>
+                </div>
+              )}
+
+              {carregandoFatura ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}><div className="layout-spinner" /></div>
+              ) : faturaDados && (
+                <>
+                  <div className="card fm-card" style={{ marginBottom: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Total do ciclo</div>
+                        <div style={{ fontWeight: 700, fontSize: 18 }}>{fmt(faturaDados.total)}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className={`badge ${faturaDados.status === 'pago' ? 'badge-green' : faturaDados.status === 'parcial' ? 'badge-yellow' : 'badge-accent'}`}>
+                          {faturaDados.status === 'pago' ? 'Paga' : faturaDados.status === 'parcial' ? 'Parcial' : 'Pendente'}
+                        </span>
+                        {faturaDados.total > 0 && (
+                          faturaDados.status === 'pendente'
+                            ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => pagarFaturaSimples(true)}>Pagar</button>
+                            : <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => pagarFaturaSimples(false)}>Desfazer</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {faturaDados.itens.length === 0 ? (
+                    <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Nenhuma compra neste ciclo.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {faturaDados.itens.map(i => (
+                        <div key={i.id} className="fm-card-linha" style={{ background: 'var(--bg-3)' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13.5, color: 'var(--text-1)' }}>{i.descricao}</div>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
+                              {new Date(i.dataCompra).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                              {i.categoriaNome && ` · ${i.categoriaNome}`}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 14, color: 'var(--text-1)' }}>{fmt(i.valor)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setFaturaAberta(null)}>Fechar</button>
             </div>
           </div>
         </div>
