@@ -119,6 +119,7 @@ export function FinanceiroMobile() {
   const [modalNovoCartao, setModalNovoCartao] = useState(false);
   const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
   const [salvandoCartao, setSalvandoCartao] = useState(false);
+  const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
   const [faturaDados, setFaturaDados] = useState<{ vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; itens: ItemFaturaDetalhe[]; antecipados?: AntecipadoItem[] } | null>(null);  const [carregandoFatura, setCarregandoFatura] = useState(false);
   const [faturaAno, setFaturaAno] = useState(new Date().getFullYear());
@@ -275,19 +276,32 @@ export function FinanceiroMobile() {
     carregarCartoes();
   }, [tela]);
 
+  function abrirEditarCartao(c: Cartao) {
+    setEditandoCartao(c);
+    setFormCartao({
+      nome: c.nome, limite: String(c.limite),
+      diaFechamento: String(c.diaFechamento), diaVencimento: String(c.diaVencimento),
+      contaBancariaId: c.contaBancariaId, taxaJurosMensal: String(c.taxaJurosMensal ?? 0),
+    });
+    setModalNovoCartao(true);
+  }
+
   async function salvarNovoCartao() {
     if (!formCartao.nome.trim() || !formCartao.contaBancariaId) return;
     setSalvandoCartao(true);
     try {
-      await api.post('/api/financeiro/cartoes', {
+      const payload = {
         nome: formCartao.nome.trim(),
         limite: parseFloat(formCartao.limite) || 0,
         diaFechamento: parseInt(formCartao.diaFechamento) || 10,
         diaVencimento: parseInt(formCartao.diaVencimento) || 15,
         contaBancariaId: formCartao.contaBancariaId,
         taxaJurosMensal: parseFloat(formCartao.taxaJurosMensal) || 0,
-      });
+      };
+      if (editandoCartao) await api.put(`/api/financeiro/cartoes/${editandoCartao.id}`, payload);
+      else await api.post('/api/financeiro/cartoes', payload);
       setModalNovoCartao(false);
+      setEditandoCartao(null);
       setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
       carregarCartoes();
     } catch {} finally { setSalvandoCartao(false); }
@@ -1232,7 +1246,7 @@ export function FinanceiroMobile() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1)', margin: 0 }}>Cartões</h2>
             <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-              onClick={() => setModalNovoCartao(true)}>
+              onClick={() => { setEditandoCartao(null); setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' }); setModalNovoCartao(true); }}>
               <Plus size={14} /> Novo cartão
             </button>
           </div>
@@ -1247,8 +1261,7 @@ export function FinanceiroMobile() {
                 const r = cartoesResumo[c.id];
                 const pct = r && c.limite > 0 ? Math.min(100, (r.usado / c.limite) * 100) : 0;
                 return (
-                  <div key={c.id} className="card fm-card" style={{ cursor: 'pointer', borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : undefined }}
-                    onClick={() => abrirFatura(c)}>
+                  <div key={c.id} className="card fm-card" style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : undefined }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', minWidth: 0 }}>{c.nome}</span>
                       {r && r.qtdCompras > 0 && <span className="fm-tag-neutra" style={{ flexShrink: 0 }}>{r.qtdCompras} compra{r.qtdCompras > 1 ? 's' : ''}</span>}
@@ -1272,6 +1285,10 @@ export function FinanceiroMobile() {
                         </div>
                       </>
                     )}
+                    <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                      <button className="btn-secondary" style={{ fontSize: 12, flex: 1 }} onClick={() => abrirFatura(c)}>Ver fatura</button>
+                      <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirEditarCartao(c)}>Editar</button>
+                    </div>
                   </div>
                );
               })}
@@ -1569,8 +1586,8 @@ export function FinanceiroMobile() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNovoCartao(false)}>
           <div className="modal" style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Novo cartão</h2>
-              <button className="btn-ghost" onClick={() => setModalNovoCartao(false)}><X size={16} /></button>
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>{editandoCartao ? 'Editar cartão' : 'Novo cartão'}</h2>
+              <button className="btn-ghost" onClick={() => { setModalNovoCartao(false); setEditandoCartao(null); }}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1606,8 +1623,8 @@ export function FinanceiroMobile() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setModalNovoCartao(false)}>Cancelar</button>
-              <button className="btn-primary" disabled={salvandoCartao} onClick={salvarNovoCartao}>{salvandoCartao ? 'Salvando...' : 'Adicionar cartão'}</button>
+              <button className="btn-secondary" onClick={() => { setModalNovoCartao(false); setEditandoCartao(null); }}>Cancelar</button>
+              <button className="btn-primary" disabled={salvandoCartao} onClick={salvarNovoCartao}>{salvandoCartao ? 'Salvando...' : editandoCartao ? 'Salvar' : 'Adicionar cartão'}</button>
             </div>
           </div>
         </div>
