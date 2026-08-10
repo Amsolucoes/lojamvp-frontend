@@ -334,6 +334,11 @@ export function Financeiro() {
     return categorias.find(c => c.nome === nome)?.icone ?? null;
   }
 
+  function nomeConta(contaId: string | null) {
+    if (!contaId) return '—';
+    return contas.find(c => c.id === contaId)?.nome ?? '—';
+  }
+
   function agruparPorData<T extends { vencimento: string }>(lista: T[]) {
     const grupos: Record<string, T[]> = {};
     lista.forEach(l => {
@@ -1160,13 +1165,13 @@ export function Financeiro() {
               <div className="table-wrap fin-table-desktop">
                 <table>
                   <thead>
-                    <tr><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr>
+                    <tr><th>Descrição</th><th>Categoria</th><th>Conta</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr>
                   </thead>
                   <tbody>
                     {agruparPorData(listaPagar).map(([data, itens]) => (
                       <>
                         <tr key={`grupo-${data}`}>
-                          <td colSpan={6} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 12px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
+                          <td colSpan={7} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 12px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
                             {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
                             <span style={{ fontWeight: 400, color: 'var(--text-3)', marginLeft: 8 }}>
                               {fmt(itens.reduce((s, i) => s + i.valor, 0))}
@@ -1196,6 +1201,7 @@ export function Financeiro() {
                           <td style={{ fontSize: 13, color: 'var(--text-2)' }}>
                             {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'}
                           </td>
+                          <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{nomeConta(l.contaBancariaId)}</td>
                           <td style={{ fontSize: 13 }}>{l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}</td>
                           <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
                           <td>
@@ -1252,7 +1258,7 @@ export function Financeiro() {
                             {l.descricao}
                           </div>
                           <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                            {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'} · {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}
+                            {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'} · {nomeConta(l.contaBancariaId)} · {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}
                           </div>
                           {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
                         </div>
@@ -1294,13 +1300,13 @@ export function Financeiro() {
               <div className="table-wrap fin-table-desktop">
                 <table>
                   <thead>
-                    <tr><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Origem</th><th></th></tr>
+                    <tr><th>Descrição</th><th>Conta</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Origem</th><th></th></tr>
                   </thead>
                   <tbody>
                     {agruparPorData(listaReceber).map(([data, itens]) => (
                       <>
                         <tr key={`grupo-r-${data}`}>
-                          <td colSpan={6} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 12px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
+                          <td colSpan={7} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 12px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
                             {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
                             <span style={{ fontWeight: 400, color: 'var(--text-3)', marginLeft: 8 }}>
                               {fmt(itens.reduce((s: number, i: any) => s + i.valor, 0))}
@@ -1324,6 +1330,7 @@ export function Financeiro() {
                             </span>
                           )}
                         </td>
+                        <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{nomeConta(l.contaBancariaId)}</td>
                         <td style={{ fontSize: 13 }}>{new Date(l.vencimento).toLocaleDateString('pt-BR')}</td>
                         <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
                         <td>
@@ -1375,7 +1382,7 @@ export function Financeiro() {
                       {l.categoriaNome && (
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</div>
                       )}
-                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR')}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{nomeConta(l.contaBancariaId)} · {new Date(l.vencimento).toLocaleDateString('pt-BR')}</div>
                       </div>
                       <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
                     </div>
