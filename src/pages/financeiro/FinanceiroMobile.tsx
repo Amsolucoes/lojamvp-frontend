@@ -30,7 +30,7 @@ interface LinhaReceber {
 }
 interface Categoria { id: string; nome: string; tipo: string; icone: string | null; }
 interface Cartao { id: string; nome: string; limite: number; diaFechamento: number; diaVencimento: number; contaBancariaId: string; ativo: boolean; taxaJurosMensal: number; }
-interface ItemFaturaDetalhe { id: string; descricao: string; valor: number; dataCompra: string; categoriaNome: string | null; categoriaId: string | null; modo: string; observacao: string | null; }
+interface ItemFaturaDetalhe { id: string; descricao: string; valor: number; dataCompra: string; categoriaNome: string | null; categoriaId: string | null; modo: string; observacao: string | null; numeroParcela: number | null; totalParcelas: number | null; }
 interface AntecipadoItem { id: string; valor: number; data: string; contaBancariaId: string; observacao: string | null; }
 interface ItemCategoriaBalanco { nome: string; icone: string; valor: number; }
 interface Balanco { receitas: ItemCategoriaBalanco[]; despesas: ItemCategoriaBalanco[]; totalReceitas: number; totalDespesas: number; saldo: number; }
@@ -1819,7 +1819,10 @@ export function FinanceiroMobile() {
                                   {i.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
                                   {i.descricao}
                                 </div>
-                                {i.categoriaNome && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{iconeCategoria(categoriasPagar, i.categoriaNome)} {i.categoriaNome}</div>}
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
+                                  {i.categoriaNome && <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{iconeCategoria(categoriasPagar, i.categoriaNome)} {i.categoriaNome}</span>}
+                                  {i.numeroParcela && <span className="fm-tag-neutra">{i.numeroParcela}/{i.totalParcelas}</span>}
+                                </div>
                               </div>
                               <div style={{ fontSize: 14, color: 'var(--text-1)', marginRight: 8 }}>{fmt(i.valor)}</div>
                               <div style={{ display: 'flex', gap: 2 }}>
