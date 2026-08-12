@@ -1065,10 +1065,15 @@ export function FinanceiroMobile() {
                 <button className="btn-secondary" onClick={() => navMesPagar(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input type="date" value={periodoDe} onChange={e => setPeriodoDe(e.target.value)} />
-                <span style={{ color: 'var(--text-3)' }}>até</span>
-                <input type="date" value={periodoAte} onChange={e => setPeriodoAte(e.target.value)} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch' }}>
+                <div className="form-group">
+                  <label className="form-label">De</label>
+                  <input type="date" value={periodoDe} onChange={e => setPeriodoDe(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Até</label>
+                  <input type="date" value={periodoAte} onChange={e => setPeriodoAte(e.target.value)} />
+                </div>
               </div>
             )}
           </div>
@@ -1243,10 +1248,15 @@ export function FinanceiroMobile() {
                 <button className="btn-secondary" onClick={() => navMesReceber(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input type="date" value={periodoDeReceber} onChange={e => setPeriodoDeReceber(e.target.value)} />
-                <span style={{ color: 'var(--text-3)' }}>até</span>
-                <input type="date" value={periodoAteReceber} onChange={e => setPeriodoAteReceber(e.target.value)} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch' }}>
+                <div className="form-group">
+                  <label className="form-label">De</label>
+                  <input type="date" value={periodoDeReceber} onChange={e => setPeriodoDeReceber(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Até</label>
+                  <input type="date" value={periodoAteReceber} onChange={e => setPeriodoAteReceber(e.target.value)} />
+                </div>
               </div>
             )}
           </div>

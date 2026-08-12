@@ -87,3 +87,7 @@
   justify-content: center;
   cursor: pointer;
 }
+input[type="date"] {
+  max-width: 100%;
+  min-width: 0;
+}
