@@ -458,33 +458,19 @@ export function DashboardFinanceiro() {
         </div>
       )}
 
-      <div className="card">
-        <div className="dash-card-header">
-          <div className="dash-card-title"><Wallet size={15} /> Contas bancárias</div>
-        </div>
-        {carregandoContasDash ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
-            <div className="layout-spinner" />
+      {!carregandoContasDash && contas.length === 0 && (
+        <div className="card">
+          <div className="dash-card-header">
+            <div className="dash-card-title"><Wallet size={15} /> Contas bancárias</div>
           </div>
-        ) : contas.length === 0 ? (
           <div className="empty" style={{ padding: '30px 0' }}>
             <p>Nenhuma conta cadastrada ainda.</p>
-            <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Acesse Financeiro para criar sua primeira conta.</p>
+            <button className="btn-secondary" style={{ fontSize: 12, marginTop: 8 }} onClick={() => navigate('/financeiro')}>
+              Criar conta no Financeiro
+            </button>
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-            {contas.map(c => (
-              <div key={c.id} className="stat-card" style={{ opacity: c.ativa ? 1 : 0.5 }}>
-                <div className="stat-label">{c.nome}</div>
-                <div className="stat-value" style={{ fontSize: 18, color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                  {fmt(c.saldoAtual)}
-                </div>
-                {!c.ativa && <div className="stat-sub">Inativa</div>}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
       </div>
   );
 }
