@@ -4,6 +4,7 @@ import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Me
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { setMobileShellOverride } from '../../utils/mobileShellOverride';
+import { usePullToRefresh } from '../../components/layout/Layout';
 import { BankBadge, BANCOS } from '../../utils/bancos';
 import { InputMoeda } from '../../components/InputMoeda';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
@@ -79,6 +80,9 @@ export function FinanceiroMobile() {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
   const [menuAberto, setMenuAberto] = useState(false);
+  const { pull, recarregando, setRef } = usePullToRefresh(() => {
+    window.dispatchEvent(new Event('pullToRefresh'));
+  });
   const [tela, setTela] = useState<'visao' | 'pagar' | 'receber' | 'cartoes' | 'contas'>('visao');
   const [linhasPagar, setLinhasPagar] = useState<LinhaPagar[]>([]);
   const [carregandoPagar, setCarregandoPagar] = useState(true);
@@ -825,7 +829,24 @@ export function FinanceiroMobile() {
         </div>
       </div>
 
-      <div className="fm-content">
+      <div className="fm-content" ref={setRef} style={{ position: 'relative' }}>
+        {pull > 0 && (
+          <div style={{
+            position: 'absolute', top: 0, left: '50%', transform: `translate(-50%, ${pull - 40}px)`,
+            width: 32, height: 32, borderRadius: '50%',
+            background: 'var(--bg-2)', border: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 60, boxShadow: 'var(--shadow)',
+            transition: recarregando ? 'none' : 'transform 0.1s',
+          }}>
+            <div style={{
+              width: 16, height: 16, borderRadius: '50%',
+              border: '2px solid var(--border-2)', borderTopColor: 'var(--accent)',
+              animation: recarregando ? 'spin 0.6s linear infinite' : 'none',
+              transform: recarregando ? 'none' : `rotate(${pull * 3}deg)`,
+            }} />
+          </div>
+        )}
       {tela === 'visao' && (
       <>
         <div className="card fm-card">

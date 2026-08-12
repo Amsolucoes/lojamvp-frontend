@@ -7,7 +7,7 @@ import { api } from '../../services/api';
 import './Layout.css';
 
 // Puxar a tela pra baixo no topo do scroll recarrega o app — padrão comum em apps mobile
-function usePullToRefresh(onRefresh: () => void) {
+export function usePullToRefresh(onRefresh: () => void) {
   const [pull, setPull] = useState(0);
   const [recarregando, setRecarregando] = useState(false);
   const [elNode, setElNode] = useState<HTMLElement | null>(null);
