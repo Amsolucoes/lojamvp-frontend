@@ -802,11 +802,19 @@ export function FinanceiroMobile() {
           ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
             {contas.filter(c => c.ativa).map(c => (
-              <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
-                <span style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <BankBadge bancoId={c.banco} tamanho={16} /> {c.nome}
-                </span>
-                <strong style={{ color: c.saldoAtual >= 0 ? 'var(--text-1)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
+              <div key={c.id}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                  <span style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <BankBadge bancoId={c.banco} tamanho={16} /> {c.nome}
+                  </span>
+                  <strong style={{ color: c.saldoAtual >= 0 ? 'var(--text-1)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
+                </div>
+                {c.limite > 0 && c.saldoAtual < 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 2, paddingLeft: 22 }}>
+                    <span style={{ color: 'var(--text-3)' }}>Disponível</span>
+                    <span style={{ color: 'var(--text-2)' }}>{fmt(Math.max(0, c.limite - Math.abs(c.saldoAtual)))}</span>
+                  </div>
+                )}
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 4, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
@@ -1035,12 +1043,18 @@ export function FinanceiroMobile() {
           {carregandoPagar ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
           ) : (() => {
-            const totalPago = linhasPagar.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
-            const totalAberto = linhasPagar.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
+            const filtradaTotais = linhasPagar.filter(l => {
+              const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
+              const statusReal = ehVencido(l) ? 'vencido' : l.status;
+              const statusOk = filtroStatus === 'todos' || statusReal === filtroStatus;
+              return catOk && statusOk;
+            });
+            const totalPago = filtradaTotais.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
+            const totalAberto = filtradaTotais.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
             const totalMes = totalPago + totalAberto;
-            const contasAberto = linhasPagar.filter(l => l.status !== 'pago' && l.origem === 'avulso').reduce((s, l) => s + l.valor, 0);
+            const contasAberto = filtradaTotais.filter(l => l.status !== 'pago' && l.origem === 'avulso').reduce((s, l) => s + l.valor, 0);
             const cartoesAberto = Object.entries(
-              linhasPagar
+              filtradaTotais
                 .filter(l => l.status !== 'pago' && (l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada'))
                 .reduce((acc, l) => { const nome = l.cartaoNome ?? 'Cartão'; acc[nome] = (acc[nome] ?? 0) + l.valor; return acc; }, {} as Record<string, number>)
             );
