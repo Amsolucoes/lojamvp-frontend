@@ -5,6 +5,8 @@ import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { setMobileShellOverride } from '../../utils/mobileShellOverride';
 import { BankBadge, BANCOS } from '../../utils/bancos';
+import { InputMoeda } from '../../components/InputMoeda';
+import { AutocompleteInput } from '../../components/AutocompleteInput';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -1476,10 +1478,15 @@ export function FinanceiroMobile() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <select value={formEdit.categoriaId} onChange={e => setFormEdit(f => ({ ...f, categoriaId: e.target.value }))}>
-                    <option value="">Sem categoria</option>
-                    {categoriasPagar.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-                  </select>
+                  <AutocompleteInput
+                    value={categoriasPagar.find(c => c.id === formEdit.categoriaId)?.nome ?? ''}
+                    options={categoriasPagar.map(c => ({ value: c.nome, icone: c.icone }))}
+                    onChange={texto => {
+                      const encontrada = categoriasPagar.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      setFormEdit(f => ({ ...f, categoriaId: encontrada?.id ?? '' }));
+                    }}
+                    placeholder="Digite ou escolha..."
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Descrição *</label>
@@ -1488,7 +1495,7 @@ export function FinanceiroMobile() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group">
                     <label className="form-label">Valor (R$) *</label>
-                    <input type="number" step={0.01} value={formEdit.valor} onChange={e => setFormEdit(f => ({ ...f, valor: e.target.value }))} />
+                    <InputMoeda value={parseFloat(formEdit.valor) || 0} onChange={v => setFormEdit(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Vencimento</label>
@@ -1579,10 +1586,15 @@ export function FinanceiroMobile() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <select value={formEditReceber.categoriaId} onChange={e => setFormEditReceber(f => ({ ...f, categoriaId: e.target.value }))}>
-                    <option value="">Sem categoria</option>
-                    {categoriasReceber.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-                  </select>
+                  <AutocompleteInput
+                    value={categoriasReceber.find(c => c.id === formEditReceber.categoriaId)?.nome ?? ''}
+                    options={categoriasReceber.map(c => ({ value: c.nome, icone: c.icone }))}
+                    onChange={texto => {
+                      const encontrada = categoriasReceber.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      setFormEditReceber(f => ({ ...f, categoriaId: encontrada?.id ?? '' }));
+                    }}
+                    placeholder="Digite ou escolha..."
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Descrição *</label>
@@ -1591,7 +1603,7 @@ export function FinanceiroMobile() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group">
                     <label className="form-label">Valor (R$) *</label>
-                    <input type="number" step={0.01} value={formEditReceber.valor} onChange={e => setFormEditReceber(f => ({ ...f, valor: e.target.value }))} />
+                    <InputMoeda value={parseFloat(formEditReceber.valor) || 0} onChange={v => setFormEditReceber(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Vencimento</label>
@@ -1861,12 +1873,10 @@ export function FinanceiroMobile() {
                       onClick={() => setFormCompra(f => ({ ...f, modo: op.v as any }))}>{op.t}</button>
                   ))}
                 </div>
-                <input value={formCompra.descricao} onChange={e => setFormCompra(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Netflix" list="fm-desc-cartao" />
-                <datalist id="fm-desc-cartao">
-                  {descricoesRecentesCartao.map(d => <option key={d} value={d} />)}
-                </datalist>
+                <AutocompleteInput value={formCompra.descricao} options={descricoesRecentesCartao}
+                  onChange={v => setFormCompra(f => ({ ...f, descricao: v }))} placeholder="Ex: Netflix" />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <input type="number" step={0.01} value={formCompra.valor} onChange={e => setFormCompra(f => ({ ...f, valor: e.target.value }))}
+                  <InputMoeda value={parseFloat(formCompra.valor) || 0} onChange={v => setFormCompra(f => ({ ...f, valor: String(v) }))}
                     placeholder={formCompra.modo === 'parcelada' ? 'Valor da parcela' : 'Valor'} />
                   {formCompra.modo === 'parcelada' ? (
                     <input type="number" min={2} max={24} value={formCompra.totalParcelas} onChange={e => setFormCompra(f => ({ ...f, totalParcelas: e.target.value }))} placeholder="Parcelas" />
@@ -1874,10 +1884,15 @@ export function FinanceiroMobile() {
                     <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
                   )}
                 </div>
-                <select value={formCompra.categoriaId} onChange={e => setFormCompra(f => ({ ...f, categoriaId: e.target.value }))}>
-                  <option value="">Sem categoria</option>
-                  {categoriasPagar.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-                </select>
+                <AutocompleteInput
+                  value={categoriasPagar.find(c => c.id === formCompra.categoriaId)?.nome ?? ''}
+                  options={categoriasPagar.map(c => ({ value: c.nome, icone: c.icone }))}
+                  onChange={texto => {
+                    const encontrada = categoriasPagar.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                    setFormCompra(f => ({ ...f, categoriaId: encontrada?.id ?? '' }));
+                  }}
+                  placeholder="Categoria (digite ou escolha)..."
+                />
                 {formCompra.modo === 'fixa' && <p style={{ fontSize: 11, color: 'var(--text-3)' }}>Repete todo mês no dia escolhido, até desativar.</p>}
               </div>
             </div>
@@ -1904,15 +1919,20 @@ export function FinanceiroMobile() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <select value={formEditItemCartao.categoriaId} onChange={e => setFormEditItemCartao(f => ({ ...f, categoriaId: e.target.value }))}>
-                    <option value="">Sem categoria</option>
-                    {categoriasPagar.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-                  </select>
+                  <AutocompleteInput
+                    value={categoriasPagar.find(c => c.id === formEditItemCartao.categoriaId)?.nome ?? ''}
+                    options={categoriasPagar.map(c => ({ value: c.nome, icone: c.icone }))}
+                    onChange={texto => {
+                      const encontrada = categoriasPagar.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      setFormEditItemCartao(f => ({ ...f, categoriaId: encontrada?.id ?? '' }));
+                    }}
+                    placeholder="Digite ou escolha..."
+                  />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group">
                     <label className="form-label">Valor (R$)</label>
-                    <input type="number" step={0.01} value={formEditItemCartao.valor} onChange={e => setFormEditItemCartao(f => ({ ...f, valor: e.target.value }))} />
+                    <InputMoeda value={parseFloat(formEditItemCartao.valor) || 0} onChange={v => setFormEditItemCartao(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Data</label>
@@ -2277,19 +2297,22 @@ export function FinanceiroMobile() {
 
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
-                  <select value={formNovoLanc.categoriaId} onChange={e => setFormNovoLanc(f => ({ ...f, categoriaId: e.target.value }))}>
-                    <option value="">Sem categoria</option>
-                    {(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-                  </select>
+                  <AutocompleteInput
+                    value={(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).find(c => c.id === formNovoLanc.categoriaId)?.nome ?? ''}
+                    options={(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).map(c => ({ value: c.nome, icone: c.icone }))}
+                    onChange={texto => {
+                      const encontrada = (modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      setFormNovoLanc(f => ({ ...f, categoriaId: encontrada?.id ?? '' }));
+                    }}
+                    placeholder="Digite ou escolha..."
+                  />
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Descrição *</label>
-                  <input value={formNovoLanc.descricao} onChange={e => setFormNovoLanc(f => ({ ...f, descricao: e.target.value }))}
-                    placeholder={modalNovoLanc === 'pagar' ? 'Ex: Aluguel' : 'Ex: Venda avulsa'} list="fm-desc-lanc" />
-                  <datalist id="fm-desc-lanc">
-                    {descricoesRecentesLanc.map(d => <option key={d} value={d} />)}
-                  </datalist>
+                  <AutocompleteInput value={formNovoLanc.descricao} options={descricoesRecentesLanc}
+                    onChange={v => setFormNovoLanc(f => ({ ...f, descricao: v }))}
+                    placeholder={modalNovoLanc === 'pagar' ? 'Ex: Aluguel' : 'Ex: Venda avulsa'} />
                 </div>
 
                 <div className="form-group">
@@ -2301,13 +2324,13 @@ export function FinanceiroMobile() {
                   {formNovoLanc.modo === 'parcelada' ? (
                     <div className="form-group">
                       <label className="form-label">Valor da parcela (R$) *</label>
-                      <input type="number" step={0.01} value={formNovoLanc.valor} onChange={e => setFormNovoLanc(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" />
+                      <InputMoeda value={parseFloat(formNovoLanc.valor) || 0} onChange={v => setFormNovoLanc(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                     </div>
                   ) : (
                     <>
                       <div className="form-group">
                         <label className="form-label">Valor (R$) *</label>
-                        <input type="number" step={0.01} value={formNovoLanc.valor} onChange={e => setFormNovoLanc(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" />
+                        <InputMoeda value={parseFloat(formNovoLanc.valor) || 0} onChange={v => setFormNovoLanc(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                       </div>
                       {formNovoLanc.modo === 'fixa' ? (
                         <div className="form-group">
