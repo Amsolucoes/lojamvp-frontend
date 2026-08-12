@@ -175,6 +175,39 @@ export function FinanceiroMobile() {
     return () => setMobileShellOverride(false);
   }, []);
 
+  useEffect(() => {
+    function aoReceberPullToRefresh() {
+      if (tela === 'visao') {
+        setCarregandoContas(true);
+        Promise.all([
+          api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {}),
+          api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoRef}&mes=${new Date().getMonth() + 1}`).then(setResumo).catch(() => {}),
+        ]).finally(() => setCarregandoContas(false));
+
+        setCarregandoResumoAnual(true);
+        api.get<any[]>(`/api/financeiro/resumo-anual?ano=${anoRef}`).then(setResumoAnual).catch(() => {}).finally(() => setCarregandoResumoAnual(false));
+
+        setCarregandoAlertas(true);
+        api.get<Alerta[]>('/api/financeiro/alertas-vencimento?dias=7').then(setAlertas).catch(() => {}).finally(() => setCarregandoAlertas(false));
+
+        setCarregandoBalanco(true);
+        api.get<Balanco>(`/api/financeiro/balanco-por-categoria?ano=${anoBalanco}&mes=${mesBalanco + 1}`)
+          .then(setBalanco).catch(() => setBalanco(null)).finally(() => setCarregandoBalanco(false));
+      } else if (tela === 'pagar') {
+        recarregarPagar();
+      } else if (tela === 'receber') {
+        recarregarReceber();
+      } else if (tela === 'cartoes') {
+        carregarCartoes();
+        if (faturaAberta) carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      } else if (tela === 'contas') {
+        recarregarContas();
+      }
+    }
+    window.addEventListener('pullToRefresh', aoReceberPullToRefresh);
+    return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
+  }, [tela, anoBalanco, mesBalanco, faturaAberta, faturaAno, faturaMes]);
+
   function periodoQueryPagar() {
     if (periodoTipo === 'personalizado') return `de=${periodoDe}&ate=${periodoAte}`;
     return `ano=${anoPagar}&mes=${mesPagar + 1}`;
