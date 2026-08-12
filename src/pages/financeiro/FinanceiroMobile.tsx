@@ -1745,18 +1745,29 @@ export function FinanceiroMobile() {
                 <button className="btn-secondary" onClick={() => navFaturaMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
               </div>
 
-              {referenciasFatura && (
-                <div className="cx-tipo-toggle" style={{ marginBottom: 12 }}>
-                  <button className={faturaAno === referenciasFatura.fechada.ano && faturaMes === referenciasFatura.fechada.mes ? 'active' : ''}
-                    onClick={() => irParaReferenciaFatura('fechada')}>
-                    Fechada {referenciasFatura.fechada.status === 'pago' ? '(paga)' : '(a pagar)'}
-                  </button>
-                  <button className={faturaAno === referenciasFatura.aberta.ano && faturaMes === referenciasFatura.aberta.mes ? 'active' : ''}
-                    onClick={() => irParaReferenciaFatura('aberta')}>
-                    Aberta
-                  </button>
-                </div>
-              )}
+              {referenciasFatura && (() => {
+                const mesmoMes = referenciasFatura.fechada.ano === referenciasFatura.aberta.ano && referenciasFatura.fechada.mes === referenciasFatura.aberta.mes;
+                if (mesmoMes) {
+                  // Sem fatura fechada pendente ainda — só existe o ciclo aberto, sem toggle
+                  return (
+                    <div style={{ textAlign: 'center', marginBottom: 12, fontSize: 12, color: 'var(--text-3)' }}>
+                      Nenhuma fatura fechada pendente — mostrando ciclo em aberto
+                    </div>
+                  );
+                }
+                return (
+                  <div className="cx-tipo-toggle" style={{ marginBottom: 12 }}>
+                    <button className={faturaAno === referenciasFatura.fechada.ano && faturaMes === referenciasFatura.fechada.mes ? 'active' : ''}
+                      onClick={() => irParaReferenciaFatura('fechada')}>
+                      Fechada {referenciasFatura.fechada.status === 'pago' ? '(paga)' : '(a pagar)'}
+                    </button>
+                    <button className={faturaAno === referenciasFatura.aberta.ano && faturaMes === referenciasFatura.aberta.mes ? 'active' : ''}
+                      onClick={() => irParaReferenciaFatura('aberta')}>
+                      Aberta
+                    </button>
+                  </div>
+                );
+              })()}
 
               {carregandoFatura ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}><div className="layout-spinner" /></div>

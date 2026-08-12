@@ -2036,22 +2036,32 @@ export function Financeiro() {
                 <button className="btn-secondary" onClick={() => navFaturaMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
               </div>
 
-              {referenciasFatura && (
-                <div className="cx-tipo-toggle" style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
-                  <button
-                    className={faturaAno === referenciasFatura.fechada.ano && faturaMes === referenciasFatura.fechada.mes ? 'active' : ''}
-                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
-                    onClick={() => irParaReferencia('fechada')}>
-                    Fechada {referenciasFatura.fechada.status === 'pago' ? '(paga)' : '(a pagar)'}
-                  </button>
-                  <button
-                    className={faturaAno === referenciasFatura.aberta.ano && faturaMes === referenciasFatura.aberta.mes ? 'active' : ''}
-                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
-                    onClick={() => irParaReferencia('aberta')}>
-                    Aberta (em andamento)
-                  </button>
-                </div>
-              )}
+              {referenciasFatura && (() => {
+                const mesmoMes = referenciasFatura.fechada.ano === referenciasFatura.aberta.ano && referenciasFatura.fechada.mes === referenciasFatura.aberta.mes;
+                if (mesmoMes) {
+                  return (
+                    <div style={{ textAlign: 'center', marginBottom: 12, fontSize: 12, color: 'var(--text-3)' }}>
+                      Nenhuma fatura fechada pendente — mostrando ciclo em aberto
+                    </div>
+                  );
+                }
+                return (
+                  <div className="cx-tipo-toggle" style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
+                    <button
+                      className={faturaAno === referenciasFatura.fechada.ano && faturaMes === referenciasFatura.fechada.mes ? 'active' : ''}
+                      style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+                      onClick={() => irParaReferencia('fechada')}>
+                      Fechada {referenciasFatura.fechada.status === 'pago' ? '(paga)' : '(a pagar)'}
+                    </button>
+                    <button
+                      className={faturaAno === referenciasFatura.aberta.ano && faturaMes === referenciasFatura.aberta.mes ? 'active' : ''}
+                      style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+                      onClick={() => irParaReferencia('aberta')}>
+                      Aberta (em andamento)
+                    </button>
+                  </div>
+                );
+              })()}
 
               {carregandoFatura && (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
