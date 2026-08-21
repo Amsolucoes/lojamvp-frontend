@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Trash2, Wrench, ClipboardList, Check, Ban, PackageCheck } from 'lucide-react';
+import { Plus, X, Trash2, Wrench, ClipboardList, Check, Ban, PackageCheck, Edit2 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
@@ -104,6 +104,12 @@ export function OrdemServico() {
   // ── Modal checklist (config) ─────────────────────────────────
   const [novaCategoriaNome, setNovaCategoriaNome] = useState('');
   const [novoItemPorCategoria, setNovoItemPorCategoria] = useState<Record<string, string>>({});
+  const [editandoCategoriaId, setEditandoCategoriaId] = useState<string | null>(null);
+  const [editCategoriaNome, setEditCategoriaNome] = useState('');
+  const [confirmExcluirCategoria, setConfirmExcluirCategoria] = useState<ChecklistCategoriaDef | null>(null);
+  const [editandoItemId, setEditandoItemId] = useState<string | null>(null);
+  const [editItemNome, setEditItemNome] = useState('');
+  const [confirmExcluirItem, setConfirmExcluirItem] = useState<{ categoriaId: string; item: ChecklistItemDef } | null>(null);
 
   useEffect(() => {
     carregarOrcamentos();
@@ -325,6 +331,69 @@ export function OrdemServico() {
     }
   }
 
+  function iniciarEdicaoCategoria(cat: ChecklistCategoriaDef) {
+    setEditandoCategoriaId(cat.id);
+    setEditCategoriaNome(cat.nome);
+  }
+  async function salvarEdicaoCategoria(cat: ChecklistCategoriaDef) {
+    if (!editCategoriaNome.trim()) return;
+    try {
+      await api.put(`/api/ordemservico/checklist-categorias/${cat.id}`, {
+        nome: editCategoriaNome.trim(),
+        ordem: cat.ordem,
+        ativa: cat.ativa,
+      });
+      setEditandoCategoriaId(null);
+      carregarChecklist();
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+  async function excluirCategoria() {
+    if (!confirmExcluirCategoria) return;
+    try {
+      await api.delete(`/api/ordemservico/checklist-categorias/${confirmExcluirCategoria.id}`);
+      sucesso('Categoria excluída.');
+      setConfirmExcluirCategoria(null);
+      carregarChecklist();
+    } catch (e) {
+      erro((e as Error).message);
+      setConfirmExcluirCategoria(null);
+    }
+  }
+
+  function iniciarEdicaoItem(item: ChecklistItemDef) {
+    setEditandoItemId(item.id);
+    setEditItemNome(item.nome);
+  }
+  async function salvarEdicaoItem(categoriaId: string, item: ChecklistItemDef) {
+    if (!editItemNome.trim()) return;
+    try {
+      await api.put(`/api/ordemservico/checklist-itens/${item.id}`, {
+        categoriaId,
+        nome: editItemNome.trim(),
+        ordem: item.ordem,
+        ativo: item.ativo,
+      });
+      setEditandoItemId(null);
+      carregarChecklist();
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+  async function excluirItem() {
+    if (!confirmExcluirItem) return;
+    try {
+      const res = await api.delete<{ mensagem: string }>(`/api/ordemservico/checklist-itens/${confirmExcluirItem.item.id}`);
+      sucesso(res?.mensagem ?? 'Item removido.');
+      setConfirmExcluirItem(null);
+      carregarChecklist();
+    } catch (e) {
+      erro((e as Error).message);
+      setConfirmExcluirItem(null);
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -396,11 +465,45 @@ export function OrdemServico() {
 
           {categoriasChecklist.map(cat => (
             <div key={cat.id} className="card">
-              <div style={{ fontWeight: 600, marginBottom: 10 }}>{cat.nome}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                {editandoCategoriaId === cat.id ? (
+                  <div style={{ display: 'flex', gap: 8, flex: 1 }}>
+                    <input value={editCategoriaNome} autoFocus
+                      onChange={e => setEditCategoriaNome(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') salvarEdicaoCategoria(cat); }}
+                      style={{ flex: 1 }} />
+                    <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => salvarEdicaoCategoria(cat)}>Salvar</button>
+                    <button className="btn-ghost" onClick={() => setEditandoCategoriaId(null)}><X size={14} /></button>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ fontWeight: 600 }}>{cat.nome}</div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="btn-ghost" title="Editar categoria" onClick={() => iniciarEdicaoCategoria(cat)}><Edit2 size={14} /></button>
+                      <button className="btn-ghost" title="Excluir categoria" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluirCategoria(cat)}><Trash2 size={14} /></button>
+                    </div>
+                  </>
+                )}
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
                 {cat.itens.map(item => (
-                  <div key={item.id} style={{ padding: '6px 10px', background: 'var(--bg-3)', borderRadius: 6, fontSize: 13 }}>
-                    {item.nome}
+                  <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'var(--bg-3)', borderRadius: 6, fontSize: 13 }}>
+                    {editandoItemId === item.id ? (
+                      <>
+                        <input value={editItemNome} autoFocus
+                          onChange={e => setEditItemNome(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') salvarEdicaoItem(cat.id, item); }}
+                          style={{ flex: 1, fontSize: 13 }} />
+                        <button className="btn-primary" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => salvarEdicaoItem(cat.id, item)}>Salvar</button>
+                        <button className="btn-ghost" onClick={() => setEditandoItemId(null)}><X size={13} /></button>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ flex: 1 }}>{item.nome}{!item.ativo && <span style={{ color: 'var(--text-3)', fontSize: 11, marginLeft: 6 }}>(inativo)</span>}</span>
+                        <button className="btn-ghost" title="Editar item" onClick={() => iniciarEdicaoItem(item)}><Edit2 size={13} /></button>
+                        <button className="btn-ghost" title="Excluir item" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluirItem({ categoriaId: cat.id, item })}><Trash2 size={13} /></button>
+                      </>
+                    )}
                   </div>
                 ))}
                 {cat.itens.length === 0 && <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Nenhum item nessa categoria ainda.</p>}
@@ -670,6 +773,50 @@ export function OrdemServico() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalConcluir(false)}>Cancelar</button>
               <button className="btn-primary" onClick={concluir}>Concluir ordem</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmar exclusão categoria checklist ── */}
+      {confirmExcluirCategoria && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirCategoria(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir categoria</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluirCategoria(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir <strong style={{ color: 'var(--text-1)' }}>{confirmExcluirCategoria.nome}</strong> e todos os seus itens?
+                Se algum item já foi usado num orçamento, a exclusão será bloqueada.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluirCategoria(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={excluirCategoria}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmar exclusão item checklist ── */}
+      {confirmExcluirItem && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirItem(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir item</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluirItem(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir <strong style={{ color: 'var(--text-1)' }}>{confirmExcluirItem.item.nome}</strong>?
+                Se já foi usado num orçamento, ele será apenas desativado em vez de excluído.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluirItem(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={excluirItem}>Excluir</button>
             </div>
           </div>
         </div>
