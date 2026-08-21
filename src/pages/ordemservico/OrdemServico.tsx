@@ -86,7 +86,6 @@ export function OrdemServico() {
   const [modalNovo, setModalNovo] = useState(false);
   const [buscaCliente, setBuscaCliente] = useState('');
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
-  const [showBuscaCliente, setShowBuscaCliente] = useState(false);
   const [veiculo, setVeiculo] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [itens, setItens] = useState<ItemOrcamento[]>([{ ...ITEM_VAZIO }]);
@@ -143,9 +142,17 @@ export function OrdemServico() {
     setModalNovo(true);
   }
 
-  const clientesFiltrados = clientes.filter(c =>
-    c.nome.toLowerCase().includes(buscaCliente.toLowerCase())
-  );
+  const clienteOptions = clientes.map(c => ({ value: `${c.nome} — ${c.telefone}` }));
+
+  function handleBuscaClienteChange(value: string) {
+    const encontrado = clientes.find(c => `${c.nome} — ${c.telefone}` === value);
+    if (encontrado) {
+      setClienteSelecionado(encontrado);
+      setBuscaCliente('');
+    } else {
+      setBuscaCliente(value);
+    }
+  }
 
   function addItem() {
     setItens(list => [...list, { ...ITEM_VAZIO }]);
@@ -532,7 +539,7 @@ export function OrdemServico() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
                 {/* Cliente */}
-                <div className="form-group" style={{ position: 'relative' }}>
+                <div className="form-group">
                   <label className="form-label">Cliente *</label>
                   {clienteSelecionado ? (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
@@ -540,24 +547,12 @@ export function OrdemServico() {
                       <button className="btn-ghost" onClick={() => setClienteSelecionado(null)}><X size={14} /></button>
                     </div>
                   ) : (
-                    <>
-                      <input placeholder="Buscar cliente..." value={buscaCliente}
-                        onChange={e => { setBuscaCliente(e.target.value); setShowBuscaCliente(true); }}
-                        onFocus={() => setShowBuscaCliente(true)}
-                        onBlur={() => setTimeout(() => setShowBuscaCliente(false), 150)} />
-                      {showBuscaCliente && buscaCliente && (
-                        <div className="cx-dropdown">
-                          {clientesFiltrados.length === 0 ? (
-                            <div className="cx-dropdown-empty">Nenhum cliente encontrado</div>
-                          ) : clientesFiltrados.slice(0, 6).map(c => (
-                            <button key={c.id} className="cx-dropdown-item" onMouseDown={() => { setClienteSelecionado(c); setBuscaCliente(''); }}>
-                              <div className="cx-drop-nome">{c.nome}</div>
-                              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{c.telefone}</div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </>
+                    <AutocompleteInput
+                      value={buscaCliente}
+                      options={clienteOptions}
+                      onChange={handleBuscaClienteChange}
+                      placeholder="Buscar cliente..."
+                    />
                   )}
                 </div>
 
