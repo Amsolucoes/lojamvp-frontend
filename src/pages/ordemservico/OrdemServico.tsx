@@ -29,6 +29,7 @@ interface OrcamentoResumo {
   id: string;
   clienteId: string;
   veiculoDescricao: string | null;
+  placa: string | null;
   status: string;
   valorTotal: number;
   criadoEm: string;
@@ -81,12 +82,14 @@ export function OrdemServico() {
   // ── Lista de orçamentos ──────────────────────────────────────
   const [orcamentos, setOrcamentos] = useState<OrcamentoResumo[]>([]);
   const [statusFiltro, setStatusFiltro] = useState<string>('todos');
+  const [buscaPlaca, setBuscaPlaca] = useState('');
 
   // ── Modal novo orçamento ─────────────────────────────────────
   const [modalNovo, setModalNovo] = useState(false);
   const [buscaCliente, setBuscaCliente] = useState('');
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
   const [veiculo, setVeiculo] = useState('');
+  const [placa, setPlaca] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [itens, setItens] = useState<ItemOrcamento[]>([{ ...ITEM_VAZIO }]);
   const [mecanicos, setMecanicos] = useState<MecanicoForm[]>([]);
@@ -119,10 +122,13 @@ export function OrdemServico() {
     carregarChecklist();
   }, []);
 
-  useEffect(() => { carregarOrcamentos(); }, [statusFiltro]);
+  useEffect(() => { carregarOrcamentos(); }, [statusFiltro, buscaPlaca]);
 
   function carregarOrcamentos() {
-    const qs = statusFiltro === 'todos' ? '' : `?status=${statusFiltro}`;
+    const params = new URLSearchParams();
+    if (statusFiltro !== 'todos') params.set('status', statusFiltro);
+    if (buscaPlaca.trim()) params.set('placa', buscaPlaca.trim());
+    const qs = params.toString() ? `?${params.toString()}` : '';
     api.get<OrcamentoResumo[]>(`/api/ordemservico/orcamentos${qs}`).then(setOrcamentos).catch(() => {});
   }
 
@@ -135,6 +141,7 @@ export function OrdemServico() {
     setClienteSelecionado(null);
     setBuscaCliente('');
     setVeiculo('');
+    setPlaca('');
     setObservacoes('');
     setItens([{ ...ITEM_VAZIO }]);
     setMecanicos([]);
@@ -206,6 +213,7 @@ export function OrdemServico() {
       await api.post('/api/ordemservico/orcamentos', {
         clienteId: clienteSelecionado.id,
         veiculoDescricao: veiculo.trim() || null,
+        placa: placa.trim() || null,
         observacoes: observacoes.trim() || null,
         itens: itens.map(i => ({
           tipo: i.tipo,
@@ -425,13 +433,18 @@ export function OrdemServico() {
       {/* ── ABA ORDENS ── */}
       {aba === 'ordens' && (
         <>
-          <div className="cat-tabs" style={{ marginBottom: 16 }}>
-            <button className={`cat-tab${statusFiltro === 'todos' ? ' active' : ''}`} onClick={() => setStatusFiltro('todos')}>Todos</button>
-            {Object.keys(STATUS_LABEL).map(s => (
-              <button key={s} className={`cat-tab${statusFiltro === s ? ' active' : ''}`} onClick={() => setStatusFiltro(s)}>
-                {STATUS_LABEL[s]}
-              </button>
-            ))}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16, alignItems: 'center' }}>
+            <div className="cat-tabs" style={{ margin: 0 }}>
+              <button className={`cat-tab${statusFiltro === 'todos' ? ' active' : ''}`} onClick={() => setStatusFiltro('todos')}>Todos</button>
+              {Object.keys(STATUS_LABEL).map(s => (
+                <button key={s} className={`cat-tab${statusFiltro === s ? ' active' : ''}`} onClick={() => setStatusFiltro(s)}>
+                  {STATUS_LABEL[s]}
+                </button>
+              ))}
+            </div>
+            <input placeholder="Buscar por placa..." value={buscaPlaca}
+              onChange={e => setBuscaPlaca(e.target.value.toUpperCase())}
+              style={{ maxWidth: 180, marginLeft: 'auto' }} />
           </div>
 
           {orcamentos.length === 0 ? (
@@ -445,7 +458,10 @@ export function OrdemServico() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
                         <div style={{ fontWeight: 600 }}>{cliente?.nome ?? 'Cliente'}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{o.veiculoDescricao ?? 'Veículo não informado'}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                          {o.veiculoDescricao ?? 'Veículo não informado'}
+                          {o.placa && <span style={{ marginLeft: 6, fontWeight: 600, color: 'var(--text-2)' }}>· {o.placa}</span>}
+                        </div>
                       </div>
                       <span className={`badge ${STATUS_BADGE[o.status]}`}>{STATUS_LABEL[o.status]}</span>
                     </div>
@@ -556,9 +572,15 @@ export function OrdemServico() {
                   )}
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Veículo</label>
-                  <input value={veiculo} onChange={e => setVeiculo(e.target.value)} placeholder="Ex: Gol 2015 - placa ABC1D23" />
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
+                  <div className="form-group">
+                    <label className="form-label">Veículo</label>
+                    <input value={veiculo} onChange={e => setVeiculo(e.target.value)} placeholder="Ex: Gol 2015" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Placa</label>
+                    <input value={placa} onChange={e => setPlaca(e.target.value.toUpperCase())} placeholder="ABC1D23" maxLength={10} />
+                  </div>
                 </div>
 
                 {/* Itens */}
@@ -688,7 +710,11 @@ export function OrdemServico() {
                 <span className={`badge ${STATUS_BADGE[detalhe.status]}`}>{STATUS_LABEL[detalhe.status]}</span>
                 <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(detalhe.valorTotal)}</span>
               </div>
-              {detalhe.veiculoDescricao && <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 10 }}>{detalhe.veiculoDescricao}</p>}
+              {(detalhe.veiculoDescricao || detalhe.placa) && (
+                <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 10 }}>
+                  {detalhe.veiculoDescricao}{detalhe.veiculoDescricao && detalhe.placa ? ' · ' : ''}{detalhe.placa}
+                </p>
+              )}
 
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Itens</div>
