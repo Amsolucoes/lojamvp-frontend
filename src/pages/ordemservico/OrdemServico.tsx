@@ -104,6 +104,7 @@ export function OrdemServico() {
   const [vencimentoConclusao, setVencimentoConclusao] = useState('');
   const [confirmExcluir, setConfirmExcluir] = useState<OrcamentoResumo | null>(null);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
 
   // ── Modal checklist (config) ─────────────────────────────────
   const [novaCategoriaNome, setNovaCategoriaNome] = useState('');
@@ -140,6 +141,7 @@ export function OrdemServico() {
 
   // ── Novo orçamento ────────────────────────────────────────────
   function abrirNovo() {
+    setEditandoId(null);
     setClienteSelecionado(null);
     setBuscaCliente('');
     setVeiculo('');
@@ -150,6 +152,51 @@ export function OrdemServico() {
     setChecklistForm({});
     setCategoriasSelecionadas([]);
     setModalNovo(true);
+  }
+
+  async function abrirEditarOrcamento(o: OrcamentoResumo) {
+    try {
+      const d = await api.get<OrcamentoDetalhe>(`/api/ordemservico/orcamentos/${o.id}`);
+
+      setEditandoId(d.id);
+      setClienteSelecionado(clientes.find(c => c.id === d.clienteId) ?? null);
+      setBuscaCliente('');
+      setVeiculo(d.veiculoDescricao ?? '');
+      setPlaca(d.placa ?? '');
+      setObservacoes(d.observacoes ?? '');
+      setItens(d.itens.map(i => ({
+        tipo: i.tipo as 'peca' | 'servico',
+        produtoId: i.produtoId,
+        descricao: i.descricao,
+        quantidade: i.quantidade,
+        valorUnitario: i.valorUnitario,
+      })));
+      setMecanicos(d.mecanicos.map(m => ({
+        profissionalId: m.profissionalId,
+        comissaoPercentual: m.comissaoPercentual,
+      })));
+
+      const novoChecklistForm: Record<string, ChecklistRespostaForm> = {};
+      d.checklist.forEach(c => {
+        novoChecklistForm[c.checklistItemId] = {
+          checklistItemId: c.checklistItemId,
+          estado: c.estado,
+          observacao: c.observacao ?? '',
+        };
+      });
+      setChecklistForm(novoChecklistForm);
+
+      const itemIdsComResposta = new Set(d.checklist.map(c => c.checklistItemId));
+      const categoriasComResposta = categoriasChecklist
+        .filter(cat => cat.itens.some(i => itemIdsComResposta.has(i.id)))
+        .map(cat => cat.id);
+      setCategoriasSelecionadas(categoriasComResposta);
+
+      setDetalhe(null);
+      setModalNovo(true);
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   const clienteOptions = clientes.map(c => ({ value: `${c.nome} — ${c.telefone}` }));
@@ -218,31 +265,38 @@ export function OrdemServico() {
       return;
     }
     setSalvando(true);
+    const payload = {
+      clienteId: clienteSelecionado.id,
+      veiculoDescricao: veiculo.trim() || null,
+      placa: placa.trim() || null,
+      observacoes: observacoes.trim() || null,
+      itens: itens.map(i => ({
+        tipo: i.tipo,
+        produtoId: i.produtoId,
+        descricao: i.descricao.trim(),
+        quantidade: i.quantidade,
+        valorUnitario: i.valorUnitario,
+      })),
+      mecanicos: mecanicos.map(m => ({
+        profissionalId: m.profissionalId,
+        comissaoPercentual: m.comissaoPercentual,
+      })),
+      checklistRespostas: Object.values(checklistForm).map(r => ({
+        checklistItemId: r.checklistItemId,
+        estado: r.estado,
+        observacao: r.observacao.trim() || null,
+      })),
+    };
     try {
-      await api.post('/api/ordemservico/orcamentos', {
-        clienteId: clienteSelecionado.id,
-        veiculoDescricao: veiculo.trim() || null,
-        placa: placa.trim() || null,
-        observacoes: observacoes.trim() || null,
-        itens: itens.map(i => ({
-          tipo: i.tipo,
-          produtoId: i.produtoId,
-          descricao: i.descricao.trim(),
-          quantidade: i.quantidade,
-          valorUnitario: i.valorUnitario,
-        })),
-        mecanicos: mecanicos.map(m => ({
-          profissionalId: m.profissionalId,
-          comissaoPercentual: m.comissaoPercentual,
-        })),
-        checklistRespostas: Object.values(checklistForm).map(r => ({
-          checklistItemId: r.checklistItemId,
-          estado: r.estado,
-          observacao: r.observacao.trim() || null,
-        })),
-      });
-      sucesso('Orçamento criado.');
+      if (editandoId) {
+        await api.put(`/api/ordemservico/orcamentos/${editandoId}`, payload);
+        sucesso('Orçamento atualizado.');
+      } else {
+        await api.post('/api/ordemservico/orcamentos', payload);
+        sucesso('Orçamento criado.');
+      }
       setModalNovo(false);
+      setEditandoId(null);
       carregarOrcamentos();
     } catch (e) {
       erro((e as Error).message);
@@ -599,7 +653,7 @@ export function OrdemServico() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNovo(false)}>
           <div className="modal" style={{ maxWidth: 640 }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Novo orçamento</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>{editandoId ? 'Editar orçamento' : 'Novo orçamento'}</h2>
               <button className="btn-ghost" onClick={() => setModalNovo(false)}><X size={16} /></button>
             </div>
             <div className="modal-body">
@@ -756,7 +810,7 @@ export function OrdemServico() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalNovo(false)}>Cancelar</button>
               <button className="btn-primary" onClick={salvarOrcamento} disabled={salvando}>
-                {salvando ? 'Salvando...' : 'Criar orçamento'}
+                {salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Criar orçamento'}
               </button>
             </div>
           </div>
@@ -825,12 +879,14 @@ export function OrdemServico() {
               {detalhe.status === 'pendente' && (
                 <>
                   <button className="btn-danger" onClick={() => setConfirmExcluir(detalhe)}><Trash2 size={14} /> Excluir</button>
+                  <button className="btn-secondary" onClick={() => abrirEditarOrcamento(detalhe)}><Edit2 size={14} /> Editar</button>
                   <button className="btn-secondary" onClick={cancelar}><Ban size={14} /> Cancelar</button>
                   <button className="btn-primary" onClick={aprovar}><Check size={14} /> Aprovar</button>
                 </>
               )}
               {detalhe.status === 'em_andamento' && (
                 <>
+                  <button className="btn-secondary" onClick={() => abrirEditarOrcamento(detalhe)}><Edit2 size={14} /> Editar</button>
                   <button className="btn-secondary" onClick={cancelar}><Ban size={14} /> Cancelar</button>
                   <button className="btn-primary" onClick={abrirConcluir}><PackageCheck size={14} /> Concluir</button>
                 </>
