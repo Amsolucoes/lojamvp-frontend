@@ -636,14 +636,14 @@ export function OrdemServico() {
                           <option value="peca">Peça</option>
                         </select>
 
-                        {item.tipo === 'peca' && (
+                        {item.tipo === 'peca' ? (
                           <select value={item.produtoId ?? ''} onChange={e => selecionarProdutoNoItem(i, e.target.value)}>
                             <option value="">Peça avulsa (fora do estoque)</option>
                             {produtos.map(p => (
                               <option key={p.id} value={p.id}>{p.nome} (estoque: {p.estoque})</option>
                             ))}
                           </select>
-                        )}
+                        ) : <div />}
 
                         <input placeholder="Descrição" value={item.descricao}
                           onChange={e => atualizarItem(i, { descricao: e.target.value })} />
