@@ -94,6 +94,7 @@ export function OrdemServico() {
   const [itens, setItens] = useState<ItemOrcamento[]>([{ ...ITEM_VAZIO }]);
   const [mecanicos, setMecanicos] = useState<MecanicoForm[]>([]);
   const [checklistForm, setChecklistForm] = useState<Record<string, ChecklistRespostaForm>>({});
+  const [categoriasSelecionadas, setCategoriasSelecionadas] = useState<string[]>([]);
   const [salvando, setSalvando] = useState(false);
 
   // ── Modal detalhe ────────────────────────────────────────────
@@ -146,6 +147,7 @@ export function OrdemServico() {
     setItens([{ ...ITEM_VAZIO }]);
     setMecanicos([]);
     setChecklistForm({});
+    setCategoriasSelecionadas([]);
     setModalNovo(true);
   }
 
@@ -198,6 +200,12 @@ export function OrdemServico() {
       const atual = f[itemId] ?? { checklistItemId: itemId, estado: 'bom', observacao: '' };
       return { ...f, [itemId]: { ...atual, ...patch } };
     });
+  }
+
+  function toggleCategoriaSelecionada(categoriaId: string) {
+    setCategoriasSelecionadas(list =>
+      list.includes(categoriaId) ? list.filter(id => id !== categoriaId) : [...list, categoriaId]
+    );
   }
 
   const totalOrcamento = itens.reduce((s, i) => s + i.quantidade * i.valorUnitario, 0);
@@ -656,26 +664,43 @@ export function OrdemServico() {
                 {categoriasChecklist.length > 0 && (
                   <div>
                     <label className="form-label">Checklist de inspeção</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: -6, marginBottom: 10 }}>
+                      Marque só as categorias relacionadas ao serviço feito nessa ordem.
+                    </p>
+                    <div className="cat-tabs" style={{ marginBottom: 12 }}>
                       {categoriasChecklist.filter(c => c.ativa).map(cat => (
-                        <div key={cat.id}>
-                          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{cat.nome}</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {cat.itens.filter(i => i.ativo).map(item => {
-                              const resp = checklistForm[item.id];
-                              return (
-                                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <span style={{ fontSize: 13, flex: 1 }}>{item.nome}</span>
-                                  <select value={resp?.estado ?? 'bom'} onChange={e => atualizarChecklistResposta(item.id, { estado: e.target.value })} style={{ width: 130 }}>
-                                    {ESTADOS_CHECKLIST.map(e => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}
-                                  </select>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
+                        <button key={cat.id} type="button"
+                          className={`cat-tab${categoriasSelecionadas.includes(cat.id) ? ' active' : ''}`}
+                          onClick={() => toggleCategoriaSelecionada(cat.id)}>
+                          {cat.nome}
+                        </button>
                       ))}
                     </div>
+
+                    {categoriasSelecionadas.length === 0 ? (
+                      <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Nenhuma categoria selecionada — nada aparece no checklist desta ordem.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {categoriasChecklist.filter(c => c.ativa && categoriasSelecionadas.includes(c.id)).map(cat => (
+                          <div key={cat.id}>
+                            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{cat.nome}</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {cat.itens.filter(i => i.ativo).map(item => {
+                                const resp = checklistForm[item.id];
+                                return (
+                                  <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ fontSize: 13, flex: 1 }}>{item.nome}</span>
+                                    <select value={resp?.estado ?? 'bom'} onChange={e => atualizarChecklistResposta(item.id, { estado: e.target.value })} style={{ width: 130 }}>
+                                      {ESTADOS_CHECKLIST.map(e => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}
+                                    </select>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
