@@ -696,37 +696,47 @@ export function OrdemServico() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {itens.map((item, i) => (
-                      <div key={i} className="os-item-row">
-                        <select value={item.tipo} onChange={e => atualizarItem(i, { tipo: e.target.value as 'peca' | 'servico', produtoId: null })}>
-                          <option value="servico">Serviço</option>
-                          <option value="peca">Peça</option>
-                        </select>
-
-                        {item.tipo === 'peca' ? (
-                          <select value={item.produtoId ?? ''} onChange={e => selecionarProdutoNoItem(i, e.target.value)}>
-                            <option value="">Peça avulsa (fora do estoque)</option>
-                            {produtos.map(p => (
-                              <option key={p.id} value={p.id}>{p.nome} (estoque: {p.estoque})</option>
-                            ))}
+                      <div key={i} className="os-item-card">
+                        <div className="os-item-linha-topo">
+                          <select value={item.tipo} onChange={e => atualizarItem(i, { tipo: e.target.value as 'peca' | 'servico', produtoId: null })}>
+                            <option value="servico">Serviço</option>
+                            <option value="peca">Peça</option>
                           </select>
-                        ) : <div />}
 
-                        <input placeholder="Descrição" value={item.descricao}
-                          onChange={e => atualizarItem(i, { descricao: e.target.value })} />
+                          {item.tipo === 'peca' && (
+                            <select value={item.produtoId ?? ''} onChange={e => selecionarProdutoNoItem(i, e.target.value)}>
+                              <option value="">Peça avulsa (fora do estoque)</option>
+                              {produtos.map(p => (
+                                <option key={p.id} value={p.id}>{p.nome} (estoque: {p.estoque})</option>
+                              ))}
+                            </select>
+                          )}
 
-                        <input type="number" min={1} value={item.quantidade}
-                          onChange={e => atualizarItem(i, { quantidade: +e.target.value || 1 })}
-                          placeholder="Qtd" />
+                          <button className="btn-ghost" onClick={() => removeItem(i)} style={{ color: 'var(--red)', marginLeft: 'auto' }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
 
-                        <InputMoeda value={item.valorUnitario} onChange={v => atualizarItem(i, { valorUnitario: v })} placeholder="Valor" />
+                        <input placeholder="Descrição do item (ex: Pneu 185/60/15 - NeuPar)" value={item.descricao}
+                          onChange={e => atualizarItem(i, { descricao: e.target.value })}
+                          className="os-item-descricao" />
 
-                        <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                          {fmt(item.quantidade * item.valorUnitario)}
-                        </span>
-
-                        <button className="btn-ghost" onClick={() => removeItem(i)} style={{ color: 'var(--red)' }}>
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="os-item-linha-valores">
+                          <div>
+                            <label>Qtd</label>
+                            <input type="number" min={1} value={item.quantidade}
+                              onChange={e => atualizarItem(i, { quantidade: +e.target.value || 1 })}
+                              placeholder="Qtd" title="Quantidade" />
+                          </div>
+                          <div>
+                            <label>Valor unitário</label>
+                            <InputMoeda value={item.valorUnitario} onChange={v => atualizarItem(i, { valorUnitario: v })} placeholder="Valor" />
+                          </div>
+                          <div>
+                            <label>Total</label>
+                            <span className="os-item-total">{fmt(item.quantidade * item.valorUnitario)}</span>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
