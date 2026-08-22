@@ -618,8 +618,7 @@ export function OrdemServico() {
                           onChange={e => atualizarItem(i, { descricao: e.target.value })} />
 
                         <input type="number" min={1} value={item.quantidade}
-                          onChange={e => atualizarItem(i, { quantidade: +e.target.value || 1 })}
-                          style={{ width: 60 }} />
+                          onChange={e => atualizarItem(i, { quantidade: +e.target.value || 1 })} />
 
                         <InputMoeda value={item.valorUnitario} onChange={v => atualizarItem(i, { valorUnitario: v })} placeholder="Valor" />
 
