@@ -298,15 +298,21 @@ export function OrdemServico() {
     }
   }
 
-  function linkWhatsappOrcamento(): string {
-    if (!detalhe) return '#';
+  function enviarPorWhatsapp() {
+    if (!detalhe) return;
     const cliente = clientes.find(c => c.id === detalhe.clienteId);
     const digitos = (cliente?.telefone ?? '').replace(/\D/g, '');
+
+    if (!digitos) {
+      erro('Este cliente não tem telefone cadastrado. Cadastre o telefone em Clientes antes de enviar por WhatsApp.');
+      return;
+    }
+
     const comDdi = digitos.startsWith('55') ? digitos : `55${digitos}`;
     const veiculo = [detalhe.veiculoDescricao, detalhe.placa].filter(Boolean).join(' · ');
     const itensTexto = detalhe.itens.map(i => `- ${i.descricao} (${i.quantidade}x): ${fmt(i.valorTotal)}`).join('\n');
     const texto = `Orçamento${veiculo ? ` — ${veiculo}` : ''}\n\n${itensTexto}\n\nTotal: ${fmt(detalhe.valorTotal)}`;
-    return `https://wa.me/${comDdi}?text=${encodeURIComponent(texto)}`;
+    window.open(`https://wa.me/${comDdi}?text=${encodeURIComponent(texto)}`, '_blank');
   }
 
   function abrirConcluir() {
@@ -800,11 +806,9 @@ export function OrdemServico() {
               <button className="btn-secondary" onClick={enviarPorEmail} disabled={enviandoEmail} title="Enviar orçamento por e-mail">
                 <Mail size={14} /> {enviandoEmail ? 'Enviando...' : 'E-mail'}
               </button>
-              <a className="btn-secondary" href={linkWhatsappOrcamento()} target="_blank" rel="noreferrer"
-                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                title="Enviar orçamento por WhatsApp">
+              <button className="btn-secondary" onClick={enviarPorWhatsapp} title="Enviar orçamento por WhatsApp">
                 <MessageCircle size={14} /> WhatsApp
-              </a>
+              </button>
               {detalhe.status === 'pendente' && (
                 <>
                   <button className="btn-danger" onClick={() => setConfirmExcluir(detalhe)}><Trash2 size={14} /> Excluir</button>
