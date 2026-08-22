@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Trash2, Wrench, ClipboardList, Check, Ban, PackageCheck, Edit2 } from 'lucide-react';
+import { Plus, X, Trash2, Wrench, ClipboardList, Check, Ban, PackageCheck, Edit2, Mail, MessageCircle } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
@@ -103,6 +103,7 @@ export function OrdemServico() {
   const [contaConclusaoId, setContaConclusaoId] = useState('');
   const [vencimentoConclusao, setVencimentoConclusao] = useState('');
   const [confirmExcluir, setConfirmExcluir] = useState<OrcamentoResumo | null>(null);
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
 
   // ── Modal checklist (config) ─────────────────────────────────
   const [novaCategoriaNome, setNovaCategoriaNome] = useState('');
@@ -282,6 +283,30 @@ export function OrdemServico() {
     } catch (e) {
       erro((e as Error).message);
     }
+  }
+
+  async function enviarPorEmail() {
+    if (!detalhe) return;
+    setEnviandoEmail(true);
+    try {
+      await api.post(`/api/ordemservico/orcamentos/${detalhe.id}/enviar-email`, {});
+      sucesso('Orçamento enviado por e-mail.');
+    } catch (e) {
+      erro((e as Error).message);
+    } finally {
+      setEnviandoEmail(false);
+    }
+  }
+
+  function linkWhatsappOrcamento(): string {
+    if (!detalhe) return '#';
+    const cliente = clientes.find(c => c.id === detalhe.clienteId);
+    const digitos = (cliente?.telefone ?? '').replace(/\D/g, '');
+    const comDdi = digitos.startsWith('55') ? digitos : `55${digitos}`;
+    const veiculo = [detalhe.veiculoDescricao, detalhe.placa].filter(Boolean).join(' · ');
+    const itensTexto = detalhe.itens.map(i => `- ${i.descricao} (${i.quantidade}x): ${fmt(i.valorTotal)}`).join('\n');
+    const texto = `Orçamento${veiculo ? ` — ${veiculo}` : ''}\n\n${itensTexto}\n\nTotal: ${fmt(detalhe.valorTotal)}`;
+    return `https://wa.me/${comDdi}?text=${encodeURIComponent(texto)}`;
   }
 
   function abrirConcluir() {
@@ -771,7 +796,15 @@ export function OrdemServico() {
                 </div>
               )}
             </div>
-            <div className="modal-footer" style={{ flexWrap: 'wrap' }}>
+            <div className="modal-footer" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <button className="btn-secondary" onClick={enviarPorEmail} disabled={enviandoEmail} title="Enviar orçamento por e-mail">
+                <Mail size={14} /> {enviandoEmail ? 'Enviando...' : 'E-mail'}
+              </button>
+              <a className="btn-secondary" href={linkWhatsappOrcamento()} target="_blank" rel="noreferrer"
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                title="Enviar orçamento por WhatsApp">
+                <MessageCircle size={14} /> WhatsApp
+              </a>
               {detalhe.status === 'pendente' && (
                 <>
                   <button className="btn-danger" onClick={() => setConfirmExcluir(detalhe)}><Trash2 size={14} /> Excluir</button>
