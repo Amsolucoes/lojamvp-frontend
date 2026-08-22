@@ -19,8 +19,10 @@
 }
 .os-item-row select,
 .os-item-row input {
+  width: 100%;
   min-height: 38px;
   font-size: 14px;
+  box-sizing: border-box;
 }
 .os-mecanico-row {
   display: flex;

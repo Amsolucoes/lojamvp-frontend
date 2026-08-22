@@ -285,6 +285,18 @@ export function OrdemServico() {
     }
   }
 
+  async function reabrir() {
+    if (!detalhe) return;
+    try {
+      await api.patch(`/api/ordemservico/orcamentos/${detalhe.id}/reabrir`, {});
+      sucesso('Ordem reaberta — voltou para em andamento.');
+      setDetalhe(null);
+      carregarOrcamentos();
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
   async function enviarPorEmail() {
     if (!detalhe) return;
     setEnviandoEmail(true);
@@ -649,7 +661,8 @@ export function OrdemServico() {
                           onChange={e => atualizarItem(i, { descricao: e.target.value })} />
 
                         <input type="number" min={1} value={item.quantidade}
-                          onChange={e => atualizarItem(i, { quantidade: +e.target.value || 1 })} />
+                          onChange={e => atualizarItem(i, { quantidade: +e.target.value || 1 })}
+                          placeholder="Qtd" />
 
                         <InputMoeda value={item.valorUnitario} onChange={v => atualizarItem(i, { valorUnitario: v })} placeholder="Valor" />
 
@@ -821,6 +834,9 @@ export function OrdemServico() {
                   <button className="btn-secondary" onClick={cancelar}><Ban size={14} /> Cancelar</button>
                   <button className="btn-primary" onClick={abrirConcluir}><PackageCheck size={14} /> Concluir</button>
                 </>
+              )}
+              {detalhe.status === 'cancelado' && (
+                <button className="btn-primary" onClick={reabrir}><Check size={14} /> Reabrir</button>
               )}
             </div>
           </div>
