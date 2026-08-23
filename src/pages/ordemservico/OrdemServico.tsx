@@ -120,11 +120,15 @@ export function OrdemServico() {
   useEffect(() => {
     carregarOrcamentos();
     api.get<Cliente[]>('/api/clientes').then(setClientes).catch(() => {});
-    api.get<Produto[]>('/api/produtos').then(setProdutos).catch(() => {});
+    carregarProdutos();
     api.get<Profissional[]>('/api/funcionarios/ativos').then(setProfissionais).catch(() => {});
     api.get<ContaBancaria[]>('/api/financeiro/contas').then(setContas).catch(() => {});
     carregarChecklist();
   }, []);
+
+  function carregarProdutos() {
+    api.get<Produto[]>('/api/produtos').then(setProdutos).catch(() => {});
+  }
 
   useEffect(() => { carregarOrcamentos(); }, [statusFiltro, buscaPlaca]);
 
@@ -359,6 +363,7 @@ export function OrdemServico() {
       sucesso(res?.mensagem ?? 'Conclusão desfeita.');
       setDetalhe(null);
       carregarOrcamentos();
+      carregarProdutos();
     } catch (e) {
       erro((e as Error).message);
     }
@@ -412,6 +417,7 @@ export function OrdemServico() {
       setModalConcluir(false);
       setDetalhe(null);
       carregarOrcamentos();
+      carregarProdutos();
     } catch (e) {
       erro((e as Error).message);
     }
