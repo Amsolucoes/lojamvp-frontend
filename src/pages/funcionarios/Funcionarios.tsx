@@ -26,6 +26,7 @@ interface Profissional {
   telefone: string | null;
   cep: string | null;
   endereco: string | null;
+  comissaoBaseCalculo: string; // total | servico — base de cálculo da comissão em Ordem de Serviço
   comissoesPorServico: ComissaoServico[];
 }
 
@@ -48,6 +49,7 @@ export function Funcionarios() {
     tipoRemuneracao: 'comissao' as 'comissao' | 'salario_fixo',
     salarioFixo: '', contaBancariaId: '',
     telefone: '', cep: '', endereco: '',
+    comissaoBaseCalculo: 'total' as 'total' | 'servico',
   });
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -99,6 +101,7 @@ export function Funcionarios() {
       nome: '', comissaoPadraoPercentual: '', ativo: true, diaPagamentoPadrao: '',
       tipoRemuneracao: 'comissao', salarioFixo: '', contaBancariaId: '',
       telefone: '', cep: '', endereco: '',
+      comissaoBaseCalculo: 'total',
     });
     setModal('novo');
   }
@@ -116,6 +119,7 @@ export function Funcionarios() {
       telefone: p.telefone ?? '',
       cep: p.cep ?? '',
       endereco: p.endereco ?? '',
+      comissaoBaseCalculo: (p.comissaoBaseCalculo as 'total' | 'servico') ?? 'total',
     });
     setModal('editar');
   }
@@ -139,6 +143,7 @@ export function Funcionarios() {
         telefone: form.telefone || null,
         cep: form.cep || null,
         endereco: form.endereco || null,
+        comissaoBaseCalculo: form.comissaoBaseCalculo,
       };
       if (modal === 'novo') await api.post('/api/funcionarios', payload);
       else await api.put(`/api/funcionarios/${editandoId}`, payload);
@@ -286,6 +291,9 @@ export function Funcionarios() {
                     {p.tipoRemuneracao === 'salario_fixo'
                       ? <>Salário fixo: <strong style={{ color: 'var(--text-1)' }}>{p.salarioFixo != null ? p.salarioFixo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'não definido'}</strong></>
                       : <>Comissão padrão: {p.comissaoPadraoPercentual != null ? `${p.comissaoPadraoPercentual}%` : 'não definida'}</>}
+                    <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>
+                      · Ordem de Serviço: {p.comissaoBaseCalculo === 'servico' ? 'só mão de obra' : 'peça + serviço'}
+                    </span>
                   </div>
                   {p.tipoRemuneracao !== 'salario_fixo' && p.comissoesPorServico.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
@@ -419,6 +427,25 @@ export function Funcionarios() {
                     {form.tipoRemuneracao === 'comissao'
                       ? 'Usado como sugestão de vencimento ao fechar a comissão desse profissional.'
                       : 'Dia do vencimento do lançamento fixo do salário no Financeiro.'}
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Comissão em Ordem de Serviço incide sobre</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className={form.comissaoBaseCalculo === 'total' ? 'btn-primary' : 'btn-secondary'}
+                      style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
+                      onClick={() => setForm(f => ({ ...f, comissaoBaseCalculo: 'total' }))}>
+                      Peça + Serviço
+                    </button>
+                    <button type="button" className={form.comissaoBaseCalculo === 'servico' ? 'btn-primary' : 'btn-secondary'}
+                      style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
+                      onClick={() => setForm(f => ({ ...f, comissaoBaseCalculo: 'servico' }))}>
+                      Só Serviço (mão de obra)
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    Vale só pra comissão gerada em Ordem de Serviço — comissão de Agendamento já é sempre sobre o preço do serviço.
                   </p>
                 </div>
                 {modal === 'editar' && (
