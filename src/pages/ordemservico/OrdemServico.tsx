@@ -103,6 +103,7 @@ export function OrdemServico() {
   const [contaConclusaoId, setContaConclusaoId] = useState('');
   const [vencimentoConclusao, setVencimentoConclusao] = useState('');
   const [confirmExcluir, setConfirmExcluir] = useState<OrcamentoResumo | null>(null);
+  const [confirmDesfazer, setConfirmDesfazer] = useState(false);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
 
@@ -344,6 +345,18 @@ export function OrdemServico() {
     try {
       await api.patch(`/api/ordemservico/orcamentos/${detalhe.id}/reabrir`, {});
       sucesso('Ordem reaberta — voltou para em andamento.');
+      setDetalhe(null);
+      carregarOrcamentos();
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function desfazerConclusao() {
+    if (!detalhe) return;
+    try {
+      const res = await api.patch<{ mensagem: string }>(`/api/ordemservico/orcamentos/${detalhe.id}/desfazer-conclusao`, {});
+      sucesso(res?.mensagem ?? 'Conclusão desfeita.');
       setDetalhe(null);
       carregarOrcamentos();
     } catch (e) {
@@ -904,6 +917,11 @@ export function OrdemServico() {
               {detalhe.status === 'cancelado' && (
                 <button className="btn-primary" onClick={reabrir}><Check size={14} /> Reabrir</button>
               )}
+              {detalhe.status === 'concluido' && (
+                <button className="btn-secondary" onClick={() => setConfirmDesfazer(true)} style={{ color: 'var(--red)' }}>
+                  <Ban size={14} /> Desfazer conclusão
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -981,6 +999,32 @@ export function OrdemServico() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setConfirmExcluirItem(null)}>Cancelar</button>
               <button className="btn-danger" onClick={excluirItem}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmar desfazer conclusão ── */}
+      {confirmDesfazer && detalhe && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmDesfazer(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Desfazer conclusão</h2>
+              <button className="btn-ghost" onClick={() => setConfirmDesfazer(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Isso vai <strong>repor o estoque</strong> das peças usadas, <strong>excluir</strong> o lançamento
+                gerado no Financeiro e <strong>excluir</strong> as comissões dos mecânicos desta ordem —
+                voltando ela para "em andamento" pra você editar e concluir de novo.
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>
+                Só funciona se nada disso já tiver sido pago/recebido de verdade.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmDesfazer(false)}>Cancelar</button>
+              <button className="btn-danger" onClick={() => { setConfirmDesfazer(false); desfazerConclusao(); }}>Desfazer conclusão</button>
             </div>
           </div>
         </div>
