@@ -390,16 +390,7 @@ export function Funcionarios() {
                   </div>
                 </div>
 
-                {form.tipoRemuneracao === 'comissao' ? (
-                  <div className="form-group">
-                    <label className="form-label">Comissão padrão (%) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                    <input type="number" min={0} max={100} step={0.1} value={form.comissaoPadraoPercentual}
-                      onChange={e => setForm(f => ({ ...f, comissaoPadraoPercentual: e.target.value }))} placeholder="Ex: 40" />
-                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-                      Aplicada a todos os serviços, exceto onde houver uma comissão específica cadastrada.
-                    </p>
-                  </div>
-                ) : (
+                {form.tipoRemuneracao === 'salario_fixo' && (
                   <>
                     <div className="form-group">
                       <label className="form-label">Valor do salário (R$) *</label>
@@ -418,6 +409,20 @@ export function Funcionarios() {
                     </div>
                   </>
                 )}
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Comissão {form.tipoRemuneracao === 'salario_fixo' ? 'adicional' : 'padrão'} (%)
+                    <span style={{ color: 'var(--text-3)', fontWeight: 400 }}> (opcional)</span>
+                  </label>
+                  <input type="number" min={0} max={100} step={0.1} value={form.comissaoPadraoPercentual}
+                    onChange={e => setForm(f => ({ ...f, comissaoPadraoPercentual: e.target.value }))} placeholder="Ex: 20" />
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    {form.tipoRemuneracao === 'salario_fixo'
+                      ? 'Comissão que soma ao salário fixo (ex: 20% sobre serviços feitos, além do fixo mensal).'
+                      : 'Aplicada a todos os serviços, exceto onde houver uma comissão específica cadastrada.'}
+                  </p>
+                </div>
 
                 <div className="form-group">
                   <label className="form-label">Dia de pagamento padrão <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
