@@ -400,8 +400,11 @@ export function OrdemServico() {
     setSalvandoDatas(true);
     try {
       await api.patch(`/api/ordemservico/orcamentos/${detalhe.id}/datas`, {
-        aprovadoEm: entradaForm || null,
-        concluidoEm: saidaForm || null,
+        // new Date(string sem "Z") é interpretado pelo navegador como hora LOCAL de quem
+        // está digitando, e .toISOString() converte pra UTC de verdade — sem precisar
+        // saber ou hardcodar o fuso da loja (funciona certo em qualquer estado do Brasil).
+        aprovadoEm: entradaForm ? new Date(entradaForm).toISOString() : null,
+        concluidoEm: saidaForm ? new Date(saidaForm).toISOString() : null,
       });
       sucesso('Entrada/saída atualizadas.');
       setModalDatas(false);
