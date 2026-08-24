@@ -7,6 +7,8 @@ interface ResumoProfissional {
   profissionalId: string;
   profissionalNome: string;
   diaPagamentoPadrao: number | null;
+  tipoRemuneracao: string;
+  valorDiaria: number | null;
   qtdAtendimentos: number;
   valorTotal: number;
 }
@@ -101,6 +103,7 @@ export function Comissoes() {
   const [periodoFim, setPeriodoFim] = useState(hojeInput());
   const [contaBancariaId, setContaBancariaId] = useState('');
   const [vencimento, setVencimento] = useState(hojeInput());
+  const [qtdDiarias, setQtdDiarias] = useState('0');
   const [fechando, setFechando] = useState(false);
 
   // Histórico
@@ -152,10 +155,11 @@ export function Comissoes() {
   }
 
   function abrirFechar(p: ResumoProfissional) {
-    setPeriodoInicio(primeiroDiaMesInput());
+    setPeriodoInicio(p.tipoRemuneracao === 'diaria' ? hojeInput() : primeiroDiaMesInput());
     setPeriodoFim(hojeInput());
     setContaBancariaId('');
     setVencimento(vencimentoSugerido(p.diaPagamentoPadrao));
+    setQtdDiarias(p.tipoRemuneracao === 'diaria' ? '1' : '0');
     setModalFechar(p);
   }
 
@@ -169,6 +173,7 @@ export function Comissoes() {
         periodoFim,
         contaBancariaId: contaBancariaId || null,
         vencimento: contaBancariaId ? vencimento : null,
+        qtdDiarias: modalFechar.tipoRemuneracao === 'diaria' ? (parseInt(qtdDiarias) || 0) : 0,
       });
       sucesso(`Fechamento gerado: ${fmt(res.valorTotal)} para ${res.profissionalNome}.`);
       setModalFechar(null);
@@ -428,6 +433,19 @@ export function Comissoes() {
                   <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} />
                 </div>
               </div>
+
+              {modalFechar.tipoRemuneracao === 'diaria' && (
+                <div className="form-group" style={{ marginTop: 14 }}>
+                  <label className="form-label">Quantidade de diárias neste fechamento</label>
+                  <input type="number" min={0} value={qtdDiarias} onChange={e => setQtdDiarias(e.target.value)} placeholder="Ex: 1" />
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    Diária de {modalFechar.valorDiaria != null ? fmt(modalFechar.valorDiaria) : '—'} cada
+                    {parseInt(qtdDiarias) > 0 && modalFechar.valorDiaria != null && (
+                      <> — total de diárias: <strong>{fmt(parseInt(qtdDiarias) * modalFechar.valorDiaria)}</strong></>
+                    )}
+                  </p>
+                </div>
+              )}
 
               <div className="form-group" style={{ marginTop: 14 }}>
                 <label className="form-label">Lançar como conta a pagar no Financeiro <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
