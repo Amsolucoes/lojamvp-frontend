@@ -321,7 +321,7 @@ export function Produtos() {
               <table>
                 <thead>
                   <tr>
-                    <th>Produto</th><th>Categoria</th><th>Custo</th>
+                    <th>Produto</th>{temOrdemServico && <th>Marca</th>}<th>Categoria</th><th>Custo</th>
                     <th>Venda</th><th>Margem</th><th>Estoque</th>
                     <th>Status</th><th></th>
                   </tr>
@@ -333,6 +333,7 @@ export function Produtos() {
                         <div className="prod-nome">{p.nome}</div>
                         {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
                       </td>
+                      {temOrdemServico && <td style={{ color: 'var(--text-2)' }}>{p.marca || '—'}</td>}
                       <td><span className="badge badge-accent">{cats.find(c => c.nome === p.categoria)?.nome ?? p.categoria}</span></td>
                       <td style={{ color: 'var(--text-2)' }}>{fmt(p.precoCusto)}</td>
                       <td style={{ fontWeight: 500 }}>{fmt(p.precoVenda)}</td>
@@ -371,7 +372,7 @@ export function Produtos() {
                 <div key={p.id} className="prod-card-mobile">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div className="prod-nome">{p.nome}</div>
+                      <div className="prod-nome">{p.nome}{temOrdemServico && p.marca ? ` — ${p.marca}` : ''}</div>
                       {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
