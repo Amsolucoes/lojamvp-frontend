@@ -923,14 +923,16 @@ export function OrdemServico() {
                 </p>
               )}
               {(detalhe.aprovadoEm || detalhe.concluidoEm) && (
-                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {detalhe.aprovadoEm && <>Entrada: {fmtDataHoraCurta(detalhe.aprovadoEm)}</>}
-                  {detalhe.aprovadoEm && detalhe.concluidoEm && ' · '}
-                  {detalhe.concluidoEm && <>Saída: {fmtDataHoraCurta(detalhe.concluidoEm)}</>}
-                  <button className="btn-ghost" title="Editar entrada/saída" onClick={abrirEditarDatas} style={{ padding: 2 }}>
-                    <Clock size={12} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+                    {detalhe.aprovadoEm && <>Entrada: {fmtDataHoraCurta(detalhe.aprovadoEm)}</>}
+                    {detalhe.aprovadoEm && detalhe.concluidoEm && ' · '}
+                    {detalhe.concluidoEm && <>Saída: {fmtDataHoraCurta(detalhe.concluidoEm)}</>}
+                  </p>
+                  <button className="btn-secondary" onClick={abrirEditarDatas} style={{ fontSize: 11, padding: '4px 10px' }}>
+                    <Clock size={12} /> Editar horário
                   </button>
-                </p>
+                </div>
               )}
 
               <div style={{ marginBottom: 14 }}>
