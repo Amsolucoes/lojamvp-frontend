@@ -656,13 +656,13 @@ export function Produtos() {
                       </p>
                     ) : (
                       <div className="variacoes-scroll-wrap" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div className="variacao-header-row" style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '90px', catUsaCor && '90px', usarCodigoPorVariacao && '220px'].filter(Boolean).join(' ')} 60px 55px 28px`, gap: 6 }}>                        
+                        <div className="variacao-header-row" style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '110px', catUsaCor && '90px', usarCodigoPorVariacao && '220px'].filter(Boolean).join(' ')} 60px 55px 28px`, gap: 6 }}>                        
                           {[catUsaTamanho && 'Tamanho', catUsaCor && 'Cor', usarCodigoPorVariacao && 'Cód. barras', 'Estoque', 'Mín.', ''].filter(h => h !== false).map((h, i) => (
                             <div key={i} style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
                           ))}
                         </div>
                         {variacoes.map((v, i) => (
-                          <div key={i} className="variacao-row" style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '90px', catUsaCor && '90px', usarCodigoPorVariacao && '220px'].filter(Boolean).join(' ')} 60px 55px 28px`, gap: 6, alignItems: 'center' }}>                            {catUsaTamanho && (
+                          <div key={i} className="variacao-row" style={{ display: 'grid', gridTemplateColumns: `${[catUsaTamanho && '110px', catUsaCor && '90px', usarCodigoPorVariacao && '220px'].filter(Boolean).join(' ')} 60px 55px 28px`, gap: 6, alignItems: 'center' }}>                            {catUsaTamanho && (
                               <select value={v.tamanho ?? ''} onChange={e => setVariacoes(prev => prev.map((x, j) => j === i ? { ...x, tamanho: e.target.value } : x))}>
                                 <option value="">—</option>
                                 {tamanhosDisponiveis.map(op => (
