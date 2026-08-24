@@ -79,7 +79,7 @@ export function Sidebar() {
   }, [corPrimaria, temaPessoal]);
 
   const logoEl = logoUrl
-    ? <img src={logoUrl} alt="Logo" style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', objectFit: 'contain' }} />
+    ? <img src={logoUrl} alt="Logo" style={{ height: 44, maxWidth: 140, width: 'auto', borderRadius: 'var(--radius-sm)', objectFit: 'contain' }} />
     : <img src="/logo-aldevsoftware-padrao.png" alt="AlDevSoftware" style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', objectFit: 'contain' }} />;
 
   const temServicos = modulos.includes('servicos');
