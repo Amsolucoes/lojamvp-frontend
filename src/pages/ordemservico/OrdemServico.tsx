@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Trash2, Wrench, ClipboardList, Check, Ban, PackageCheck, Edit2, Mail, MessageCircle } from 'lucide-react';
+import { Plus, X, Trash2, Wrench, ClipboardList, Check, Ban, PackageCheck, Edit2, Mail, MessageCircle, Clock } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
@@ -73,6 +73,14 @@ function fmtDataHoraCurta(iso: string) {
   });
 }
 
+// Converte ISO (UTC) pra formato aceito pelo input datetime-local, já no horário local do navegador
+function paraDatetimeLocal(iso: string): string {
+  const d = new Date(iso);
+  const offset = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
 const ITEM_VAZIO: ItemOrcamento = { tipo: 'servico', produtoId: null, descricao: '', quantidade: 1, valorUnitario: 0 };
 
 export function OrdemServico() {
@@ -111,6 +119,10 @@ export function OrdemServico() {
   const [vencimentoConclusao, setVencimentoConclusao] = useState('');
   const [confirmExcluir, setConfirmExcluir] = useState<OrcamentoResumo | null>(null);
   const [confirmDesfazer, setConfirmDesfazer] = useState(false);
+  const [modalDatas, setModalDatas] = useState(false);
+  const [entradaForm, setEntradaForm] = useState('');
+  const [saidaForm, setSaidaForm] = useState('');
+  const [salvandoDatas, setSalvandoDatas] = useState(false);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
 
@@ -373,6 +385,33 @@ export function OrdemServico() {
       carregarProdutos();
     } catch (e) {
       erro((e as Error).message);
+    }
+  }
+
+  function abrirEditarDatas() {
+    if (!detalhe) return;
+    setEntradaForm(detalhe.aprovadoEm ? paraDatetimeLocal(detalhe.aprovadoEm) : '');
+    setSaidaForm(detalhe.concluidoEm ? paraDatetimeLocal(detalhe.concluidoEm) : '');
+    setModalDatas(true);
+  }
+
+  async function salvarDatas() {
+    if (!detalhe) return;
+    setSalvandoDatas(true);
+    try {
+      await api.patch(`/api/ordemservico/orcamentos/${detalhe.id}/datas`, {
+        aprovadoEm: entradaForm || null,
+        concluidoEm: saidaForm || null,
+      });
+      sucesso('Entrada/saída atualizadas.');
+      setModalDatas(false);
+      const atualizado = await api.get<OrcamentoDetalhe>(`/api/ordemservico/orcamentos/${detalhe.id}`);
+      setDetalhe(atualizado);
+      carregarOrcamentos();
+    } catch (e) {
+      erro((e as Error).message);
+    } finally {
+      setSalvandoDatas(false);
     }
   }
 
@@ -881,10 +920,13 @@ export function OrdemServico() {
                 </p>
               )}
               {(detalhe.aprovadoEm || detalhe.concluidoEm) && (
-                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>
+                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {detalhe.aprovadoEm && <>Entrada: {fmtDataHoraCurta(detalhe.aprovadoEm)}</>}
                   {detalhe.aprovadoEm && detalhe.concluidoEm && ' · '}
                   {detalhe.concluidoEm && <>Saída: {fmtDataHoraCurta(detalhe.concluidoEm)}</>}
+                  <button className="btn-ghost" title="Editar entrada/saída" onClick={abrirEditarDatas} style={{ padding: 2 }}>
+                    <Clock size={12} />
+                  </button>
                 </p>
               )}
 
@@ -1026,6 +1068,34 @@ export function OrdemServico() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setConfirmExcluirItem(null)}>Cancelar</button>
               <button className="btn-danger" onClick={excluirItem}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Editar entrada/saída ── */}
+      {modalDatas && detalhe && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalDatas(false)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar entrada/saída</h2>
+              <button className="btn-ghost" onClick={() => setModalDatas(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Entrada (aprovação)</label>
+                <input type="datetime-local" value={entradaForm} onChange={e => setEntradaForm(e.target.value)} />
+              </div>
+              <div className="form-group" style={{ marginTop: 14 }}>
+                <label className="form-label">Saída (conclusão) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(deixe em branco se ainda não concluiu)</span></label>
+                <input type="datetime-local" value={saidaForm} onChange={e => setSaidaForm(e.target.value)} />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalDatas(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarDatas} disabled={salvandoDatas}>
+                {salvandoDatas ? 'Salvando...' : 'Salvar'}
+              </button>
             </div>
           </div>
         </div>
