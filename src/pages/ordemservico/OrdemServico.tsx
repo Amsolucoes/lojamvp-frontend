@@ -120,6 +120,7 @@ export function OrdemServico() {
   const [confirmExcluir, setConfirmExcluir] = useState<OrcamentoResumo | null>(null);
   const [confirmDesfazer, setConfirmDesfazer] = useState(false);
   const [modalDatas, setModalDatas] = useState(false);
+  const [dadosLoja, setDadosLoja] = useState<{ endereco: string | null; telefone: string | null }>({ endereco: null, telefone: null });
   const [entradaForm, setEntradaForm] = useState('');
   const [saidaForm, setSaidaForm] = useState('');
   const [salvandoDatas, setSalvandoDatas] = useState(false);
@@ -143,6 +144,10 @@ export function OrdemServico() {
     api.get<Profissional[]>('/api/funcionarios/ativos').then(setProfissionais).catch(() => {});
     api.get<ContaBancaria[]>('/api/financeiro/contas').then(setContas).catch(() => {});
     carregarChecklist();
+    api.get<any>('/api/loja/situacao').then(res => setDadosLoja({
+      endereco: res?.enderecoLoja ?? null,
+      telefone: res?.telefoneLoja ?? null,
+    })).catch(() => {});
   }, []);
 
   function carregarProdutos() {
@@ -444,7 +449,10 @@ export function OrdemServico() {
     const comDdi = digitos.startsWith('55') ? digitos : `55${digitos}`;
     const veiculo = [detalhe.veiculoDescricao, detalhe.placa].filter(Boolean).join(' · ');
     const itensTexto = detalhe.itens.map(i => `- ${i.descricao} (${i.quantidade}x): ${fmt(i.valorTotal)}`).join('\n');
-    const texto = `Orçamento${veiculo ? ` — ${veiculo}` : ''}\n\n${itensTexto}\n\nTotal: ${fmt(detalhe.valorTotal)}`;
+    const rodape = [dadosLoja.endereco, dadosLoja.telefone ? `Tel/WhatsApp: ${dadosLoja.telefone}` : null]
+      .filter(Boolean).join('\n');
+    const texto = `Orçamento${veiculo ? ` — ${veiculo}` : ''}\n\n${itensTexto}\n\nTotal: ${fmt(detalhe.valorTotal)}` +
+      (rodape ? `\n\n---\n${rodape}` : '');
     window.open(`https://wa.me/${comDdi}?text=${encodeURIComponent(texto)}`, '_blank');
   }
 
