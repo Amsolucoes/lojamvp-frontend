@@ -67,8 +67,10 @@ function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function fmtDataCurta(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+function fmtDataHoraCurta(iso: string) {
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
 }
 
 const ITEM_VAZIO: ItemOrcamento = { tipo: 'servico', produtoId: null, descricao: '', quantidade: 1, valorUnitario: 0 };
@@ -598,9 +600,9 @@ export function OrdemServico() {
                       {o.nomesMecanicos.length > 0 ? o.nomesMecanicos.join(', ') : 'Sem mecânico vinculado'}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-                      {o.aprovadoEm && <>Início: {fmtDataCurta(o.aprovadoEm)}</>}
+                      {o.aprovadoEm && <>Entrada: {fmtDataHoraCurta(o.aprovadoEm)}</>}
                       {o.aprovadoEm && o.concluidoEm && ' · '}
-                      {o.concluidoEm && <>Fim: {fmtDataCurta(o.concluidoEm)}</>}
+                      {o.concluidoEm && <>Saída: {fmtDataHoraCurta(o.concluidoEm)}</>}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 10 }}>
                       <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(o.valorTotal)}</span>
@@ -874,8 +876,15 @@ export function OrdemServico() {
                 <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(detalhe.valorTotal)}</span>
               </div>
               {(detalhe.veiculoDescricao || detalhe.placa) && (
-                <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 10 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 6 }}>
                   {detalhe.veiculoDescricao}{detalhe.veiculoDescricao && detalhe.placa ? ' · ' : ''}{detalhe.placa}
+                </p>
+              )}
+              {(detalhe.aprovadoEm || detalhe.concluidoEm) && (
+                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>
+                  {detalhe.aprovadoEm && <>Entrada: {fmtDataHoraCurta(detalhe.aprovadoEm)}</>}
+                  {detalhe.aprovadoEm && detalhe.concluidoEm && ' · '}
+                  {detalhe.concluidoEm && <>Saída: {fmtDataHoraCurta(detalhe.concluidoEm)}</>}
                 </p>
               )}
 
