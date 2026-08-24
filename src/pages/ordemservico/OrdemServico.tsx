@@ -36,6 +36,7 @@ interface OrcamentoResumo {
   aprovadoEm: string | null;
   concluidoEm: string | null;
   qtdMecanicos: number;
+  nomesMecanicos: string[];
 }
 
 interface OrcamentoDetalhe extends OrcamentoResumo {
@@ -64,6 +65,10 @@ const ESTADO_LABEL: Record<string, string> = {
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function fmtDataCurta(iso: string) {
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
 const ITEM_VAZIO: ItemOrcamento = { tipo: 'servico', produtoId: null, descricao: '', quantidade: 1, valorUnitario: 0 };
@@ -589,8 +594,15 @@ export function OrdemServico() {
                       </div>
                       <span className={`badge ${STATUS_BADGE[o.status]}`}>{STATUS_LABEL[o.status]}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{o.qtdMecanicos} mecânico(s)</span>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>
+                      {o.nomesMecanicos.length > 0 ? o.nomesMecanicos.join(', ') : 'Sem mecânico vinculado'}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                      {o.aprovadoEm && <>Início: {fmtDataCurta(o.aprovadoEm)}</>}
+                      {o.aprovadoEm && o.concluidoEm && ' · '}
+                      {o.concluidoEm && <>Fim: {fmtDataCurta(o.concluidoEm)}</>}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 10 }}>
                       <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(o.valorTotal)}</span>
                     </div>
                   </div>
