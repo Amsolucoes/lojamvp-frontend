@@ -15,7 +15,8 @@ export interface Produto {
   criadoEm: string;
   tipoVenda: string;
   unidadeMedida?: string;
-  marca?: string;
+  marcaId?: string | null;
+  nomeMarca?: string | null;
 }
 
 // ── Cliente ───────────────────────────────────────────────────────

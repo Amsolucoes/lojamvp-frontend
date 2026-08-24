@@ -60,7 +60,8 @@ function mapProduto(p: any): Produto {
     ativo: p.ativo, criadoEm: p.criadoEm,
     tipoVenda: p.tipoVenda, unidadeMedida: p.unidadeMedida,
     variacoes: p.variacoes ?? [],
-    marca: p.marca,
+    marcaId: p.marcaId,
+    nomeMarca: p.nomeMarca,
   } as any;
 }
 

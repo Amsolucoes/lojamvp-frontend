@@ -33,12 +33,19 @@ type FormData = Omit<Produto, 'id' | 'criadoEm'>;
 const EMPTY: FormData = {
   nome: '', categoria: '', precoCusto: 0, precoVenda: 0,
   estoque: 0, estoqueMinimo: 3, codigoBarras: '', descricao: '', ativo: true,
-  tipoVenda: 'unidade', unidadeMedida: 'un', marca: '',
+  tipoVenda: 'unidade', unidadeMedida: 'un', marcaId: null,
 };
 
 export function Produtos() {
   const { produtos, deleteProduto, recarregar } = useApp();
   const [temOrdemServico, setTemOrdemServico] = useState(false);
+  const [marcas, setMarcas] = useState<{ id: string; nome: string }[]>([]);
+  const [marcaFiltro, setMarcaFiltro] = useState<string>('todas');
+  const [modalMarcas, setModalMarcas] = useState(false);
+  const [novaMarcaNome, setNovaMarcaNome] = useState('');
+  const [editandoMarcaId, setEditandoMarcaId] = useState<string | null>(null);
+  const [editMarcaNome, setEditMarcaNome] = useState('');
+  const [confirmExcluirMarca, setConfirmExcluirMarca] = useState<{ id: string; nome: string } | null>(null);
   const [busca, setBusca]         = useState('');
   const [catFiltro, setCat]       = useState<string>('todas');
   const [statusFiltro, setStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos');
@@ -96,7 +103,8 @@ export function Produtos() {
                    (p.codigoBarras?.includes(busca) ?? false);
     const catOk  = catFiltro === 'todas' || p.categoria === catFiltro;
     const statOk = statusFiltro === 'todos' || (statusFiltro === 'ativo' ? p.ativo : !p.ativo);
-    return ok && catOk && statOk;
+    const marcaOk = marcaFiltro === 'todas' || p.marcaId === marcaFiltro;
+    return ok && catOk && statOk && marcaOk;
   });
 
   const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
@@ -263,7 +271,53 @@ export function Produtos() {
     api.get<any>('/api/loja/situacao')
       .then(res => setTemOrdemServico(Array.isArray(res?.modulosAtivos) && res.modulosAtivos.includes('ordem_servico')))
       .catch(() => {});
+
+    carregarMarcas();
   }, []);
+
+  function carregarMarcas() {
+    api.get<{ id: string; nome: string }[]>('/api/marcas').then(setMarcas).catch(() => {});
+  }
+
+  async function criarMarca() {
+    if (!novaMarcaNome.trim()) return;
+    try {
+      await api.post('/api/marcas', { nome: novaMarcaNome.trim() });
+      setNovaMarcaNome('');
+      carregarMarcas();
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  function iniciarEdicaoMarca(m: { id: string; nome: string }) {
+    setEditandoMarcaId(m.id);
+    setEditMarcaNome(m.nome);
+  }
+
+  async function salvarEdicaoMarca(id: string) {
+    if (!editMarcaNome.trim()) return;
+    try {
+      await api.put(`/api/marcas/${id}`, { nome: editMarcaNome.trim() });
+      setEditandoMarcaId(null);
+      carregarMarcas();
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function excluirMarca() {
+    if (!confirmExcluirMarca) return;
+    try {
+      await api.delete(`/api/marcas/${confirmExcluirMarca.id}`);
+      sucesso('Marca excluída.');
+      setConfirmExcluirMarca(null);
+      carregarMarcas();
+    } catch (e) {
+      erro((e as Error).message);
+      setConfirmExcluirMarca(null);
+    }
+  }
 
   useEffect(() => {
     setPaginaAtual(1);
@@ -280,6 +334,11 @@ export function Produtos() {
           <button className="btn-secondary" onClick={() => setModalGerenciar(true)}>
             Gerenciar categorias
           </button>
+          {temOrdemServico && (
+            <button className="btn-secondary" onClick={() => setModalMarcas(true)}>
+              Gerenciar marcas
+            </button>
+          )}
           <button className="btn-primary" onClick={abrirNovo}>
             <Plus size={15} style={{ verticalAlign: -2 }} /> Novo produto
           </button>
@@ -306,6 +365,16 @@ export function Produtos() {
           <button className={`cat-tab${statusFiltro === 'ativo'   ? ' active' : ''}`} onClick={() => setStatus('ativo')}>Ativos</button>
           <button className={`cat-tab${statusFiltro === 'inativo' ? ' active' : ''}`} onClick={() => setStatus('inativo')}>Inativos</button>
         </div>
+        {temOrdemServico && marcas.length > 0 && (
+          <div className="cat-tabs">
+            <button className={`cat-tab${marcaFiltro === 'todas' ? ' active' : ''}`} onClick={() => setMarcaFiltro('todas')}>Todas marcas</button>
+            {marcas.map(m => (
+              <button key={m.id} className={`cat-tab${marcaFiltro === m.id ? ' active' : ''}`} onClick={() => setMarcaFiltro(m.id)}>
+                {m.nome}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tabela */}
@@ -333,7 +402,7 @@ export function Produtos() {
                         <div className="prod-nome">{p.nome}</div>
                         {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
                       </td>
-                      {temOrdemServico && <td style={{ color: 'var(--text-2)' }}>{p.marca || '—'}</td>}
+                      {temOrdemServico && <td style={{ color: 'var(--text-2)' }}>{p.nomeMarca || '—'}</td>}
                       <td><span className="badge badge-accent">{cats.find(c => c.nome === p.categoria)?.nome ?? p.categoria}</span></td>
                       <td style={{ color: 'var(--text-2)' }}>{fmt(p.precoCusto)}</td>
                       <td style={{ fontWeight: 500 }}>{fmt(p.precoVenda)}</td>
@@ -372,7 +441,7 @@ export function Produtos() {
                 <div key={p.id} className="prod-card-mobile">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div className="prod-nome">{p.nome}{temOrdemServico && p.marca ? ` — ${p.marca}` : ''}</div>
+                      <div className="prod-nome">{p.nome}{temOrdemServico && p.nomeMarca ? ` — ${p.nomeMarca}` : ''}</div>
                       {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
@@ -480,7 +549,10 @@ export function Produtos() {
                 {temOrdemServico && (
                   <div className="form-group">
                     <label className="form-label">Marca</label>
-                    <input value={form.marca ?? ''} onChange={e => setForm(f => ({ ...f, marca: e.target.value }))} placeholder="Ex: NeuPar, Bosch..." />
+                    <select value={form.marcaId ?? ''} onChange={e => setForm(f => ({ ...f, marcaId: e.target.value || null }))}>
+                      <option value="">Sem marca</option>
+                      {marcas.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                    </select>
                   </div>
                 )}
                 <div className="form-group">
@@ -769,6 +841,88 @@ export function Produtos() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalGerenciar(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal gerenciar marcas */}
+      {modalMarcas && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMarcas(false)}>
+          <div className="modal" style={{ maxWidth: 440 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Gerenciar marcas</h2>
+              <button className="btn-ghost" onClick={() => setModalMarcas(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                <input placeholder="Nova marca (ex: NeuPar, Bosch...)" value={novaMarcaNome}
+                  onChange={e => setNovaMarcaNome(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') criarMarca(); }}
+                  style={{ flex: 1 }} />
+                <button className="btn-primary" onClick={criarMarca}><Plus size={14} /></button>
+              </div>
+
+              {marcas.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>
+                  Nenhuma marca cadastrada.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {marcas.map(m => (
+                    <div key={m.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, gap: 8,
+                    }}>
+                      {editandoMarcaId === m.id ? (
+                        <>
+                          <input value={editMarcaNome} autoFocus
+                            onChange={e => setEditMarcaNome(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') salvarEdicaoMarca(m.id); }}
+                            style={{ flex: 1 }} />
+                          <button className="btn-primary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => salvarEdicaoMarca(m.id)}>Salvar</button>
+                          <button className="btn-ghost" onClick={() => setEditandoMarcaId(null)}><X size={14} /></button>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: 14, fontWeight: 500 }}>{m.nome}</span>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn-ghost" title="Editar" onClick={() => iniciarEdicaoMarca(m)}><Edit2 size={14} /></button>
+                            <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluirMarca(m)}><Trash2 size={14} /></button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalMarcas(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar exclusão de marca */}
+      {confirmExcluirMarca && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirMarca(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir marca</h2>
+              <button className="btn-ghost" onClick={() => setConfirmExcluirMarca(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Tem certeza que deseja excluir a marca <strong style={{ color: 'var(--text-1)' }}>{confirmExcluirMarca.nome}</strong>?
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>
+                Só é possível excluir marcas que não tenham produtos vinculados.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmExcluirMarca(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={excluirMarca}>Excluir</button>
             </div>
           </div>
         </div>
