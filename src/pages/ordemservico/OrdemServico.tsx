@@ -73,6 +73,14 @@ function fmtDataHoraCurta(iso: string) {
   });
 }
 
+// Formata telefone só para exibição — mesmo padrão usado no e-mail (backend)
+function fmtTelefone(telefone: string): string {
+  const digitos = telefone.replace(/\D/g, '');
+  if (digitos.length === 11) return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7)}`;
+  if (digitos.length === 10) return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+  return telefone;
+}
+
 // Converte ISO (UTC) pra formato aceito pelo input datetime-local, já no horário local do navegador
 function paraDatetimeLocal(iso: string): string {
   const d = new Date(iso);
@@ -449,7 +457,7 @@ export function OrdemServico() {
     const comDdi = digitos.startsWith('55') ? digitos : `55${digitos}`;
     const veiculo = [detalhe.veiculoDescricao, detalhe.placa].filter(Boolean).join(' · ');
     const itensTexto = detalhe.itens.map(i => `- ${i.descricao} (${i.quantidade}x): ${fmt(i.valorTotal)}`).join('\n');
-    const rodape = [dadosLoja.endereco, dadosLoja.telefone ? `Tel/WhatsApp: ${dadosLoja.telefone}` : null]
+    const rodape = [dadosLoja.endereco, dadosLoja.telefone ? `Tel/WhatsApp: ${fmtTelefone(dadosLoja.telefone)}` : null]
       .filter(Boolean).join('\n');
     const texto = `Orçamento${veiculo ? ` — ${veiculo}` : ''}\n\n${itensTexto}\n\nTotal: ${fmt(detalhe.valorTotal)}` +
       (rodape ? `\n\n---\n${rodape}` : '');
