@@ -72,7 +72,7 @@ export function Configuracoes() {
   const [saving, setSaving] = useState(false);
 
   // ── Identidade da loja (logo/nome/cor) ──────────────────────────
-  const [formIdentidade, setFormIdentidade] = useState({ nome: '', corPrimaria: '#6366f1', logoUrl: '' });
+  const [formIdentidade, setFormIdentidade] = useState({ nome: '', corPrimaria: '#6366f1', logoUrl: '', endereco: '', telefone: '' });
   const [loadingIdentidade, setLoadingIdentidade] = useState(true);
   const [savingIdentidade, setSavingIdentidade] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -129,7 +129,10 @@ export function Configuracoes() {
 
   useEffect(() => {
     api.get<any>('/api/cliente/config').then(res => {
-      setFormIdentidade({ nome: res.nome ?? '', corPrimaria: res.corPrimaria ?? '#6366f1', logoUrl: res.logoUrl ?? '' });
+      setFormIdentidade({
+        nome: res.nome ?? '', corPrimaria: res.corPrimaria ?? '#6366f1', logoUrl: res.logoUrl ?? '',
+        endereco: res.endereco ?? '', telefone: res.telefone ?? '',
+      });
     }).catch(() => {}).finally(() => setLoadingIdentidade(false));
   }, []);
 
@@ -350,6 +353,23 @@ export function Configuracoes() {
             <div className="form-group">
               <label className="form-label">Nome da loja</label>
               <input value={formIdentidade.nome} onChange={e => setFormIdentidade(f => ({ ...f, nome: e.target.value }))} />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Telefone / WhatsApp de contato</label>
+              <input value={formIdentidade.telefone}
+                onChange={e => setFormIdentidade(f => ({ ...f, telefone: e.target.value }))}
+                placeholder="(00) 00000-0000" />
+              <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                Aparece nos e-mails e mensagens de WhatsApp enviados aos seus clientes.
+              </p>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Endereço</label>
+              <input value={formIdentidade.endereco}
+                onChange={e => setFormIdentidade(f => ({ ...f, endereco: e.target.value }))}
+                placeholder="Rua, número, bairro, cidade - UF" />
             </div>
 
             <div className="form-group">
