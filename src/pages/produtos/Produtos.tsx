@@ -33,11 +33,12 @@ type FormData = Omit<Produto, 'id' | 'criadoEm'>;
 const EMPTY: FormData = {
   nome: '', categoria: '', precoCusto: 0, precoVenda: 0,
   estoque: 0, estoqueMinimo: 3, codigoBarras: '', descricao: '', ativo: true,
-  tipoVenda: 'unidade', unidadeMedida: 'un',
+  tipoVenda: 'unidade', unidadeMedida: 'un', marca: '',
 };
 
 export function Produtos() {
   const { produtos, deleteProduto, recarregar } = useApp();
+  const [temOrdemServico, setTemOrdemServico] = useState(false);
   const [busca, setBusca]         = useState('');
   const [catFiltro, setCat]       = useState<string>('todas');
   const [statusFiltro, setStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos');
@@ -258,6 +259,10 @@ export function Produtos() {
       const temTamanhoOuCor = res.some(c => c.chave === 'tamanho' || c.chave === 'cor');
       setTemVariacoes(temTamanhoOuCor);
     }).catch(() => {});
+
+    api.get<any>('/api/loja/situacao')
+      .then(res => setTemOrdemServico(Array.isArray(res?.modulosAtivos) && res.modulosAtivos.includes('ordem_servico')))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -471,6 +476,12 @@ export function Produtos() {
                   <label className="form-label">Código de barras</label>
                   <input value={form.codigoBarras} onChange={e => setForm(f => ({ ...f, codigoBarras: e.target.value }))} placeholder="Opcional" />
                 </div>
+                {temOrdemServico && (
+                  <div className="form-group">
+                    <label className="form-label">Marca</label>
+                    <input value={form.marca ?? ''} onChange={e => setForm(f => ({ ...f, marca: e.target.value }))} placeholder="Ex: NeuPar, Bosch..." />
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">Tipo de venda</label>
                   <select value={form.tipoVenda ?? 'unidade'} onChange={e => {
