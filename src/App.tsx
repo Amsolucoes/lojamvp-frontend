@@ -36,6 +36,7 @@ import { PeriodosEspeciaisChacara } from './pages/chacara/PeriodosEspeciaisChaca
 import { ListaReservasChacara } from './pages/chacara/ListaReservasChacara';
 import { Etiquetas } from './pages/etiquetas/Etiquetas';
 import { OrdemServico } from './pages/ordemservico/OrdemServico';
+import { Patrimonio } from './pages/patrimonio/Patrimonio';
 import { ToastProvider } from './context/ToastContext';
 
 function Rotas() {
@@ -102,6 +103,7 @@ function Rotas() {
           <Route path="chacara/reservas" element={<ListaReservasChacara />} />
           <Route path="etiquetas"  element={<Etiquetas />} />
           <Route path="ordem-servico" element={<OrdemServico />} />
+          <Route path="patrimonio" element={<Patrimonio />} />
           <Route path="*"          element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

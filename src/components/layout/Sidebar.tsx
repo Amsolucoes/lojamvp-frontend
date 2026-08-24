@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
   TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, 
-  FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent, Tag, Wrench } from 'lucide-react';
+  FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -110,6 +110,7 @@ export function Sidebar() {
     ...(temFuncionarios ? [{ to: '/funcionarios', label: 'Funcionários', icon: UserCog }] : []),
     ...(temFuncionarios ? [{ to: '/comissoes', label: 'Comissões', icon: Percent }] : []),
     ...(temOrdemServico ? [{ to: '/ordem-servico', label: 'Ordem de Serviço', icon: Wrench }] : []),
+    ...(temOrdemServico ? [{ to: '/patrimonio', label: 'Patrimônio', icon: ClipboardCheck }] : []),
     ...(temFinanceiro ? [{ to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
     ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
     ...(temCorretora ? [{ to: '/funil', icon: Filter, label: 'Funil de Vendas' }] : []),
