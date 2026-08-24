@@ -21,8 +21,9 @@ interface Profissional {
   ativo: boolean;
   comissaoPadraoPercentual: number | null;
   diaPagamentoPadrao: number | null;
-  tipoRemuneracao: string; // comissao | salario_fixo
+  tipoRemuneracao: string; // comissao | salario_fixo | diaria
   salarioFixo: number | null;
+  valorDiaria: number | null;
   telefone: string | null;
   cep: string | null;
   endereco: string | null;
@@ -46,10 +47,11 @@ export function Funcionarios() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [form, setForm] = useState({
     nome: '', comissaoPadraoPercentual: '', ativo: true, diaPagamentoPadrao: '',
-    tipoRemuneracao: 'comissao' as 'comissao' | 'salario_fixo',
+    tipoRemuneracao: 'comissao' as 'comissao' | 'salario_fixo' | 'diaria',
     salarioFixo: '', contaBancariaId: '',
     telefone: '', cep: '', endereco: '',
     comissaoBaseCalculo: 'total' as 'total' | 'servico',
+    valorDiaria: '',
   });
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -102,6 +104,7 @@ export function Funcionarios() {
       tipoRemuneracao: 'comissao', salarioFixo: '', contaBancariaId: '',
       telefone: '', cep: '', endereco: '',
       comissaoBaseCalculo: 'total',
+      valorDiaria: '',
     });
     setModal('novo');
   }
@@ -113,13 +116,14 @@ export function Funcionarios() {
       comissaoPadraoPercentual: p.comissaoPadraoPercentual != null ? String(p.comissaoPadraoPercentual) : '',
       ativo: p.ativo,
       diaPagamentoPadrao: p.diaPagamentoPadrao != null ? String(p.diaPagamentoPadrao) : '',
-      tipoRemuneracao: (p.tipoRemuneracao as 'comissao' | 'salario_fixo') ?? 'comissao',
+      tipoRemuneracao: (p.tipoRemuneracao as 'comissao' | 'salario_fixo' | 'diaria') ?? 'comissao',
       salarioFixo: p.salarioFixo != null ? String(p.salarioFixo) : '',
       contaBancariaId: '',
       telefone: p.telefone ?? '',
       cep: p.cep ?? '',
       endereco: p.endereco ?? '',
       comissaoBaseCalculo: (p.comissaoBaseCalculo as 'total' | 'servico') ?? 'total',
+      valorDiaria: p.valorDiaria != null ? String(p.valorDiaria) : '',
     });
     setModal('editar');
   }
@@ -128,6 +132,10 @@ export function Funcionarios() {
     if (!form.nome.trim()) { erro('Preencha o nome.'); return; }
     if (form.tipoRemuneracao === 'salario_fixo' && !form.salarioFixo) {
       erro('Informe o valor do salário fixo.');
+      return;
+    }
+    if (form.tipoRemuneracao === 'diaria' && !form.valorDiaria) {
+      erro('Informe o valor da diária.');
       return;
     }
     setSaving(true);
@@ -144,6 +152,7 @@ export function Funcionarios() {
         cep: form.cep || null,
         endereco: form.endereco || null,
         comissaoBaseCalculo: form.comissaoBaseCalculo,
+        valorDiaria: form.tipoRemuneracao === 'diaria' && form.valorDiaria ? parseFloat(form.valorDiaria) : null,
       };
       if (modal === 'novo') await api.post('/api/funcionarios', payload);
       else await api.put(`/api/funcionarios/${editandoId}`, payload);
@@ -288,9 +297,18 @@ export function Funcionarios() {
                     {!p.ativo && <span className="badge badge-accent" style={{ fontSize: 10 }}>Inativo</span>}
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>
-                    {p.tipoRemuneracao === 'salario_fixo'
-                      ? <>Salário fixo: <strong style={{ color: 'var(--text-1)' }}>{p.salarioFixo != null ? p.salarioFixo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'não definido'}</strong></>
-                      : <>Comissão padrão: {p.comissaoPadraoPercentual != null ? `${p.comissaoPadraoPercentual}%` : 'não definida'}</>}
+                    {p.tipoRemuneracao === 'salario_fixo' && (
+                      <>Salário fixo: <strong style={{ color: 'var(--text-1)' }}>{p.salarioFixo != null ? p.salarioFixo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'não definido'}</strong></>
+                    )}
+                    {p.tipoRemuneracao === 'diaria' && (
+                      <>Diária: <strong style={{ color: 'var(--text-1)' }}>{p.valorDiaria != null ? p.valorDiaria.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'não definida'}</strong></>
+                    )}
+                    {p.tipoRemuneracao === 'comissao' && (
+                      <>Comissão padrão: {p.comissaoPadraoPercentual != null ? `${p.comissaoPadraoPercentual}%` : 'não definida'}</>
+                    )}
+                    {p.tipoRemuneracao !== 'comissao' && p.comissaoPadraoPercentual != null && (
+                      <span style={{ marginLeft: 8 }}>+ {p.comissaoPadraoPercentual}% comissão</span>
+                    )}
                     <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>
                       · Ordem de Serviço: {p.comissaoBaseCalculo === 'servico' ? 'só mão de obra' : 'peça + serviço'}
                     </span>
@@ -387,6 +405,11 @@ export function Funcionarios() {
                       onClick={() => setForm(f => ({ ...f, tipoRemuneracao: 'salario_fixo' }))}>
                       Salário fixo
                     </button>
+                    <button type="button" className={form.tipoRemuneracao === 'diaria' ? 'btn-primary' : 'btn-secondary'}
+                      style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
+                      onClick={() => setForm(f => ({ ...f, tipoRemuneracao: 'diaria' }))}>
+                      Diária
+                    </button>
                   </div>
                 </div>
 
@@ -410,17 +433,28 @@ export function Funcionarios() {
                   </>
                 )}
 
+                {form.tipoRemuneracao === 'diaria' && (
+                  <div className="form-group">
+                    <label className="form-label">Valor da diária (R$) *</label>
+                    <input type="number" min={0} step={0.01} value={form.valorDiaria}
+                      onChange={e => setForm(f => ({ ...f, valorDiaria: e.target.value }))} placeholder="Ex: 100" />
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                      Pago junto com a comissão no fechamento — você informa quantas diárias entram em cada fechamento.
+                    </p>
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label className="form-label">
-                    Comissão {form.tipoRemuneracao === 'salario_fixo' ? 'adicional' : 'padrão'} (%)
+                    Comissão {form.tipoRemuneracao === 'comissao' ? 'padrão' : 'adicional'} (%)
                     <span style={{ color: 'var(--text-3)', fontWeight: 400 }}> (opcional)</span>
                   </label>
                   <input type="number" min={0} max={100} step={0.1} value={form.comissaoPadraoPercentual}
                     onChange={e => setForm(f => ({ ...f, comissaoPadraoPercentual: e.target.value }))} placeholder="Ex: 20" />
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-                    {form.tipoRemuneracao === 'salario_fixo'
-                      ? 'Comissão que soma ao salário fixo (ex: 20% sobre serviços feitos, além do fixo mensal).'
-                      : 'Aplicada a todos os serviços, exceto onde houver uma comissão específica cadastrada.'}
+                    {form.tipoRemuneracao === 'salario_fixo' && 'Comissão que soma ao salário fixo (ex: 20% sobre serviços feitos, além do fixo mensal).'}
+                    {form.tipoRemuneracao === 'diaria' && 'Comissão que soma à diária (ex: 20% sobre serviços feitos, além da diária do dia).'}
+                    {form.tipoRemuneracao === 'comissao' && 'Aplicada a todos os serviços, exceto onde houver uma comissão específica cadastrada.'}
                   </p>
                 </div>
 
