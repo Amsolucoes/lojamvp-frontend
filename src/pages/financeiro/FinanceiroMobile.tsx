@@ -800,8 +800,11 @@ export function FinanceiroMobile() {
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
   const pagarAberto = (resumo?.pagar.totalPendente ?? 0) + (resumo?.pagar.totalVencido ?? 0);
   const receberAberto = (resumo?.receber.totalPendente ?? 0) + (resumo?.receber.totalVencido ?? 0);
-  const totalVencidoQtd = (resumo?.pagar.qtdVencido ?? 0) + (resumo?.receber.qtdVencido ?? 0);
-  const totalVencidoValor = (resumo?.pagar.totalVencido ?? 0) + (resumo?.receber.totalVencido ?? 0);
+  const vencidoPagarValor = resumo?.pagar.totalVencido ?? 0;
+  const vencidoPagarQtd = resumo?.pagar.qtdVencido ?? 0;
+  const vencidoReceberValor = resumo?.receber.totalVencido ?? 0;
+  const vencidoReceberQtd = resumo?.receber.qtdVencido ?? 0;
+  const totalVencidoQtd = vencidoPagarQtd + vencidoReceberQtd;
 
   const anoPago = resumoAnual.reduce((s, m) => s + m.pagar, 0);
   const anoRecebido = resumoAnual.reduce((s, m) => s + m.receber, 0);
@@ -898,10 +901,19 @@ export function FinanceiroMobile() {
 
         {totalVencidoQtd > 0 && (
           <div className="card fm-card" style={{ borderColor: 'rgba(248,113,113,0.4)', marginBottom: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13 }}>Vencidos</span>
-              <span className="badge badge-red">{fmt(totalVencidoValor)}</span>
-            </div>
+            <div className="fm-card-kicker" style={{ marginBottom: 8 }}>Vencidos</div>
+            {vencidoPagarQtd > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: vencidoReceberQtd > 0 ? 6 : 0 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>A pagar ({vencidoPagarQtd})</span>
+                <span className="badge badge-red">{fmt(vencidoPagarValor)}</span>
+              </div>
+            )}
+            {vencidoReceberQtd > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>A receber ({vencidoReceberQtd})</span>
+                <span className="badge badge-red">{fmt(vencidoReceberValor)}</span>
+              </div>
+            )}
           </div>
         )}
         </>
