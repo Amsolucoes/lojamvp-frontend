@@ -717,7 +717,7 @@ export function Financeiro() {
   const [modalPagarFatura, setModalPagarFatura] = useState(false);
   const [formPagFatura, setFormPagFatura] = useState({
     modo: 'total' as 'total' | 'parcial' | 'parcelado', valorPago: '', totalParcelas: '3',
-    valorEntrada: '', primeiraParcela: '', contaBancariaId: '',
+    valorEntrada: '', primeiraParcela: '', contaBancariaId: '', dataPagamento: new Date().toISOString().slice(0, 10),
   });
   const [modalAntecipado, setModalAntecipado] = useState(false);
   const [formAntecipado, setFormAntecipado] = useState({ valor: '', data: new Date().toISOString().slice(0, 10), contaBancariaId: '', observacao: '' });
@@ -2090,7 +2090,7 @@ export function Financeiro() {
                       {faturaDados.total > 0 && (
                         faturaDados.status === 'pendente'
                           ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => {
-                              setFormPagFatura(f => ({ ...f, contaBancariaId: faturaAberta.contaBancariaId }));
+                              setFormPagFatura(f => ({ ...f, contaBancariaId: faturaAberta.contaBancariaId, dataPagamento: new Date().toISOString().slice(0, 10) }));
                               setModalPagarFatura(true);
                             }}>Pagar</button>
                           : <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => pagarFaturaModal('desfazer')}>Desfazer</button>
@@ -2410,6 +2410,11 @@ export function Financeiro() {
                   {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
               </div>
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label className="form-label">Data do pagamento</label>
+                <input type="date" max={new Date().toISOString().slice(0, 10)} value={formPagFatura.dataPagamento}
+                  onChange={e => setFormPagFatura(f => ({ ...f, dataPagamento: e.target.value }))} />
+              </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                 {[
                   { v: 'total', t: 'Pagar tudo' },
@@ -2478,7 +2483,7 @@ export function Financeiro() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalPagarFatura(false)}>Cancelar</button>
               <button className="btn-primary" onClick={() => {
-                if (formPagFatura.modo === 'total') pagarFaturaModal('total', { contaBancariaId: formPagFatura.contaBancariaId || null });
+                if (formPagFatura.modo === 'total') pagarFaturaModal('total', { contaBancariaId: formPagFatura.contaBancariaId || null, dataPagamento: formPagFatura.dataPagamento || null });
                 else if (formPagFatura.modo === 'parcial') {
                   const valorParcial = parseFloat(formPagFatura.valorPago) || 0;
                   const limiteParcial = (faturaDados?.restante ?? faturaDados?.total ?? 0) - 0.01;
@@ -2486,13 +2491,14 @@ export function Financeiro() {
                     erro(`Informe um valor entre R$ 0,01 e ${fmt(limiteParcial)}.`);
                     return;
                   }
-                  pagarFaturaModal('parcial', { valorPago: valorParcial, contaBancariaId: formPagFatura.contaBancariaId || null });
+                  pagarFaturaModal('parcial', { valorPago: valorParcial, contaBancariaId: formPagFatura.contaBancariaId || null, dataPagamento: formPagFatura.dataPagamento || null });
                 }
                 else pagarFaturaModal('parcelado', {
                   totalParcelas: parseInt(formPagFatura.totalParcelas) || 3,
                   valorEntrada: parseFloat(formPagFatura.valorEntrada) || 0,
                   primeiraParcela: formPagFatura.primeiraParcela || null,
                   contaBancariaId: formPagFatura.contaBancariaId || null,
+                  dataPagamento: formPagFatura.dataPagamento || null,
                 });
               }}>
                 Confirmar
