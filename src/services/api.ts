@@ -19,14 +19,21 @@ async function request<T>(
 ): Promise<T> {
   const token = getToken();
 
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // fetch() lançou antes de qualquer resposta chegar — sem internet, servidor
+    // fora do ar, ou erro de rede/CORS. Não existe um "res" pra inspecionar aqui.
+    throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
+  }
 
   // Token expirado ou inválido — faz logout automático
   if (res.status === 401) {
@@ -36,10 +43,15 @@ async function request<T>(
 
   if (res.status === 204) return undefined as T;
 
-  const data = await res.json();
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch {
+    // Corpo vazio ou não-JSON (ex: página de erro de um proxy) — segue sem dados.
+  }
 
   if (!res.ok) {
-    const err = new Error(data?.erro ?? data?.title ?? `Erro ${res.status}`) as Error & { bloqueado?: boolean; status?: number };
+    const err = new Error(data?.erro ?? data?.title ?? `Erro ${res.status}. Tente novamente.`) as Error & { bloqueado?: boolean; status?: number };
     err.bloqueado = data?.bloqueado === true;
     err.status = res.status;
     throw err;

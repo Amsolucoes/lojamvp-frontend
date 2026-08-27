@@ -8,6 +8,7 @@ import { usePullToRefresh } from '../../components/layout/Layout';
 import { BankBadge, BANCOS } from '../../utils/bancos';
 import { InputMoeda } from '../../components/InputMoeda';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
+import { useToast } from '../../context/ToastContext';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -79,6 +80,7 @@ const ABAS = [
 export function FinanceiroMobile() {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
+  const { sucesso, erro } = useToast();
   const [menuAberto, setMenuAberto] = useState(false);
   const { pull, recarregando, setRef } = usePullToRefresh(() => {
     window.dispatchEvent(new Event('pullToRefresh'));
@@ -272,7 +274,9 @@ export function FinanceiroMobile() {
     try {
       await api.post(`/api/financeiro/lancamentos/${l.id}/pagamento`, { pago });
       recarregarReceber();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   function abrirEditarReceber(l: LinhaReceber) {
@@ -301,7 +305,9 @@ export function FinanceiroMobile() {
       });
       setEditandoReceber(null);
       recarregarReceber();
-    } catch {} finally { setSalvandoEditReceber(false); }
+    } catch (e) {
+      erro((e as Error).message);
+    } finally { setSalvandoEditReceber(false); }
   }
 
   async function excluirReceber(modo: 'unica' | 'todas' = 'unica') {
@@ -310,7 +316,9 @@ export function FinanceiroMobile() {
       await api.delete(`/api/financeiro/lancamentos/${confirmExcluirReceber.id}?modo=${modo}`);
       setConfirmExcluirReceber(null);
       recarregarReceber();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   function carregarCartoes() {
@@ -360,7 +368,9 @@ export function FinanceiroMobile() {
       setEditandoCartao(null);
       setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
       carregarCartoes();
-    } catch {} finally { setSalvandoCartao(false); }
+    } catch (e) {
+      erro((e as Error).message);
+    } finally { setSalvandoCartao(false); }
   }
 
   async function carregarFatura(cartaoId: string, ano: number, mes: number) {
@@ -445,7 +455,9 @@ export function FinanceiroMobile() {
       setModalLancarCompra(false);
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarCartoes();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   function abrirEditarItemCartao(item: ItemFaturaDetalhe) {
@@ -469,7 +481,9 @@ export function FinanceiroMobile() {
       });
       setEditandoItemCartao(null);
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   async function excluirItemCartao(modo: 'unica' | 'todas') {
@@ -479,7 +493,9 @@ export function FinanceiroMobile() {
       setConfirmExcluirItemCartao(null);
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarCartoes();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   async function pagarFaturaModal(modo: string, extra?: any) {
@@ -489,7 +505,10 @@ export function FinanceiroMobile() {
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarCartoes();
       setModalPagarFatura(false);
-    } catch {}
+      sucesso('Fatura atualizada!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   function abrirNovoAntecipado() {
@@ -508,7 +527,10 @@ export function FinanceiroMobile() {
       setModalAntecipado(false);
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarCartoes();
-    } catch {}
+      sucesso('Pagamento antecipado registrado!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   async function excluirAntecipado() {
@@ -518,7 +540,9 @@ export function FinanceiroMobile() {
       setConfirmExcluirAntecipado(null);
       carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarCartoes();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   function recarregarContas() {
@@ -547,14 +571,18 @@ export function FinanceiroMobile() {
       setMostrarFormConta(false);
       setEditandoConta(null);
       recarregarContas();
-    } catch {} finally { setSalvandoConta(false); }
+    } catch (e) {
+      erro((e as Error).message);
+    } finally { setSalvandoConta(false); }
   }
 
   async function alternarConta(c: Conta) {
     try {
       await api.patch(`/api/financeiro/contas/${c.id}/ativo`, {});
       recarregarContas();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   function abrirAjuste(c: Conta) {
@@ -573,7 +601,10 @@ export function FinanceiroMobile() {
       });
       setModalAjuste(null);
       recarregarContas();
-    } catch {}
+      sucesso('Saldo ajustado!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   async function salvarTransferencia() {
@@ -590,7 +621,10 @@ export function FinanceiroMobile() {
       setModalTransferencia(false);
       setFormTransf({ contaOrigemId: '', contaDestinoId: '', valor: '', registrar: true, observacao: '' });
       recarregarContas();
-    } catch {}
+      sucesso('Transferência realizada!');
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   function abrirNovoLancamento(aba: 'pagar' | 'receber') {
@@ -638,7 +672,10 @@ export function FinanceiroMobile() {
       setModalNovoLanc(null);
       if (abaFechada === 'pagar') recarregarPagar(); else recarregarReceber();
       recarregarContas();
-    } catch {} finally { setSalvandoNovoLanc(false); }
+      sucesso('Lançamento criado!');
+    } catch (e) {
+      erro((e as Error).message);
+    } finally { setSalvandoNovoLanc(false); }
   }
 
   useEffect(() => {
@@ -659,7 +696,9 @@ export function FinanceiroMobile() {
         await api.post(`/api/financeiro/lancamentos/${l.id}/pagamento`, { pago });
       }
       recarregarPagar();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   function abrirEditar(l: LinhaPagar) {
@@ -688,7 +727,9 @@ export function FinanceiroMobile() {
       });
       setEditandoLancamento(null);
       recarregarPagar();
-    } catch {} finally { setSalvandoEdit(false); }
+    } catch (e) {
+      erro((e as Error).message);
+    } finally { setSalvandoEdit(false); }
   }
 
   async function excluirLinha(modo: 'unica' | 'todas' = 'unica') {
@@ -697,7 +738,9 @@ export function FinanceiroMobile() {
       await api.delete(`/api/financeiro/lancamentos/${confirmExcluir.id}?modo=${modo}`);
       setConfirmExcluir(null);
       recarregarPagar();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   const [contas, setContas] = useState<Conta[]>([]);
@@ -772,7 +815,9 @@ export function FinanceiroMobile() {
       setFormCat({ nome: '', tipo: 'ambos', icone: '🏷️' });
       setMostrarFormCategoria(false);
       recarregarTodasListasCategoria();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   function abrirEditarCategoria(c: Categoria) {
@@ -789,21 +834,27 @@ export function FinanceiroMobile() {
       setFormCat({ nome: '', tipo: 'ambos', icone: '🏷️' });
       setMostrarFormCategoria(false);
       recarregarTodasListasCategoria();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   async function excluirCategoria(c: Categoria) {
     try {
       await api.delete(`/api/financeiro/categorias/${c.id}`);
       recarregarTodasListasCategoria();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   async function seedCategoriasPadrao() {
     try {
       await api.post('/api/financeiro/categorias/seed-padrao', {});
       recarregarTodasListasCategoria();
-    } catch {}
+    } catch (e) {
+      erro((e as Error).message);
+    }
   }
 
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
