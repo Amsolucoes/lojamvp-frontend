@@ -26,7 +26,13 @@ export function usePullToRefresh(onRefresh: () => void) {
     const el = elNode;
 
     function onTouchStart(e: TouchEvent) {
-      if (el.scrollTop <= 0) {
+      // Só arma o gesto se o elemento realmente tiver conteúdo próprio pra
+      // rolar. Sem essa checagem, um contêiner "vazio" (como o .layout-main
+      // quando a página filha já cuida do próprio scroll internamente) fica
+      // sempre com scrollTop 0 e armaria o pull-to-refresh em qualquer
+      // arrasto pra baixo — inclusive o gesto de rolar a lista interna de
+      // volta pro topo rapidamente.
+      if (el.scrollTop <= 0 && el.scrollHeight > el.clientHeight) {
         startY.current = e.touches[0].clientY;
         puxando.current = true;
       } else {
