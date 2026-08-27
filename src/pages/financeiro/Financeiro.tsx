@@ -2132,76 +2132,31 @@ export function Financeiro() {
                 </div>
               )}
 
-              {faturaDados?.parcelasFinanciamento && faturaDados.parcelasFinanciamento.length > 0 && (
-                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>
-                    💳 Parcela(s) do parcelamento de faturas anteriores
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {faturaDados.parcelasFinanciamento.map(p => (
-                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>
-                        <div>
-                          <div>
-                            Parcela {p.numeroParcela}/{p.totalParcelas}
-                            {p.mesOrigemFatura && p.anoOrigemFatura && (
-                              <span style={{ color: 'var(--text-3)' }}> — da fatura de {MESES[p.mesOrigemFatura - 1]}/{p.anoOrigemFatura}</span>
-                            )}
-                          </div>
-                          <div style={{ color: 'var(--text-3)', fontSize: 11 }}>Vence {new Date(p.vencimento).toLocaleDateString('pt-BR')}</div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {fmt(p.valor)}
-                          <span className={`badge ${p.status === 'pago' ? 'badge-green' : 'badge-accent'}`} style={{ fontSize: 9 }}>
-                            {p.status === 'pago' ? 'Paga' : 'Pendente'}
-                          </span>
-                          {p.status !== 'pago' && (
-                            <>
-                              <button className="btn-ghost" style={{ padding: 4 }} title="Editar"
-                                onClick={() => abrirEditarLancamento({
-                                  id: p.id, descricao: p.descricao, observacao: p.observacao ?? undefined,
-                                  categoriaNome: null, categoriaId: p.categoriaId, contaBancariaId: p.contaBancariaId,
-                                  modo: p.modo, valor: p.valor, vencimento: p.vencimento, status: p.status,
-                                  pagoEm: null, numeroParcela: p.numeroParcela, totalParcelas: p.totalParcelas,
-                                  origem: 'avulso', cartaoId: null, cartaoNome: null,
-                                } as any)}>
-                                <span style={{ fontSize: 11 }}>✎</span>
-                              </button>
-                              <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} title="Excluir"
-                                onClick={() => setConfirmExcluir({
-                                  id: p.id, descricao: p.descricao, observacao: p.observacao ?? undefined,
-                                  categoriaNome: null, categoriaId: p.categoriaId, contaBancariaId: p.contaBancariaId,
-                                  modo: p.modo, valor: p.valor, vencimento: p.vencimento, status: p.status,
-                                  pagoEm: null, numeroParcela: p.numeroParcela, totalParcelas: p.totalParcelas,
-                                  origem: 'avulso', cartaoId: null, cartaoNome: null,
-                                } as any)}>
-                                <Trash2 size={12} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {faturaDados && faturaDados.itens.length > 0 && (
+              {faturaDados && ((faturaDados.itens.length > 0) || ((faturaDados.parcelasFinanciamento?.length ?? 0) > 0)) && (
                 <input placeholder="Buscar por descrição..." value={buscaFatura}
                   onChange={e => { setBuscaFatura(e.target.value); setPaginaFatura(1); }}
                   style={{ marginBottom: 12 }} />
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-                {faturaDados?.itens.length === 0 ? (
-                  <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma compra neste ciclo.</p>
-                ) : (
-                  (() => {
-                    const itensFiltrados = (faturaDados?.itens ?? []).filter(i => !buscaFatura || i.descricao.toLowerCase().includes(buscaFatura.toLowerCase()));
-                    const totalPagFatura = Math.max(1, Math.ceil(itensFiltrados.length / 15));
-                    const pagAtualFatura = Math.min(paginaFatura, totalPagFatura);
-                    const itensPaginados = itensFiltrados.slice((pagAtualFatura - 1) * 15, pagAtualFatura * 15);
-                    return agruparPorData(itensPaginados.map(i => ({ ...i, vencimento: i.dataCompra })));
-                  })().map(([dia, itens]) => (
+                {(() => {
+                  const itensCompra: any[] = (faturaDados?.itens ?? []).map(i => ({ ...i, vencimento: i.dataCompra, origemLinha: 'compra' as const }));
+                  const itensFinanciamento: any[] = (faturaDados?.parcelasFinanciamento ?? []).map(p => ({
+                    id: p.id, descricao: p.descricao, valor: p.valor, vencimento: p.vencimento,
+                    categoriaNome: null, categoriaId: p.categoriaId, modo: p.modo, observacao: p.observacao,
+                    numeroParcela: p.numeroParcela, totalParcelas: p.totalParcelas,
+                    origemLinha: 'financiamento' as const, status: p.status, contaBancariaId: p.contaBancariaId,
+                    mesOrigemFatura: p.mesOrigemFatura, anoOrigemFatura: p.anoOrigemFatura,
+                  }));
+                  const todosItens: any[] = [...itensCompra, ...itensFinanciamento];
+                  const itensFiltrados = todosItens.filter(i => !buscaFatura || i.descricao.toLowerCase().includes(buscaFatura.toLowerCase()));
+                  if (itensFiltrados.length === 0) {
+                    return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma compra neste ciclo.</p>;
+                  }
+                  const totalPagFatura = Math.max(1, Math.ceil(itensFiltrados.length / 15));
+                  const pagAtualFatura = Math.min(paginaFatura, totalPagFatura);
+                  const itensPaginados = itensFiltrados.slice((pagAtualFatura - 1) * 15, pagAtualFatura * 15);
+                  return agruparPorData(itensPaginados).map(([dia, itens]) => (
                     <div key={dia}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 6, padding: '4px 8px', marginBottom: 6 }}>
                         <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
@@ -2212,11 +2167,23 @@ export function Financeiro() {
                           <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)', gap: 8 }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div>
+                                {i.origemLinha === 'financiamento' && <span title="Parcela de financiamento" style={{ marginRight: 4 }}>💳</span>}
                                 {i.descricao}
                                 {i.modo === 'fixa' && <span className="badge badge-accent" style={{ fontSize: 9, marginLeft: 6 }}>🔁 Fixo</span>}
+                                {i.numeroParcela && (
+                                  <span className="badge badge-accent" style={{ fontSize: 9, marginLeft: 6 }}>{i.numeroParcela}/{i.totalParcelas}</span>
+                                )}
+                                {i.origemLinha === 'financiamento' && (
+                                  <span className={`badge ${i.status === 'pago' ? 'badge-green' : 'badge-yellow'}`} style={{ fontSize: 9, marginLeft: 6 }}>
+                                    {i.status === 'pago' ? 'Paga' : 'Pendente'}
+                                  </span>
+                                )}
                               </div>
                               {i.categoriaNome && (
                                 <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{iconeCategoria(i.categoriaNome)} {i.categoriaNome}</div>
+                              )}
+                              {i.origemLinha === 'financiamento' && i.mesOrigemFatura && i.anoOrigemFatura && (
+                                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>da fatura de {MESES[i.mesOrigemFatura - 1]}/{i.anoOrigemFatura}</div>
                               )}
                               {i.observacao && (
                                 <span className="badge badge-accent" style={{ fontSize: 10, marginTop: 4, display: 'inline-block' }}>
@@ -2225,20 +2192,50 @@ export function Financeiro() {
                               )}
                             </div>
                             <span style={{ fontWeight: 600, flexShrink: 0 }}>{fmt(i.valor)}</span>
-                            <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                              <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditarItemCartao(i)}>✎</button>
-                              <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluirItemCartao(i)}><Trash2 size={13} /></button>
-                            </div>
+                            {i.origemLinha === 'financiamento' ? (
+                              i.status !== 'pago' && (
+                                <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                                  <button className="btn-ghost" style={{ padding: 4 }} title="Editar"
+                                    onClick={() => abrirEditarLancamento({
+                                      id: i.id, descricao: i.descricao, observacao: i.observacao ?? undefined,
+                                      categoriaNome: null, categoriaId: i.categoriaId, contaBancariaId: i.contaBancariaId,
+                                      modo: i.modo, valor: i.valor, vencimento: i.vencimento, status: i.status,
+                                      pagoEm: null, numeroParcela: i.numeroParcela, totalParcelas: i.totalParcelas,
+                                      origem: 'avulso', cartaoId: null, cartaoNome: null,
+                                    } as any)}>
+                                    <span style={{ fontSize: 11 }}>✎</span>
+                                  </button>
+                                  <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} title="Excluir"
+                                    onClick={() => setConfirmExcluir({
+                                      id: i.id, descricao: i.descricao, observacao: i.observacao ?? undefined,
+                                      categoriaNome: null, categoriaId: i.categoriaId, contaBancariaId: i.contaBancariaId,
+                                      modo: i.modo, valor: i.valor, vencimento: i.vencimento, status: i.status,
+                                      pagoEm: null, numeroParcela: i.numeroParcela, totalParcelas: i.totalParcelas,
+                                      origem: 'avulso', cartaoId: null, cartaoNome: null,
+                                    } as any)}>
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              )
+                            ) : (
+                              <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                                <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditarItemCartao(i)}>✎</button>
+                                <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluirItemCartao(i)}><Trash2 size={13} /></button>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
                     </div>
-                  ))
-                )}
+                  ));
+                })()}
               </div>
 
               {(() => {
-                const itensFiltrados = (faturaDados?.itens ?? []).filter(i => !buscaFatura || i.descricao.toLowerCase().includes(buscaFatura.toLowerCase()));
+                const itensCompra: any[] = (faturaDados?.itens ?? []).map(i => ({ ...i, vencimento: i.dataCompra }));
+                const itensFinanciamento: any[] = faturaDados?.parcelasFinanciamento ?? [];
+                const todosItens: any[] = [...itensCompra, ...itensFinanciamento];
+                const itensFiltrados = todosItens.filter(i => !buscaFatura || i.descricao.toLowerCase().includes(buscaFatura.toLowerCase()));
                 const totalPagFatura = Math.max(1, Math.ceil(itensFiltrados.length / 15));
                 const pagAtualFatura = Math.min(paginaFatura, totalPagFatura);
                 if (itensFiltrados.length <= 15) return null;

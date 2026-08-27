@@ -132,7 +132,15 @@ export function FinanceiroMobile() {
   const [salvandoCartao, setSalvandoCartao] = useState(false);
   const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
-  const [faturaDados, setFaturaDados] = useState<{ vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; itens: ItemFaturaDetalhe[]; antecipados?: AntecipadoItem[] } | null>(null);  const [carregandoFatura, setCarregandoFatura] = useState(false);
+  const [faturaDados, setFaturaDados] = useState<{
+    vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; itens: ItemFaturaDetalhe[]; antecipados?: AntecipadoItem[];
+    parcelasFinanciamento?: {
+      id: string; descricao: string; valor: number; vencimento: string; status: string;
+      numeroParcela: number; totalParcelas: number; contaBancariaId: string; categoriaId: string | null;
+      observacao: string | null; modo: string; mesOrigemFatura: number | null; anoOrigemFatura: number | null;
+    }[];
+  } | null>(null);
+  const [carregandoFatura, setCarregandoFatura] = useState(false);
   const [faturaAno, setFaturaAno] = useState(new Date().getFullYear());
   const [faturaMes, setFaturaMes] = useState(new Date().getMonth() + 1);
   const [referenciasFatura, setReferenciasFatura] = useState<{ aberta: { ano: number; mes: number }; fechada: { ano: number; mes: number; total: number; status: string } } | null>(null);
@@ -1916,39 +1924,79 @@ export function FinanceiroMobile() {
                     )}
                   </div>
 
-                  {faturaDados.itens.length === 0 ? (
-                    <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Nenhuma compra neste ciclo.</p>
-                  ) : (
-                    agruparPorData(faturaDados.itens.map(i => ({ ...i, vencimento: i.dataCompra }))).map(([dia, itens]) => (
+                  {(() => {
+                    const itensCompra: any[] = faturaDados.itens.map(i => ({ ...i, vencimento: i.dataCompra, origemLinha: 'compra' as const }));
+                    const itensFinanciamento: any[] = (faturaDados.parcelasFinanciamento ?? []).map(p => ({
+                      id: p.id, descricao: p.descricao, valor: p.valor, vencimento: p.vencimento,
+                      categoriaNome: null, categoriaId: p.categoriaId, modo: p.modo, observacao: p.observacao,
+                      numeroParcela: p.numeroParcela, totalParcelas: p.totalParcelas,
+                      origemLinha: 'financiamento' as const, status: p.status, contaBancariaId: p.contaBancariaId,
+                      mesOrigemFatura: p.mesOrigemFatura, anoOrigemFatura: p.anoOrigemFatura,
+                    }));
+                    const todosItens: any[] = [...itensCompra, ...itensFinanciamento];
+                    if (todosItens.length === 0) {
+                      return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Nenhuma compra neste ciclo.</p>;
+                    }
+                    return agruparPorData(todosItens).map(([dia, itens]) => (
                       <div key={dia} style={{ marginBottom: 12 }}>
                         <div className="fm-dia-header">
                           <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
-                          <strong>{fmt(itens.reduce((s, i) => s + i.valor, 0))}</strong>
+                          <strong>{fmt(itens.reduce((s, i: any) => s + i.valor, 0))}</strong>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {itens.map(i => (
+                          {itens.map((i: any) => (
                             <div key={i.id} className="fm-card-linha" style={{ background: 'var(--bg-3)' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 13.5, color: 'var(--text-1)' }}>
                                   {i.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
+                                  {i.origemLinha === 'financiamento' && <span title="Parcela de financiamento" style={{ marginRight: 4 }}>💳</span>}
                                   {i.descricao}
                                 </div>
                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
                                   {i.categoriaNome && <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{iconeCategoria(categoriasPagar, i.categoriaNome)} {i.categoriaNome}</span>}
                                   {i.numeroParcela && <span className="fm-tag-neutra">{i.numeroParcela}/{i.totalParcelas}</span>}
+                                  {i.origemLinha === 'financiamento' && i.mesOrigemFatura && i.anoOrigemFatura && (
+                                    <span className="fm-tag-neutra">fatura {MESES_ABREV[i.mesOrigemFatura - 1]}/{i.anoOrigemFatura}</span>
+                                  )}
+                                  {i.origemLinha === 'financiamento' && (
+                                    <span className={`badge badge-${i.status === 'pago' ? 'green' : 'yellow'}`} style={{ fontSize: 9 }}>
+                                      {i.status === 'pago' ? 'Paga' : 'Pendente'}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                               <div style={{ fontSize: 14, color: 'var(--text-1)', marginRight: 8 }}>{fmt(i.valor)}</div>
-                              <div style={{ display: 'flex', gap: 2 }}>
-                                <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditarItemCartao(i)}>✎</button>
-                                <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluirItemCartao(i)}><Trash2 size={13} /></button>
-                              </div>
+                              {i.origemLinha === 'financiamento' ? (
+                                i.status !== 'pago' && (
+                                  <div style={{ display: 'flex', gap: 2 }}>
+                                    <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditar({
+                                      id: i.id, descricao: i.descricao, observacao: i.observacao ?? undefined,
+                                      categoriaNome: null, categoriaId: i.categoriaId, contaBancariaId: i.contaBancariaId,
+                                      modo: i.modo, valor: i.valor, vencimento: i.vencimento, status: i.status,
+                                      numeroParcela: i.numeroParcela, totalParcelas: i.totalParcelas,
+                                      origem: 'avulso', cartaoId: null, cartaoNome: null,
+                                    } as any)}>✎</button>
+                                    <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluir({
+                                      id: i.id, descricao: i.descricao, observacao: i.observacao ?? undefined,
+                                      categoriaNome: null, categoriaId: i.categoriaId, contaBancariaId: i.contaBancariaId,
+                                      modo: i.modo, valor: i.valor, vencimento: i.vencimento, status: i.status,
+                                      numeroParcela: i.numeroParcela, totalParcelas: i.totalParcelas,
+                                      origem: 'avulso', cartaoId: null, cartaoNome: null,
+                                    } as any)}><Trash2 size={13} /></button>
+                                  </div>
+                                )
+                              ) : (
+                                <div style={{ display: 'flex', gap: 2 }}>
+                                  <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditarItemCartao(i)}>✎</button>
+                                  <button className="btn-ghost" style={{ padding: 4, color: 'var(--red)' }} onClick={() => setConfirmExcluirItemCartao(i)}><Trash2 size={13} /></button>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
                       </div>
-                    ))
-                  )}
+                    ));
+                  })()}
                 </>
               )}
             </div>
