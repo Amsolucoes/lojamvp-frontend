@@ -29,6 +29,12 @@ export function usePullToRefresh(onRefresh: () => void) {
       if (el.scrollTop <= 0) {
         startY.current = e.touches[0].clientY;
         puxando.current = true;
+      } else {
+        // Garante que nenhum estado de um gesto anterior (que talvez não tenha
+        // disparado touchend corretamente) sobreviva pra esse novo toque.
+        puxando.current = false;
+        pullAtual.current = 0;
+        setPull(0);
       }
     }
     function onTouchMove(e: TouchEvent) {
@@ -62,13 +68,24 @@ export function usePullToRefresh(onRefresh: () => void) {
       }
     }
 
+    function onTouchCancel() {
+      // O navegador cancelou o gesto no meio (comum em swipes rápidos, quando o
+      // sistema assume que é scroll nativo) — nunca deve disparar refresh,
+      // só limpar o estado pra não vazar pro próximo toque.
+      puxando.current = false;
+      pullAtual.current = 0;
+      setPull(0);
+    }
+
     el.addEventListener('touchstart', onTouchStart, { passive: true });
     el.addEventListener('touchmove', onTouchMove, { passive: true });
     el.addEventListener('touchend', onTouchEnd);
+    el.addEventListener('touchcancel', onTouchCancel);
     return () => {
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchCancel);
     };
   }, [elNode, onRefresh]);
 
