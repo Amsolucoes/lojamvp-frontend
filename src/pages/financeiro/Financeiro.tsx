@@ -132,6 +132,7 @@ export function Financeiro() {
   const [catFiltro, setCatFiltro] = useState(() => searchParams.get('categoria') || 'todas');
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pago' | 'pendente'>('todos');
   const [modoFiltro, setModoFiltro] = useState<'todos' | 'avulsa' | 'parcelada' | 'fixa'>('todos');
+  const [buscaDescricao, setBuscaDescricao] = useState('');
   const [paginaLista, setPaginaLista] = useState(1);
   const [itensPorPagina, setItensPorPagina] = useState(15);
   const [periodoTipo, setPeriodoTipo] = useState<'mes' | 'personalizado'>('mes');
@@ -289,8 +290,9 @@ export function Financeiro() {
   useEffect(() => {
     if (primeiraCargaFiltro.current) { primeiraCargaFiltro.current = false; return; }
     setCatFiltro('todas');
+    setBuscaDescricao('');
   }, [aba]);
-  useEffect(() => { setPaginaLista(1); }, [aba, mesRef, anoRef, catFiltro, statusFiltro, modoFiltro, periodoTipo, periodoDe, periodoAte, itensPorPagina]);
+  useEffect(() => { setPaginaLista(1); }, [aba, mesRef, anoRef, catFiltro, statusFiltro, modoFiltro, buscaDescricao, periodoTipo, periodoDe, periodoAte, itensPorPagina]);
   useEffect(() => { setPaginaCat(1); }, [filtroCatModal]);
   useEffect(() => {
     const novo = searchParams.get('novo');
@@ -358,8 +360,12 @@ export function Financeiro() {
     return modo === modoFiltro;
   }
 
+  function passaBusca(descricao: string) {
+    return !buscaDescricao || descricao.toLowerCase().includes(buscaDescricao.toLowerCase());
+  }
+
   const listaPagarCompleta = linhasPagar.filter(l =>
-    (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaStatus(l.status) && passaModo(l.modo)
+    (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaStatus(l.status) && passaModo(l.modo) && passaBusca(l.descricao)
   );
   const listaReceberCompleta = receberUnificado.filter((l: any) => {
     const catOk = catFiltro === 'todas'
@@ -367,7 +373,7 @@ export function Financeiro() {
       : catFiltro === '__plano__'
       ? l.origem === 'plano'
       : l.origem === 'avulso' && l.categoriaNome === catFiltro;
-    return catOk && passaStatus(l.status) && passaModo(l.modo);
+    return catOk && passaStatus(l.status) && passaModo(l.modo) && passaBusca(l.descricao);
   });
 
   const listaCompletaAtual = aba === 'pagar' ? listaPagarCompleta : listaReceberCompleta;
@@ -380,7 +386,7 @@ export function Financeiro() {
 
   // Quando algum filtro (categoria ou status) está ativo, recalcula os totais
   // com base na lista já filtrada, em vez do resumo geral do backend.
-  const filtroAtivo = catFiltro !== 'todas' || statusFiltro !== 'todos' || modoFiltro !== 'todos' || periodoTipo === 'personalizado';
+  const filtroAtivo = catFiltro !== 'todas' || statusFiltro !== 'todos' || modoFiltro !== 'todos' || buscaDescricao !== '' || periodoTipo === 'personalizado';
   const hoje0h = new Date(new Date().toDateString());
 
   function resumoDaLista(lista: any[]) {
@@ -1092,6 +1098,7 @@ export function Financeiro() {
           )}
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input type="text" placeholder="Buscar por descrição..." value={buscaDescricao} onChange={e => setBuscaDescricao(e.target.value)} style={{ width: 200 }} />
           {aba === 'pagar' && (
             <div className="cx-tipo-toggle">
               <button className={modoPagar === 'agrupado' ? 'active' : ''} onClick={() => setModoPagar('agrupado')}>Agrupado</button>
@@ -1118,11 +1125,12 @@ export function Financeiro() {
             <option value="parcelada">Parcelada</option>
             <option value="fixa">Fixa</option>
           </select>
-          {(catFiltro !== 'todas' || statusFiltro !== 'todos' || modoFiltro !== 'todos' || periodoTipo === 'personalizado') && (
+          {(catFiltro !== 'todas' || statusFiltro !== 'todos' || modoFiltro !== 'todos' || buscaDescricao !== '' || periodoTipo === 'personalizado') && (
             <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => {
               setCatFiltro('todas');
               setStatusFiltro('todos');
               setModoFiltro('todos');
+              setBuscaDescricao('');
               setPeriodoTipo('mes');
             }}>
               Limpar filtros

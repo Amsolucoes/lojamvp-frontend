@@ -91,6 +91,7 @@ export function FinanceiroMobile() {
   const [categoriasPagar, setCategoriasPagar] = useState<Categoria[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'vencido' | 'pago'>('todos');
   const [catFiltro, setCatFiltro] = useState('todas');
+  const [buscaPagar, setBuscaPagar] = useState('');
   const [paginaLista, setPaginaLista] = useState(1);
   const [mesBalanco, setMesBalanco] = useState(new Date().getMonth());
   const [anoBalanco, setAnoBalanco] = useState(new Date().getFullYear());
@@ -114,6 +115,7 @@ export function FinanceiroMobile() {
   const [categoriasReceber, setCategoriasReceber] = useState<Categoria[]>([]);
   const [filtroStatusReceber, setFiltroStatusReceber] = useState<'todos' | 'pendente' | 'pago'>('todos');
   const [catFiltroReceber, setCatFiltroReceber] = useState('todas');
+  const [buscaReceber, setBuscaReceber] = useState('');
   const [paginaListaReceber, setPaginaListaReceber] = useState(1);
   const [mesReceber, setMesReceber] = useState(new Date().getMonth());
   const [anoReceber, setAnoReceber] = useState(new Date().getFullYear());
@@ -268,7 +270,7 @@ export function FinanceiroMobile() {
     api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasReceber(cats.filter(c => c.tipo === 'receber' || c.tipo === 'ambos'))).catch(() => {});
   }, [tela, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
 
-  useEffect(() => { setPaginaListaReceber(1); }, [tela, filtroStatusReceber, catFiltroReceber, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
+  useEffect(() => { setPaginaListaReceber(1); }, [tela, filtroStatusReceber, catFiltroReceber, buscaReceber, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
 
   async function marcarRecebimentoLocal(l: LinhaReceber, pago: boolean) {
     try {
@@ -686,7 +688,7 @@ export function FinanceiroMobile() {
     api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasPagar(cats.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos'))).catch(() => {});
   }, [tela, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
 
-  useEffect(() => { setPaginaLista(1); }, [tela, filtroStatus, catFiltro, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
+  useEffect(() => { setPaginaLista(1); }, [tela, filtroStatus, catFiltro, buscaPagar, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
 
   async function marcarPagamentoLocal(l: LinhaPagar, pago: boolean) {
     const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
@@ -1181,7 +1183,8 @@ export function FinanceiroMobile() {
               const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
               const statusReal = ehVencido(l) ? 'vencido' : l.status;
               const statusOk = filtroStatus === 'todos' || statusReal === filtroStatus;
-              return catOk && statusOk;
+              const buscaOk = !buscaPagar || l.descricao.toLowerCase().includes(buscaPagar.toLowerCase());
+              return catOk && statusOk && buscaOk;
             });
             const totalPago = filtradaTotais.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
             const totalAberto = filtradaTotais.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
@@ -1243,13 +1246,15 @@ export function FinanceiroMobile() {
               ))}
             </select>
           )}
+          <input placeholder="Buscar por descrição..." value={buscaPagar} onChange={e => setBuscaPagar(e.target.value)} style={{ marginBottom: 14 }} />
 
           {carregandoPagar ? null : (() => {
             const filtrada = linhasPagar.filter(l => {
               const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
               const statusReal = ehVencido(l) ? 'vencido' : l.status;
               const statusOk = filtroStatus === 'todos' || statusReal === filtroStatus;
-              return catOk && statusOk;
+              const buscaOk = !buscaPagar || l.descricao.toLowerCase().includes(buscaPagar.toLowerCase());
+              return catOk && statusOk && buscaOk;
             });
             if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
             const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
@@ -1360,8 +1365,11 @@ export function FinanceiroMobile() {
           {carregandoReceber ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
           ) : (() => {
-            const totalRecebido = linhasReceber.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
-            const totalAberto = linhasReceber.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
+            const baseReceber = buscaReceber
+              ? linhasReceber.filter(l => l.descricao.toLowerCase().includes(buscaReceber.toLowerCase()))
+              : linhasReceber;
+            const totalRecebido = baseReceber.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
+            const totalAberto = baseReceber.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
             const totalMes = totalRecebido + totalAberto;
             return (
               <div className="card fm-card" style={{ marginBottom: 14 }}>
@@ -1397,6 +1405,7 @@ export function FinanceiroMobile() {
               ))}
             </select>
           )}
+          <input placeholder="Buscar por descrição..." value={buscaReceber} onChange={e => setBuscaReceber(e.target.value)} style={{ marginBottom: 14 }} />
 
           {carregandoReceber ? null : (() => {
             const filtrada = linhasReceber.filter(l => {
@@ -1406,7 +1415,8 @@ export function FinanceiroMobile() {
                 ? l.origem === 'plano'
                 : l.origem === 'avulso' && l.categoriaNome === catFiltroReceber;
               const statusOk = filtroStatusReceber === 'todos' || l.status === filtroStatusReceber;
-              return catOk && statusOk;
+              const buscaOk = !buscaReceber || l.descricao.toLowerCase().includes(buscaReceber.toLowerCase());
+              return catOk && statusOk && buscaOk;
             });
             if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
             const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
