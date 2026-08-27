@@ -1870,8 +1870,8 @@ export function FinanceiroMobile() {
                         <div style={{ fontWeight: 700, fontSize: 18 }}>{fmt(faturaDados.total)}</div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span className={`badge ${faturaDados.status === 'pago' ? 'badge-green' : faturaDados.status === 'parcial' ? 'badge-yellow' : 'badge-accent'}`}>
-                          {faturaDados.status === 'pago' ? 'Paga' : faturaDados.status === 'parcial' ? 'Parcial' : 'Pendente'}
+                        <span className={`badge ${faturaDados.status === 'pago' ? 'badge-green' : faturaDados.status === 'financiada' ? 'badge-blue' : faturaDados.status === 'parcial' ? 'badge-yellow' : 'badge-accent'}`}>
+                          {faturaDados.status === 'pago' ? 'Paga' : faturaDados.status === 'financiada' ? 'Parcelada' : faturaDados.status === 'parcial' ? 'Parcial' : 'Pendente'}
                         </span>
                         {faturaDados.total > 0 && (
                           faturaDados.status === 'pendente'
