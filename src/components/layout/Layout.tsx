@@ -14,6 +14,7 @@ export function usePullToRefresh(onRefresh: () => void) {
   const startY = useRef(0);
   const puxando = useRef(false);
   const pullAtual = useRef(0);
+  const ultimoScrollEm = useRef(0);
 
   // Callback ref: dispara exatamente quando o elemento é montado/desmontado,
   // sem reanexar listeners em cada re-render do app (diferente de um RefObject comum).
@@ -25,14 +26,22 @@ export function usePullToRefresh(onRefresh: () => void) {
     if (!elNode) return;
     const el = elNode;
 
+    function onScroll() {
+      // Registra sempre que o elemento rolar de verdade — usado abaixo pra
+      // diferenciar "já estava parado no topo" de "acabou de chegar no topo
+      // por inércia (momentum) e ainda está se assentando".
+      ultimoScrollEm.current = Date.now();
+    }
+
     function onTouchStart(e: TouchEvent) {
-      // Só arma o gesto se o elemento realmente tiver conteúdo próprio pra
-      // rolar. Sem essa checagem, um contêiner "vazio" (como o .layout-main
-      // quando a página filha já cuida do próprio scroll internamente) fica
-      // sempre com scrollTop 0 e armaria o pull-to-refresh em qualquer
-      // arrasto pra baixo — inclusive o gesto de rolar a lista interna de
-      // volta pro topo rapidamente.
-      if (el.scrollTop <= 0 && el.scrollHeight > el.clientHeight) {
+      // Além de estar no topo e ter conteúdo pra rolar, exige que a rolagem
+      // esteja "parada" há pelo menos 150ms. Sem isso, um flick rápido pra
+      // subir a lista (que fisicamente é um arrasto pra baixo, igual o pull)
+      // pode fazer o próximo toque encostar bem no instante em que a rolagem
+      // por inércia acabou de chegar no topo — e isso seria interpretado
+      // erroneamente como o início de um pull-to-refresh.
+      const paradoHaTempo = Date.now() - ultimoScrollEm.current > 150;
+      if (el.scrollTop <= 0 && el.scrollHeight > el.clientHeight && paradoHaTempo) {
         startY.current = e.touches[0].clientY;
         puxando.current = true;
       } else {
@@ -83,11 +92,13 @@ export function usePullToRefresh(onRefresh: () => void) {
       setPull(0);
     }
 
+    el.addEventListener('scroll', onScroll, { passive: true });
     el.addEventListener('touchstart', onTouchStart, { passive: true });
     el.addEventListener('touchmove', onTouchMove, { passive: true });
     el.addEventListener('touchend', onTouchEnd);
     el.addEventListener('touchcancel', onTouchCancel);
     return () => {
+      el.removeEventListener('scroll', onScroll);
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
