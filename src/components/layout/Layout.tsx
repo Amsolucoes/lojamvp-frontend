@@ -14,10 +14,7 @@ export function usePullToRefresh(onRefresh: () => void) {
   const startY = useRef(0);
   const puxando = useRef(false);
   const pullAtual = useRef(0);
-  const ultimoScrollEm = useRef(0);
 
-  // Callback ref: dispara exatamente quando o elemento é montado/desmontado,
-  // sem reanexar listeners em cada re-render do app (diferente de um RefObject comum).
   const setRef = useCallback((node: HTMLElement | null) => {
     setElNode(node);
   }, []);
@@ -26,22 +23,18 @@ export function usePullToRefresh(onRefresh: () => void) {
     if (!elNode) return;
     const el = elNode;
 
-    function onScroll() {
-      // Registra sempre que o elemento rolar de verdade — usado abaixo pra
-      // diferenciar "já estava parado no topo" de "acabou de chegar no topo
-      // por inércia (momentum) e ainda está se assentando".
-      ultimoScrollEm.current = Date.now();
-    }
-
     function onTouchStart(e: TouchEvent) {
-      // Além de estar no topo e ter conteúdo pra rolar, exige que a rolagem
-      // esteja "parada" há pelo menos 150ms. Sem isso, um flick rápido pra
-      // subir a lista (que fisicamente é um arrasto pra baixo, igual o pull)
-      // pode fazer o próximo toque encostar bem no instante em que a rolagem
-      // por inércia acabou de chegar no topo — e isso seria interpretado
-      // erroneamente como o início de um pull-to-refresh.
-      const paradoHaTempo = Date.now() - ultimoScrollEm.current > 150;
-      if (el.scrollTop <= 0 && el.scrollHeight > el.clientHeight && paradoHaTempo) {
+      // Impede que esse toque também seja interpretado por um usePullToRefresh
+      // de um contêiner ANCESTRAL (ex: .layout-main por trás do scroll interno
+      // de uma tela como o Financeiro mobile). Sem isso, os dois "ouvintes"
+      // recebem o mesmo toque físico e podem discordar sobre se o usuário
+      // está ou não no topo.
+      e.stopPropagation();
+
+      // Só arma o gesto se o elemento realmente tiver conteúdo próprio pra
+      // rolar — evita que um contêiner "vazio" (sem overflow de verdade)
+      // arme o pull-to-refresh à toa.
+      if (el.scrollTop <= 0 && el.scrollHeight > el.clientHeight) {
         startY.current = e.touches[0].clientY;
         puxando.current = true;
       } else {
@@ -54,6 +47,7 @@ export function usePullToRefresh(onRefresh: () => void) {
     }
     function onTouchMove(e: TouchEvent) {
       if (!puxando.current) return;
+      e.stopPropagation();
       const delta = e.touches[0].clientY - startY.current;
       if (delta > 0 && el.scrollTop <= 0) {
         const novoPull = Math.min(delta * 0.5, 90);
@@ -65,8 +59,9 @@ export function usePullToRefresh(onRefresh: () => void) {
         setPull(0);
       }
     }
-    function onTouchEnd() {
+    function onTouchEnd(e: TouchEvent) {
       if (!puxando.current) return;
+      e.stopPropagation();
       puxando.current = false;
       const disparou = pullAtual.current > 60;
       pullAtual.current = 0;
@@ -83,22 +78,19 @@ export function usePullToRefresh(onRefresh: () => void) {
       }
     }
 
-    function onTouchCancel() {
-      // O navegador cancelou o gesto no meio (comum em swipes rápidos, quando o
-      // sistema assume que é scroll nativo) — nunca deve disparar refresh,
-      // só limpar o estado pra não vazar pro próximo toque.
+    function onTouchCancel(e: TouchEvent) {
+      if (!puxando.current) return;
+      e.stopPropagation();
       puxando.current = false;
       pullAtual.current = 0;
       setPull(0);
     }
 
-    el.addEventListener('scroll', onScroll, { passive: true });
     el.addEventListener('touchstart', onTouchStart, { passive: true });
     el.addEventListener('touchmove', onTouchMove, { passive: true });
     el.addEventListener('touchend', onTouchEnd);
     el.addEventListener('touchcancel', onTouchCancel);
     return () => {
-      el.removeEventListener('scroll', onScroll);
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
@@ -108,7 +100,6 @@ export function usePullToRefresh(onRefresh: () => void) {
 
   return { pull, recarregando, setRef };
 }
-
 // Trava o scroll do body sempre que existir algum modal (.modal-overlay) aberto
 // em qualquer tela do sistema — sem precisar mexer em cada modal individualmente.
 function useTravaScrollModal() {
