@@ -2034,6 +2034,12 @@ export function FinanceiroMobile() {
                     <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
                   )}
                 </div>
+                {formCompra.modo === 'parcelada' && (
+                  <div className="form-group">
+                    <label className="form-label">Data da 1ª parcela</label>
+                    <input type="date" value={formCompra.dataCompra} onChange={e => setFormCompra(f => ({ ...f, dataCompra: e.target.value }))} />
+                  </div>
+                )}
                 <AutocompleteInput
                   value={categoriasPagar.find(c => c.id === formCompra.categoriaId)?.nome ?? ''}
                   options={categoriasPagar.map(c => ({ value: c.nome, icone: c.icone }))}
