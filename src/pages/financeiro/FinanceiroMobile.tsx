@@ -150,6 +150,7 @@ export function FinanceiroMobile() {
   const [formPagFatura, setFormPagFatura] = useState({
     modo: 'total' as 'total' | 'parcial' | 'parcelado', valorPago: '', totalParcelas: '3',
     valorEntrada: '', contaBancariaId: '', dataPagamento: new Date().toISOString().slice(0, 10),
+    primeiraParcela: '',
   });
   const [modalAntecipado, setModalAntecipado] = useState(false);
   const [formAntecipado, setFormAntecipado] = useState({ valor: '', data: new Date().toISOString().slice(0, 10), contaBancariaId: '', observacao: '' });
@@ -2143,6 +2144,13 @@ export function FinanceiroMobile() {
                     <label className="form-label">Em quantas parcelas</label>
                     <input type="number" min={2} max={24} value={formPagFatura.totalParcelas} onChange={e => setFormPagFatura(f => ({ ...f, totalParcelas: e.target.value }))} />
                   </div>
+                  <div className="form-group">
+                    <label className="form-label">Data da 1ª parcela <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                    <input type="date" value={formPagFatura.primeiraParcela} onChange={e => setFormPagFatura(f => ({ ...f, primeiraParcela: e.target.value }))} />
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                      Se deixar em branco, cai automaticamente no mês seguinte ao vencimento desta fatura.
+                    </p>
+                  </div>
                 </>
               )}
             </div>
@@ -2154,6 +2162,7 @@ export function FinanceiroMobile() {
                 else pagarFaturaModal('parcelado', {
                   totalParcelas: parseInt(formPagFatura.totalParcelas) || 3,
                   valorEntrada: parseFloat(formPagFatura.valorEntrada) || 0,
+                  primeiraParcela: formPagFatura.primeiraParcela || null,
                   contaBancariaId: formPagFatura.contaBancariaId || null,
                   dataPagamento: formPagFatura.dataPagamento || null,
                 });
