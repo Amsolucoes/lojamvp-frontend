@@ -106,7 +106,7 @@ export function FinanceiroMobile() {
   const itensPorPagina = 20;
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
-  const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '', observacao: '' });
+  const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEdit, setSalvandoEdit] = useState(false);
 
   const [linhasReceber, setLinhasReceber] = useState<LinhaReceber[]>([]);
@@ -122,7 +122,7 @@ export function FinanceiroMobile() {
   const [periodoAteReceber, setPeriodoAteReceber] = useState(new Date().toISOString().slice(0, 10));
   const [confirmExcluirReceber, setConfirmExcluirReceber] = useState<LinhaReceber | null>(null);
   const [editandoReceber, setEditandoReceber] = useState<LinhaReceber | null>(null);
-  const [formEditReceber, setFormEditReceber] = useState({ contaBancariaId: '', categoriaId: '', descricao: '', valor: '', vencimento: '', observacao: '' });
+  const [formEditReceber, setFormEditReceber] = useState({ contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEditReceber, setSalvandoEditReceber] = useState(false);
 
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
@@ -151,10 +151,10 @@ export function FinanceiroMobile() {
   const [formCompra, setFormCompra] = useState({
     modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
     descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10),
-    categoriaId: '', totalParcelas: '2',
+    categoriaId: '', categoriaTexto: '', totalParcelas: '2',
   });
   const [editandoItemCartao, setEditandoItemCartao] = useState<ItemFaturaDetalhe | null>(null);
-  const [formEditItemCartao, setFormEditItemCartao] = useState({ descricao: '', valor: '', dataCompra: '', categoriaId: '' });
+  const [formEditItemCartao, setFormEditItemCartao] = useState({ descricao: '', valor: '', dataCompra: '', categoriaId: '', categoriaTexto: '' });
   const [confirmExcluirItemCartao, setConfirmExcluirItemCartao] = useState<ItemFaturaDetalhe | null>(null);
   const [modalPagarFatura, setModalPagarFatura] = useState(false);
   const [formPagFatura, setFormPagFatura] = useState({
@@ -178,7 +178,7 @@ export function FinanceiroMobile() {
   const [salvandoNovoLanc, setSalvandoNovoLanc] = useState(false);
   const [formNovoLanc, setFormNovoLanc] = useState({
     modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
-    contaBancariaId: '', categoriaId: '', descricao: '', valor: '', observacao: '',
+    contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', observacao: '',
     vencimento: new Date().toISOString().slice(0, 10),
     totalParcelas: '2', diaVencimento: '10',
     tipoParcelamento: 'quantidade' as 'quantidade' | 'dataFim',
@@ -284,6 +284,7 @@ export function FinanceiroMobile() {
     setFormEditReceber({
       contaBancariaId: l.contaBancariaId ?? '',
       categoriaId: l.categoriaId ?? '',
+      categoriaTexto: l.categoriaNome ?? '',
       descricao: l.descricao,
       valor: String(l.valor),
       vencimento: l.vencimento ? l.vencimento.slice(0, 10) : '',
@@ -425,7 +426,7 @@ export function FinanceiroMobile() {
   }
 
   function abrirLancarCompra() {
-    setFormCompra({ modo: 'avulsa', descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '', totalParcelas: '2' });
+    setFormCompra({ modo: 'avulsa', descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '', categoriaTexto: '', totalParcelas: '2' });
     setModalLancarCompra(true);
     api.get<string[]>('/api/financeiro/cartoes/lancamentos/descricoes').then(setDescricoesRecentesCartao).catch(() => {});
   }
@@ -467,6 +468,7 @@ export function FinanceiroMobile() {
       valor: String(item.valor),
       dataCompra: item.dataCompra.slice(0, 10),
       categoriaId: item.categoriaId ?? '',
+      categoriaTexto: item.categoriaNome ?? '',
     });
   }
 
@@ -629,7 +631,7 @@ export function FinanceiroMobile() {
 
   function abrirNovoLancamento(aba: 'pagar' | 'receber') {
     setFormNovoLanc({
-      modo: 'avulsa', contaBancariaId: contas[0]?.id ?? '', categoriaId: '', descricao: '', valor: '', observacao: '',
+      modo: 'avulsa', contaBancariaId: contas[0]?.id ?? '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', observacao: '',
       vencimento: new Date().toISOString().slice(0, 10), totalParcelas: '2', diaVencimento: '10',
       tipoParcelamento: 'quantidade', dataFim: new Date().toISOString().slice(0, 10),
       jaPago: false, dataInicio: new Date().toISOString().slice(0, 10), avisar: true,
@@ -706,6 +708,7 @@ export function FinanceiroMobile() {
     setFormEdit({
       contaBancariaId: l.contaBancariaId ?? '',
       categoriaId: l.categoriaId ?? '',
+      categoriaTexto: l.categoriaNome ?? '',
       descricao: l.descricao,
       valor: String(l.valor),
       vencimento: l.vencimento ? l.vencimento.slice(0, 10) : '',
@@ -1629,11 +1632,11 @@ export function FinanceiroMobile() {
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
                   <AutocompleteInput
-                    value={categoriasPagar.find(c => c.id === formEdit.categoriaId)?.nome ?? ''}
+                    value={categoriasPagar.find(c => c.id === formEdit.categoriaId)?.nome ?? formEdit.categoriaTexto}
                     options={categoriasPagar.map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
                       const encontrada = categoriasPagar.find(c => c.nome.toLowerCase() === texto.toLowerCase());
-                      setFormEdit(f => ({ ...f, categoriaId: encontrada?.id ?? '' }));
+                      setFormEdit(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
                   />
@@ -1737,11 +1740,11 @@ export function FinanceiroMobile() {
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
                   <AutocompleteInput
-                    value={categoriasReceber.find(c => c.id === formEditReceber.categoriaId)?.nome ?? ''}
+                    value={categoriasReceber.find(c => c.id === formEditReceber.categoriaId)?.nome ?? formEditReceber.categoriaTexto}
                     options={categoriasReceber.map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
                       const encontrada = categoriasReceber.find(c => c.nome.toLowerCase() === texto.toLowerCase());
-                      setFormEditReceber(f => ({ ...f, categoriaId: encontrada?.id ?? '' }));
+                      setFormEditReceber(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
                   />
@@ -2092,11 +2095,11 @@ export function FinanceiroMobile() {
                   </div>
                 )}
                 <AutocompleteInput
-                  value={categoriasPagar.find(c => c.id === formCompra.categoriaId)?.nome ?? ''}
+                  value={categoriasPagar.find(c => c.id === formCompra.categoriaId)?.nome ?? formCompra.categoriaTexto}
                   options={categoriasPagar.map(c => ({ value: c.nome, icone: c.icone }))}
                   onChange={texto => {
                     const encontrada = categoriasPagar.find(c => c.nome.toLowerCase() === texto.toLowerCase());
-                    setFormCompra(f => ({ ...f, categoriaId: encontrada?.id ?? '' }));
+                    setFormCompra(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                   }}
                   placeholder="Categoria (digite ou escolha)..."
                 />
@@ -2127,11 +2130,11 @@ export function FinanceiroMobile() {
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
                   <AutocompleteInput
-                    value={categoriasPagar.find(c => c.id === formEditItemCartao.categoriaId)?.nome ?? ''}
+                    value={categoriasPagar.find(c => c.id === formEditItemCartao.categoriaId)?.nome ?? formEditItemCartao.categoriaTexto}
                     options={categoriasPagar.map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
                       const encontrada = categoriasPagar.find(c => c.nome.toLowerCase() === texto.toLowerCase());
-                      setFormEditItemCartao(f => ({ ...f, categoriaId: encontrada?.id ?? '' }));
+                      setFormEditItemCartao(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
                   />
@@ -2519,11 +2522,11 @@ export function FinanceiroMobile() {
                 <div className="form-group">
                   <label className="form-label">Categoria</label>
                   <AutocompleteInput
-                    value={(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).find(c => c.id === formNovoLanc.categoriaId)?.nome ?? ''}
+                    value={(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).find(c => c.id === formNovoLanc.categoriaId)?.nome ?? formNovoLanc.categoriaTexto}
                     options={(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
                       const encontrada = (modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).find(c => c.nome.toLowerCase() === texto.toLowerCase());
-                      setFormNovoLanc(f => ({ ...f, categoriaId: encontrada?.id ?? '' }));
+                      setFormNovoLanc(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
                   />
