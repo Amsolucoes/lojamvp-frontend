@@ -11,6 +11,7 @@ import { Paginacao } from '@/components/Paginacao';
 // ── Tipos ─────────────────────────────────────────────────────────
 interface Cliente { id: string; nome: string; telefone: string; }
 interface Produto { id: string; nome: string; precoVenda: number; estoque: number; }
+interface Servico { id: string; nome: string; preco: number; ativo: boolean; }
 interface Profissional { id: string; nome: string; comissaoPadraoPercentual?: number | null; }
 interface ContaBancaria { id: string; nome: string; }
 
@@ -20,6 +21,7 @@ interface ChecklistCategoriaDef { id: string; nome: string; ordem: number; ativa
 interface ItemOrcamento {
   tipo: 'peca' | 'servico';
   produtoId: string | null;
+  servicoId: string | null;
   descricao: string;
   quantidade: number;
   valorUnitario: number;
@@ -43,7 +45,7 @@ interface OrcamentoResumo {
 
 interface OrcamentoDetalhe extends OrcamentoResumo {
   observacoes: string | null;
-  itens: { id: string; tipo: string; produtoId: string | null; descricao: string; quantidade: number; valorUnitario: number; valorTotal: number }[];
+  itens: { id: string; tipo: string; produtoId: string | null; servicoId: string | null; descricao: string; quantidade: number; valorUnitario: number; valorTotal: number }[];
   mecanicos: { id: string; profissionalId: string; nomeProfissional: string; comissaoPercentual: number }[];
   checklist: { id: string; checklistItemId: string; nomeItem: string; estado: string; observacao: string | null }[];
 }
@@ -97,7 +99,7 @@ function paraDatetimeLocal(iso: string): string {
   return local.toISOString().slice(0, 16);
 }
 
-const ITEM_VAZIO: ItemOrcamento = { tipo: 'servico', produtoId: null, descricao: '', quantidade: 1, valorUnitario: 0 };
+const ITEM_VAZIO: ItemOrcamento = { tipo: 'servico', produtoId: null, servicoId: null, descricao: '', quantidade: 1, valorUnitario: 0 };
 
 export function OrdemServico() {
   const { sucesso, erro } = useToast();
@@ -107,6 +109,7 @@ export function OrdemServico() {
   // ── Dados auxiliares ─────────────────────────────────────────
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [catalogoServicos, setCatalogoServicos] = useState<Servico[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [categoriasChecklist, setCategoriasChecklist] = useState<ChecklistCategoriaDef[]>([]);
@@ -167,6 +170,7 @@ export function OrdemServico() {
     carregarProdutos();
     api.get<Profissional[]>('/api/funcionarios/ativos').then(setProfissionais).catch(() => {});
     api.get<ContaBancaria[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+    api.get<Servico[]>('/api/servicos').then(res => setCatalogoServicos(res.filter(s => s.ativo))).catch(() => {});
     carregarChecklist();
     api.get<any>('/api/loja/situacao').then(res => setDadosLoja({
       endereco: res?.enderecoLoja ?? null,
@@ -264,6 +268,7 @@ export function OrdemServico() {
       setItens(d.itens.map(i => ({
         tipo: i.tipo as 'peca' | 'servico',
         produtoId: i.produtoId,
+        servicoId: i.servicoId,
         descricao: i.descricao,
         quantidade: i.quantidade,
         valorUnitario: i.valorUnitario,
@@ -322,6 +327,11 @@ export function OrdemServico() {
     if (!produto) { atualizarItem(i, { produtoId: null }); return; }
     atualizarItem(i, { produtoId: produto.id, descricao: produto.nome, valorUnitario: produto.precoVenda });
   }
+  function selecionarServicoNoItem(i: number, servicoId: string) {
+    const servico = catalogoServicos.find(s => s.id === servicoId);
+    if (!servico) { atualizarItem(i, { servicoId: null }); return; }
+    atualizarItem(i, { servicoId: servico.id, descricao: servico.nome, valorUnitario: servico.preco });
+  }
 
   function addMecanico() {
     if (profissionais.length === 0) { erro('Cadastre um profissional em Funcionários primeiro.'); return; }
@@ -370,6 +380,7 @@ export function OrdemServico() {
       itens: itens.map(i => ({
         tipo: i.tipo,
         produtoId: i.produtoId,
+        servicoId: i.servicoId,
         descricao: i.descricao.trim(),
         quantidade: i.quantidade,
         valorUnitario: i.valorUnitario,
@@ -874,7 +885,7 @@ export function OrdemServico() {
                     {itens.map((item, i) => (
                       <div key={i} className="os-item-card">
                         <div className="os-item-linha-topo">
-                          <select value={item.tipo} onChange={e => atualizarItem(i, { tipo: e.target.value as 'peca' | 'servico', produtoId: null })}>
+                          <select value={item.tipo} onChange={e => atualizarItem(i, { tipo: e.target.value as 'peca' | 'servico', produtoId: null, servicoId: null })}>
                             <option value="servico">Serviço</option>
                             <option value="peca">Peça</option>
                           </select>
@@ -884,6 +895,15 @@ export function OrdemServico() {
                               <option value="">Peça avulsa (fora do estoque)</option>
                               {produtos.map(p => (
                                 <option key={p.id} value={p.id}>{p.nome} (estoque: {p.estoque})</option>
+                              ))}
+                            </select>
+                          )}
+
+                          {item.tipo === 'servico' && (
+                            <select value={item.servicoId ?? ''} onChange={e => selecionarServicoNoItem(i, e.target.value)}>
+                              <option value="">Serviço avulso (fora do catálogo)</option>
+                              {catalogoServicos.map(s => (
+                                <option key={s.id} value={s.id}>{s.nome} ({fmt(s.preco)})</option>
                               ))}
                             </select>
                           )}
