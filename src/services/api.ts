@@ -60,10 +60,41 @@ async function request<T>(
   return data as T;
 }
 
+// Pra respostas binárias (PDF, etc.) — não tenta fazer parse de JSON no corpo.
+async function downloadBlob(path: string): Promise<Blob> {
+  const token = getToken();
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+  } catch {
+    throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
+  }
+
+  if (res.status === 401) {
+    logout();
+    throw new Error('Sessão expirada. Faça login novamente.');
+  }
+
+  if (!res.ok) {
+    let mensagem = `Erro ${res.status}. Tente novamente.`;
+    try {
+      const data = await res.json();
+      mensagem = data?.erro ?? data?.title ?? mensagem;
+    } catch {}
+    throw new Error(mensagem);
+  }
+
+  return res.blob();
+}
+
 export const api = {
-  get:    <T>(path: string)                => request<T>('GET',    path),
-  post:   <T>(path: string, body: unknown) => request<T>('POST',   path, body),
-  put:    <T>(path: string, body: unknown) => request<T>('PUT',    path, body),
-  patch:  <T>(path: string, body: unknown) => request<T>('PATCH',  path, body),
-  delete: <T>(path: string)               => request<T>('DELETE', path),
+  get:      <T>(path: string)                => request<T>('GET',    path),
+  post:     <T>(path: string, body: unknown) => request<T>('POST',   path, body),
+  put:      <T>(path: string, body: unknown) => request<T>('PUT',    path, body),
+  patch:    <T>(path: string, body: unknown) => request<T>('PATCH',  path, body),
+  delete:   <T>(path: string)               => request<T>('DELETE', path),
+  download: (path: string)                  => downloadBlob(path),
 };
