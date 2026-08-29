@@ -313,7 +313,7 @@ export function Funcionarios() {
                       · Ordem de Serviço: {p.comissaoBaseCalculo === 'servico' ? 'só mão de obra' : 'peça + serviço'}
                     </span>
                   </div>
-                  {p.tipoRemuneracao !== 'salario_fixo' && p.comissoesPorServico.length > 0 && (
+                    {p.comissoesPorServico.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                       {p.comissoesPorServico.map(c => (
                         <span key={c.id} className="badge badge-accent" style={{ fontSize: 11 }}>
@@ -324,11 +324,9 @@ export function Funcionarios() {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  {p.tipoRemuneracao !== 'salario_fixo' && (
-                    <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => abrirComissoes(p)}>
-                      <Percent size={13} /> Comissões
-                    </button>
-                  )}
+                  <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => abrirComissoes(p)}>
+                    <Percent size={13} /> Comissões
+                  </button>
                   <button className="btn-ghost" title="Editar" onClick={() => abrirEditar(p)}><Edit2 size={14} /></button>
                   <button className="btn-ghost" title={p.ativo ? 'Desativar' : 'Ativar'} onClick={() => alternarAtivo(p)}>
                     {p.ativo ? 'Desativar' : 'Ativar'}
