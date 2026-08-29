@@ -60,6 +60,7 @@ export function Clientes() {
   const [servicosCliente, setServicosCliente] = useState<any[]>([]);
   const [ordensServicoCliente, setOrdensServicoCliente] = useState<OrdemServicoCliente[]>([]);
   const [resumoServicos, setResumoServicos] = useState<Record<string, { qtd: number; total: number }>>({});
+  const [resumoOS, setResumoOS] = useState<Record<string, { qtd: number; total: number }>>({});
   const [temServicos, setTemServicos] = useState(false);
   const [assinantesIds, setAssinantesIds] = useState<Set<string>>(new Set());
   const [pagina, setPagina] = useState(1);
@@ -143,6 +144,12 @@ export function Clientes() {
   function totalServicos(clienteId: string) {
     return resumoServicos[clienteId]?.total ?? 0;
   }
+  function qtdOS(clienteId: string) {
+    return resumoOS[clienteId]?.qtd ?? 0;
+  }
+  function totalOS(clienteId: string) {
+    return resumoOS[clienteId]?.total ?? 0;
+  }
 
   const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -163,6 +170,16 @@ export function Clientes() {
         const mapa: Record<string, { qtd: number; total: number }> = {};
         res.forEach(r => { mapa[r.clienteId] = { qtd: r.qtd, total: r.total }; });
         setResumoServicos(mapa);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    api.get<any[]>('/api/ordemservico/resumo-clientes')
+      .then(res => {
+        const mapa: Record<string, { qtd: number; total: number }> = {};
+        res.forEach(r => { mapa[r.clienteId] = { qtd: r.qtd, total: r.total }; });
+        setResumoOS(mapa);
       })
       .catch(() => {});
   }, []);
@@ -241,6 +258,11 @@ export function Clientes() {
                 {(c.creditoLoja ?? 0) > 0 && (
                   <div className="cli-info" style={{ color: 'var(--green)', fontWeight: 600 }}>
                     💰 Crédito: {fmt(c.creditoLoja ?? 0)}
+                  </div>
+                )}
+                {qtdOS(c.id) > 0 && (
+                  <div className="cli-info" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                    🔧 {qtdOS(c.id)} ordem{qtdOS(c.id) > 1 ? 's' : ''} de serviço · {fmt(totalOS(c.id))}
                   </div>
                 )}
                 <div className="cli-divider" />
