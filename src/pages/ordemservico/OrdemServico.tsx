@@ -4,6 +4,7 @@ import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { InputMoeda } from '../../components/InputMoeda';
+import { useApp } from '../../context/AppContext';
 import './OrdemServico.css';
 
 // ── Tipos ─────────────────────────────────────────────────────────
@@ -93,6 +94,7 @@ const ITEM_VAZIO: ItemOrcamento = { tipo: 'servico', produtoId: null, descricao:
 
 export function OrdemServico() {
   const { sucesso, erro } = useToast();
+  const { nomeLoja } = useApp();
   const [aba, setAba] = useState<'ordens' | 'checklist'>('ordens');
 
   // ── Dados auxiliares ─────────────────────────────────────────
@@ -459,7 +461,8 @@ export function OrdemServico() {
     const itensTexto = detalhe.itens.map(i => `- ${i.descricao} (${i.quantidade}x): ${fmt(i.valorTotal)}`).join('\n');
     const rodape = [dadosLoja.endereco, dadosLoja.telefone ? `Tel/WhatsApp: ${fmtTelefone(dadosLoja.telefone)}` : null]
       .filter(Boolean).join('\n');
-    const texto = `Orçamento${veiculo ? ` — ${veiculo}` : ''}\n\n${itensTexto}\n\nTotal: ${fmt(detalhe.valorTotal)}` +
+    const cabecalho = nomeLoja ? `*${nomeLoja}*\n` : '';
+    const texto = `${cabecalho}Orçamento${veiculo ? ` — ${veiculo}` : ''}\n\n${itensTexto}\n\nTotal: ${fmt(detalhe.valorTotal)}` +
       (rodape ? `\n\n---\n${rodape}` : '');
     window.open(`https://wa.me/${comDdi}?text=${encodeURIComponent(texto)}`, '_blank');
   }
