@@ -63,6 +63,12 @@ const ESTADOS_CHECKLIST = ['bom', 'regular', 'ruim', 'precisa_trocar'];
 const ESTADO_LABEL: Record<string, string> = {
   bom: 'Bom', regular: 'Regular', ruim: 'Ruim', precisa_trocar: 'Precisa trocar',
 };
+const FORMAS_PAGAMENTO_OS: { value: string; label: string; icon: string }[] = [
+  { value: 'dinheiro', label: 'Dinheiro', icon: '💵' },
+  { value: 'pix', label: 'Pix', icon: '⚡' },
+  { value: 'credito', label: 'Crédito', icon: '💳' },
+  { value: 'debito', label: 'Débito', icon: '🏦' },
+];
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -127,6 +133,9 @@ export function OrdemServico() {
   const [modalConcluir, setModalConcluir] = useState(false);
   const [contaConclusaoId, setContaConclusaoId] = useState('');
   const [vencimentoConclusao, setVencimentoConclusao] = useState('');
+  const [jaPagoConclusao, setJaPagoConclusao] = useState(false);
+  const [formaPagamentoConclusao, setFormaPagamentoConclusao] = useState('pix');
+  const [parcelasConclusao, setParcelasConclusao] = useState(1);
   const [confirmExcluir, setConfirmExcluir] = useState<OrcamentoResumo | null>(null);
   const [confirmDesfazer, setConfirmDesfazer] = useState(false);
   const [modalDatas, setModalDatas] = useState(false);
@@ -470,16 +479,23 @@ export function OrdemServico() {
   function abrirConcluir() {
     setContaConclusaoId(contas[0]?.id ?? '');
     setVencimentoConclusao('');
+    setJaPagoConclusao(false);
+    setFormaPagamentoConclusao('pix');
+    setParcelasConclusao(1);
     setModalConcluir(true);
   }
 
   async function concluir() {
     if (!detalhe) return;
     if (!contaConclusaoId) { erro('Selecione a conta bancária de recebimento.'); return; }
+    if (jaPagoConclusao && !formaPagamentoConclusao) { erro('Selecione a forma de pagamento.'); return; }
     try {
       await api.patch(`/api/ordemservico/orcamentos/${detalhe.id}/concluir`, {
         contaBancariaId: contaConclusaoId,
         vencimento: vencimentoConclusao || null,
+        jaPago: jaPagoConclusao,
+        formaPagamento: jaPagoConclusao ? formaPagamentoConclusao : null,
+        parcelas: jaPagoConclusao && formaPagamentoConclusao === 'credito' ? parcelasConclusao : null,
       });
       sucesso('Ordem concluída — lançamento gerado no Financeiro.');
       setModalConcluir(false);
@@ -1044,6 +1060,42 @@ export function OrdemServico() {
                 <label className="form-label">Vencimento <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional — padrão hoje)</span></label>
                 <input type="date" value={vencimentoConclusao} onChange={e => setVencimentoConclusao(e.target.value)} />
               </div>
+
+              <div className="form-group" style={{ marginTop: 14 }}>
+                <label className="form-label">Pagamento</label>
+                <div className="os-toggle-pill">
+                  <button type="button" className={!jaPagoConclusao ? 'active' : ''} onClick={() => setJaPagoConclusao(false)}>Pendente</button>
+                  <button type="button" className={jaPagoConclusao ? 'active' : ''} onClick={() => setJaPagoConclusao(true)}>✓ Já foi pago</button>
+                </div>
+              </div>
+
+              {jaPagoConclusao && (
+                <div className="form-group" style={{ marginTop: 10 }}>
+                  <label className="form-label">Forma de pagamento *</label>
+                  <div className="cx-formas">
+                    {FORMAS_PAGAMENTO_OS.map(fp => (
+                      <button key={fp.value} type="button"
+                        className={`cx-forma-btn${formaPagamentoConclusao === fp.value ? ' active' : ''}`}
+                        onClick={() => setFormaPagamentoConclusao(fp.value)}>
+                        <span>{fp.icon}</span>
+                        <span>{fp.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {formaPagamentoConclusao === 'credito' && (
+                    <div style={{ marginTop: 10 }}>
+                      <label className="form-label">Parcelamento</label>
+                      <select style={{ marginTop: 5 }} value={parcelasConclusao} onChange={e => setParcelasConclusao(+e.target.value)}>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                          <option key={n} value={n}>
+                            {n}x {fmt(detalhe.valorTotal / n)}{n === 1 ? ' (à vista)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalConcluir(false)}>Cancelar</button>

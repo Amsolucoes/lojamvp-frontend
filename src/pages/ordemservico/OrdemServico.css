@@ -87,3 +87,24 @@
     grid-auto-rows: auto;
   }
 }
+
+.os-toggle-pill {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  width: fit-content;
+}
+.os-toggle-pill button {
+  padding: 7px 14px;
+  background: transparent;
+  border-radius: 0;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+}
+.os-toggle-pill button.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
