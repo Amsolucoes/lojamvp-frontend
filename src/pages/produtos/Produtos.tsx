@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, Package, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Search, Edit2, Trash2, Package, X, ChevronDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
 import { api } from '../../services/api';
@@ -48,6 +48,8 @@ export function Produtos() {
   const [confirmExcluirMarca, setConfirmExcluirMarca] = useState<{ id: string; nome: string } | null>(null);
   const [busca, setBusca]         = useState('');
   const [catFiltro, setCat]       = useState<string>('todas');
+  const [catMenuAberto, setCatMenuAberto] = useState(false);
+  const catMenuRef = useRef<HTMLDivElement>(null);
   const [statusFiltro, setStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos');
   const [modal, setModal]         = useState<'novo' | 'editar' | null>(null);
   const [editId, setEditId]       = useState<string | null>(null);
@@ -106,6 +108,23 @@ export function Produtos() {
     const marcaOk = marcaFiltro === 'todas' || p.marcaId === marcaFiltro;
     return ok && catOk && statOk && marcaOk;
   });
+
+  // Usa select com busca quando passar de 10 categorias — com poucas, pills
+  // continuam mais rápidas de clicar direto.
+  const usarSelectCategoria = cats.length > 10;
+  const catsOrdenadas = [...cats].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  // Contagem por categoria respeita busca/status/marca já aplicados, mas
+  // ignora o próprio filtro de categoria — assim cada opção mostra quantos
+  // produtos apareceriam SE ela fosse escolhida.
+  const produtosParaContagem = produtos.filter(p => {
+    const ok = p.nome.toLowerCase().includes(busca.toLowerCase()) || (p.codigoBarras?.includes(busca) ?? false);
+    const statOk = statusFiltro === 'todos' || (statusFiltro === 'ativo' ? p.ativo : !p.ativo);
+    const marcaOk = marcaFiltro === 'todas' || p.marcaId === marcaFiltro;
+    return ok && statOk && marcaOk;
+  });
+  const contagemPorCategoria: Record<string, number> = {};
+  produtosParaContagem.forEach(p => { contagemPorCategoria[p.categoria] = (contagemPorCategoria[p.categoria] ?? 0) + 1; });
 
   const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
   const paginaSegura = Math.min(paginaAtual, totalPaginas);
@@ -323,6 +342,14 @@ export function Produtos() {
     setPaginaAtual(1);
   }, [busca, catFiltro, statusFiltro, porPagina]);
 
+  useEffect(() => {
+    function aoClicarFora(e: MouseEvent) {
+      if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node)) setCatMenuAberto(false);
+    }
+    document.addEventListener('mousedown', aoClicarFora);
+    return () => document.removeEventListener('mousedown', aoClicarFora);
+  }, []);
+
   return (
     <div className="page">
       <div className="page-header">
@@ -352,14 +379,37 @@ export function Produtos() {
           <input className="search-input" placeholder="Buscar por nome ou código..."
             value={busca} onChange={e => setBusca(e.target.value)} />
         </div>
-        <div className="cat-tabs">
-          <button className={`cat-tab${catFiltro === 'todas' ? ' active' : ''}`} onClick={() => setCat('todas')}>Todas</button>
-          {cats.map(c => (
-            <button key={c.id} className={`cat-tab${catFiltro === c.nome ? ' active' : ''}`} onClick={() => setCat(c.nome)}>
-              {c.nome}
+        {usarSelectCategoria ? (
+          <div className="cat-select-wrap" ref={catMenuRef}>
+            <button type="button" className="cat-select-btn" onClick={() => setCatMenuAberto(v => !v)}>
+              <span>Categoria: {catFiltro === 'todas' ? 'todas' : catFiltro}</span>
+              <ChevronDown size={14} style={{ transform: catMenuAberto ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
             </button>
-          ))}
-        </div>
+            {catMenuAberto && (
+              <div className="cat-select-menu">
+                <button type="button" className={`cat-select-item${catFiltro === 'todas' ? ' active' : ''}`}
+                  onClick={() => { setCat('todas'); setCatMenuAberto(false); }}>
+                  <span>Todas</span><span className="cat-select-count">{produtosParaContagem.length}</span>
+                </button>
+                {catsOrdenadas.map(c => (
+                  <button type="button" key={c.id} className={`cat-select-item${catFiltro === c.nome ? ' active' : ''}`}
+                    onClick={() => { setCat(c.nome); setCatMenuAberto(false); }}>
+                    <span>{c.nome}</span><span className="cat-select-count">{contagemPorCategoria[c.nome] ?? 0}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="cat-tabs">
+            <button className={`cat-tab${catFiltro === 'todas' ? ' active' : ''}`} onClick={() => setCat('todas')}>Todas</button>
+            {cats.map(c => (
+              <button key={c.id} className={`cat-tab${catFiltro === c.nome ? ' active' : ''}`} onClick={() => setCat(c.nome)}>
+                {c.nome}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="cat-tabs">
           <button className={`cat-tab${statusFiltro === 'todos'   ? ' active' : ''}`} onClick={() => setStatus('todos')}>Todos</button>
           <button className={`cat-tab${statusFiltro === 'ativo'   ? ' active' : ''}`} onClick={() => setStatus('ativo')}>Ativos</button>
