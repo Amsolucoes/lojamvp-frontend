@@ -28,6 +28,23 @@ function iniciais(nome: string) {
   return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
 }
 
+interface OrdemServicoCliente {
+  id: string;
+  veiculoDescricao: string | null;
+  placa: string | null;
+  status: string;
+  valorTotal: number;
+  criadoEm: string;
+  concluidoEm: string | null;
+  itens: { descricao: string; quantidade: number; valorTotal: number }[];
+}
+const OS_STATUS_LABEL: Record<string, string> = {
+  pendente: 'Pendente', em_andamento: 'Em andamento', concluido: 'Concluído', cancelado: 'Cancelado',
+};
+const OS_STATUS_BADGE: Record<string, string> = {
+  pendente: 'badge-accent', em_andamento: 'badge-yellow', concluido: 'badge-green', cancelado: 'badge-red',
+};
+
 export function Clientes() {
   const { clientes, vendas, trocas, soServicos, addCliente, updateCliente, deleteCliente, temCorretora, temTurmas, temProdutos, temServicos: temServicosCtx } = useApp();
   const ehAluno = temTurmas && !temProdutos && !temServicosCtx;
@@ -41,6 +58,7 @@ export function Clientes() {
   const [confirmDel, setDel] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [servicosCliente, setServicosCliente] = useState<any[]>([]);
+  const [ordensServicoCliente, setOrdensServicoCliente] = useState<OrdemServicoCliente[]>([]);
   const [resumoServicos, setResumoServicos] = useState<Record<string, { qtd: number; total: number }>>({});
   const [temServicos, setTemServicos] = useState(false);
   const [assinantesIds, setAssinantesIds] = useState<Set<string>>(new Set());
@@ -85,6 +103,10 @@ export function Clientes() {
     api.get<any[]>(`/api/agendamentos/cliente/${c.id}`)
       .then(res => setServicosCliente(res.filter(s => s.status !== 'cancelado')))
       .catch(() => setServicosCliente([]));
+    setOrdensServicoCliente([]);
+    api.get<OrdemServicoCliente[]>(`/api/ordemservico/orcamentos/cliente/${c.id}`)
+      .then(setOrdensServicoCliente)
+      .catch(() => setOrdensServicoCliente([]));
   }
 
   async function salvar() {
@@ -488,6 +510,66 @@ export function Clientes() {
                           {s.status === 'concluido'
                             ? <span className="badge badge-green">Concluído</span>
                             : <span className="badge badge-blue">Agendado</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Histórico de ordens de serviço */}
+              {ordensServicoCliente.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 8px' }}>
+                    🔧 Histórico de ordens de serviço
+                  </div>
+                  {/* Desktop */}
+                  <div className="table-wrap cli-hist-desktop">
+                    <table>
+                      <thead>
+                        <tr><th>Data</th><th>Veículo</th><th>Itens</th><th>Status</th><th>Total</th></tr>
+                      </thead>
+                      <tbody>
+                        {ordensServicoCliente.map(o => (
+                          <tr key={o.id}>
+                            <td style={{ color: 'var(--text-3)', fontSize: 12 }}>
+                              {new Date(o.concluidoEm ?? o.criadoEm).toLocaleDateString('pt-BR')}
+                            </td>
+                            <td style={{ fontSize: 12 }}>
+                              {o.veiculoDescricao ?? '—'}{o.placa ? ` · ${o.placa}` : ''}
+                            </td>
+                            <td style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                              {o.itens.map((i, idx) => (
+                                <div key={idx}>{i.descricao} ×{i.quantidade}</div>
+                              ))}
+                            </td>
+                            <td><span className={`badge ${OS_STATUS_BADGE[o.status] ?? 'badge-accent'}`}>{OS_STATUS_LABEL[o.status] ?? o.status}</span></td>
+                            <td style={{ fontWeight: 500, color: 'var(--green)' }}>{fmt(o.valorTotal)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {/* Mobile */}
+                  <div className="cli-hist-mobile">
+                    {ordensServicoCliente.map(o => (
+                      <div key={o.id} className="cli-hist-card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                            {new Date(o.concluidoEm ?? o.criadoEm).toLocaleDateString('pt-BR')}
+                          </span>
+                          <span style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(o.valorTotal)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                            {o.veiculoDescricao ?? '—'}{o.placa ? ` · ${o.placa}` : ''}
+                          </span>
+                          <span className={`badge ${OS_STATUS_BADGE[o.status] ?? 'badge-accent'}`}>{OS_STATUS_LABEL[o.status] ?? o.status}</span>
+                        </div>
+                        <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                          {o.itens.map((i, idx) => (
+                            <div key={idx}>{i.descricao} ×{i.quantidade}</div>
+                          ))}
                         </div>
                       </div>
                     ))}
