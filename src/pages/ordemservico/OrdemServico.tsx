@@ -114,6 +114,8 @@ export function OrdemServico() {
   const [orcamentos, setOrcamentos] = useState<OrcamentoResumo[]>([]);
   const [statusFiltro, setStatusFiltro] = useState<string>('todos');
   const [buscaPlaca, setBuscaPlaca] = useState('');
+  const [paginaOS, setPaginaOS] = useState(1);
+  const [porPaginaOS, setPorPaginaOS] = useState(12);
 
   // ── Modal novo orçamento ─────────────────────────────────────
   const [modalNovo, setModalNovo] = useState(false);
@@ -176,6 +178,7 @@ export function OrdemServico() {
   }
 
   useEffect(() => { carregarOrcamentos(); }, [statusFiltro, buscaPlaca]);
+  useEffect(() => { setPaginaOS(1); }, [statusFiltro, buscaPlaca]);
 
   function carregarOrcamentos() {
     const params = new URLSearchParams();
@@ -662,6 +665,10 @@ export function OrdemServico() {
     }
   }
 
+  const totalPaginasOS = Math.max(1, Math.ceil(orcamentos.length / porPaginaOS));
+  const paginaSeguraOS = Math.min(paginaOS, totalPaginasOS);
+  const orcamentosPaginados = orcamentos.slice((paginaSeguraOS - 1) * porPaginaOS, paginaSeguraOS * porPaginaOS);
+
   return (
     <div className="page">
       <div className="page-header">
@@ -703,39 +710,58 @@ export function OrdemServico() {
           {orcamentos.length === 0 ? (
             <div className="card"><div className="empty"><Wrench size={32} /><p>Nenhum orçamento encontrado.</p></div></div>
           ) : (
-            <div className="os-grid">
-              {orcamentos.map(o => {
-                const cliente = clientes.find(c => c.id === o.clienteId);
-                return (
-                  <div key={o.id} className="card os-card" onClick={() => abrirDetalhe(o)}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{cliente?.nome ?? 'Cliente'}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                          {o.veiculoDescricao ?? 'Veículo não informado'}
-                          {o.placa && <span style={{ marginLeft: 6, fontWeight: 600, color: 'var(--text-2)' }}>· {o.placa}</span>}
+            <>
+              <div className="os-grid">
+                {orcamentosPaginados.map(o => {
+                  const cliente = clientes.find(c => c.id === o.clienteId);
+                  return (
+                    <div key={o.id} className="card os-card" onClick={() => abrirDetalhe(o)}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{cliente?.nome ?? 'Cliente'}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                            {o.veiculoDescricao ?? 'Veículo não informado'}
+                            {o.placa && <span style={{ marginLeft: 6, fontWeight: 600, color: 'var(--text-2)' }}>· {o.placa}</span>}
+                          </div>
                         </div>
+                        <span className={`badge ${STATUS_BADGE[o.status]}`}>{STATUS_LABEL[o.status]}</span>
                       </div>
-                      <span className={`badge ${STATUS_BADGE[o.status]}`}>{STATUS_LABEL[o.status]}</span>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>
+                        {o.nomesMecanicos.length > 0 ? o.nomesMecanicos.join(', ') : 'Sem mecânico vinculado'}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                        {o.aprovadoEm && <>Entrada: {fmtDataHoraCurta(o.aprovadoEm)}</>}
+                        {o.aprovadoEm && o.concluidoEm && ' · '}
+                        {o.concluidoEm && <>Saída: {fmtDataHoraCurta(o.concluidoEm)}</>}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                        <button className="btn-ghost" title="Imprimir ordem de serviço" onClick={e => { e.stopPropagation(); imprimirOS(o); }} style={{ padding: 4 }}>
+                          <Printer size={14} />
+                        </button>
+                        <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(o.valorTotal)}</span>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>
-                      {o.nomesMecanicos.length > 0 ? o.nomesMecanicos.join(', ') : 'Sem mecânico vinculado'}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-                      {o.aprovadoEm && <>Entrada: {fmtDataHoraCurta(o.aprovadoEm)}</>}
-                      {o.aprovadoEm && o.concluidoEm && ' · '}
-                      {o.concluidoEm && <>Saída: {fmtDataHoraCurta(o.concluidoEm)}</>}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                      <button className="btn-ghost" title="Imprimir ordem de serviço" onClick={e => { e.stopPropagation(); imprimirOS(o); }} style={{ padding: 4 }}>
-                        <Printer size={14} />
-                      </button>
-                      <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(o.valorTotal)}</span>
-                    </div>
+                  );
+                })}
+              </div>
+              <div className="prod-paginacao">
+                <div className="prod-pag-info">
+                  Mostrando {(paginaSeguraOS - 1) * porPaginaOS + 1}–{Math.min(paginaSeguraOS * porPaginaOS, orcamentos.length)} de {orcamentos.length}
+                </div>
+                <div className="prod-pag-controles">
+                  <select value={porPaginaOS} onChange={e => { setPorPaginaOS(+e.target.value); setPaginaOS(1); }} className="prod-pag-select">
+                    <option value={12}>12 por página</option>
+                    <option value={24}>24 por página</option>
+                    <option value={48}>48 por página</option>
+                  </select>
+                  <div className="prod-pag-botoes">
+                    <button className="btn-secondary" disabled={paginaSeguraOS <= 1} onClick={() => setPaginaOS(p => Math.max(1, p - 1))}>Anterior</button>
+                    <span className="prod-pag-atual">{paginaSeguraOS} / {totalPaginasOS}</span>
+                    <button className="btn-secondary" disabled={paginaSeguraOS >= totalPaginasOS} onClick={() => setPaginaOS(p => Math.min(totalPaginasOS, p + 1))}>Próxima</button>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              </div>
+            </>
           )}
         </>
       )}
