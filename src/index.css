@@ -150,6 +150,34 @@ button:active { transform: scale(0.98); }
 .badge-blue   { background: var(--blue-bg);   color: var(--blue);   }
 .badge-accent { background: var(--accent-bg); color: var(--accent); }
 
+/* Seletor de opções (toggle) largura total — usado no Financeiro pra
+   Mês/Personalizado, Agrupado/Detalhado, etc. Fica global de propósito,
+   já que várias páginas usam essa mesma classe. */
+.cx-tipo-toggle {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.cx-tipo-toggle button {
+  flex: 1;
+  padding: 7px 12px;
+  background: transparent;
+  border-radius: 0;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  text-align: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+.cx-tipo-toggle button.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
 /* Card base */
 .card {
   background: var(--bg-2);

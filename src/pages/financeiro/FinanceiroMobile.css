@@ -67,16 +67,6 @@
   padding-right: 2px;
 }
 .fm-pagar-filtro { overflow: visible; padding: 14px 10px; }
-.cx-tipo-toggle {
-  display: flex;
-  width: 100%;
-}
-.cx-tipo-toggle button {
-  flex: 1;
-  text-align: center;
-  justify-content: center;
-  white-space: nowrap;
-}
 .fm-fab-novo {
   width: 44px;
   height: 44px;
