@@ -120,6 +120,18 @@
 }
 .dash-week-bar-wrap:hover .dash-week-tip { opacity: 1; }
 
+.dash-alerts-scroll {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.dash-grid-secundario {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+  align-items: start;
+}
 
 @media (max-width: 768px) {
   .dash-grid { grid-template-columns: 1fr !important; }
@@ -129,6 +141,8 @@
 
   .dash-week-chart { height: 90px; gap: 4px; }
   .dash-week-label { font-size: 9px; }
+
+  .dash-grid-secundario { grid-template-columns: 1fr !important; }
 }
 
 .dash-resumo-mobile { display: none; }

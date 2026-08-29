@@ -368,15 +368,15 @@ function DashboardLoja() {
           )}
         </div>
 
-        {/* Alertas + Top produtos */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {alertasEstoque.length > 0 && (
-            <div className="card dash-alerts">
-              <div className="dash-card-header">
-                <div className="dash-card-title" style={{ color: 'var(--yellow)' }}>
-                  <AlertTriangle size={15} /> Estoque baixo
-                </div>
+        {/* Alertas de estoque */}
+        {alertasEstoque.length > 0 && (
+          <div className="card dash-alerts">
+            <div className="dash-card-header">
+              <div className="dash-card-title" style={{ color: 'var(--yellow)' }}>
+                <AlertTriangle size={15} /> Estoque baixo
               </div>
+            </div>
+            <div className="dash-alerts-scroll">
               {alertasEstoque.map(p => (
                 <div key={p.id} className="alert-row">
                   <span>{p.nome}</span>
@@ -384,48 +384,51 @@ function DashboardLoja() {
                 </div>
               ))}
             </div>
-          )}
-          <div className="card">
-            <div className="dash-card-header">
-              <div className="dash-card-title"><CreditCard size={15} /> Formas de pagamento hoje</div>
-            </div>
-            {formasPagamentoHoje.length === 0 || totalHoje <= 0 ? (
-              <div className="empty" style={{ padding: '20px 0' }}><p>Nenhuma venda hoje ainda.</p></div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
-                  {formasPagamentoHoje.map(f => (
-                    <div key={f.forma} style={{ width: `${(f.valor / totalHoje) * 100}%`, background: COR_PAG[f.forma] ?? 'var(--text-3)' }} />
-                  ))}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {formasPagamentoHoje.map(f => (
-                    <div key={f.forma} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: COR_PAG[f.forma] ?? 'var(--text-3)' }} />
-                        {LABEL_PAG[f.forma] ?? f.forma}
-                      </span>
-                      <span style={{ color: 'var(--text-3)' }}>{((f.valor / totalHoje) * 100).toFixed(0)}% · {fmt(f.valor)}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
           </div>
-          <div className="card">
-            <div className="dash-card-header">
-              <div className="dash-card-title"><TrendingUp size={15} /> Mais vendidos esta semana</div>
-            </div>
-            {topSemana.length === 0 ? (
-              <div className="empty" style={{ padding: '20px 0' }}><p>Sem vendas nos últimos 7 dias.</p></div>
-            ) : topSemana.map((x, i: number) => (
-              <div key={x.produto.id} className="top-row">
-                <span className="top-rank">#{i + 1}</span>
-                <span className="top-nome">{x.produto.nome}</span>
-                <span className="top-qtd">{x.qtd} un.</span>
+        )}
+      </div>
+
+      <div className="dash-grid-secundario">
+        <div className="card">
+          <div className="dash-card-header">
+            <div className="dash-card-title"><CreditCard size={15} /> Formas de pagamento hoje</div>
+          </div>
+          {formasPagamentoHoje.length === 0 || totalHoje <= 0 ? (
+            <div className="empty" style={{ padding: '20px 0' }}><p>Nenhuma venda hoje ainda.</p></div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
+                {formasPagamentoHoje.map(f => (
+                  <div key={f.forma} style={{ width: `${(f.valor / totalHoje) * 100}%`, background: COR_PAG[f.forma] ?? 'var(--text-3)' }} />
+                ))}
               </div>
-            ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {formasPagamentoHoje.map(f => (
+                  <div key={f.forma} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: COR_PAG[f.forma] ?? 'var(--text-3)' }} />
+                      {LABEL_PAG[f.forma] ?? f.forma}
+                    </span>
+                    <span style={{ color: 'var(--text-3)' }}>{((f.valor / totalHoje) * 100).toFixed(0)}% · {fmt(f.valor)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        <div className="card">
+          <div className="dash-card-header">
+            <div className="dash-card-title"><TrendingUp size={15} /> Mais vendidos esta semana</div>
           </div>
+          {topSemana.length === 0 ? (
+            <div className="empty" style={{ padding: '20px 0' }}><p>Sem vendas nos últimos 7 dias.</p></div>
+          ) : topSemana.map((x, i: number) => (
+            <div key={x.produto.id} className="top-row">
+              <span className="top-rank">#{i + 1}</span>
+              <span className="top-nome">{x.produto.nome}</span>
+              <span className="top-qtd">{x.qtd} un.</span>
+            </div>
+          ))}
         </div>
       </div>
       <div className="dash-fab-spacer" />
