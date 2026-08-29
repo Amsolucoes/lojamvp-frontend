@@ -60,7 +60,7 @@ export function Clientes() {
   const [servicosCliente, setServicosCliente] = useState<any[]>([]);
   const [ordensServicoCliente, setOrdensServicoCliente] = useState<OrdemServicoCliente[]>([]);
   const [resumoServicos, setResumoServicos] = useState<Record<string, { qtd: number; total: number }>>({});
-  const [resumoOS, setResumoOS] = useState<Record<string, { qtd: number; total: number }>>({});
+  const [resumoOS, setResumoOS] = useState<Record<string, { qtd: number; total: number; temAndamento: boolean }>>({});
   const [temServicos, setTemServicos] = useState(false);
   const [assinantesIds, setAssinantesIds] = useState<Set<string>>(new Set());
   const [pagina, setPagina] = useState(1);
@@ -150,6 +150,9 @@ export function Clientes() {
   function totalOS(clienteId: string) {
     return resumoOS[clienteId]?.total ?? 0;
   }
+  function osTemAndamento(clienteId: string) {
+    return resumoOS[clienteId]?.temAndamento ?? false;
+  }
 
   const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -177,8 +180,8 @@ export function Clientes() {
   useEffect(() => {
     api.get<any[]>('/api/ordemservico/resumo-clientes')
       .then(res => {
-        const mapa: Record<string, { qtd: number; total: number }> = {};
-        res.forEach(r => { mapa[r.clienteId] = { qtd: r.qtd, total: r.total }; });
+        const mapa: Record<string, { qtd: number; total: number; temAndamento: boolean }> = {};
+        res.forEach(r => { mapa[r.clienteId] = { qtd: r.qtd, total: r.total, temAndamento: r.temAndamento }; });
         setResumoOS(mapa);
       })
       .catch(() => {});
@@ -260,11 +263,6 @@ export function Clientes() {
                     💰 Crédito: {fmt(c.creditoLoja ?? 0)}
                   </div>
                 )}
-                {qtdOS(c.id) > 0 && (
-                  <div className="cli-info" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                    🔧 {qtdOS(c.id)} ordem{qtdOS(c.id) > 1 ? 's' : ''} de serviço · {fmt(totalOS(c.id))}
-                  </div>
-                )}
                 <div className="cli-divider" />
                 <div className="cli-stats">
                   {!soServicos && !temCorretora && (
@@ -280,6 +278,18 @@ export function Clientes() {
                     </div>
                   )}
                 </div>
+                {qtdOS(c.id) > 0 && (
+                  <div className="cli-stats" style={{ marginTop: 10 }}>
+                    <div>
+                      <div className="cli-stat-val" style={{ color: osTemAndamento(c.id) ? 'var(--yellow)' : 'var(--green)' }}>
+                        {fmt(totalOS(c.id))}
+                      </div>
+                      <div className="cli-stat-label">
+                        {qtdOS(c.id)} ordem{qtdOS(c.id) > 1 ? 's' : ''} de serviço{osTemAndamento(c.id) ? ' (em andamento)' : ''}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {ultima && !temCorretora && (
                   <div className="cli-ultima">
                     Última compra: {new Date(ultima.criadaEm).toLocaleDateString('pt-BR')}
