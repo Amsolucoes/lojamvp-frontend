@@ -137,14 +137,14 @@
   gap: 8px;
   align-items: center;
 }
-.cx-tipo-toggle {
+.cx-toggle-pill {
   display: flex;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
 }
-.cx-tipo-toggle button {
+.cx-toggle-pill button {
   padding: 7px 12px;
   background: transparent;
   border-radius: 0;
@@ -153,7 +153,7 @@
   font-weight: 500;
   border: none;
 }
-.cx-tipo-toggle button.active {
+.cx-toggle-pill button.active {
   background: var(--accent-bg);
   color: var(--accent);
 }

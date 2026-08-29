@@ -1100,7 +1100,7 @@ export function Caixa() {
               placeholder="0"
               style={{ flex: 1 }}
             />
-            <div className="cx-tipo-toggle">
+            <div className="cx-toggle-pill">
               <button className={tipoDesc === 'reais' ? 'active' : ''} onClick={() => setTipoDesc('reais')}>R$</button>
               <button className={tipoDesc === 'pct' ? 'active' : ''} onClick={() => setTipoDesc('pct')}>%</button>
             </div>
@@ -1373,7 +1373,7 @@ export function Caixa() {
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div className="cx-tipo-toggle">
+                <div className="cx-toggle-pill">
                   <button type="button" className={tipoMovimento === 'entrada' ? 'active' : ''} onClick={() => setTipoMovimento('entrada')}>Entrada</button>
                   <button type="button" className={tipoMovimento === 'saida' ? 'active' : ''} onClick={() => setTipoMovimento('saida')}>Sangria</button>
                 </div>
@@ -1524,7 +1524,7 @@ export function Caixa() {
                   </div>
 
                   {/* Toggle devolvido/novo */}
-                  <div className="cx-tipo-toggle" style={{ marginBottom: 12 }}>
+                  <div className="cx-toggle-pill" style={{ marginBottom: 12 }}>
                     <button className={trocaTipo === 'devolvido' ? 'active' : ''} onClick={() => setTrocaTipo('devolvido')}>
                       Devolvidos ({devolvidos.length})
                     </button>
