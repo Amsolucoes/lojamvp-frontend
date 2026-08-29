@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Trash2, Wrench, ClipboardList, Check, Ban, PackageCheck, Edit2, Mail, MessageCircle, Clock } from 'lucide-react';
+import { Plus, X, Trash2, Wrench, ClipboardList, Check, Ban, PackageCheck, Edit2, Mail, MessageCircle, Clock, Download, Printer } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
@@ -145,6 +145,8 @@ export function OrdemServico() {
   const [salvandoDatas, setSalvandoDatas] = useState(false);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [baixandoPdf, setBaixandoPdf] = useState(false);
+  const [imprimindoOS, setImprimindoOS] = useState<OrcamentoDetalhe | null>(null);
 
   // ── Modal checklist (config) ─────────────────────────────────
   const [novaCategoriaNome, setNovaCategoriaNome] = useState('');
@@ -185,6 +187,49 @@ export function OrdemServico() {
 
   function carregarChecklist() {
     api.get<ChecklistCategoriaDef[]>('/api/ordemservico/checklist-categorias').then(setCategoriasChecklist).catch(() => {});
+  }
+
+  // Dispara a impressão assim que a OS a imprimir estiver carregada, e limpa
+  // o estado quando a caixa de diálogo de impressão do navegador for fechada.
+  useEffect(() => {
+    if (!imprimindoOS) return;
+    const timer = setTimeout(() => window.print(), 50);
+    return () => clearTimeout(timer);
+  }, [imprimindoOS]);
+
+  useEffect(() => {
+    function aoTerminarImpressao() { setImprimindoOS(null); }
+    window.addEventListener('afterprint', aoTerminarImpressao);
+    return () => window.removeEventListener('afterprint', aoTerminarImpressao);
+  }, []);
+
+  async function imprimirOS(o: OrcamentoResumo) {
+    try {
+      const d = await api.get<OrcamentoDetalhe>(`/api/ordemservico/orcamentos/${o.id}`);
+      setImprimindoOS(d);
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  async function baixarPdf() {
+    if (!detalhe) return;
+    setBaixandoPdf(true);
+    try {
+      const blob = await api.download(`/api/ordemservico/orcamentos/${detalhe.id}/pdf`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `orcamento-${detalhe.id.slice(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      erro((e as Error).message);
+    } finally {
+      setBaixandoPdf(false);
+    }
   }
 
   // ── Novo orçamento ────────────────────────────────────────────
@@ -681,7 +726,10 @@ export function OrdemServico() {
                       {o.aprovadoEm && o.concluidoEm && ' · '}
                       {o.concluidoEm && <>Saída: {fmtDataHoraCurta(o.concluidoEm)}</>}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                      <button className="btn-ghost" title="Imprimir ordem de serviço" onClick={e => { e.stopPropagation(); imprimirOS(o); }} style={{ padding: 4 }}>
+                        <Printer size={14} />
+                      </button>
                       <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(o.valorTotal)}</span>
                     </div>
                   </div>
@@ -1002,6 +1050,9 @@ export function OrdemServico() {
               )}
             </div>
             <div className="modal-footer" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <button className="btn-secondary" onClick={baixarPdf} disabled={baixandoPdf} title="Baixar orçamento em PDF">
+                <Download size={14} /> {baixandoPdf ? 'Gerando...' : 'PDF'}
+              </button>
               <button className="btn-secondary" onClick={enviarPorEmail} disabled={enviandoEmail} title="Enviar orçamento por e-mail">
                 <Mail size={14} /> {enviandoEmail ? 'Enviando...' : 'E-mail'}
               </button>
@@ -1219,6 +1270,65 @@ export function OrdemServico() {
               <button className="btn-danger" onClick={excluir}>Excluir</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Folha de impressão da OS para o mecânico (só visível ao imprimir) ── */}
+      {imprimindoOS && (
+        <div className="os-impressao">
+          <h2>{nomeLoja}</h2>
+          <p style={{ fontSize: 13, margin: '2px 0 10px' }}>
+            Ordem de Serviço — {STATUS_LABEL[imprimindoOS.status] ?? imprimindoOS.status}
+          </p>
+          <div className="os-imp-linha" />
+          <p><strong>Cliente:</strong> {clientes.find(c => c.id === imprimindoOS.clienteId)?.nome ?? '—'}</p>
+          <p><strong>Telefone:</strong> {clientes.find(c => c.id === imprimindoOS.clienteId)?.telefone ?? '—'}</p>
+          {(imprimindoOS.veiculoDescricao || imprimindoOS.placa) && (
+            <p><strong>Veículo:</strong> {imprimindoOS.veiculoDescricao}{imprimindoOS.veiculoDescricao && imprimindoOS.placa ? ' · ' : ''}{imprimindoOS.placa}</p>
+          )}
+          {imprimindoOS.aprovadoEm && <p><strong>Entrada:</strong> {fmtDataHoraCurta(imprimindoOS.aprovadoEm)}</p>}
+
+          <div className="os-imp-linha" />
+          <h3>Itens</h3>
+          <table>
+            <thead><tr><th>Descrição</th><th>Qtd</th><th>Total</th></tr></thead>
+            <tbody>
+              {imprimindoOS.itens.map(i => (
+                <tr key={i.id}><td>{i.descricao}</td><td>{i.quantidade}</td><td>{fmt(i.valorTotal)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+
+          {imprimindoOS.mecanicos.length > 0 && (
+            <>
+              <div className="os-imp-linha" />
+              <h3>Mecânico(s)</h3>
+              {imprimindoOS.mecanicos.map(m => <p key={m.id} style={{ margin: '2px 0' }}>{m.nomeProfissional}</p>)}
+            </>
+          )}
+
+          {imprimindoOS.checklist.length > 0 && (
+            <>
+              <div className="os-imp-linha" />
+              <h3>Checklist</h3>
+              <table>
+                <thead><tr><th>Item</th><th>Estado</th></tr></thead>
+                <tbody>
+                  {imprimindoOS.checklist.map(c => (
+                    <tr key={c.id}><td>{c.nomeItem}</td><td>{ESTADO_LABEL[c.estado] ?? c.estado}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {imprimindoOS.observacoes && (
+            <>
+              <div className="os-imp-linha" />
+              <h3>Observações</h3>
+              <p>{imprimindoOS.observacoes}</p>
+            </>
+          )}
         </div>
       )}
     </div>

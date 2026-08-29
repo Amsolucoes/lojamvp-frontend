@@ -108,3 +108,26 @@
   background: var(--accent-bg);
   color: var(--accent);
 }
+
+.os-impressao { display: none; }
+
+@media print {
+  @page { size: A4; margin: 15mm; }
+  body * { visibility: hidden; }
+  .os-impressao, .os-impressao * { visibility: visible; }
+  .os-impressao {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    font-family: Arial, sans-serif;
+    color: #000;
+  }
+  .os-impressao h2 { font-size: 18px; margin-bottom: 2px; }
+  .os-impressao h3 { font-size: 14px; margin-bottom: 6px; }
+  .os-impressao p { font-size: 12px; margin: 2px 0; }
+  .os-impressao table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  .os-impressao th, .os-impressao td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 12px; }
+  .os-imp-linha { border-top: 1px solid #000; margin: 10px 0; }
+}
