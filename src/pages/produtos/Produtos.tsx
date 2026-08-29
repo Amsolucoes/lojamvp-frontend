@@ -5,6 +5,7 @@ import { Produto } from '../../types';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import './Produtos.css';
+import { Paginacao } from '@/components/Paginacao';
 
 interface Variacao {
   id?: string;
@@ -532,30 +533,14 @@ export function Produtos() {
 
       {/* Paginação */}
       {lista.length > 0 && (
-        <div className="prod-paginacao">
-          <div className="prod-pag-info">
-            Mostrando {(paginaSegura - 1) * porPagina + 1}–{Math.min(paginaSegura * porPagina, lista.length)} de {lista.length}
-          </div>
-          <div className="prod-pag-controles">
-            <select value={porPagina} onChange={e => setPorPagina(+e.target.value)} className="prod-pag-select">
-              <option value={5}>5 por página</option>
-              <option value={10}>10 por página</option>
-              <option value={20}>20 por página</option>
-              <option value={50}>50 por página</option>
-            </select>
-            <div className="prod-pag-botoes">
-              <button className="btn-secondary" disabled={paginaSegura <= 1}
-                onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}>
-                Anterior
-              </button>
-              <span className="prod-pag-atual">{paginaSegura} / {totalPaginas}</span>
-              <button className="btn-secondary" disabled={paginaSegura >= totalPaginas}
-                onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}>
-                Próxima
-              </button>
-            </div>
-          </div>
-        </div>
+        <Paginacao
+          paginaAtual={paginaSegura}
+          totalItens={lista.length}
+          porPagina={porPagina}
+          onMudarPagina={setPaginaAtual}
+          onMudarPorPagina={setPorPagina}
+          opcoesPorPagina={[5, 10, 20, 50]}
+        />
       )}
 
       {/* Modal novo/editar */}

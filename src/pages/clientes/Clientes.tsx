@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { Cliente } from '../../types';
 import { api } from '../../services/api';
 import './Clientes.css';
+import { Paginacao } from '@/components/Paginacao';
 
 type FormData = Omit<Cliente, 'id' | 'criadoEm'>;
 const EMPTY: FormData = { nome: '', telefone: '', cpf: '', email: '', endereco: '', observacoes: '', dataNascimento: undefined };
@@ -302,23 +303,14 @@ export function Clientes() {
       )}
 
       {lista.length > 0 && (
-        <div className="prod-paginacao">
-          <div className="prod-pag-info">
-            Mostrando {(paginaSegura - 1) * porPagina + 1}–{Math.min(paginaSegura * porPagina, lista.length)} de {lista.length}
-          </div>
-          <div className="prod-pag-controles">
-            <select value={porPagina} onChange={e => setPorPagina(+e.target.value)} className="prod-pag-select">
-              <option value={12}>12 por página</option>
-              <option value={24}>24 por página</option>
-              <option value={48}>48 por página</option>
-            </select>
-            <div className="prod-pag-botoes">
-              <button className="btn-secondary" disabled={paginaSegura <= 1} onClick={() => setPagina(p => Math.max(1, p - 1))}>Anterior</button>
-              <span className="prod-pag-atual">{paginaSegura} / {totalPaginas}</span>
-              <button className="btn-secondary" disabled={paginaSegura >= totalPaginas} onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}>Próxima</button>
-            </div>
-          </div>
-        </div>
+        <Paginacao
+          paginaAtual={paginaSegura}
+          totalItens={lista.length}
+          porPagina={porPagina}
+          onMudarPagina={setPagina}
+          onMudarPorPagina={setPorPagina}
+          opcoesPorPagina={[12, 24, 48]}
+        />
       )}
 
       {/* Modal novo/editar */}

@@ -6,6 +6,7 @@ import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { InputMoeda } from '../../components/InputMoeda';
 import { useApp } from '../../context/AppContext';
 import './OrdemServico.css';
+import { Paginacao } from '@/components/Paginacao';
 
 // ── Tipos ─────────────────────────────────────────────────────────
 interface Cliente { id: string; nome: string; telefone: string; }
@@ -744,23 +745,14 @@ export function OrdemServico() {
                   );
                 })}
               </div>
-              <div className="prod-paginacao">
-                <div className="prod-pag-info">
-                  Mostrando {(paginaSeguraOS - 1) * porPaginaOS + 1}–{Math.min(paginaSeguraOS * porPaginaOS, orcamentos.length)} de {orcamentos.length}
-                </div>
-                <div className="prod-pag-controles">
-                  <select value={porPaginaOS} onChange={e => { setPorPaginaOS(+e.target.value); setPaginaOS(1); }} className="prod-pag-select">
-                    <option value={12}>12 por página</option>
-                    <option value={24}>24 por página</option>
-                    <option value={48}>48 por página</option>
-                  </select>
-                  <div className="prod-pag-botoes">
-                    <button className="btn-secondary" disabled={paginaSeguraOS <= 1} onClick={() => setPaginaOS(p => Math.max(1, p - 1))}>Anterior</button>
-                    <span className="prod-pag-atual">{paginaSeguraOS} / {totalPaginasOS}</span>
-                    <button className="btn-secondary" disabled={paginaSeguraOS >= totalPaginasOS} onClick={() => setPaginaOS(p => Math.min(totalPaginasOS, p + 1))}>Próxima</button>
-                  </div>
-                </div>
-              </div>
+              <Paginacao
+                paginaAtual={paginaSeguraOS}
+                totalItens={orcamentos.length}
+                porPagina={porPaginaOS}
+                onMudarPagina={setPaginaOS}
+                onMudarPorPagina={setPorPaginaOS}
+                opcoesPorPagina={[12, 24, 48]}
+              />
             </>
           )}
         </>
