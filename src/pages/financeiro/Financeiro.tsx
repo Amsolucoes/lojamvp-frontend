@@ -1210,7 +1210,14 @@ export function Financeiro() {
                             {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'}
                           </td>
                           <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{nomeConta(l.contaBancariaId)}</td>
-                          <td style={{ fontSize: 13 }}>{l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}</td>
+                          <td style={{ fontSize: 13 }}>
+                            {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}
+                            {l.pagoEm && (
+                              <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 2 }}>
+                                Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}
+                              </div>
+                            )}
+                          </td>
                           <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
                           <td>
                             {ehFinanciada ? <span className="badge badge-blue">Financiada</span>
@@ -1268,6 +1275,7 @@ export function Financeiro() {
                           <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                             {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'} · {nomeConta(l.contaBancariaId)} · {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}
                           </div>
+                          {l.pagoEm && <div style={{ fontSize: 11, color: 'var(--green)' }}>Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}</div>}
                           {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
                         </div>
                         <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
@@ -1339,7 +1347,14 @@ export function Financeiro() {
                           )}
                         </td>
                         <td style={{ fontSize: 13, color: 'var(--text-2)' }}>{nomeConta(l.contaBancariaId)}</td>
-                        <td style={{ fontSize: 13 }}>{new Date(l.vencimento).toLocaleDateString('pt-BR')}</td>
+                        <td style={{ fontSize: 13 }}>
+                          {new Date(l.vencimento).toLocaleDateString('pt-BR')}
+                          {l.pagoEm && (
+                            <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 2 }}>
+                              Recebido em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}
+                            </div>
+                          )}
+                        </td>
                         <td style={{ fontWeight: 600 }}>{fmt(l.valor)}</td>
                         <td>
                           {l.status === 'pago' ? <span className="badge badge-green">Recebido</span>
@@ -1391,6 +1406,7 @@ export function Financeiro() {
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</div>
                       )}
                       <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{nomeConta(l.contaBancariaId)} · {new Date(l.vencimento).toLocaleDateString('pt-BR')}</div>
+                      {l.pagoEm && <div style={{ fontSize: 11, color: 'var(--green)' }}>Recebido em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}</div>}
                       </div>
                       <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
                     </div>

@@ -21,14 +21,14 @@ interface Alerta { id: string; descricao: string; tipo: string; valor: number; v
 interface LinhaPagar {
   id: string; descricao: string; observacao?: string | null;
   categoriaNome: string | null; categoriaId: string | null; contaBancariaId: string | null;
-  modo: string; valor: number; vencimento: string; status: string;
+  modo: string; valor: number; vencimento: string; status: string; pagoEm: string | null;
   numeroParcela: number | null; totalParcelas: number | null;
   origem: string; cartaoId: string | null; cartaoNome: string | null;
 }
 interface LinhaReceber {
   id: string; descricao: string; observacao?: string | null;
   categoriaNome: string | null; categoriaId: string | null; contaBancariaId: string | null;
-  modo: string; valor: number; vencimento: string; status: string;
+  modo: string; valor: number; vencimento: string; status: string; pagoEm: string | null;
   numeroParcela: number | null; totalParcelas: number | null;
   origem: string; // avulso | plano
 }
@@ -1283,6 +1283,7 @@ export function FinanceiroMobile() {
                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
                                   {l.categoriaNome && <span className="fm-tag-neutra">{iconeCategoria(categoriasPagar, l.categoriaNome)} {l.categoriaNome}</span>}
                                   <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                                  {l.pagoEm && <span style={{ fontSize: 11.5, color: 'var(--green)' }}>· Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>}
                                   {l.numeroParcela && <span className="fm-tag-neutra">{l.numeroParcela}/{l.totalParcelas}</span>}
                                 </div>
                               </div>
@@ -1445,6 +1446,7 @@ export function FinanceiroMobile() {
                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
                                   {l.categoriaNome && <span className="fm-tag-neutra">{iconeCategoria(categoriasReceber, l.categoriaNome)} {l.categoriaNome}</span>}
                                   <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                                  {l.pagoEm && <span style={{ fontSize: 11.5, color: 'var(--green)' }}>· Recebido em {new Date(l.pagoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>}
                                   {l.numeroParcela && <span className="fm-tag-neutra">{l.numeroParcela}/{l.totalParcelas}</span>}
                                   {l.origem === 'plano' && <span className="fm-tag-neutra">Plano</span>}
                                 </div>
