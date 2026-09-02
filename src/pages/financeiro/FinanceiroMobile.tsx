@@ -2247,8 +2247,14 @@ export function FinanceiroMobile() {
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <label className="form-label">Pagar com a conta</label>
                 <select value={formPagFatura.contaBancariaId} onChange={e => setFormPagFatura(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                  <option value="">Nenhuma (não afeta saldo de conta)</option>
                   {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
+                {!formPagFatura.contaBancariaId && (
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    Use quando a dívida foi resolvida por fora (negociação, absorvida em outro financiamento etc.).
+                  </p>
+                )}
               </div>
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <label className="form-label">Data do pagamento</label>
@@ -2296,14 +2302,16 @@ export function FinanceiroMobile() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalPagarFatura(false)}>Cancelar</button>
               <button className="btn-primary" onClick={() => {
-                if (formPagFatura.modo === 'total') pagarFaturaModal('total', { contaBancariaId: formPagFatura.contaBancariaId || null, dataPagamento: formPagFatura.dataPagamento || null });
-                else if (formPagFatura.modo === 'parcial') pagarFaturaModal('parcial', { valorPago: parseFloat(formPagFatura.valorPago) || 0, contaBancariaId: formPagFatura.contaBancariaId || null, dataPagamento: formPagFatura.dataPagamento || null });
+                const naoAfetaSaldo = !formPagFatura.contaBancariaId;
+                if (formPagFatura.modo === 'total') pagarFaturaModal('total', { contaBancariaId: formPagFatura.contaBancariaId || null, dataPagamento: formPagFatura.dataPagamento || null, naoAfetaSaldo });
+                else if (formPagFatura.modo === 'parcial') pagarFaturaModal('parcial', { valorPago: parseFloat(formPagFatura.valorPago) || 0, contaBancariaId: formPagFatura.contaBancariaId || null, dataPagamento: formPagFatura.dataPagamento || null, naoAfetaSaldo });
                 else pagarFaturaModal('parcelado', {
                   totalParcelas: parseInt(formPagFatura.totalParcelas) || 3,
                   valorEntrada: parseFloat(formPagFatura.valorEntrada) || 0,
                   primeiraParcela: formPagFatura.primeiraParcela || null,
                   contaBancariaId: formPagFatura.contaBancariaId || null,
                   dataPagamento: formPagFatura.dataPagamento || null,
+                  naoAfetaSaldo,
                 });
               }}>Confirmar</button>
             </div>

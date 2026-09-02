@@ -2451,8 +2451,14 @@ export function Financeiro() {
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <label className="form-label">Pagar com a conta</label>
                 <select value={formPagFatura.contaBancariaId} onChange={e => setFormPagFatura(f => ({ ...f, contaBancariaId: e.target.value }))}>
+                  <option value="">Nenhuma (não afeta saldo de conta)</option>
                   {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
+                {!formPagFatura.contaBancariaId && (
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    Use quando a dívida foi resolvida por fora (negociação com o banco, absorvida em outro financiamento etc.) — não vai debitar de nenhuma conta cadastrada.
+                  </p>
+                )}
               </div>
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <label className="form-label">Data do pagamento</label>
@@ -2527,7 +2533,8 @@ export function Financeiro() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalPagarFatura(false)}>Cancelar</button>
               <button className="btn-primary" onClick={() => {
-                if (formPagFatura.modo === 'total') pagarFaturaModal('total', { contaBancariaId: formPagFatura.contaBancariaId || null, dataPagamento: formPagFatura.dataPagamento || null });
+                const naoAfetaSaldo = !formPagFatura.contaBancariaId;
+                if (formPagFatura.modo === 'total') pagarFaturaModal('total', { contaBancariaId: formPagFatura.contaBancariaId || null, dataPagamento: formPagFatura.dataPagamento || null, naoAfetaSaldo });
                 else if (formPagFatura.modo === 'parcial') {
                   const valorParcial = parseFloat(formPagFatura.valorPago) || 0;
                   const limiteParcial = (faturaDados?.restante ?? faturaDados?.total ?? 0) - 0.01;
@@ -2535,7 +2542,7 @@ export function Financeiro() {
                     erro(`Informe um valor entre R$ 0,01 e ${fmt(limiteParcial)}.`);
                     return;
                   }
-                  pagarFaturaModal('parcial', { valorPago: valorParcial, contaBancariaId: formPagFatura.contaBancariaId || null, dataPagamento: formPagFatura.dataPagamento || null });
+                  pagarFaturaModal('parcial', { valorPago: valorParcial, contaBancariaId: formPagFatura.contaBancariaId || null, dataPagamento: formPagFatura.dataPagamento || null, naoAfetaSaldo });
                 }
                 else pagarFaturaModal('parcelado', {
                   totalParcelas: parseInt(formPagFatura.totalParcelas) || 3,
@@ -2543,6 +2550,7 @@ export function Financeiro() {
                   primeiraParcela: formPagFatura.primeiraParcela || null,
                   contaBancariaId: formPagFatura.contaBancariaId || null,
                   dataPagamento: formPagFatura.dataPagamento || null,
+                  naoAfetaSaldo,
                 });
               }}>
                 Confirmar
