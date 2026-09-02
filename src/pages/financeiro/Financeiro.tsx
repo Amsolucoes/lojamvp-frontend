@@ -561,11 +561,15 @@ export function Financeiro() {
   // Útil quando só uma parcela foi quitada à parte (ex: negociação com o banco).
   async function marcarParcelaFinanciamentoPaga(id: string) {
     try {
-      await api.post(`/api/financeiro/lancamentos/${id}/pagamento`, { pago: true });
+      // absorvidaSemConta=true: essa marcação é pra casos onde a parcela foi resolvida
+      // por fora (negociação, quitação junto com outra dívida etc.) — não deve reduzir
+      // o saldo de nenhuma conta bancária, já que o dinheiro não saiu dela de verdade.
+      await api.post(`/api/financeiro/lancamentos/${id}/pagamento`, { pago: true, absorvidaSemConta: true });
       if (faturaAberta) carregarFatura(faturaAberta.id, faturaAno, faturaMes);
       carregarLancamentos();
       carregarResumo();
-      sucesso('Parcela marcada como paga.');
+      carregarContas();
+      sucesso('Parcela marcada como quitada (sem afetar saldo de conta).');
     } catch (e) {
       erro((e as Error).message);
     }
@@ -2234,7 +2238,7 @@ export function Financeiro() {
                             {i.origemLinha === 'financiamento' ? (
                               i.status !== 'pago' && (
                                 <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                                  <button className="btn-ghost" style={{ padding: 4, color: 'var(--green)' }} title="Marcar essa parcela como paga"
+                                  <button className="btn-ghost" style={{ padding: 4, color: 'var(--green)' }} title="Marcar como quitada — não afeta saldo de nenhuma conta"
                                     onClick={() => marcarParcelaFinanciamentoPaga(i.id)}>
                                     <Check size={12} />
                                   </button>
