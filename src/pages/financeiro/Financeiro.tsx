@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3 } from 'lucide-react';
+import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw } from 'lucide-react';
 import { api } from '../../services/api';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { InputMoeda } from '../../components/InputMoeda';
@@ -570,6 +570,21 @@ export function Financeiro() {
       carregarResumo();
       carregarContas();
       sucesso('Parcela marcada como quitada (sem afetar saldo de conta).');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
+  // Reverte a marcação acima — volta a parcela pra pendente. O saldo de conta já se
+  // corrige sozinho (é sempre recalculado na hora), não precisa ajustar nada manualmente.
+  async function desfazerParcelaFinanciamento(id: string) {
+    try {
+      await api.post(`/api/financeiro/lancamentos/${id}/pagamento`, { pago: false });
+      if (faturaAberta) carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarLancamentos();
+      carregarResumo();
+      carregarContas();
+      sucesso('Parcela voltou para pendente.');
     } catch (e) {
       erro((e as Error).message);
     }
@@ -2236,7 +2251,7 @@ export function Financeiro() {
                             </div>
                             <span style={{ fontWeight: 600, flexShrink: 0 }}>{fmt(i.valor)}</span>
                             {i.origemLinha === 'financiamento' ? (
-                              i.status !== 'pago' && (
+                              i.status !== 'pago' ? (
                                 <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
                                   <button className="btn-ghost" style={{ padding: 4, color: 'var(--green)' }} title="Marcar como quitada — não afeta saldo de nenhuma conta"
                                     onClick={() => marcarParcelaFinanciamentoPaga(i.id)}>
@@ -2263,6 +2278,11 @@ export function Financeiro() {
                                     <Trash2 size={12} />
                                   </button>
                                 </div>
+                              ) : (
+                                <button className="btn-ghost" style={{ padding: 4, flexShrink: 0 }} title="Desfazer — volta essa parcela para pendente"
+                                  onClick={() => desfazerParcelaFinanciamento(i.id)}>
+                                  <RotateCcw size={12} />
+                                </button>
                               )
                             ) : (
                               <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
