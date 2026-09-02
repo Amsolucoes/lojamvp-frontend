@@ -427,6 +427,19 @@ export function FinanceiroMobile() {
     } catch {}
   }
 
+  // Marca uma parcela de financiamento ESPECÍFICA como paga, sem mexer no resto da
+  // fatura do mês — útil quando só uma parcela foi quitada à parte (negociação, etc.).
+  async function marcarParcelaFinanciamentoPaga(id: string) {
+    try {
+      await api.post(`/api/financeiro/lancamentos/${id}/pagamento`, { pago: true });
+      if (faturaAberta) carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarCartoes();
+      sucesso('Parcela marcada como paga.');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
   function abrirLancarCompra() {
     setFormCompra({ modo: 'avulsa', descricao: '', valor: '', dataCompra: new Date().toISOString().slice(0, 10), categoriaId: '', categoriaTexto: '', totalParcelas: '2' });
     setModalLancarCompra(true);
@@ -2035,6 +2048,10 @@ export function FinanceiroMobile() {
                               {i.origemLinha === 'financiamento' ? (
                                 i.status !== 'pago' && (
                                   <div style={{ display: 'flex', gap: 2 }}>
+                                    <button className="btn-ghost" style={{ padding: 4, color: 'var(--green)' }} title="Marcar essa parcela como paga"
+                                      onClick={() => marcarParcelaFinanciamentoPaga(i.id)}>
+                                      <Check size={13} />
+                                    </button>
                                     <button className="btn-ghost" style={{ padding: 4 }} onClick={() => abrirEditar({
                                       id: i.id, descricao: i.descricao, observacao: i.observacao ?? undefined,
                                       categoriaNome: null, categoriaId: i.categoriaId, contaBancariaId: i.contaBancariaId,

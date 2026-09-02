@@ -556,6 +556,21 @@ export function Financeiro() {
     }
   }
 
+  // Marca uma parcela de financiamento ESPECÍFICA como paga, sem mexer no resto da
+  // fatura do mês — diferente de "Pagar fatura", que sempre trata o ciclo inteiro.
+  // Útil quando só uma parcela foi quitada à parte (ex: negociação com o banco).
+  async function marcarParcelaFinanciamentoPaga(id: string) {
+    try {
+      await api.post(`/api/financeiro/lancamentos/${id}/pagamento`, { pago: true });
+      if (faturaAberta) carregarFatura(faturaAberta.id, faturaAno, faturaMes);
+      carregarLancamentos();
+      carregarResumo();
+      sucesso('Parcela marcada como paga.');
+    } catch (e) {
+      erro((e as Error).message);
+    }
+  }
+
   // ── Cartões de crédito ──────────────────────────────────────────
   function abrirNovoCartao() {
     setEditandoCartao(null);
@@ -2219,6 +2234,10 @@ export function Financeiro() {
                             {i.origemLinha === 'financiamento' ? (
                               i.status !== 'pago' && (
                                 <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                                  <button className="btn-ghost" style={{ padding: 4, color: 'var(--green)' }} title="Marcar essa parcela como paga"
+                                    onClick={() => marcarParcelaFinanciamentoPaga(i.id)}>
+                                    <Check size={12} />
+                                  </button>
                                   <button className="btn-ghost" style={{ padding: 4 }} title="Editar"
                                     onClick={() => abrirEditarLancamento({
                                       id: i.id, descricao: i.descricao, observacao: i.observacao ?? undefined,
