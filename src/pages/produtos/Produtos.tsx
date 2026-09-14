@@ -405,7 +405,22 @@ export function Produtos() {
           <p className="page-subtitle">{produtos.length} produto(s) cadastrado(s)</p>
         </div>
         <div className="prod-header-actions">
-          <div className="cat-select-wrap" ref={acoesMenuRef}>
+          {/* Desktop: botões separados */}
+          <div className="prod-actions-desktop">
+            <button className="btn-secondary" onClick={() => navigate('/produtos/precificacao')}>
+              Precificação
+            </button>
+            <button className="btn-secondary" onClick={() => setModalGerenciar(true)}>
+              Gerenciar categorias
+            </button>
+            {temOrdemServico && (
+              <button className="btn-secondary" onClick={() => setModalMarcas(true)}>
+                Gerenciar marcas
+              </button>
+            )}
+          </div>
+          {/* Mobile: menu "Mais ações" */}
+          <div className="cat-select-wrap prod-actions-mobile" ref={acoesMenuRef}>
             <button type="button" className="cat-select-btn" onClick={() => setAcoesMenuAberto(v => !v)}>
               <span>Mais ações</span>
               <ChevronDown size={14} style={{ transform: acoesMenuAberto ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
