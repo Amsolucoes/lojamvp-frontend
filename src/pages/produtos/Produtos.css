@@ -298,4 +298,16 @@ tr:hover .row-actions { opacity: 1; }
 @media (max-width: 768px) {
   .cat-select-menu { left: 0; right: 0; min-width: 0; width: 100%; }
 }
+
+.prod-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text-2);
+}
 }

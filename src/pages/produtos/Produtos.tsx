@@ -73,6 +73,9 @@ export function Produtos() {
   const [porPagina, setPorPagina] = useState(10);
   const { sucesso, erro, aviso } = useToast();
   const [catParaExcluir, setCatParaExcluir] = useState<any>(null);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [confirmStatusLote, setConfirmStatusLote] = useState<boolean | null>(null);
+  const [aplicandoStatusLote, setAplicandoStatusLote] = useState(false);
 
   const TAMANHOS_LETRA = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
   const TAMANHOS_NUMERO = ['32', '34', '36', '38', '40', '42', '44', '46'];
@@ -132,6 +135,44 @@ export function Produtos() {
   const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
   const paginaSegura = Math.min(paginaAtual, totalPaginas);
   const listaPaginada = lista.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina);
+
+  const idsFiltrados = lista.map(p => p.id);
+  const todosFiltradosSelecionados = idsFiltrados.length > 0 && idsFiltrados.every(id => selecionados.has(id));
+
+  function toggleSelecionado(id: string) {
+    setSelecionados(prev => {
+      const novo = new Set(prev);
+      if (novo.has(id)) novo.delete(id); else novo.add(id);
+      return novo;
+    });
+  }
+
+  function toggleSelecionarTodosFiltrados() {
+    setSelecionados(prev => {
+      if (todosFiltradosSelecionados) {
+        const novo = new Set(prev);
+        idsFiltrados.forEach(id => novo.delete(id));
+        return novo;
+      }
+      return new Set([...prev, ...idsFiltrados]);
+    });
+  }
+
+  async function aplicarStatusLote(ativo: boolean) {
+    const qtd = selecionados.size;
+    setAplicandoStatusLote(true);
+    try {
+      await api.put('/api/produtos/status-em-lote', { ids: Array.from(selecionados), ativo });
+      await recarregar();
+      setSelecionados(new Set());
+      setConfirmStatusLote(null);
+      sucesso(`${qtd} produto(s) ${ativo ? 'ativado(s)' : 'inativado(s)'} com sucesso.`);
+    } catch (e) {
+      erro('Erro ao atualizar produtos: ' + (e as Error).message);
+    } finally {
+      setAplicandoStatusLote(false);
+    }
+  }
 
   function carregarCategorias() {
     api.get<any[]>('/api/categorias').then(res => {
@@ -433,6 +474,18 @@ export function Produtos() {
         )}
       </div>
 
+      {/* Ação em massa */}
+      {selecionados.size > 0 && (
+        <div className="card prod-bulk-bar">
+          <span>{selecionados.size} selecionado(s)</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-secondary" onClick={() => setConfirmStatusLote(true)}>Ativar selecionados</button>
+            <button className="btn-secondary" onClick={() => setConfirmStatusLote(false)}>Inativar selecionados</button>
+            <button className="btn-ghost" onClick={() => setSelecionados(new Set())}>Limpar seleção</button>
+          </div>
+        </div>
+      )}
+
       {/* Tabela */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {lista.length === 0 ? (
@@ -446,6 +499,9 @@ export function Produtos() {
               <table>
                 <thead>
                   <tr>
+                    <th style={{ width: 32 }}>
+                      <input type="checkbox" checked={todosFiltradosSelecionados} onChange={toggleSelecionarTodosFiltrados} />
+                    </th>
                     <th>Produto</th>{temOrdemServico && <th>Marca</th>}<th>Categoria</th><th>Custo</th>
                     <th>Venda</th><th>Margem</th><th>Estoque</th>
                     <th>Status</th><th></th>
@@ -454,6 +510,9 @@ export function Produtos() {
                 <tbody>
                   {listaPaginada.map(p => (
                     <tr key={p.id}>
+                      <td>
+                        <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggleSelecionado(p.id)} />
+                      </td>
                       <td>
                         <div className="prod-nome">{p.nome}</div>
                         {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
@@ -496,9 +555,12 @@ export function Produtos() {
               {listaPaginada.map(p => (
                 <div key={p.id} className="prod-card-mobile">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div className="prod-nome">{p.nome}{temOrdemServico && p.nomeMarca ? ` — ${p.nomeMarca}` : ''}</div>
-                      {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggleSelecionado(p.id)} style={{ marginTop: 3 }} />
+                      <div>
+                        <div className="prod-nome">{p.nome}{temOrdemServico && p.nomeMarca ? ` — ${p.nomeMarca}` : ''}</div>
+                        {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
+                      </div>
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
                       <button className="btn-ghost" onClick={() => abrirEditar(p)}><Edit2 size={14} /></button>
@@ -546,6 +608,31 @@ export function Produtos() {
           onMudarPorPagina={setPorPagina}
           opcoesPorPagina={[5, 10, 20, 50]}
         />
+      )}
+
+      {/* Modal ativar/inativar em lote */}
+      {confirmStatusLote !== null && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmStatusLote(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>{confirmStatusLote ? 'Ativar produtos' : 'Inativar produtos'}</h2>
+              <button className="btn-ghost" onClick={() => setConfirmStatusLote(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Isso vai {confirmStatusLote ? 'ativar' : 'inativar'}{' '}
+                <strong style={{ color: 'var(--text-1)' }}>{selecionados.size} produto(s)</strong> selecionado(s).
+                {!confirmStatusLote && ' Produtos inativos somem das telas de venda, mas continuam no histórico e podem ser reativados a qualquer momento.'}
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmStatusLote(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={() => aplicarStatusLote(confirmStatusLote)} disabled={aplicandoStatusLote}>
+                {aplicandoStatusLote ? 'Aplicando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal novo/editar */}
