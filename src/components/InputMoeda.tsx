@@ -5,9 +5,10 @@ interface Props {
   onChange: (value: number) => void;
   placeholder?: string;
   autoFocus?: boolean;
+  className?: string;
 }
 
-export function InputMoeda({ value, onChange, placeholder, autoFocus }: Props) {
+export function InputMoeda({ value, onChange, placeholder, autoFocus, className }: Props) {
   const exibido = value
     ? value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : '';
@@ -26,6 +27,7 @@ export function InputMoeda({ value, onChange, placeholder, autoFocus }: Props) {
       onChange={handleChange}
       placeholder={placeholder}
       autoFocus={autoFocus}
+      className={className}
     />
   );
 }

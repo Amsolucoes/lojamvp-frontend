@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, ChevronDown, Percent } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { InputMoeda } from '../../components/InputMoeda';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { Paginacao } from '@/components/Paginacao';
@@ -227,20 +228,18 @@ export function Precificacao() {
                         </td>
                         <td><span className="badge badge-accent">{p.categoria}</span></td>
                         <td>
-                          <input
-                            type="number" step="0.01" min={0}
+                          <InputMoeda
                             className="precif-input"
                             value={custo}
-                            onChange={e => editarCampo(p.id, 'precoCusto', parseFloat(e.target.value) || 0,
+                            onChange={v => editarCampo(p.id, 'precoCusto', v,
                               { precoCusto: p.precoCusto, precoVenda: p.precoVenda })}
                           />
                         </td>
                         <td>
-                          <input
-                            type="number" step="0.01" min={0}
+                          <InputMoeda
                             className="precif-input"
                             value={venda}
-                            onChange={e => editarCampo(p.id, 'precoVenda', parseFloat(e.target.value) || 0,
+                            onChange={v => editarCampo(p.id, 'precoVenda', v,
                               { precoCusto: p.precoCusto, precoVenda: p.precoVenda })}
                           />
                         </td>
