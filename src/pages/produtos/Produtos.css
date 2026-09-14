@@ -314,4 +314,20 @@ tr:hover .row-actions { opacity: 1; }
   border: 1px solid var(--accent);
   box-shadow: none;
 }
+
+.prod-checkbox {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .prod-header-actions .cat-select-menu button {
+    width: 100%;
+    justify-content: flex-start;
+    border-radius: 0;
+  }
+}
 }

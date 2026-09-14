@@ -516,7 +516,7 @@ export function Produtos() {
                 <thead>
                   <tr>
                     <th style={{ width: 32 }}>
-                      <input type="checkbox" checked={todosFiltradosSelecionados} onChange={toggleSelecionarTodosFiltrados} />
+                      <input type="checkbox" className="prod-checkbox" checked={todosFiltradosSelecionados} onChange={toggleSelecionarTodosFiltrados} />
                     </th>
                     <th>Produto</th>{temOrdemServico && <th>Marca</th>}<th>Categoria</th><th>Custo</th>
                     <th>Venda</th><th>Margem</th><th>Estoque</th>
@@ -527,7 +527,7 @@ export function Produtos() {
                   {listaPaginada.map(p => (
                     <tr key={p.id}>
                       <td>
-                        <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggleSelecionado(p.id)} />
+                        <input type="checkbox" className="prod-checkbox" checked={selecionados.has(p.id)} onChange={() => toggleSelecionado(p.id)} />
                       </td>
                       <td>
                         <div className="prod-nome">{p.nome}</div>
@@ -572,7 +572,7 @@ export function Produtos() {
                 <div key={p.id} className="prod-card-mobile">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggleSelecionado(p.id)} style={{ marginTop: 3 }} />
+                      <input type="checkbox" className="prod-checkbox" checked={selecionados.has(p.id)} onChange={() => toggleSelecionado(p.id)} style={{ marginTop: 3 }} />
                       <div>
                         <div className="prod-nome">{p.nome}{temOrdemServico && p.nomeMarca ? ` — ${p.nomeMarca}` : ''}</div>
                         {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
