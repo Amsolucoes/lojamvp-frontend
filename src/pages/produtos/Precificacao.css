@@ -19,6 +19,8 @@
 }
 
 .precif-reajuste select {
+  width: auto;
+  flex: none;
   padding: 6px 10px;
 }
 

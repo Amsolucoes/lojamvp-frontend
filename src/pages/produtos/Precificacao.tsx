@@ -225,6 +225,11 @@ export function Precificacao() {
                         <td>
                           <div className="prod-nome">{p.nome}</div>
                           {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
+                          {p.variacoes && p.variacoes.filter(v => v.ativo).length > 0 && (
+                            <div className="prod-cod">
+                              Grade: {p.variacoes.filter(v => v.ativo).map(v => [v.tamanho, v.cor].filter(Boolean).join('/')).join(', ')}
+                            </div>
+                          )}
                         </td>
                         <td><span className="badge badge-accent">{p.categoria}</span></td>
                         <td>

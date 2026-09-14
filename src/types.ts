@@ -1,6 +1,17 @@
 // ── Produto ───────────────────────────────────────────────────────
 export type Categoria = 'semi-joias' | 'maquiagem' | 'acessorios' | 'outro';
 
+export interface ProdutoVariacao {
+  id: string;
+  tamanho?: string;
+  cor?: string;
+  outroCampo?: string;
+  codigoBarras?: string;
+  estoque: number;
+  estoqueMinimo: number;
+  ativo: boolean;
+}
+
 export interface Produto {
   id: string;
   nome: string;
@@ -17,6 +28,7 @@ export interface Produto {
   unidadeMedida?: string;
   marcaId?: string | null;
   nomeMarca?: string | null;
+  variacoes?: ProdutoVariacao[];
 }
 
 // ── Cliente ───────────────────────────────────────────────────────
