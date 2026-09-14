@@ -1,0 +1,38 @@
+.precif-voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.precif-reajuste {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.precif-reajuste select {
+  padding: 6px 10px;
+}
+
+.precif-reajuste-input {
+  width: 90px;
+  padding: 6px 10px;
+  text-align: right;
+}
+
+.precif-input {
+  width: 110px;
+  padding: 6px 8px;
+}
+
+.precif-linha-editada {
+  background: var(--bg-hover);
+}

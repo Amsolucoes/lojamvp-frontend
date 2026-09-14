@@ -7,6 +7,7 @@ import { Layout } from './components/layout/Layout';
 import { Login } from './pages/login/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Produtos } from './pages/produtos/Produtos';
+import { Precificacao } from './pages/produtos/Precificacao';
 import { Clientes } from './pages/clientes/Clientes';
 import { Caixa } from './pages/caixa/Caixa';
 import { Estoque } from './pages/estoque/Estoque';
@@ -79,6 +80,7 @@ function Rotas() {
         <Route element={<Layout />}>
           <Route index             element={<Dashboard />} />
           <Route path="produtos"   element={<Produtos />} />
+          <Route path="produtos/precificacao" element={<Precificacao />} />
           <Route path="clientes"   element={<Clientes />} />
           <Route path="caixa"      element={<Caixa />} />
           <Route path="estoque"    element={<Estoque />} />

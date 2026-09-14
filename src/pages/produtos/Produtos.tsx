@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Edit2, Trash2, Package, X, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Edit2, Trash2, Package, X, ChevronDown, DollarSign } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
 import { api } from '../../services/api';
@@ -38,6 +39,7 @@ const EMPTY: FormData = {
 };
 
 export function Produtos() {
+  const navigate = useNavigate();
   const { produtos, deleteProduto, recarregar } = useApp();
   const [temOrdemServico, setTemOrdemServico] = useState(false);
   const [marcas, setMarcas] = useState<{ id: string; nome: string }[]>([]);
@@ -359,6 +361,9 @@ export function Produtos() {
           <p className="page-subtitle">{produtos.length} produto(s) cadastrado(s)</p>
         </div>
         <div className="prod-header-actions">
+          <button className="btn-secondary" onClick={() => navigate('/produtos/precificacao')}>
+            <DollarSign size={15} style={{ verticalAlign: -2 }} /> Precificação
+          </button>
           <button className="btn-secondary" onClick={() => setModalGerenciar(true)}>
             Gerenciar categorias
           </button>
