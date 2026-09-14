@@ -247,8 +247,9 @@ tr:hover .row-actions { opacity: 1; }
   .modal-footer {
     flex-shrink: 0;
   }
+}
 
-  .cat-select-wrap { position: relative; }
+.cat-select-wrap { position: relative; }
 .cat-select-btn {
   display: flex;
   align-items: center;
@@ -337,5 +338,4 @@ tr:hover .row-actions { opacity: 1; }
     justify-content: flex-start;
     border-radius: 0;
   }
-}
 }
