@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit2, Trash2, Package, X, ChevronDown, DollarSign } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, X, ChevronDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
 import { api } from '../../services/api';
@@ -53,6 +53,8 @@ export function Produtos() {
   const [catFiltro, setCat]       = useState<string>('todas');
   const [catMenuAberto, setCatMenuAberto] = useState(false);
   const catMenuRef = useRef<HTMLDivElement>(null);
+  const [acoesMenuAberto, setAcoesMenuAberto] = useState(false);
+  const acoesMenuRef = useRef<HTMLDivElement>(null);
   const [statusFiltro, setStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos');
   const [modal, setModal]         = useState<'novo' | 'editar' | null>(null);
   const [editId, setEditId]       = useState<string | null>(null);
@@ -389,6 +391,7 @@ export function Produtos() {
   useEffect(() => {
     function aoClicarFora(e: MouseEvent) {
       if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node)) setCatMenuAberto(false);
+      if (acoesMenuRef.current && !acoesMenuRef.current.contains(e.target as Node)) setAcoesMenuAberto(false);
     }
     document.addEventListener('mousedown', aoClicarFora);
     return () => document.removeEventListener('mousedown', aoClicarFora);
@@ -402,17 +405,30 @@ export function Produtos() {
           <p className="page-subtitle">{produtos.length} produto(s) cadastrado(s)</p>
         </div>
         <div className="prod-header-actions">
-          <button className="btn-secondary" onClick={() => navigate('/produtos/precificacao')}>
-            <DollarSign size={15} style={{ verticalAlign: -2 }} /> Precificação
-          </button>
-          <button className="btn-secondary" onClick={() => setModalGerenciar(true)}>
-            Gerenciar categorias
-          </button>
-          {temOrdemServico && (
-            <button className="btn-secondary" onClick={() => setModalMarcas(true)}>
-              Gerenciar marcas
+          <div className="cat-select-wrap" ref={acoesMenuRef}>
+            <button type="button" className="cat-select-btn" onClick={() => setAcoesMenuAberto(v => !v)}>
+              <span>Mais ações</span>
+              <ChevronDown size={14} style={{ transform: acoesMenuAberto ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
             </button>
-          )}
+            {acoesMenuAberto && (
+              <div className="cat-select-menu">
+                <button type="button" className="cat-select-item"
+                  onClick={() => { setAcoesMenuAberto(false); navigate('/produtos/precificacao'); }}>
+                  <span>Precificação</span>
+                </button>
+                <button type="button" className="cat-select-item"
+                  onClick={() => { setAcoesMenuAberto(false); setModalGerenciar(true); }}>
+                  <span>Gerenciar categorias</span>
+                </button>
+                {temOrdemServico && (
+                  <button type="button" className="cat-select-item"
+                    onClick={() => { setAcoesMenuAberto(false); setModalMarcas(true); }}>
+                    <span>Gerenciar marcas</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <button className="btn-primary" onClick={abrirNovo}>
             <Plus size={15} style={{ verticalAlign: -2 }} /> Novo produto
           </button>

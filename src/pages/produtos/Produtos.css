@@ -103,6 +103,7 @@ tr:hover .row-actions { opacity: 1; }
 .prod-header-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .prod-paginacao {
@@ -308,6 +309,9 @@ tr:hover .row-actions { opacity: 1; }
   padding: 10px 16px;
   margin-bottom: 16px;
   font-size: 13px;
-  color: var(--text-2);
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  box-shadow: none;
 }
 }
