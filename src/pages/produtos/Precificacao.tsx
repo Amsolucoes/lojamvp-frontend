@@ -69,10 +69,18 @@ export function Precificacao() {
   }
 
   function editarCampo(id: string, campo: keyof Edicao, valor: number, original: Edicao) {
-    setEdicoes(prev => ({
-      ...prev,
-      [id]: { ...original, ...prev[id], [campo]: valor },
-    }));
+    setEdicoes(prev => {
+      const atualizado = { ...original, ...prev[id], [campo]: valor };
+      const igualAoOriginal = atualizado.precoCusto === original.precoCusto && atualizado.precoVenda === original.precoVenda;
+
+      const novo = { ...prev };
+      if (igualAoOriginal) {
+        delete novo[id];
+      } else {
+        novo[id] = atualizado;
+      }
+      return novo;
+    });
   }
 
   function margem(precoCusto: number, precoVenda: number) {
