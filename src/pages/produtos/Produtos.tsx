@@ -535,7 +535,7 @@ export function Produtos() {
                       <input type="checkbox" className="prod-checkbox" checked={todosFiltradosSelecionados} onChange={toggleSelecionarTodosFiltrados} />
                     </th>
                     <th>Produto</th>{temOrdemServico && <th>Marca</th>}<th>Categoria</th><th>Custo</th>
-                    <th>Venda</th><th>Margem</th><th>Estoque</th>
+                    <th>Venda</th><th>Margem</th><th>Estoque</th><th>Mín.</th>
                     <th>Status</th><th></th>
                   </tr>
                 </thead>
@@ -569,6 +569,7 @@ export function Produtos() {
                           </span>
                         )}
                       </td>
+                      <td style={{ color: 'var(--text-2)' }}>{fmtEstoque({ ...p, estoque: p.estoqueMinimo })}</td>
                       <td><span className={`badge ${p.ativo ? 'badge-green' : 'badge-red'}`}>{p.ativo ? 'Ativo' : 'Inativo'}</span></td>
                       <td>
                         <div className="row-actions">
@@ -619,7 +620,7 @@ export function Produtos() {
                       </div>
                     ) : (
                       <span className={p.estoque <= p.estoqueMinimo ? 'estoque-baixo' : 'estoque-ok'} style={{ fontSize: 12 }}>
-                        Estoque: {fmtEstoque(p)}
+                        Estoque: {fmtEstoque(p)} <span style={{ color: 'var(--text-3)' }}>(mín. {fmtEstoque({ ...p, estoque: p.estoqueMinimo })})</span>
                       </span>
                     )}
                   </div>

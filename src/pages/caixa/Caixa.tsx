@@ -126,6 +126,7 @@ export function Caixa() {
   });
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [salvandoMovimento, setSalvandoMovimento] = useState(false);
+  const [salvandoVenda, setSalvandoVenda] = useState(false);
   const [editandoMovimentoId, setEditandoMovimentoId] = useState<string | null>(null);
   const [movimentosHoje, setMovimentosHoje] = useState<MovimentoCaixaItem[]>([]);
   const [confirmDelMovimento, setConfirmDelMovimento] = useState<MovimentoCaixaItem | null>(null);
@@ -642,51 +643,59 @@ export function Caixa() {
 
   async function finalizarVenda() {
     if (carrinho.length === 0) { toastErro('Adicione produtos ou serviços ao carrinho.'); return; }
-    const venda = {
-      itens: carrinho.map(item => ({
-        produtoId:     item.tipo === 'produto' ? item.produtoId : null,
-        servicoId:     item.tipo === 'servico' ? item.servicoId : null,
-        agendamentoId: item.agendamentoId ?? null,
-        assinaturaId:  item.assinaturaId ?? null,
-        nomeProduto:   item.nomeProduto,
-        quantidade:    item.quantidade,
-        precoUnitario: item.precoUnitario,
-        subtotal:      item.subtotal,
-        variacaoId:    item.variacaoId ?? null,
-      })),
-      clienteId:      clienteId || undefined,
-      nomeCliente:    clienteSel?.nome,
-      total:          subtotal,
-      desconto:       descontoVal,
-      totalFinal:     total,
-      creditoUsado:   creditoUsado > 0 ? creditoUsado : null,
-      dataVenda:      dataVenda || undefined,
-      origemVendaId:  origemVendaId || null,
-      formaPagamento: formas[0].forma,
-      parcelas:       formas[0].parcelas ?? 1,
-      formasPagamento: JSON.stringify(formas.map(f => ({ forma: f.forma, valor: duasFormas ? f.valor : total, parcelas: f.parcelas ?? 1 }))),
-      troco: formas[0].forma === 'dinheiro' && !duasFormas && valorPago
-        ? Math.max(0, parseFloat(valorPago) - total)
-        : undefined,
-    } as any;
+    if (salvandoVenda) return; // evita duplo clique gerando 2 vendas
+    setSalvandoVenda(true);
+    try {
+      const venda = {
+        itens: carrinho.map(item => ({
+          produtoId:     item.tipo === 'produto' ? item.produtoId : null,
+          servicoId:     item.tipo === 'servico' ? item.servicoId : null,
+          agendamentoId: item.agendamentoId ?? null,
+          assinaturaId:  item.assinaturaId ?? null,
+          nomeProduto:   item.nomeProduto,
+          quantidade:    item.quantidade,
+          precoUnitario: item.precoUnitario,
+          subtotal:      item.subtotal,
+          variacaoId:    item.variacaoId ?? null,
+        })),
+        clienteId:      clienteId || undefined,
+        nomeCliente:    clienteSel?.nome,
+        total:          subtotal,
+        desconto:       descontoVal,
+        totalFinal:     total,
+        creditoUsado:   creditoUsado > 0 ? creditoUsado : null,
+        dataVenda:      dataVenda || undefined,
+        origemVendaId:  origemVendaId || null,
+        formaPagamento: formas[0].forma,
+        parcelas:       formas[0].parcelas ?? 1,
+        formasPagamento: JSON.stringify(formas.map(f => ({ forma: f.forma, valor: duasFormas ? f.valor : total, parcelas: f.parcelas ?? 1 }))),
+        troco: formas[0].forma === 'dinheiro' && !duasFormas && valorPago
+          ? Math.max(0, parseFloat(valorPago) - total)
+          : undefined,
+      } as any;
 
-    const trocoVenda = formas[0].forma === 'dinheiro' && !duasFormas && valorPago
-      ? Math.max(0, parseFloat(valorPago.replace(',', '.')) - total)
-      : 0;
+      const trocoVenda = formas[0].forma === 'dinheiro' && !duasFormas && valorPago
+        ? Math.max(0, parseFloat(valorPago.replace(',', '.')) - total)
+        : 0;
 
-    const vendaCriada = await registrarVenda(venda);
-    await recarregar(true);
-    carregarPendentes();
-    toastSucesso(
-      trocoVenda > 0
-        ? `Venda registrada! Troco: ${fmt(trocoVenda)}`
-        : `Venda registrada! ${fmt(total)}`
-    );
-    if (temCupomNaoFiscal) {
-      setCupomVenda(vendaCriada);
-      setModalCupom(true);
+      const vendaCriada = await registrarVenda(venda);
+      await recarregar(true);
+      carregarPendentes();
+      toastSucesso(
+        trocoVenda > 0
+          ? `Venda registrada! Troco: ${fmt(trocoVenda)}`
+          : `Venda registrada! ${fmt(total)}`
+      );
+      if (temCupomNaoFiscal) {
+        setCupomVenda(vendaCriada);
+        setModalCupom(true);
+      }
+      limpar();
+    } catch (e) {
+      toastErro('Erro ao registrar venda: ' + (e as Error).message);
+    } finally {
+      setSalvandoVenda(false);
     }
-    limpar();
   }
 
   function imprimirCupom() {
@@ -1248,11 +1257,11 @@ export function Caixa() {
 
       {/* Botão finalizar */}
       <button
-        className={`cx-finalizar${podeFinalizar ? '' : ' disabled'}`}
-        onClick={podeFinalizar ? finalizarVenda : undefined}
-        disabled={!podeFinalizar}>
+        className={`cx-finalizar${podeFinalizar && !salvandoVenda ? '' : ' disabled'}`}
+        onClick={podeFinalizar && !salvandoVenda ? finalizarVenda : undefined}
+        disabled={!podeFinalizar || salvandoVenda}>
         <Check size={18} />
-        Finalizar venda · {fmt(total)}
+        {salvandoVenda ? 'Finalizando...' : `Finalizar venda · ${fmt(total)}`}
       </button>
 
       {/* Modal seleção de variação */}
