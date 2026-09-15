@@ -297,7 +297,7 @@
     size: 80mm auto;
     margin: 0;
   }
-  body * {
+  body:has(.cupom-impressao) * {
     visibility: hidden;
   }
   .cupom-impressao, .cupom-impressao * {
