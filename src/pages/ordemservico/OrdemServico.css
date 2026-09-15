@@ -112,7 +112,7 @@
 .os-impressao { display: none; }
 
 @media print {
-  @page { size: A4; margin: 15mm; }
+  @page os-nota { size: A4; margin: 15mm; }
   body:has(.os-impressao) * { visibility: hidden; }
   .os-impressao, .os-impressao * { visibility: visible; }
   .os-impressao {
@@ -123,6 +123,7 @@
     width: 100%;
     font-family: Arial, sans-serif;
     color: #000;
+    page: os-nota;
   }
   .os-impressao h2 { font-size: 18px; margin-bottom: 2px; }
   .os-impressao h3 { font-size: 14px; margin-bottom: 6px; }
