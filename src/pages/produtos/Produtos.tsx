@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { InputMoeda } from '../../components/InputMoeda';
 import './Produtos.css';
 import { Paginacao } from '@/components/Paginacao';
 
@@ -739,17 +740,15 @@ export function Produtos() {
                   <label className="form-label">
                     Preço de custo (R$){form.tipoVenda === 'fracionado' ? ` por ${form.unidadeMedida}` : ''}
                   </label>
-                  <input type="number" min={0} step={0.01}
-                    value={form.precoCusto === 0 ? '' : form.precoCusto}
-                    onChange={e => setForm(f => ({ ...f, precoCusto: e.target.value === '' ? 0 : +e.target.value }))} />
+                  <InputMoeda value={form.precoCusto} placeholder="0,00"
+                    onChange={v => setForm(f => ({ ...f, precoCusto: v }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">
                     Preço de venda (R$){form.tipoVenda === 'fracionado' ? ` por ${form.unidadeMedida}` : ''}
                   </label>
-                  <input type="number" min={0} step={0.01}
-                    value={form.precoVenda === 0 ? '' : form.precoVenda}
-                    onChange={e => setForm(f => ({ ...f, precoVenda: e.target.value === '' ? 0 : +e.target.value }))} />
+                  <InputMoeda value={form.precoVenda} placeholder="0,00"
+                    onChange={v => setForm(f => ({ ...f, precoVenda: v }))} />
                 </div>
 
                 {/* Estoque — desabilitado se tem variações */}
