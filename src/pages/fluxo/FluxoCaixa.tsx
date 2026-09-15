@@ -70,7 +70,7 @@ interface ContaBancaria {
 }
 
 export function FluxoCaixa() {
-  const { vendas, produtos, temFinanceiro } = useApp();
+  const { vendas, produtos, temFinanceiro, recarregar } = useApp();
   const { sucesso: toastSucesso, erro: toastErro } = useToast();
   const [movimentos, setMovimentos] = useState<MovimentoCaixa[]>([]);
   const [origens, setOrigens] = useState<OrigemVenda[]>([]);
@@ -79,6 +79,8 @@ export function FluxoCaixa() {
   const [formEditMov, setFormEditMov] = useState({ tipo: 'entrada' as 'entrada' | 'saida', valor: 0, data: '', origemVendaId: '', observacao: '', contaBancariaId: '' });
   const [salvandoEditMov, setSalvandoEditMov] = useState(false);
   const [confirmDelMovimento, setConfirmDelMovimento] = useState<MovimentoCaixa | null>(null);
+  const [confirmDelVenda, setConfirmDelVenda] = useState<{ id: string; hora: string; total: number } | null>(null);
+  const [excluindoVenda, setExcluindoVenda] = useState(false);
 
   function carregarMovimentos() {
     api.get<MovimentoCaixa[]>('/api/movimentos-caixa').then(setMovimentos).catch(() => {});
@@ -141,6 +143,21 @@ export function FluxoCaixa() {
       carregarMovimentos();
     } catch (e) {
       toastErro((e as Error).message);
+    }
+  }
+
+  async function excluirVenda() {
+    if (!confirmDelVenda) return;
+    setExcluindoVenda(true);
+    try {
+      await api.delete(`/api/vendas/${confirmDelVenda.id}`);
+      await recarregar(true);
+      toastSucesso('Venda excluída. Estoque e agendamento/plano vinculados foram estornados.');
+      setConfirmDelVenda(null);
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setExcluindoVenda(false);
     }
   }
 
@@ -321,7 +338,7 @@ export function FluxoCaixa() {
                 <div className="fc-table-desktop">
                   <table>
                     <thead>
-                      <tr><th>Horário</th><th>Cliente</th><th>Origem</th><th>Itens</th><th>Pagamento</th><th>Total</th></tr>
+                      <tr><th>Horário</th><th>Cliente</th><th>Origem</th><th>Itens</th><th>Pagamento</th><th>Total</th><th className="no-print"></th></tr>
                     </thead>
                     <tbody>
                       {[...vendasHoje].sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime()).map(v => (
@@ -355,6 +372,15 @@ export function FluxoCaixa() {
                             )}
                           </td>
                           <td style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(v.totalFinal)}</td>
+                          <td className="no-print">
+                            <button className="btn-ghost" title="Excluir venda" style={{ color: 'var(--red)' }}
+                              onClick={() => setConfirmDelVenda({
+                                id: v.id, total: v.totalFinal,
+                                hora: new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                              })}>
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -372,7 +398,16 @@ export function FluxoCaixa() {
                           </span>
                           <span style={{ marginLeft: 8, fontSize: 13 }}>{v.nomeCliente || '—'}</span>
                         </div>
-                        <span style={{ fontWeight: 700, color: 'var(--green)' }}>{fmt(v.totalFinal)}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 700, color: 'var(--green)' }}>{fmt(v.totalFinal)}</span>
+                          <button className="btn-ghost no-print" title="Excluir venda" style={{ color: 'var(--red)' }}
+                            onClick={() => setConfirmDelVenda({
+                              id: v.id, total: v.totalFinal,
+                              hora: new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                            })}>
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
                       {v.origemNome && (
                         <div style={{ marginTop: 4 }}>
@@ -928,6 +963,34 @@ export function FluxoCaixa() {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setConfirmDelMovimento(null)}>Cancelar</button>
               <button className="btn-danger" onClick={excluirMovimento}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar exclusão de venda */}
+      {confirmDelVenda && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmDelVenda(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir venda</h2>
+              <button className="btn-ghost" onClick={() => setConfirmDelVenda(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir a venda das <strong style={{ color: 'var(--text-1)' }}>{confirmDelVenda.hora}</strong>, de{' '}
+                <strong style={{ color: 'var(--text-1)' }}>{fmt(confirmDelVenda.total)}</strong>?
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>
+                O estoque dos produtos vendidos é devolvido automaticamente, assim como o uso de plano/agendamento
+                e o crédito de loja usado, se houver. Só é possível excluir vendas feitas hoje.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setConfirmDelVenda(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={excluirVenda} disabled={excluindoVenda}>
+                {excluindoVenda ? 'Excluindo...' : 'Excluir venda'}
+              </button>
             </div>
           </div>
         </div>
