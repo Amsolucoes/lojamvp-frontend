@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, Calendar, X, Trash2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, Calendar, X, Trash2, Printer } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -251,7 +251,7 @@ export function FluxoCaixa() {
           <h1 className="page-title">Fluxo de Caixa</h1>
           <p className="page-subtitle">Entradas e movimentações financeiras</p>
         </div>
-        <div className="cat-tabs">
+        <div className="cat-tabs no-print">
             <button className={`cat-tab${aba === 'hoje' ? ' active' : ''}`} onClick={() => setAba('hoje')}>
               ⚡ Hoje
             </button>
@@ -260,6 +260,9 @@ export function FluxoCaixa() {
           </button>
           <button className={`cat-tab${aba === 'mensal' ? ' active' : ''}`} onClick={() => setAba('mensal')}>
             <TrendingUp size={13} /> Mensal
+          </button>
+          <button className="btn-secondary" onClick={() => window.print()}>
+            <Printer size={14} style={{ verticalAlign: -2 }} /> Imprimir
           </button>
         </div>
       </div>

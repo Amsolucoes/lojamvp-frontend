@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart2, TrendingUp, Package, ShoppingCart, Calendar, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { BarChart2, TrendingUp, Package, ShoppingCart, Calendar, ArrowUpCircle, ArrowDownCircle, Printer } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import './Relatorios.css';
@@ -188,7 +188,7 @@ export function Relatorios() {
           <h1 className="page-title">Relatórios</h1>
           <p className="page-subtitle">Análise de vendas e desempenho</p>
         </div>
-        <div className="rel-periodo-tabs">
+        <div className="rel-periodo-tabs no-print">
           {PERIODOS.map(p => (
             <button key={p.value} className={`cat-tab${periodo === p.value ? ' active' : ''}`}
               onClick={() => setPeriodo(p.value)}>
@@ -199,11 +199,14 @@ export function Relatorios() {
             onClick={() => setPeriodo('custom')}>
             📅 Personalizado
           </button>
+          <button className="btn-secondary" onClick={() => window.print()}>
+            <Printer size={14} style={{ verticalAlign: -2 }} /> Imprimir
+          </button>
         </div>
       </div>
 
       {periodo === 'custom' && (
-        <div className="card" style={{ marginBottom: 16, padding: 16, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div className="card no-print" style={{ marginBottom: 16, padding: 16, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label">Data início</label>
             <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />

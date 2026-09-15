@@ -25,6 +25,12 @@
   .layout-main { overflow-y: auto; }
 }
 
+@media print {
+  .sidebar, .mobile-topbar, .sidebar-overlay { display: none !important; }
+  .layout { display: block; }
+  .layout-main { overflow: visible !important; height: auto !important; }
+}
+
 .layout-spinner {
   width: 28px;
   height: 28px;

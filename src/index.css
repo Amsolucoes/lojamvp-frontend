@@ -287,6 +287,14 @@ tbody td {
   margin-top: 2px;
 }
 
+/* Impressão — classe utilitária: qualquer elemento com essa classe some ao
+   imprimir. Usada nos botões de imprimir e nos controles de filtro/ação
+   que não fazem sentido numa folha impressa (abas, navegação, etc). */
+@media print {
+  .no-print { display: none !important; }
+  @page { size: A4; margin: 12mm; }
+}
+
 /* Empty state */
 .empty {
   display: flex;
