@@ -106,7 +106,7 @@ export function Caixa() {
   const [desconto, setDesconto]       = useState(0);
   const [tipoDesc, setTipoDesc]       = useState<'reais' | 'pct'>('reais');
   const [formaPag, setFormaPag]       = useState<FormaPagamento>('pix');
-  const [valorPago, setValorPago]     = useState('');
+  const [valorPago, setValorPago]     = useState(0);
   const [clienteId, setClienteId]     = useState('');
   const [buscaCli, setBuscaCli]       = useState('');
   const [showCli, setShowCli]         = useState(false);
@@ -224,8 +224,8 @@ export function Caixa() {
   const creditoCliente = clienteSel?.creditoLoja ?? 0;
   const creditoUsado = usarCredito ? Math.min(creditoCliente, subtotal - descontoVal) : 0;
   const total = Math.max(0, subtotal - descontoVal - creditoUsado);
-  const troco = formaPag === 'dinheiro' && valorPago
-    ? Math.max(0, parseFloat(valorPago.replace(',', '.')) - total)
+  const troco = formaPag === 'dinheiro' && valorPago > 0
+    ? Math.max(0, valorPago - total)
     : 0;
 
   async function handleBipeCodigoBarras(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -669,13 +669,13 @@ export function Caixa() {
         formaPagamento: formas[0].forma,
         parcelas:       formas[0].parcelas ?? 1,
         formasPagamento: JSON.stringify(formas.map(f => ({ forma: f.forma, valor: duasFormas ? f.valor : total, parcelas: f.parcelas ?? 1 }))),
-        troco: formas[0].forma === 'dinheiro' && !duasFormas && valorPago
-          ? Math.max(0, parseFloat(valorPago) - total)
+        troco: formas[0].forma === 'dinheiro' && !duasFormas && valorPago > 0
+          ? Math.max(0, valorPago - total)
           : undefined,
       } as any;
 
-      const trocoVenda = formas[0].forma === 'dinheiro' && !duasFormas && valorPago
-        ? Math.max(0, parseFloat(valorPago.replace(',', '.')) - total)
+      const trocoVenda = formas[0].forma === 'dinheiro' && !duasFormas && valorPago > 0
+        ? Math.max(0, valorPago - total)
         : 0;
 
       const vendaCriada = await registrarVenda(venda);
@@ -706,8 +706,10 @@ export function Caixa() {
     setCarrinho([]);
     setClienteId('');
     setBuscaCli('');
+    setBuscaProd('');
+    setBuscaServ('');
     setDesconto(0);
-    setValorPago('');
+    setValorPago(0);
     setFormas([{ forma: 'dinheiro', valor: 0 }]);
     setDuasFormas(false);
     setUsarCredito(false);
@@ -1199,17 +1201,14 @@ export function Caixa() {
             {f.forma === 'dinheiro' && !duasFormas && (
               <div style={{ marginTop: 10 }}>
                 <label className="form-label">Valor recebido</label>
-                <input type="number" min={0} step={0.01}
-                  value={valorPago}
-                  onChange={e => setValorPago(e.target.value)}
-                  placeholder={fmt(total)}
-                  style={{ marginTop: 5 }} />
-                {valorPago && parseFloat(valorPago) >= total && (
-                  <div className="cx-troco">Troco: <strong>{fmt(parseFloat(valorPago) - total)}</strong></div>
+                <InputMoeda value={valorPago} onChange={setValorPago}
+                  placeholder="0,00" />
+                {valorPago > 0 && valorPago >= total && (
+                  <div className="cx-troco">Troco: <strong>{fmt(valorPago - total)}</strong></div>
                 )}
-                {valorPago && parseFloat(valorPago) < total && (
+                {valorPago > 0 && valorPago < total && (
                   <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>
-                    Faltam {fmt(total - parseFloat(valorPago))}
+                    Faltam {fmt(total - valorPago)}
                   </div>
                 )}
               </div>
