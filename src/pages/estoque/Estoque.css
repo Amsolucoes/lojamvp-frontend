@@ -162,13 +162,12 @@ tr:hover .est-acoes { opacity: 1; }
 .est-card-mobile:last-child { border-bottom: none; }
 
 @media (max-width: 768px) {
-  .est-table-desktop { display: none; }
-  .est-cards-mobile { display: block; }
-  .est-stats { grid-template-columns: 1fr 1fr !important; }
   .est-abas { flex-wrap: wrap; }
 }
 
 @media (max-width: 900px) {
+  .est-table-desktop { display: none; }
+  .est-cards-mobile { display: block; }
   .est-stats { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 500px) {
