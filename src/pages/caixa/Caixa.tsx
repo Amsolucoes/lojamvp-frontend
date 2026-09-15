@@ -700,18 +700,33 @@ export function Caixa() {
 
   function imprimirCupom() {
     // Fecha o modal antes de imprimir — enquanto ele está aberto, o body fica
-    // com position:fixed (trava de scroll por trás de modal), o que quebra o
-    // posicionamento absoluto do cupom na hora de imprimir.
+    // com position:fixed (trava de scroll por trás de modal).
     setModalCupom(false);
+
     const estilo = document.createElement('style');
     estilo.textContent = '@page { size: 80mm auto; margin: 0; }';
     document.head.appendChild(estilo);
-    function limparEstilo() {
-      estilo.remove();
-      window.removeEventListener('afterprint', limparEstilo);
-    }
-    window.addEventListener('afterprint', limparEstilo);
-    setTimeout(() => window.print(), 50);
+
+    setTimeout(() => {
+      const cupom = document.querySelector('.cupom-impressao') as HTMLElement | null;
+      // Move o cupom pra raiz do body antes de imprimir. Dentro da .caixa-page
+      // (que é display:grid) o position:absolute do cupom se ancora no grid, não
+      // na folha — movendo pro body ele volta a se posicionar certo.
+      const paiOriginal = cupom?.parentElement ?? null;
+      const proximoIrmao = cupom?.nextSibling ?? null;
+      if (cupom) document.body.appendChild(cupom);
+
+      function restaurar() {
+        estilo.remove();
+        if (cupom && paiOriginal) {
+          if (proximoIrmao) paiOriginal.insertBefore(cupom, proximoIrmao);
+          else paiOriginal.appendChild(cupom);
+        }
+        window.removeEventListener('afterprint', restaurar);
+      }
+      window.addEventListener('afterprint', restaurar);
+      window.print();
+    }, 50);
   }
 
   function limpar() {
