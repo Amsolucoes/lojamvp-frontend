@@ -699,6 +699,10 @@ export function Caixa() {
   }
 
   function imprimirCupom() {
+    // Fecha o modal antes de imprimir — enquanto ele está aberto, o body fica
+    // com position:fixed (trava de scroll por trás de modal), o que quebra o
+    // posicionamento absoluto do cupom na hora de imprimir.
+    setModalCupom(false);
     const estilo = document.createElement('style');
     estilo.textContent = '@page { size: 80mm auto; margin: 0; }';
     document.head.appendChild(estilo);
@@ -707,7 +711,7 @@ export function Caixa() {
       window.removeEventListener('afterprint', limparEstilo);
     }
     window.addEventListener('afterprint', limparEstilo);
-    window.print();
+    setTimeout(() => window.print(), 50);
   }
 
   function limpar() {
