@@ -199,10 +199,15 @@ export function OrdemServico() {
 
   // Dispara a impressão assim que a OS a imprimir estiver carregada, e limpa
   // o estado quando a caixa de diálogo de impressão do navegador for fechada.
+  // O tamanho de página é injetado via JS (em vez de só CSS) pra não depender
+  // de qual @page carregou por último no bundle.
   useEffect(() => {
     if (!imprimindoOS) return;
+    const estilo = document.createElement('style');
+    estilo.textContent = '@page { size: A4; margin: 15mm; }';
+    document.head.appendChild(estilo);
     const timer = setTimeout(() => window.print(), 50);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); estilo.remove(); };
   }, [imprimindoOS]);
 
   useEffect(() => {

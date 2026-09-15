@@ -699,6 +699,14 @@ export function Caixa() {
   }
 
   function imprimirCupom() {
+    const estilo = document.createElement('style');
+    estilo.textContent = '@page { size: 80mm auto; margin: 0; }';
+    document.head.appendChild(estilo);
+    function limparEstilo() {
+      estilo.remove();
+      window.removeEventListener('afterprint', limparEstilo);
+    }
+    window.addEventListener('afterprint', limparEstilo);
     window.print();
   }
 
