@@ -261,8 +261,8 @@ export function FluxoCaixa() {
           <button className={`cat-tab${aba === 'mensal' ? ' active' : ''}`} onClick={() => setAba('mensal')}>
             <TrendingUp size={13} /> Mensal
           </button>
-          <button className="btn-secondary" onClick={() => window.print()}>
-            <Printer size={14} style={{ verticalAlign: -2 }} /> Imprimir
+          <button className="cat-tab" onClick={() => window.print()}>
+            <Printer size={13} style={{ verticalAlign: -2 }} /> Imprimir
           </button>
         </div>
       </div>

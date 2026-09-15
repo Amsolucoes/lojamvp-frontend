@@ -199,8 +199,8 @@ export function Relatorios() {
             onClick={() => setPeriodo('custom')}>
             📅 Personalizado
           </button>
-          <button className="btn-secondary" onClick={() => window.print()}>
-            <Printer size={14} style={{ verticalAlign: -2 }} /> Imprimir
+          <button className="cat-tab" onClick={() => window.print()}>
+            <Printer size={13} style={{ verticalAlign: -2 }} /> Imprimir
           </button>
         </div>
       </div>
