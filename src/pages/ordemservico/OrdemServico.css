@@ -114,7 +114,7 @@
 @media print {
   @page { size: A4; margin: 15mm; }
   body:has(.os-impressao) * { visibility: hidden; }
-  .os-impressao, .os-impressao * { visibility: visible; }
+  .os-impressao, .os-impressao * { visibility: visible !important; }
   .os-impressao {
     display: block;
     position: absolute;
