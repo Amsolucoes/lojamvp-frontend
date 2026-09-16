@@ -21,6 +21,7 @@ const LABEL_PAG: Record<string, string> = {
 const COR_PAG: Record<string, string> = {
   dinheiro: 'var(--green)', pix: 'var(--blue)', credito: 'var(--accent)', debito: 'var(--yellow)',
 };
+const PALETA_ORIGEM = ['var(--green)', 'var(--blue)', 'var(--accent)', 'var(--yellow)', 'var(--text-3)'];
 
 // Lê formasPagamento seja string JSON ou array já parseado
 function parseFormas(fp: any): any[] {
@@ -107,12 +108,38 @@ function DashboardLoja() {
   const variacaoVsOntem = temComparacaoOntem ? ((totalHoje - totalOntem) / totalOntem) * 100 : 0;
   const ticketMedioHoje = vendasHoje.length > 0 ? totalHoje / vendasHoje.length : 0;
 
+  // Mesmo dia da semana passada — comparação mais justa que "vs ontem"
+  // quando o dia da semana tem perfil de venda diferente (ex: sábado vs domingo).
+  const semanaPassadaDate = new Date(agora); semanaPassadaDate.setDate(agora.getDate() - 7);
+  const semanaPassada = semanaPassadaDate.toDateString();
+  const vendasSemanaPassadaMesmoDia = vendas.filter(v => new Date(v.criadaEm).toDateString() === semanaPassada);
+  const totalSemanaPassadaMesmoDia = vendasSemanaPassadaMesmoDia.reduce((s, v) => s + v.totalFinal, 0);
+  const temComparacaoSemanaPassada = vendasSemanaPassadaMesmoDia.length > 0;
+  const variacaoVsSemanaPassada = temComparacaoSemanaPassada
+    ? ((totalHoje - totalSemanaPassadaMesmoDia) / totalSemanaPassadaMesmoDia) * 100 : 0;
+
   const movimentosHoje = movimentos.filter(m => new Date(m.data).toDateString() === hoje);
   const entradasManuaisHoje = movimentosHoje.filter(m => m.tipo === 'entrada').reduce((s, m) => s + m.valor, 0);
   const sangriasHoje = movimentosHoje.filter(m => m.tipo === 'saida').reduce((s, m) => s + m.valor, 0);
   const ajusteCaixaHoje = entradasManuaisHoje - sangriasHoje;
   const alertasEstoque = produtos.filter(p => p.ativo && p.estoque <= p.estoqueMinimo);
   const produtosAtivos = produtos.filter(p => p.ativo).length;
+
+  // Vendas no mês — compara com o mesmo número de dias do mês passado (mês
+  // corrido inteiro vs um recorte parcial não seria uma comparação justa).
+  const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+  const vendasMes = vendas.filter(v => new Date(v.criadaEm) >= inicioMes);
+  const totalMes = vendasMes.reduce((s, v) => s + v.totalFinal, 0);
+  const inicioMesPassado = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
+  const fimMesPassadoMesmoPeriodo = new Date(agora.getFullYear(), agora.getMonth() - 1, agora.getDate(), 23, 59, 59);
+  const vendasMesPassadoMesmoPeriodo = vendas.filter(v => {
+    const d = new Date(v.criadaEm);
+    return d >= inicioMesPassado && d <= fimMesPassadoMesmoPeriodo;
+  });
+  const totalMesPassadoMesmoPeriodo = vendasMesPassadoMesmoPeriodo.reduce((s, v) => s + v.totalFinal, 0);
+  const temComparacaoMes = totalMesPassadoMesmoPeriodo > 0;
+  const variacaoVsMesPassado = temComparacaoMes
+    ? ((totalMes - totalMesPassadoMesmoPeriodo) / totalMesPassadoMesmoPeriodo) * 100 : 0;
 
   // Janela dos últimos 7 dias (hoje incluso) — usada no gráfico, em "clientes
   // novos" e nos "mais vendidos da semana", todos com o mesmo recorte.
@@ -131,8 +158,16 @@ function DashboardLoja() {
   const mediaDiariaSemana = diasComVendaSemana > 0 ? totalSemana / diasComVendaSemana : 0;
   const melhorDiaSemana = [...ultimos7Dias].sort((a, b) => b.valor - a.valor)[0];
 
+  const vendasSemana = vendas.filter(v => new Date(v.criadaEm) >= inicioSemana);
+  const ticketMedio7d = vendasSemana.length > 0 ? totalSemana / vendasSemana.length : 0;
+
+  // Formas de pagamento — usa hoje normalmente, mas cai pros últimos 7 dias
+  // quando ainda não houve venda hoje (evita card vazio logo cedo no dia).
+  const usarFormasSemana = totalHoje <= 0;
+  const vendasParaFormas = usarFormasSemana ? vendasSemana : vendasHoje;
+  const totalFormas = usarFormasSemana ? totalSemana : totalHoje;
   const totalPorForma: Record<string, number> = {};
-  vendasHoje.forEach(v => {
+  vendasParaFormas.forEach(v => {
     const formas = parseFormas(v.formasPagamento);
     if (formas.length > 0) {
       formas.forEach((f: any) => { totalPorForma[f.forma] = (totalPorForma[f.forma] ?? 0) + f.valor; });
@@ -140,13 +175,20 @@ function DashboardLoja() {
       totalPorForma[v.formaPagamento] = (totalPorForma[v.formaPagamento] ?? 0) + v.totalFinal;
     }
   });
-  const formasPagamentoHoje = Object.entries(totalPorForma)
+  const formasPagamentoPeriodo = Object.entries(totalPorForma)
     .map(([forma, valor]) => ({ forma, valor }))
     .sort((a, b) => b.valor - a.valor);
 
-  const itensSemana = vendas
-    .filter(v => new Date(v.criadaEm) >= inicioSemana)
-    .flatMap((v: Venda) => v.itens);
+  // Vendas por origem (ex: Site, Loja física) — só aparece se a loja usa
+  // o campo de origem; senão a lista sai vazia e o card correspondente some.
+  const nomesOrigemSemana = [...new Set(vendasSemana.map(v => v.origemNome).filter(Boolean))] as string[];
+  const porOrigemSemana = nomesOrigemSemana.map(nome => {
+    const vs = vendasSemana.filter(v => v.origemNome === nome);
+    return { origem: nome, qtd: vs.length, valor: vs.reduce((s, v) => s + v.totalFinal, 0) };
+  }).sort((a, b) => b.valor - a.valor);
+  const totalOrigemSemana = porOrigemSemana.reduce((s, o) => s + o.valor, 0);
+
+  const itensSemana = vendasSemana.flatMap((v: Venda) => v.itens);
   const topSemana = [...produtos]
     .map(p => ({ produto: p, qtd: itensSemana.filter((i: ItemVenda) => i.produtoId === p.id).reduce((s: number, i: ItemVenda) => s + i.quantidade, 0) }))
     .filter(x => x.qtd > 0)
@@ -223,6 +265,12 @@ function DashboardLoja() {
                 {Math.abs(variacaoVsOntem).toFixed(0)}% vs ontem
               </span>
             )}
+            {temComparacaoSemanaPassada && (
+              <span style={{ marginLeft: 8, color: variacaoVsSemanaPassada >= 0 ? 'var(--green)' : 'var(--red)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                {variacaoVsSemanaPassada >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                {Math.abs(variacaoVsSemanaPassada).toFixed(0)}% vs sem. passada
+              </span>
+            )}
           </div>
           {ajusteCaixaHoje !== 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: 12 }}>
@@ -232,9 +280,28 @@ function DashboardLoja() {
           )}
         </div>
         <div className="stat-card">
+          <div className="stat-label">Vendas no mês</div>
+          <div className="stat-value">{fmt(totalMes)}</div>
+          <div className="stat-sub">
+            {vendasMes.length} transação(ões)
+            {temComparacaoMes && (
+              <span style={{ marginLeft: 8, color: variacaoVsMesPassado >= 0 ? 'var(--green)' : 'var(--red)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                {variacaoVsMesPassado >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                {Math.abs(variacaoVsMesPassado).toFixed(0)}% vs mês passado
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="stat-card">
           <div className="stat-label">Ticket médio</div>
           <div className="stat-value">{fmt(ticketMedioHoje)}</div>
           <div className="stat-sub">por venda hoje</div>
+          {vendasSemana.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: 12 }}>
+              <span style={{ color: 'var(--text-3)' }}>Média 7 dias</span>
+              <strong>{fmt(ticketMedio7d)}</strong>
+            </div>
+          )}
         </div>
         <div className="stat-card">
           <div className="stat-label">Produtos ativos</div>
@@ -404,25 +471,27 @@ function DashboardLoja() {
       <div className="dash-grid-secundario">
         <div className="card">
           <div className="dash-card-header">
-            <div className="dash-card-title"><CreditCard size={15} /> Formas de pagamento hoje</div>
+            <div className="dash-card-title">
+              <CreditCard size={15} /> Formas de pagamento {usarFormasSemana ? '— 7 dias' : 'hoje'}
+            </div>
           </div>
-          {formasPagamentoHoje.length === 0 || totalHoje <= 0 ? (
-            <div className="empty" style={{ padding: '20px 0' }}><p>Nenhuma venda hoje ainda.</p></div>
+          {formasPagamentoPeriodo.length === 0 || totalFormas <= 0 ? (
+            <div className="empty" style={{ padding: '20px 0' }}><p>Nenhuma venda nos últimos 7 dias ainda.</p></div>
           ) : (
             <>
               <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
-                {formasPagamentoHoje.map(f => (
-                  <div key={f.forma} style={{ width: `${(f.valor / totalHoje) * 100}%`, background: COR_PAG[f.forma] ?? 'var(--text-3)' }} />
+                {formasPagamentoPeriodo.map(f => (
+                  <div key={f.forma} style={{ width: `${(f.valor / totalFormas) * 100}%`, background: COR_PAG[f.forma] ?? 'var(--text-3)' }} />
                 ))}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {formasPagamentoHoje.map(f => (
+                {formasPagamentoPeriodo.map(f => (
                   <div key={f.forma} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: COR_PAG[f.forma] ?? 'var(--text-3)' }} />
                       {LABEL_PAG[f.forma] ?? f.forma}
                     </span>
-                    <span style={{ color: 'var(--text-3)' }}>{((f.valor / totalHoje) * 100).toFixed(0)}% · {fmt(f.valor)}</span>
+                    <span style={{ color: 'var(--text-3)' }}>{((f.valor / totalFormas) * 100).toFixed(0)}% · {fmt(f.valor)}</span>
                   </div>
                 ))}
               </div>
@@ -443,6 +512,30 @@ function DashboardLoja() {
             </div>
           ))}
         </div>
+        {porOrigemSemana.length > 0 && (
+          <div className="card" style={{ gridColumn: '1 / -1' }}>
+            <div className="dash-card-header">
+              <div className="dash-card-title"><Store size={15} /> Vendas por origem — 7 dias</div>
+            </div>
+            <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
+              {porOrigemSemana.map((o, i) => (
+                <div key={o.origem} style={{ width: `${(o.valor / totalOrigemSemana) * 100}%`, background: PALETA_ORIGEM[i % PALETA_ORIGEM.length] }} />
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 24px' }}>
+              {porOrigemSemana.map((o, i) => (
+                <div key={o.origem} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, minWidth: 180, flex: 1 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: PALETA_ORIGEM[i % PALETA_ORIGEM.length] }} />
+                    {o.origem}
+                    <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>({o.qtd})</span>
+                  </span>
+                  <span style={{ color: 'var(--text-3)' }}>{((o.valor / totalOrigemSemana) * 100).toFixed(0)}% · {fmt(o.valor)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div className="dash-fab-spacer" />
     </div>
