@@ -301,7 +301,7 @@
     visibility: hidden;
   }
   .cupom-impressao, .cupom-impressao * {
-    visibility: visible;
+    visibility: visible !important;
   }
   .cupom-impressao {
     display: block;
