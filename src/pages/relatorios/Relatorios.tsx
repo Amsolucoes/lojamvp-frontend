@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart2, TrendingUp, Package, ShoppingCart, Calendar, ArrowUpCircle, ArrowDownCircle, Printer } from 'lucide-react';
+import { BarChart2, TrendingUp, Package, ShoppingCart, Calendar, ArrowUpCircle, ArrowDownCircle, Printer, Globe, Store } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import './Relatorios.css';
@@ -33,6 +33,14 @@ function extrairVariacao(nomeProduto: string): { nome: string; variacao?: string
 const labelPag: Record<string, string> = {
   dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito',
 };
+
+// Ícone do card de entrada de caixa, de acordo com a origem (Site, Loja física, etc.)
+function iconeOrigem(nome: string) {
+  const n = nome.toLowerCase();
+  if (n.includes('site') || n.includes('online')) return Globe;
+  if (n.includes('loja') || n.includes('física') || n.includes('fisica')) return Store;
+  return ArrowUpCircle;
+}
 
 interface MovimentoCaixa {
   id: string;
@@ -181,6 +189,14 @@ export function Relatorios() {
   const totalSangriasMov = movimentosFiltrados.filter(m => m.tipo === 'saida').reduce((s, m) => s + m.valor, 0);
   const ajusteLiquido = totalEntradasMov - totalSangriasMov;
 
+  // Entradas de caixa separadas por origem (Vendas do site, Vendas da loja, outras entradas...)
+  const entradasMov = movimentosFiltrados.filter(m => m.tipo === 'entrada');
+  const origensEntrada = [...new Set(entradasMov.map(m => m.origemNome || 'Outras entradas'))];
+  const entradasPorOrigem = origensEntrada.map(origem => {
+    const ms = entradasMov.filter(m => (m.origemNome || 'Outras entradas') === origem);
+    return { origem, qtd: ms.length, total: ms.reduce((s, m) => s + m.valor, 0) };
+  }).sort((a, b) => b.total - a.total);
+
   return (
     <div className="page">
       <div className="page-header">
@@ -255,17 +271,21 @@ export function Relatorios() {
           <div className="stat-value" style={{ fontSize: 20, color: 'var(--red)' }}>{fmt(totalDesconto)}</div>
           <div className="stat-sub">concedidos no período</div>
         </div>
-        {movimentosFiltrados.length > 0 && (
-          <div className="stat-card" style={ajusteLiquido < 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
-            <div className="stat-label">↕️ Ajustes de caixa</div>
-            <div className="stat-value" style={{ fontSize: 20, color: ajusteLiquido >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {ajusteLiquido >= 0 ? '+' : ''}{fmt(ajusteLiquido)}
+        {entradasPorOrigem.map(e => {
+          const Icone = iconeOrigem(e.origem);
+          return (
+            <div className="stat-card" key={e.origem}>
+              <div className="stat-label"><Icone size={12} style={{ verticalAlign: -1 }} /> {e.origem}</div>
+              <div className="stat-value" style={{ fontSize: 20, color: 'var(--green)' }}>+{fmt(e.total)}</div>
+              <div className="stat-sub">{e.qtd} entrada(s)</div>
             </div>
-            <div className="stat-sub">
-              {totalEntradasMov > 0 && `+${fmt(totalEntradasMov)} entrada`}
-              {totalEntradasMov > 0 && totalSangriasMov > 0 && ' · '}
-              {totalSangriasMov > 0 && `-${fmt(totalSangriasMov)} sangria`}
-            </div>
+          );
+        })}
+        {totalSangriasMov > 0 && (
+          <div className="stat-card" style={{ borderColor: 'rgba(248,113,113,0.3)' }}>
+            <div className="stat-label"><ArrowDownCircle size={12} style={{ verticalAlign: -1 }} /> Sangrias</div>
+            <div className="stat-value" style={{ fontSize: 20, color: 'var(--red)' }}>-{fmt(totalSangriasMov)}</div>
+            <div className="stat-sub">{movimentosFiltrados.filter(m => m.tipo === 'saida').length} saída(s)</div>
           </div>
         )}
       </div>
