@@ -126,6 +126,10 @@ function DashboardLoja() {
     return { label: dia.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''), valor, isHoje: diaStr === hoje };
   });
   const maxSemana = Math.max(...ultimos7Dias.map(d => d.valor), 1);
+  const totalSemana = ultimos7Dias.reduce((s, d) => s + d.valor, 0);
+  const diasComVendaSemana = ultimos7Dias.filter(d => d.valor > 0).length;
+  const mediaDiariaSemana = diasComVendaSemana > 0 ? totalSemana / diasComVendaSemana : 0;
+  const melhorDiaSemana = [...ultimos7Dias].sort((a, b) => b.valor - a.valor)[0];
 
   const totalPorForma: Record<string, number> = {};
   vendasHoje.forEach(v => {
@@ -277,6 +281,15 @@ function DashboardLoja() {
       <div className="card dash-week-card">
         <div className="dash-card-header">
           <div className="dash-card-title"><TrendingUp size={15} /> Vendas — últimos 7 dias</div>
+          {totalSemana > 0 && (
+            <div className="dash-week-summary">
+              <div className="dash-week-summary-total">{fmt(totalSemana)}</div>
+              <div className="dash-week-summary-sub">
+                média {fmt(mediaDiariaSemana)}/dia
+                {melhorDiaSemana.valor > 0 && ` · melhor dia: ${melhorDiaSemana.label}`}
+              </div>
+            </div>
+          )}
         </div>
         <div className="dash-week-chart">
           {ultimos7Dias.map((d, i) => (
