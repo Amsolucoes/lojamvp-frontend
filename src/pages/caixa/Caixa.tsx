@@ -1408,7 +1408,7 @@ export function Caixa() {
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div className="cx-toggle-pill">
+                <div className="cx-toggle-pill" style={{ alignSelf: 'center' }}>
                   <button type="button" className={tipoMovimento === 'entrada' ? 'active' : ''} onClick={() => setTipoMovimento('entrada')}>Entrada</button>
                   <button type="button" className={tipoMovimento === 'saida' ? 'active' : ''} onClick={() => setTipoMovimento('saida')}>Sangria</button>
                 </div>
