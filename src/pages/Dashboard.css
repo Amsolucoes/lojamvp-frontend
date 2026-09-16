@@ -14,6 +14,11 @@
 
 .dash-card-header {
   margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .dash-card-title {
   font-size: 13px;
@@ -106,19 +111,18 @@
   bottom: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
-  background: var(--bg-2);
-  border: 1px solid var(--border-2);
-  border-radius: var(--radius-sm);
-  padding: 3px 7px;
   font-size: 10px;
+  font-weight: 600;
   white-space: nowrap;
-  color: var(--text-1);
-  opacity: 0;
-  transition: opacity 0.15s;
+  color: var(--text-2);
   pointer-events: none;
   z-index: 10;
 }
-.dash-week-bar-wrap:hover .dash-week-tip { opacity: 1; }
+.dash-week-col.hoje .dash-week-tip { color: var(--accent); }
+
+.dash-week-summary { text-align: right; }
+.dash-week-summary-total { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.dash-week-summary-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
 
 .dash-alerts-scroll {
   max-height: 340px;
@@ -141,6 +145,9 @@
 
   .dash-week-chart { height: 90px; gap: 4px; }
   .dash-week-label { font-size: 9px; }
+  .dash-week-tip { font-size: 8px; }
+  .dash-week-summary { text-align: left; }
+  .dash-week-summary-total { font-size: 13px; }
 
   .dash-grid-secundario { grid-template-columns: 1fr !important; }
 }
