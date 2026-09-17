@@ -9,6 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Produtos } from './pages/produtos/Produtos';
 import { Precificacao } from './pages/produtos/Precificacao';
 import { Clientes } from './pages/clientes/Clientes';
+import { Fornecedores } from './pages/fornecedores/Fornecedores';
 import { Caixa } from './pages/caixa/Caixa';
 import { Estoque } from './pages/estoque/Estoque';
 import { Relatorios } from './pages/relatorios/Relatorios';
@@ -82,6 +83,7 @@ function Rotas() {
           <Route path="produtos"   element={<Produtos />} />
           <Route path="produtos/precificacao" element={<Precificacao />} />
           <Route path="clientes"   element={<Clientes />} />
+          <Route path="fornecedores" element={<Fornecedores />} />
           <Route path="caixa"      element={<Caixa />} />
           <Route path="estoque"    element={<Estoque />} />
           <Route path="relatorios" element={<Relatorios />} />

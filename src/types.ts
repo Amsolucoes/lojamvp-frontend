@@ -28,6 +28,8 @@ export interface Produto {
   unidadeMedida?: string;
   marcaId?: string | null;
   nomeMarca?: string | null;
+  fornecedorId?: string | null;
+  nomeFornecedor?: string | null;
   variacoes?: ProdutoVariacao[];
 }
 
@@ -43,6 +45,20 @@ export interface Cliente {
   observacoes?: string;
   criadoEm: string;
   creditoLoja?: number;
+}
+
+// ── Fornecedor ────────────────────────────────────────────────────
+export interface Fornecedor {
+  id: string;
+  nome: string;
+  cnpjCpf?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+  endereco?: string | null;
+  observacoes?: string | null;
+  ativo: boolean;
+  criadoEm: string;
+  qtdProdutos: number;
 }
 
 // ── Venda / Caixa ─────────────────────────────────────────────────
