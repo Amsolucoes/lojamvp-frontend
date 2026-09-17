@@ -77,6 +77,11 @@ function itemKey(item: CarrinhoItem): string {
     : `prod-${item.produtoId}-${item.variacaoId ?? 'sem'}`;
 }
 
+// Chave dos itens fracionados usada nos mapas de texto digitado (peso/valor)
+function chaveFrac(produtoId: string, variacaoId: string | undefined): string {
+  return `${produtoId}-${variacaoId ?? 'sem'}`;
+}
+
 const FORMAS: { value: FormaPagamento; label: string; icon: string }[] = [
   { value: 'dinheiro', label: 'Dinheiro',  icon: '💵' },
   { value: 'pix',      label: 'Pix',       icon: '⚡' },
@@ -86,6 +91,35 @@ const FORMAS: { value: FormaPagamento; label: string; icon: string }[] = [
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// Peso (kg/un. de medida) e valor em R$ do item fracionado, sincronizados:
+// editar um recalcula o outro a partir do preço unitário do produto.
+function CxFracionadoInputs({ item, qtdTexto, valorTexto, onQtd, onValor }: {
+  item: CarrinhoItem;
+  qtdTexto: string;
+  valorTexto: number;
+  onQtd: (v: string) => void;
+  onValor: (v: number) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <input
+          type="text" inputMode="decimal"
+          className="cx-preco-input"
+          style={{ width: 90, textAlign: 'center' }}
+          value={qtdTexto}
+          placeholder="0,000"
+          onChange={e => onQtd(e.target.value)} />
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>ou R$</span>
+        <InputMoeda value={valorTexto} onChange={onValor} placeholder="0,00" className="cx-preco-input" />
+      </div>
+    </div>
+  );
 }
 
 function hojeStrMovimento() {
@@ -149,6 +183,9 @@ export function Caixa() {
   const [trocaResultado, setTrocaResultado] = useState<any>(null);
   const [usarCredito, setUsarCredito] = useState(false);
   const [qtdTexto, setQtdTexto] = useState<Record<string, string>>({});
+  // Valor em R$ digitado por item fracionado — permite vender "R$ 10 de erva
+  // mate" em vez de digitar o peso; os dois campos ficam sincronizados.
+  const [valorFracTexto, setValorFracTexto] = useState<Record<string, number>>({});
 
   // Serviços
   const [servicos, setServicos]       = useState<Servico[]>([]);
@@ -457,11 +494,29 @@ export function Caixa() {
   function setQtdFracionada(prodId: string, variacaoId: string | undefined, valor: string) {
     // Permite só dígitos e uma vírgula/ponto
     const limpo = valor.replace(/[^\d.,]/g, '');
-    const chave = `${prodId}-${variacaoId ?? 'sem'}`;
+    const chave = chaveFrac(prodId, variacaoId);
     setQtdTexto(prev => ({ ...prev, [chave]: limpo }));
 
     const num = limpo === '' ? 0 : parseFloat(limpo.replace(',', '.'));
     const q = isNaN(num) ? 0 : num;
+    const item = carrinho.find(i => i.tipo === 'produto' && i.produtoId === prodId && i.variacaoId === variacaoId);
+    setValorFracTexto(prev => ({ ...prev, [chave]: q * (item?.precoUnitario ?? 0) }));
+    setCarrinho(prev => prev.map(i => {
+      if (i.tipo !== 'produto' || i.produtoId !== prodId || i.variacaoId !== variacaoId) return i;
+      return { ...i, quantidade: q, subtotal: q * i.precoUnitario };
+    }));
+  }
+
+  // Vender por valor em R$ (ex: "R$ 10 de erva mate a R$ 22/kg") — calcula o
+  // peso automaticamente a partir do preço unitário do produto.
+  function setValorFracionado(prodId: string, variacaoId: string | undefined, valorReais: number) {
+    const chave = chaveFrac(prodId, variacaoId);
+    const item = carrinho.find(i => i.tipo === 'produto' && i.produtoId === prodId && i.variacaoId === variacaoId);
+    const preco = item?.precoUnitario ?? 0;
+    const q = preco > 0 ? Math.round((valorReais / preco) * 1000) / 1000 : 0;
+
+    setValorFracTexto(prev => ({ ...prev, [chave]: valorReais }));
+    setQtdTexto(prev => ({ ...prev, [chave]: q > 0 ? q.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '' }));
     setCarrinho(prev => prev.map(i => {
       if (i.tipo !== 'produto' || i.produtoId !== prodId || i.variacaoId !== variacaoId) return i;
       return { ...i, quantidade: q, subtotal: q * i.precoUnitario };
@@ -494,6 +549,11 @@ export function Caixa() {
         ? { ...i, precoUnitario: novoPreco, subtotal: i.quantidade * novoPreco }
         : i
     ));
+    // Mantém o campo "valor em R$" do fracionado sincronizado com o novo preço
+    if (item.tipo === 'produto' && item.tipoVenda === 'fracionado') {
+      const chave = chaveFrac(item.produtoId!, item.variacaoId);
+      setValorFracTexto(prev => ({ ...prev, [chave]: item.quantidade * novoPreco }));
+    }
   }
 
   async function confirmarTroca() {
@@ -967,16 +1027,12 @@ export function Caixa() {
                         </td>
                         <td>
                           {item.tipo === 'produto' && item.tipoVenda === 'fracionado' ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <input
-                                type="text" inputMode="decimal"
-                                className="cx-preco-input"
-                                style={{ width: 110, textAlign: 'center' }}
-                                value={qtdTexto[`${item.produtoId}-${item.variacaoId ?? 'sem'}`] ?? ''}
-                                placeholder="0,000"
-                                onChange={e => setQtdFracionada(item.produtoId!, item.variacaoId, e.target.value)} />
-                              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
-                            </div>
+                            <CxFracionadoInputs
+                              item={item}
+                              qtdTexto={qtdTexto[chaveFrac(item.produtoId!, item.variacaoId)] ?? ''}
+                              valorTexto={valorFracTexto[chaveFrac(item.produtoId!, item.variacaoId)] ?? 0}
+                              onQtd={v => setQtdFracionada(item.produtoId!, item.variacaoId, v)}
+                              onValor={v => setValorFracionado(item.produtoId!, item.variacaoId, v)} />
                           ) : (
                             <div className="cx-qtd">
                               <button className="cx-qtd-btn" onClick={() => alterarQtd(item, -1)}><Minus size={12} /></button>
@@ -1031,16 +1087,12 @@ export function Caixa() {
                         onChange={e => editarPreco(item, +e.target.value)}
                         style={{ maxWidth: 90 }} />
                       {item.tipo === 'produto' && item.tipoVenda === 'fracionado' ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <input
-                            type="text" inputMode="decimal"
-                            className="cx-preco-input"
-                            style={{ width: 90, textAlign: 'center' }}
-                            value={qtdTexto[`${item.produtoId}-${item.variacaoId ?? 'sem'}`] ?? ''}
-                            placeholder="0,000"
-                            onChange={e => setQtdFracionada(item.produtoId!, item.variacaoId, e.target.value)} />
-                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{item.unidadeMedida}</span>
-                        </div>
+                        <CxFracionadoInputs
+                          item={item}
+                          qtdTexto={qtdTexto[chaveFrac(item.produtoId!, item.variacaoId)] ?? ''}
+                          valorTexto={valorFracTexto[chaveFrac(item.produtoId!, item.variacaoId)] ?? 0}
+                          onQtd={v => setQtdFracionada(item.produtoId!, item.variacaoId, v)}
+                          onValor={v => setValorFracionado(item.produtoId!, item.variacaoId, v)} />
                       ) : (
                         <div className="cx-qtd">
                           <button className="cx-qtd-btn" onClick={() => alterarQtd(item, -1)}><Minus size={12} /></button>
