@@ -513,15 +513,17 @@ export function Caixa() {
     const chave = chaveFrac(prodId, variacaoId);
     const item = carrinho.find(i => i.tipo === 'produto' && i.produtoId === prodId && i.variacaoId === variacaoId);
     const preco = item?.precoUnitario ?? 0;
-    const q = preco > 0 ? Math.round((valorReais / preco) * 1000) / 1000 : 0;
+    // Quantidade em precisão total (não arredondada) — assim peso × preço
+    // continua batendo com o valor digitado, mesmo se algo recalcular o
+    // subtotal a partir da quantidade (ex: o backend, ao salvar a venda).
+    const qPreciso = preco > 0 ? valorReais / preco : 0;
+    const qExibido = Math.round(qPreciso * 1000) / 1000;
 
     setValorFracTexto(prev => ({ ...prev, [chave]: valorReais }));
-    setQtdTexto(prev => ({ ...prev, [chave]: q > 0 ? q.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '' }));
+    setQtdTexto(prev => ({ ...prev, [chave]: qExibido > 0 ? qExibido.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '' }));
     setCarrinho(prev => prev.map(i => {
       if (i.tipo !== 'produto' || i.produtoId !== prodId || i.variacaoId !== variacaoId) return i;
-      // Cobra exatamente o valor digitado — o peso é só uma estimativa
-      // (arredondada a 3 casas) para dar baixa no estoque.
-      return { ...i, quantidade: q, subtotal: valorReais };
+      return { ...i, quantidade: qPreciso, subtotal: valorReais };
     }));
   }
 
@@ -812,8 +814,12 @@ export function Caixa() {
   const totalDia   = vendasHoje.reduce((s, v) => s + v.totalFinal, 0);
   const totalFormas = formas.reduce((s, f) => s + f.valor, 0);
 
-  const podeFinalizar = carrinho.length > 0 && 
-  (duasFormas ? Math.abs(totalFormas - total) < 0.01 : formas[0].forma !== undefined);
+  // Em dinheiro (forma única), exige valor recebido suficiente pra cobrir o
+  // total antes de liberar o botão — senão a venda fechava sem troco calculado.
+  const podeFinalizar = carrinho.length > 0 &&
+  (duasFormas
+    ? Math.abs(totalFormas - total) < 0.01
+    : formas[0].forma !== undefined && (formas[0].forma !== 'dinheiro' || valorPago >= total));
 
   return (
     <div className="page caixa-page">
@@ -1295,6 +1301,11 @@ export function Caixa() {
                 <label className="form-label">Valor recebido</label>
                 <InputMoeda value={valorPago} onChange={setValorPago}
                   placeholder="0,00" />
+                {valorPago === 0 && total > 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
+                    Informe o valor recebido para finalizar.
+                  </div>
+                )}
                 {valorPago > 0 && valorPago >= total && (
                   <div className="cx-troco">Troco: <strong>{fmt(valorPago - total)}</strong></div>
                 )}
