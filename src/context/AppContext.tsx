@@ -28,6 +28,7 @@ interface AppCtx {
   temChacaraReservas: boolean;
   temEtiquetas: boolean;
   temCupomNaoFiscal: boolean;
+  temFuncionarios: boolean;
 
   addProduto:    (p: Omit<Produto, 'id' | 'criadoEm'>) => Promise<void>;
   updateProduto: (id: string, p: Partial<Produto>)       => Promise<void>;
@@ -84,6 +85,7 @@ function mapVenda(v: any): Venda {
     parcelas: v.parcelas,
     troco: v.troco, criadaEm: v.criadaEm,
     origemNome: v.origemNome,
+    nomeFuncionario: v.nomeFuncionario,
     itens: (v.itens ?? []).map((i: any) => ({
       produtoId: i.produtoId ?? null,
       servicoId: i.servicoId ?? null,
@@ -127,6 +129,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const temChacaraReservas = modulosAtivos.includes('chacara_reservas');
   const temEtiquetas = modulosAtivos.includes('etiquetas') && temProdutos;
   const temCupomNaoFiscal = modulosAtivos.includes('cupom_nao_fiscal');
+  const temFuncionarios = modulosAtivos.includes('funcionarios') && tipoPlano !== 'chacara';
 
   async function recarregar(silencioso = false) {
     if (!silencioso) setLoading(true);
@@ -225,6 +228,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       troco:           v.troco ?? null,
       dataVenda:       (v as any).dataVenda ?? null,
       origemVendaId:   (v as any).origemVendaId ?? null,
+      funcionarioId:   (v as any).funcionarioId ?? null,
     };
 
     const nova = await api.post<any>('/api/vendas', payload);
@@ -285,7 +289,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       produtos, clientes, vendas, movimentos, loading, erro, trocas,
       modulosAtivos, tipoPlano, temProdutos, temServicos, soServicos,
       soFinanceiro, temFinanceiro, temTurmas,
-      fase, nomeLoja, temCorretora, temNf, temChacaraReservas, temCupomNaoFiscal, temEtiquetas,
+      fase, nomeLoja, temCorretora, temNf, temChacaraReservas, temCupomNaoFiscal, temEtiquetas, temFuncionarios,
       addProduto, updateProduto, deleteProduto,
       addCliente, updateCliente, deleteCliente,
       registrarVenda, ajustarEstoque,

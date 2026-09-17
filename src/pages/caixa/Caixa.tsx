@@ -35,6 +35,11 @@ interface ContaBancaria {
   nome: string;
 }
 
+interface Funcionario {
+  id: string;
+  nome: string;
+}
+
 interface MovimentoCaixaItem {
   id: string;
   tipo: 'entrada' | 'saida';
@@ -127,7 +132,7 @@ function hojeStrMovimento() {
 }
 
 export function Caixa() {
-  const { produtos, clientes, registrarVenda, vendas, recarregar, temProdutos, temServicos, soServicos, temFinanceiro, temCupomNaoFiscal, nomeLoja } = useApp();
+  const { produtos, clientes, registrarVenda, vendas, recarregar, temProdutos, temServicos, soServicos, temFinanceiro, temCupomNaoFiscal, temFuncionarios, nomeLoja } = useApp();
   const [cupomVenda, setCupomVenda] = useState<Venda | null>(null);
   const [modalCupom, setModalCupom] = useState(false);
 
@@ -152,6 +157,8 @@ export function Caixa() {
   const [origens, setOrigens]         = useState<OrigemVenda[]>([]);
   const [origemVendaId, setOrigemVendaId] = useState('');
   const [modalOrigens, setModalOrigens] = useState(false);
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const [funcionarioId, setFuncionarioId] = useState('');
 
   const [modalMovimento, setModalMovimento] = useState(false);
   const [tipoMovimento, setTipoMovimento] = useState<'entrada' | 'saida'>('entrada');
@@ -220,6 +227,11 @@ export function Caixa() {
     if (!temServicos) return;
     api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
   }, [temServicos]);
+
+  useEffect(() => {
+    if (!temFuncionarios) return;
+    api.get<Funcionario[]>('/api/funcionarios/ativos').then(setFuncionarios).catch(() => {});
+  }, [temFuncionarios]);
 
   function carregarOrigens() {
     api.get<OrigemVenda[]>('/api/origens-venda').then(setOrigens).catch(() => {});
@@ -730,6 +742,7 @@ export function Caixa() {
         creditoUsado:   creditoUsado > 0 ? creditoUsado : null,
         dataVenda:      dataVenda || undefined,
         origemVendaId:  origemVendaId || null,
+        funcionarioId:  funcionarioId || null,
         formaPagamento: formas[0].forma,
         parcelas:       formas[0].parcelas ?? 1,
         formasPagamento: JSON.stringify(formas.map(f => ({ forma: f.forma, valor: duasFormas ? f.valor : total, parcelas: f.parcelas ?? 1 }))),
@@ -806,6 +819,7 @@ export function Caixa() {
     setUsarCredito(false);
     setDataVenda(hojeStr());
     setOrigemVendaId('');
+    setFuncionarioId('');
   }
 
   // Vendas do dia
@@ -1194,6 +1208,15 @@ export function Caixa() {
                 <button type="button" className="btn-secondary" onClick={() => { abrirNovaOrigem(); setModalOrigens(true); }}>Gerenciar</button>
               </div>
             </div>
+            {temFuncionarios && (
+              <div className="form-group">
+                <label className="form-label">Funcionário <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                <select value={funcionarioId} onChange={e => setFuncionarioId(e.target.value)}>
+                  <option value="">Não informar</option>
+                  {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
