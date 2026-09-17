@@ -103,12 +103,12 @@ function CxFracionadoInputs({ item, qtdTexto, valorTexto, onQtd, onValor }: {
   onValor: (v: number) => void;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <input
           type="text" inputMode="decimal"
           className="cx-preco-input"
-          style={{ width: 90, textAlign: 'center' }}
+          style={{ width: 80, textAlign: 'center' }}
           value={qtdTexto}
           placeholder="0,000"
           onChange={e => onQtd(e.target.value)} />
@@ -519,7 +519,9 @@ export function Caixa() {
     setQtdTexto(prev => ({ ...prev, [chave]: q > 0 ? q.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '' }));
     setCarrinho(prev => prev.map(i => {
       if (i.tipo !== 'produto' || i.produtoId !== prodId || i.variacaoId !== variacaoId) return i;
-      return { ...i, quantidade: q, subtotal: q * i.precoUnitario };
+      // Cobra exatamente o valor digitado — o peso é só uma estimativa
+      // (arredondada a 3 casas) para dar baixa no estoque.
+      return { ...i, quantidade: q, subtotal: valorReais };
     }));
   }
 
@@ -1081,27 +1083,38 @@ export function Caixa() {
                         <Trash2 size={14} />
                       </button>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, gap: 8 }}>
-                      <input className="cx-preco-input" type="number" min={0} step={0.01}
-                        value={item.precoUnitario}
-                        onChange={e => editarPreco(item, +e.target.value)}
-                        style={{ maxWidth: 90 }} />
-                      {item.tipo === 'produto' && item.tipoVenda === 'fracionado' ? (
-                        <CxFracionadoInputs
-                          item={item}
-                          qtdTexto={qtdTexto[chaveFrac(item.produtoId!, item.variacaoId)] ?? ''}
-                          valorTexto={valorFracTexto[chaveFrac(item.produtoId!, item.variacaoId)] ?? 0}
-                          onQtd={v => setQtdFracionada(item.produtoId!, item.variacaoId, v)}
-                          onValor={v => setValorFracionado(item.produtoId!, item.variacaoId, v)} />
-                      ) : (
+                    {item.tipo === 'produto' && item.tipoVenda === 'fracionado' ? (
+                      <>
+                        <div style={{ marginTop: 10 }}>
+                          <CxFracionadoInputs
+                            item={item}
+                            qtdTexto={qtdTexto[chaveFrac(item.produtoId!, item.variacaoId)] ?? ''}
+                            valorTexto={valorFracTexto[chaveFrac(item.produtoId!, item.variacaoId)] ?? 0}
+                            onQtd={v => setQtdFracionada(item.produtoId!, item.variacaoId, v)}
+                            onValor={v => setValorFracionado(item.produtoId!, item.variacaoId, v)} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
+                          <input className="cx-preco-input" type="number" min={0} step={0.01}
+                            value={item.precoUnitario}
+                            onChange={e => editarPreco(item, +e.target.value)}
+                            style={{ maxWidth: 90 }} />
+                          <span style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 15 }}>{fmt(item.subtotal)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, gap: 8 }}>
+                        <input className="cx-preco-input" type="number" min={0} step={0.01}
+                          value={item.precoUnitario}
+                          onChange={e => editarPreco(item, +e.target.value)}
+                          style={{ maxWidth: 90 }} />
                         <div className="cx-qtd">
                           <button className="cx-qtd-btn" onClick={() => alterarQtd(item, -1)}><Minus size={12} /></button>
                           <span className="cx-qtd-val">{item.quantidade}</span>
                           <button className="cx-qtd-btn" onClick={() => alterarQtd(item, 1)}><Plus size={12} /></button>
                         </div>
-                      )}
-                      <span style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 15 }}>{fmt(item.subtotal)}</span>
-                    </div>
+                        <span style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 15 }}>{fmt(item.subtotal)}</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
