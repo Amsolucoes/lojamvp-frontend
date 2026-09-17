@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, X, Trash2, Users, Edit2, Percent } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { useApp } from '../../context/AppContext';
 import { formatarTelefone, formatarCep, buscarEnderecoPorCep } from '../../utils/mascaras';
 
 interface Servico {
@@ -28,6 +29,8 @@ interface Profissional {
   cep: string | null;
   endereco: string | null;
   comissaoBaseCalculo: string; // total | servico — base de cálculo da comissão em Ordem de Serviço
+  comissaoVendasAtiva: boolean;
+  comissaoVendasPercentual: number | null;
   comissoesPorServico: ComissaoServico[];
 }
 
@@ -38,6 +41,7 @@ interface Conta {
 
 export function Funcionarios() {
   const { sucesso, erro } = useToast();
+  const { temOrdemServico } = useApp();
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [contas, setContas] = useState<Conta[]>([]);
@@ -52,6 +56,8 @@ export function Funcionarios() {
     telefone: '', cep: '', endereco: '',
     comissaoBaseCalculo: 'total' as 'total' | 'servico',
     valorDiaria: '',
+    comissaoVendasAtiva: false,
+    comissaoVendasPercentual: '',
   });
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -105,6 +111,8 @@ export function Funcionarios() {
       telefone: '', cep: '', endereco: '',
       comissaoBaseCalculo: 'total',
       valorDiaria: '',
+      comissaoVendasAtiva: false,
+      comissaoVendasPercentual: '',
     });
     setModal('novo');
   }
@@ -124,6 +132,8 @@ export function Funcionarios() {
       endereco: p.endereco ?? '',
       comissaoBaseCalculo: (p.comissaoBaseCalculo as 'total' | 'servico') ?? 'total',
       valorDiaria: p.valorDiaria != null ? String(p.valorDiaria) : '',
+      comissaoVendasAtiva: p.comissaoVendasAtiva ?? false,
+      comissaoVendasPercentual: p.comissaoVendasPercentual != null ? String(p.comissaoVendasPercentual) : '',
     });
     setModal('editar');
   }
@@ -136,6 +146,10 @@ export function Funcionarios() {
     }
     if (form.tipoRemuneracao === 'diaria' && !form.valorDiaria) {
       erro('Informe o valor da diária.');
+      return;
+    }
+    if (form.comissaoVendasAtiva && !form.comissaoVendasPercentual) {
+      erro('Informe o percentual de comissão em vendas.');
       return;
     }
     setSaving(true);
@@ -153,6 +167,8 @@ export function Funcionarios() {
         endereco: form.endereco || null,
         comissaoBaseCalculo: form.comissaoBaseCalculo,
         valorDiaria: form.tipoRemuneracao === 'diaria' && form.valorDiaria ? parseFloat(form.valorDiaria) : null,
+        comissaoVendasAtiva: form.comissaoVendasAtiva,
+        comissaoVendasPercentual: form.comissaoVendasAtiva && form.comissaoVendasPercentual ? parseFloat(form.comissaoVendasPercentual) : null,
       };
       if (modal === 'novo') await api.post('/api/funcionarios', payload);
       else await api.put(`/api/funcionarios/${editandoId}`, payload);
@@ -309,9 +325,16 @@ export function Funcionarios() {
                     {p.tipoRemuneracao !== 'comissao' && p.comissaoPadraoPercentual != null && (
                       <span style={{ marginLeft: 8 }}>+ {p.comissaoPadraoPercentual}% comissão</span>
                     )}
-                    <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>
-                      · Ordem de Serviço: {p.comissaoBaseCalculo === 'servico' ? 'só mão de obra' : 'peça + serviço'}
-                    </span>
+                    {temOrdemServico && (
+                      <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>
+                        · Ordem de Serviço: {p.comissaoBaseCalculo === 'servico' ? 'só mão de obra' : 'peça + serviço'}
+                      </span>
+                    )}
+                    {p.comissaoVendasAtiva && (
+                      <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>
+                        · Vendas: {p.comissaoVendasPercentual}%
+                      </span>
+                    )}
                   </div>
                     {p.comissoesPorServico.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
@@ -467,23 +490,43 @@ export function Funcionarios() {
                   </p>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Comissão em Ordem de Serviço incide sobre</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button type="button" className={form.comissaoBaseCalculo === 'total' ? 'btn-primary' : 'btn-secondary'}
-                      style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
-                      onClick={() => setForm(f => ({ ...f, comissaoBaseCalculo: 'total' }))}>
-                      Peça + Serviço
-                    </button>
-                    <button type="button" className={form.comissaoBaseCalculo === 'servico' ? 'btn-primary' : 'btn-secondary'}
-                      style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
-                      onClick={() => setForm(f => ({ ...f, comissaoBaseCalculo: 'servico' }))}>
-                      Só Serviço (mão de obra)
-                    </button>
+                {temOrdemServico && (
+                  <div className="form-group">
+                    <label className="form-label">Comissão em Ordem de Serviço incide sobre</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" className={form.comissaoBaseCalculo === 'total' ? 'btn-primary' : 'btn-secondary'}
+                        style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
+                        onClick={() => setForm(f => ({ ...f, comissaoBaseCalculo: 'total' }))}>
+                        Peça + Serviço
+                      </button>
+                      <button type="button" className={form.comissaoBaseCalculo === 'servico' ? 'btn-primary' : 'btn-secondary'}
+                        style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
+                        onClick={() => setForm(f => ({ ...f, comissaoBaseCalculo: 'servico' }))}>
+                        Só Serviço (mão de obra)
+                      </button>
+                    </div>
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                      Vale só pra comissão gerada em Ordem de Serviço — comissão de Agendamento já é sempre sobre o preço do serviço.
+                    </p>
                   </div>
+                )}
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={form.comissaoVendasAtiva} style={{ width: 16, height: 16, margin: 0 }}
+                      onChange={e => setForm(f => ({ ...f, comissaoVendasAtiva: e.target.checked }))} />
+                    <span>Gerar comissão em vendas do Caixa</span>
+                  </label>
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-                    Vale só pra comissão gerada em Ordem de Serviço — comissão de Agendamento já é sempre sobre o preço do serviço.
+                    Quando esse funcionário for selecionado numa venda do Caixa, gera uma comissão sobre o valor vendido (produtos e serviços avulsos — itens vindos de um agendamento já geram comissão própria).
                   </p>
+                  {form.comissaoVendasAtiva && (
+                    <div style={{ marginTop: 8 }}>
+                      <label className="form-label">Comissão em vendas (%)</label>
+                      <input type="number" min={0} max={100} step={0.1} value={form.comissaoVendasPercentual}
+                        onChange={e => setForm(f => ({ ...f, comissaoVendasPercentual: e.target.value }))} placeholder="Ex: 5" />
+                    </div>
+                  )}
                 </div>
                 {modal === 'editar' && (
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
