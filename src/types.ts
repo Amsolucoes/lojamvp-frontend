@@ -70,6 +70,7 @@ export interface Venda {
   troco?: number;
   criadaEm: string;
   origemNome?: string;
+  nomeFuncionario?: string;
 }
 
 // ── Estoque ───────────────────────────────────────────────────────
