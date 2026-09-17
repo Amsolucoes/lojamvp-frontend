@@ -29,6 +29,7 @@ interface AppCtx {
   temEtiquetas: boolean;
   temCupomNaoFiscal: boolean;
   temFuncionarios: boolean;
+  temOrdemServico: boolean;
 
   addProduto:    (p: Omit<Produto, 'id' | 'criadoEm'>) => Promise<void>;
   updateProduto: (id: string, p: Partial<Produto>)       => Promise<void>;
@@ -130,6 +131,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const temEtiquetas = modulosAtivos.includes('etiquetas') && temProdutos;
   const temCupomNaoFiscal = modulosAtivos.includes('cupom_nao_fiscal');
   const temFuncionarios = modulosAtivos.includes('funcionarios') && tipoPlano !== 'chacara';
+  const temOrdemServico = modulosAtivos.includes('ordem_servico');
 
   async function recarregar(silencioso = false) {
     if (!silencioso) setLoading(true);
@@ -289,7 +291,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       produtos, clientes, vendas, movimentos, loading, erro, trocas,
       modulosAtivos, tipoPlano, temProdutos, temServicos, soServicos,
       soFinanceiro, temFinanceiro, temTurmas,
-      fase, nomeLoja, temCorretora, temNf, temChacaraReservas, temCupomNaoFiscal, temEtiquetas, temFuncionarios,
+      fase, nomeLoja, temCorretora, temNf, temChacaraReservas, temCupomNaoFiscal, temEtiquetas, temFuncionarios, temOrdemServico,
       addProduto, updateProduto, deleteProduto,
       addCliente, updateCliente, deleteCliente,
       registrarVenda, ajustarEstoque,
