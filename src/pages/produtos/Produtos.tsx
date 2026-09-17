@@ -36,12 +36,12 @@ type FormData = Omit<Produto, 'id' | 'criadoEm'>;
 const EMPTY: FormData = {
   nome: '', categoria: '', precoCusto: 0, precoVenda: 0,
   estoque: 0, estoqueMinimo: 3, codigoBarras: '', descricao: '', ativo: true,
-  tipoVenda: 'unidade', unidadeMedida: 'un', marcaId: null,
+  tipoVenda: 'unidade', unidadeMedida: 'un', marcaId: null, fornecedorId: null,
 };
 
 export function Produtos() {
   const navigate = useNavigate();
-  const { produtos, deleteProduto, recarregar } = useApp();
+  const { produtos, fornecedores, deleteProduto, recarregar } = useApp();
   const [temOrdemServico, setTemOrdemServico] = useState(false);
   const [marcas, setMarcas] = useState<{ id: string; nome: string }[]>([]);
   const [marcaFiltro, setMarcaFiltro] = useState<string>('todas');
@@ -715,6 +715,16 @@ export function Produtos() {
                     </select>
                   </div>
                 )}
+                <div className="form-group">
+                  <label className="form-label">Fornecedor <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select style={{ flex: 1 }} value={form.fornecedorId ?? ''} onChange={e => setForm(f => ({ ...f, fornecedorId: e.target.value || null }))}>
+                      <option value="">Sem fornecedor</option>
+                      {fornecedores.filter(fr => fr.ativo).map(fr => <option key={fr.id} value={fr.id}>{fr.nome}</option>)}
+                    </select>
+                    <button type="button" className="btn-secondary" onClick={() => navigate('/fornecedores')}>Gerenciar</button>
+                  </div>
+                </div>
                 <div className="form-group">
                   <label className="form-label">Tipo de venda</label>
                   <select value={form.tipoVenda ?? 'unidade'} onChange={e => {

@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
   TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, 
-  FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck } from 'lucide-react';
+  FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck, Truck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -105,6 +105,7 @@ export function Sidebar() {
     ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
     ...(temServicos || temTurmas ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
     ...(temProdutos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
+    ...(temProdutos ? [{ to: '/fornecedores', icon: Truck, label: 'Fornecedores' }] : []),
     ...(temEtiquetas ? [{ to: '/etiquetas', icon: Tag, label: 'Etiquetas' }] : []),
     ...(temNf ? [{ to: '/nf', label: 'Importar NF', icon: FileText }] : []),
     ...(temFuncionarios ? [{ to: '/funcionarios', label: 'Funcionários', icon: UserCog }] : []),

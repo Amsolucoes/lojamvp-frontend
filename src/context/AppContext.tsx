@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api } from '../services/api';
-import { Produto, Cliente, Venda, MovimentoEstoque } from '../types';
+import { Produto, Cliente, Fornecedor, Venda, MovimentoEstoque } from '../types';
 
 interface AppCtx {
-  produtos:   Produto[];
-  clientes:   Cliente[];
+  produtos:    Produto[];
+  clientes:    Cliente[];
+  fornecedores: Fornecedor[];
   vendas:     Venda[];
   movimentos: MovimentoEstoque[];
   loading:    boolean;
@@ -39,6 +40,10 @@ interface AppCtx {
   updateCliente: (id: string, c: Partial<Cliente>)       => Promise<void>;
   deleteCliente: (id: string)                            => Promise<void>;
 
+  addFornecedor:    (f: Omit<Fornecedor, 'id' | 'criadoEm' | 'qtdProdutos'>) => Promise<void>;
+  updateFornecedor: (id: string, f: Partial<Fornecedor>)                     => Promise<void>;
+  deleteFornecedor: (id: string)                                             => Promise<void>;
+
   registrarVenda: (v: Omit<Venda, 'id' | 'criadaEm'>) => Promise<Venda>;
 
   ajustarEstoque: (
@@ -64,7 +69,18 @@ function mapProduto(p: any): Produto {
     variacoes: p.variacoes ?? [],
     marcaId: p.marcaId,
     nomeMarca: p.nomeMarca,
+    fornecedorId: p.fornecedorId,
+    nomeFornecedor: p.nomeFornecedor,
   } as any;
+}
+
+function mapFornecedor(f: any): Fornecedor {
+  return {
+    id: f.id, nome: f.nome, cnpjCpf: f.cnpjCpf,
+    telefone: f.telefone, email: f.email, endereco: f.endereco,
+    observacoes: f.observacoes, ativo: f.ativo, criadoEm: f.criadoEm,
+    qtdProdutos: f.qtdProdutos ?? 0,
+  };
 }
 
 function mapCliente(c: any): Cliente {
@@ -108,6 +124,7 @@ function mapMovimento(m: any): MovimentoEstoque {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [produtos,   setProdutos]   = useState<Produto[]>([]);
   const [clientes,   setClientes]   = useState<Cliente[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [vendas,     setVendas]     = useState<Venda[]>([]);
   const [movimentos, setMovimentos] = useState<MovimentoEstoque[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -144,15 +161,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('loja:movimentos');
 
     try {
-      const [prods, clis, vends, movs, trcs] = await Promise.all([
+      const [prods, clis, forns, vends, movs, trcs] = await Promise.all([
         api.get<any[]>('/api/produtos'),
         api.get<any[]>('/api/clientes'),
+        api.get<any[]>('/api/fornecedores'),
         api.get<any[]>('/api/vendas'),
         api.get<any[]>('/api/estoque/movimentos'),
         api.get<any[]>('/api/trocas'),
       ]);
       setProdutos(prods.map(mapProduto));
       setClientes(clis.map(mapCliente));
+      setFornecedores(forns.map(mapFornecedor));
       setVendas(vends.map(mapVenda));
       setMovimentos(movs.map(mapMovimento));
       setTrocas(trcs);
@@ -209,6 +228,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function deleteCliente(id: string) {
     await api.delete(`/api/clientes/${id}`);
     setClientes(prev => prev.filter(x => x.id !== id));
+  }
+
+  async function addFornecedor(f: Omit<Fornecedor, 'id' | 'criadoEm' | 'qtdProdutos'>) {
+    const novo = await api.post<any>('/api/fornecedores', f);
+    setFornecedores(prev => [...prev, mapFornecedor(novo)]);
+  }
+
+  async function updateFornecedor(id: string, f: Partial<Fornecedor>) {
+    const atual = fornecedores.find(x => x.id === id)!;
+    const atualizado = await api.put<any>(`/api/fornecedores/${id}`, { ...atual, ...f });
+    setFornecedores(prev => prev.map(x => x.id === id ? mapFornecedor(atualizado) : x));
+  }
+
+  async function deleteFornecedor(id: string) {
+    // Fornecedor em uso é desativado em vez de excluído — recarrega a lista
+    // pra refletir o resultado real, em vez de assumir que foi removido.
+    await api.delete(`/api/fornecedores/${id}`);
+    const lista = await api.get<any[]>('/api/fornecedores');
+    setFornecedores(lista.map(mapFornecedor));
   }
 
   async function registrarVenda(v: Omit<Venda, 'id' | 'criadaEm'>) {
@@ -288,12 +326,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={{
-      produtos, clientes, vendas, movimentos, loading, erro, trocas,
+      produtos, clientes, fornecedores, vendas, movimentos, loading, erro, trocas,
       modulosAtivos, tipoPlano, temProdutos, temServicos, soServicos,
       soFinanceiro, temFinanceiro, temTurmas,
       fase, nomeLoja, temCorretora, temNf, temChacaraReservas, temCupomNaoFiscal, temEtiquetas, temFuncionarios, temOrdemServico,
       addProduto, updateProduto, deleteProduto,
       addCliente, updateCliente, deleteCliente,
+      addFornecedor, updateFornecedor, deleteFornecedor,
       registrarVenda, ajustarEstoque,
       recarregar,
     }}>
