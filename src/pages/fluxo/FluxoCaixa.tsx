@@ -79,7 +79,7 @@ export function FluxoCaixa() {
   const [formEditMov, setFormEditMov] = useState({ tipo: 'entrada' as 'entrada' | 'saida', valor: 0, data: '', origemVendaId: '', observacao: '', contaBancariaId: '' });
   const [salvandoEditMov, setSalvandoEditMov] = useState(false);
   const [confirmDelMovimento, setConfirmDelMovimento] = useState<MovimentoCaixa | null>(null);
-  const [confirmDelVenda, setConfirmDelVenda] = useState<{ id: string; hora: string; total: number } | null>(null);
+  const [confirmDelVenda, setConfirmDelVenda] = useState<{ id: string; hora: string; total: number; data: Date } | null>(null);
   const [excluindoVenda, setExcluindoVenda] = useState(false);
 
   function carregarMovimentos() {
@@ -261,6 +261,12 @@ export function FluxoCaixa() {
     ? movimentos.filter(m => new Date(m.data).toDateString() === diaDetalhado.toDateString())
     : [];
 
+  // Só dá pra excluir venda do mês corrente (e não no futuro) — mesma regra do backend
+  function podeExcluirVenda(data: Date) {
+    return data.getFullYear() === hoje.getFullYear() && data.getMonth() === hoje.getMonth() && data <= hoje;
+  }
+  const podeExcluirDiaDetalhado = diaDetalhado ? podeExcluirVenda(diaDetalhado) : false;
+
   return (
     <div className="page">
       <div className="page-header">
@@ -375,7 +381,7 @@ export function FluxoCaixa() {
                           <td className="no-print">
                             <button className="btn-ghost" title="Excluir venda" style={{ color: 'var(--red)' }}
                               onClick={() => setConfirmDelVenda({
-                                id: v.id, total: v.totalFinal,
+                                id: v.id, total: v.totalFinal, data: new Date(v.criadaEm),
                                 hora: new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                               })}>
                               <Trash2 size={14} />
@@ -402,7 +408,7 @@ export function FluxoCaixa() {
                           <span style={{ fontWeight: 700, color: 'var(--green)' }}>{fmt(v.totalFinal)}</span>
                           <button className="btn-ghost no-print" title="Excluir venda" style={{ color: 'var(--red)' }}
                             onClick={() => setConfirmDelVenda({
-                              id: v.id, total: v.totalFinal,
+                              id: v.id, total: v.totalFinal, data: new Date(v.criadaEm),
                               hora: new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                             })}>
                             <Trash2 size={13} />
@@ -834,7 +840,18 @@ export function FluxoCaixa() {
                           <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 6 }}>{v.origemNome}</span>
                         )}
                       </div>
-                      <span style={{ fontWeight: 700, color: 'var(--green)' }}>{fmt(v.totalFinal)}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 700, color: 'var(--green)' }}>{fmt(v.totalFinal)}</span>
+                        {podeExcluirDiaDetalhado && (
+                          <button className="btn-ghost" title="Excluir venda" style={{ color: 'var(--red)' }}
+                            onClick={() => setConfirmDelVenda({
+                              id: v.id, total: v.totalFinal, data: new Date(v.criadaEm),
+                              hora: new Date(v.criadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                            })}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-2)' }}>
                       {v.itens.map(i => (
@@ -978,12 +995,13 @@ export function FluxoCaixa() {
             </div>
             <div className="modal-body">
               <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
-                Excluir a venda das <strong style={{ color: 'var(--text-1)' }}>{confirmDelVenda.hora}</strong>, de{' '}
+                Excluir a venda de <strong style={{ color: 'var(--text-1)' }}>{confirmDelVenda.data.toLocaleDateString('pt-BR')}</strong>,{' '}
+                das <strong style={{ color: 'var(--text-1)' }}>{confirmDelVenda.hora}</strong>, de{' '}
                 <strong style={{ color: 'var(--text-1)' }}>{fmt(confirmDelVenda.total)}</strong>?
               </p>
               <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>
                 O estoque dos produtos vendidos é devolvido automaticamente, assim como o uso de plano/agendamento
-                e o crédito de loja usado, se houver. Só é possível excluir vendas feitas hoje.
+                e o crédito de loja usado, se houver. Só é possível excluir vendas do mês atual.
               </p>
             </div>
             <div className="modal-footer">
