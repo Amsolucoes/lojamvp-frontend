@@ -27,7 +27,11 @@ const MODULOS_DESCRICAO: Record<string, string> = {
   etiquetas:  'Impressão de etiquetas de produtos com código de barras.',
   chacara_reservas: 'Agenda de reservas com pagamento online, contrato automático e aviso de check-out.',
   funcionarios: 'Comissão de profissionais, fechamento de pagamento e integração com o Financeiro.',
+  nfce: 'Emissão de Nota Fiscal de Consumidor Eletrônica (NFC-e) direto da venda, sem exigir impressão.',
 };
+
+// Módulos que ficam visíveis mesmo "em breve" (não escondidos), pra loja já saber que vem por aí
+const MODULOS_MOSTRAR_EM_BREVE = ['nfce'];
 
 type SessaoLoja = {
   modulosAtivos: string;
@@ -545,8 +549,9 @@ export function Configuracoes() {
             .filter(mod => {
               // NF só faz sentido pra loja com produtos físicos
               if (mod.chave === 'nf' && !temProdutos) return false;
-              // Módulos ainda não disponíveis (em breve) ficam escondidos por completo
-              if (!mod.disponivelParaAtivar) return false;
+              // Módulos ainda não disponíveis (em breve) ficam escondidos por completo,
+              // exceto os que a gente já quer anunciar como "em breve" (ex.: nfce)
+              if (!mod.disponivelParaAtivar && !MODULOS_MOSTRAR_EM_BREVE.includes(mod.chave)) return false;
 
               const grupoExclusivo = ['corretora', 'servicos', 'turmas'];
 
