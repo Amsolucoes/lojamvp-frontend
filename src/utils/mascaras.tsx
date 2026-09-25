@@ -44,3 +44,24 @@ export async function buscarEnderecoPorCep(valor: string): Promise<string | null
     return null;
   }
 }
+
+/**
+ * Busca endereço pelo CEP via ViaCEP, com endereço (rua + bairro) e cidade separados
+ * — pra formulários que têm campos próprios de número e cidade.
+ */
+export async function buscarEnderecoEstruturado(valor: string): Promise<{ endereco: string; cidade: string } | null> {
+  const digitos = valor.replace(/\D/g, '');
+  if (digitos.length !== 8) return null;
+
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
+    const dados = await res.json();
+    if (dados.erro) return null;
+
+    const endereco = [dados.logradouro, dados.bairro].filter(Boolean).join(', ');
+    const cidade = dados.localidade && dados.uf ? `${dados.localidade} - ${dados.uf}` : '';
+    return { endereco, cidade };
+  } catch {
+    return null;
+  }
+}
