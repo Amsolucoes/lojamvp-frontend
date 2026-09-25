@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X, CalendarHeart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { InputMoeda } from '../../components/InputMoeda';
 
 type Periodo = {
   id: number;
@@ -241,8 +242,8 @@ export function PeriodosEspeciaisChacara() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Valor total do período (R$)</label>
-                  <input type="number" min={0} step={0.01} value={form.valorTotal}
-                    onChange={e => setForm(f => ({ ...f, valorTotal: Number(e.target.value) }))} />
+                  <InputMoeda value={form.valorTotal} placeholder="0,00"
+                    onChange={v => setForm(f => ({ ...f, valorTotal: v }))} />
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
                     Se o cliente reservar só parte do período, o valor é dividido proporcionalmente pelos dias.
                   </p>
