@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight, AlertTriangle, Star } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import { formatarTelefone, formatarCpf, formatarCep, buscarEnderecoPorCep } from '../../utils/mascaras';
+import { formatarTelefone, formatarCpf, formatarCep, buscarEnderecoEstruturado } from '../../utils/mascaras';
+import { InputMoeda } from '../../components/InputMoeda';
 
 type Reserva = {
   id: number;
@@ -15,6 +16,8 @@ type Reserva = {
   clienteDocumento: string | null;
   clienteCep: string | null;
   clienteEndereco: string | null;
+  clienteNumero: string | null;
+  clienteCidade: string | null;
   valor: number;
   valorPago: number;
   status: string;
@@ -74,7 +77,7 @@ export function ListaReservasChacara() {
   const [modalEditar, setModalEditar] = useState<Reserva | null>(null);
   const [formEditar, setFormEditar] = useState({
     dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '',
-    clienteDocumento: '', clienteCep: '', clienteEndereco: '',
+    clienteDocumento: '', clienteCep: '', clienteEndereco: '', clienteNumero: '', clienteCidade: '',
   });
   const [ajustarValorManual, setAjustarValorManual] = useState(false);
   const [valorManual, setValorManual] = useState(0);
@@ -85,9 +88,14 @@ export function ListaReservasChacara() {
   const [excluindo, setExcluindo] = useState(false);
 
   const [modalNova, setModalNova] = useState(false);
-  const [formNova, setFormNova] = useState({ dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '', valor: 0, valorPago: 0 });
+  const [formNova, setFormNova] = useState({
+    dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '',
+    clienteDocumento: '', clienteCep: '', clienteEndereco: '', clienteNumero: '', clienteCidade: '',
+    valor: 0, valorPago: 0,
+  });
   const [salvandoNova, setSalvandoNova] = useState(false);
   const [erroNova, setErroNova] = useState('');
+  const [buscandoCepNova, setBuscandoCepNova] = useState(false);
 
   const [modalPagamento, setModalPagamento] = useState<Reserva | null>(null);
   const [valorPagamento, setValorPagamento] = useState(0);
@@ -232,7 +240,7 @@ export function ListaReservasChacara() {
   }
 
   const [modalPrejuizo, setModalPrejuizo] = useState<Reserva | null>(null);
-  const [formPrejuizo, setFormPrejuizo] = useState({ valor: '', observacao: '' });
+  const [formPrejuizo, setFormPrejuizo] = useState({ valor: 0, observacao: '' });
   const [salvandoPrejuizo, setSalvandoPrejuizo] = useState(false);
 
   const [modalAvaliarCliente, setModalAvaliarCliente] = useState<Reserva | null>(null);
@@ -264,7 +272,7 @@ export function ListaReservasChacara() {
 
   function abrirPrejuizo(r: Reserva) {
     setFormPrejuizo({
-      valor: r.valorPrejuizo ? String(r.valorPrejuizo) : '',
+      valor: r.valorPrejuizo ?? 0,
       observacao: r.observacaoPrejuizo ?? '',
     });
     setModalPrejuizo(r);
@@ -275,7 +283,7 @@ export function ListaReservasChacara() {
     setSalvandoPrejuizo(true);
     try {
       await api.patch(`/api/chacara/reservas/${modalPrejuizo.id}/prejuizo`, {
-        valor: formPrejuizo.valor ? parseFloat(formPrejuizo.valor) : null,
+        valor: formPrejuizo.valor ? formPrejuizo.valor : null,
         observacao: formPrejuizo.observacao.trim() || null,
       });
       sucesso('Registro salvo.');
@@ -342,9 +350,16 @@ export function ListaReservasChacara() {
 
   async function buscarEnderecoPorCepEdicao(valor: string) {
     setBuscandoCepEdicao(true);
-    const endereco = await buscarEnderecoPorCep(valor);
-    if (endereco) setFormEditar(f => ({ ...f, clienteEndereco: endereco }));
+    const resultado = await buscarEnderecoEstruturado(valor);
+    if (resultado) setFormEditar(f => ({ ...f, clienteEndereco: resultado.endereco, clienteCidade: resultado.cidade }));
     setBuscandoCepEdicao(false);
+  }
+
+  async function buscarEnderecoPorCepNova(valor: string) {
+    setBuscandoCepNova(true);
+    const resultado = await buscarEnderecoEstruturado(valor);
+    if (resultado) setFormNova(f => ({ ...f, clienteEndereco: resultado.endereco, clienteCidade: resultado.cidade }));
+    setBuscandoCepNova(false);
   }
 
   function abrirEdicao(r: Reserva) {
@@ -358,6 +373,8 @@ export function ListaReservasChacara() {
       clienteDocumento: r.clienteDocumento ?? '',
       clienteCep: r.clienteCep ?? '',
       clienteEndereco: r.clienteEndereco ?? '',
+      clienteNumero: r.clienteNumero ?? '',
+      clienteCidade: r.clienteCidade ?? '',
     });
     setAjustarValorManual(false);
     setValorManual(r.valor);
@@ -405,7 +422,11 @@ export function ListaReservasChacara() {
   }
 
   function abrirNova() {
-    setFormNova({ dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '', valor: 0, valorPago: 0 });
+    setFormNova({
+      dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '',
+      clienteDocumento: '', clienteCep: '', clienteEndereco: '', clienteNumero: '', clienteCidade: '',
+      valor: 0, valorPago: 0,
+    });
     setErroNova('');
     setModalNova(true);
   }
@@ -692,11 +713,25 @@ export function ListaReservasChacara() {
                     {buscandoCepEdicao && <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Buscando...</p>}
                   </div>
                 </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div className="form-group" style={{ flex: 2 }}>
+                    <label className="form-label">Endereço (rua, bairro)</label>
+                    <input value={formEditar.clienteEndereco}
+                      onChange={e => setFormEditar(f => ({ ...f, clienteEndereco: e.target.value }))}
+                      maxLength={150} />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Número</label>
+                    <input value={formEditar.clienteNumero}
+                      onChange={e => setFormEditar(f => ({ ...f, clienteNumero: e.target.value }))}
+                      maxLength={20} />
+                  </div>
+                </div>
                 <div className="form-group">
-                  <label className="form-label">Endereço completo</label>
-                  <input value={formEditar.clienteEndereco}
-                    onChange={e => setFormEditar(f => ({ ...f, clienteEndereco: e.target.value }))}
-                    maxLength={150} />
+                  <label className="form-label">Cidade</label>
+                  <input value={formEditar.clienteCidade}
+                    onChange={e => setFormEditar(f => ({ ...f, clienteCidade: e.target.value }))}
+                    placeholder="Cidade - UF" maxLength={100} />
                 </div>
 
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
@@ -709,9 +744,7 @@ export function ListaReservasChacara() {
                 {ajustarValorManual && (
                   <div className="form-group">
                     <label className="form-label">Valor final (R$)</label>
-                    <input type="number" min={0} step={0.01} value={valorManual}
-                      onChange={e => setValorManual(Number(e.target.value))}
-                      onFocus={e => e.target.select()} />
+                    <InputMoeda value={valorManual} onChange={setValorManual} placeholder="0,00" />
                   </div>
                 )}
               </div>
@@ -778,18 +811,52 @@ export function ListaReservasChacara() {
                     onChange={e => setFormNova(f => ({ ...f, clienteTelefone: formatarTelefone(e.target.value) }))}
                     inputMode="tel" maxLength={16} />
                 </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">CPF (opcional)</label>
+                    <input value={formNova.clienteDocumento}
+                      onChange={e => setFormNova(f => ({ ...f, clienteDocumento: formatarCpf(e.target.value) }))}
+                      inputMode="numeric" maxLength={14} />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">CEP (opcional)</label>
+                    <input value={formNova.clienteCep}
+                      onChange={e => setFormNova(f => ({ ...f, clienteCep: formatarCep(e.target.value) }))}
+                      onBlur={e => buscarEnderecoPorCepNova(e.target.value)}
+                      inputMode="numeric" maxLength={9} />
+                    {buscandoCepNova && <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Buscando...</p>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div className="form-group" style={{ flex: 2 }}>
+                    <label className="form-label">Endereço (rua, bairro)</label>
+                    <input value={formNova.clienteEndereco}
+                      onChange={e => setFormNova(f => ({ ...f, clienteEndereco: e.target.value }))}
+                      maxLength={150} />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Número</label>
+                    <input value={formNova.clienteNumero}
+                      onChange={e => setFormNova(f => ({ ...f, clienteNumero: e.target.value }))}
+                      maxLength={20} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Cidade</label>
+                  <input value={formNova.clienteCidade}
+                    onChange={e => setFormNova(f => ({ ...f, clienteCidade: e.target.value }))}
+                    placeholder="Cidade - UF" maxLength={100} />
+                </div>
                 <div className="form-group">
                   <label className="form-label">Valor combinado (R$)</label>
-                  <input type="number" min={0} step={0.01} value={formNova.valor}
-                    onChange={e => setFormNova(f => ({ ...f, valor: Number(e.target.value) }))} />
+                  <InputMoeda value={formNova.valor} onChange={v => setFormNova(f => ({ ...f, valor: v }))} placeholder="0,00" />
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
                     Valor livre — não é calculado automaticamente, use o valor combinado com o cliente (com desconto ou não).
                   </p>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Valor já pago (R$)</label>
-                  <input type="number" min={0} step={0.01} value={formNova.valorPago}
-                    onChange={e => setFormNova(f => ({ ...f, valorPago: Number(e.target.value) }))} />
+                  <InputMoeda value={formNova.valorPago} onChange={v => setFormNova(f => ({ ...f, valorPago: v }))} placeholder="0,00" />
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
                     Deixe igual ao valor combinado se já recebeu tudo, ou menor se só recebeu a entrada.
                   </p>
@@ -821,8 +888,7 @@ export function ListaReservasChacara() {
               </p>
               <div className="form-group">
                 <label className="form-label">Valor recebido agora (entrada ou total)</label>
-                <input type="number" min={0} step={0.01} value={valorEntrada}
-                  onChange={e => setValorEntrada(Number(e.target.value))} />
+                <InputMoeda value={valorEntrada} onChange={setValorEntrada} placeholder="0,00" />
               </div>
               <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>
                 Se for só a entrada, o saldo fica registrado como pendente e você pode registrar o pagamento do restante depois.
@@ -852,8 +918,7 @@ export function ListaReservasChacara() {
               </p>
               <div className="form-group">
                 <label className="form-label">Valor recebido agora (R$)</label>
-                <input type="number" min={0} step={0.01} value={valorPagamento}
-                  onChange={e => setValorPagamento(Number(e.target.value))} />
+                <InputMoeda value={valorPagamento} onChange={setValorPagamento} placeholder="0,00" />
               </div>
               {erroPagamento && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{erroPagamento}</p>}
             </div>
@@ -881,8 +946,7 @@ export function ListaReservasChacara() {
               </p>
               <div className="form-group">
                 <label className="form-label">Valor do prejuízo (R$)</label>
-                <input type="number" min={0} step={0.01} value={formPrejuizo.valor}
-                  onChange={e => setFormPrejuizo(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" />
+                <InputMoeda value={formPrejuizo.valor} onChange={v => setFormPrejuizo(f => ({ ...f, valor: v }))} placeholder="0,00" />
               </div>
               <div className="form-group" style={{ marginTop: 12 }}>
                 <label className="form-label">O que aconteceu</label>
