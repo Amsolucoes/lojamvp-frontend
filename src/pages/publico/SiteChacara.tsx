@@ -16,7 +16,7 @@ type DadosChacara = {
   precificacao: { limitePessoasPacotePequeno: number; minimoPessoas: number };
 };
 
-type Detalhamento = { valorEstadia: number; valorTaxaLimpeza: number; valorTotal: number; detalhamento: string[] };
+type Detalhamento = { valorEstadia: number; valorTaxaLimpeza: number; valorTotal: number; detalhamento: string[]; pacoteFechado: boolean };
 
 declare global {
   interface Window { MercadoPago: any; }
@@ -183,6 +183,8 @@ const CHAC_CSS = `
   border-radius: 8px; font-family: 'Work Sans', sans-serif;
 }
 .chac-input:focus-visible { outline: 2px solid var(--chac-accent, var(--chac-green)); outline-offset: 1px; }
+.chac-input:disabled { background: #f2efe6; color: var(--chac-ink-soft); cursor: not-allowed; }
+.chac-input-sm { font-size: 13px; padding: 10px 6px; }
 .chac-field-label { font-size: 12px; color: var(--chac-ink-soft); display: block; margin-bottom: 4px; }
 
 .chac-summary { background: var(--chac-paper); border-radius: 10px; padding: 14px; margin: 14px 0; }
@@ -678,49 +680,54 @@ export function SiteChacara() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-                  <div style={{ flex: '1 1 140px', minWidth: 140 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                  <div style={{ flex: '1 1 130px', minWidth: 120 }}>
                     <label className="chac-field-label">Data início</label>
                     <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="chac-input" />
                   </div>
-                  <div style={{ flex: '1 1 140px', minWidth: 140 }}>
+                  <div style={{ flex: '1 1 130px', minWidth: 120 }}>
                     <label className="chac-field-label">Data fim</label>
                     <input type="date" value={dataFim} min={dataInicio}
                       max={dataInicio ? new Date(new Date(dataInicio).getTime() + 29 * 86400000).toISOString().slice(0, 10) : undefined}
                       onChange={e => setDataFim(e.target.value)} className="chac-input" />
                   </div>
-                  <div style={{ flex: '0 1 90px', minWidth: 80 }}>
+                  <div style={{ flex: '0 1 76px', minWidth: 70 }}>
                     <label className="chac-field-label">Pessoas</label>
                     <input type="number" min={dados.precificacao.minimoPessoas} value={pessoas}
-                      onChange={e => setPessoas(Number(e.target.value))} className="chac-input" />
+                      onChange={e => setPessoas(Number(e.target.value))} className="chac-input chac-input-sm" />
                   </div>
+                  {dados.horarios.entrada.length > 0 && (
+                    <div style={{ flex: '1 1 100px', minWidth: 92 }}>
+                      <label className="chac-field-label">Entrada</label>
+                      <select value={horaEntrada} disabled={!!valor?.pacoteFechado}
+                        onChange={e => setHoraEntrada(e.target.value)} className="chac-input chac-input-sm">
+                        <option value="">Padrão</option>
+                        {dados.horarios.entrada.map(h => (
+                          <option key={h.id} value={h.hora}>{h.hora}{h.ajuste !== 0 ? ` (${h.ajuste < 0 ? '-' : '+'}${fmt(Math.abs(h.ajuste))})` : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {dados.horarios.saida.length > 0 && (
+                    <div style={{ flex: '1 1 100px', minWidth: 92 }}>
+                      <label className="chac-field-label">Saída</label>
+                      <select value={horaSaida} disabled={!!valor?.pacoteFechado}
+                        onChange={e => setHoraSaida(e.target.value)} className="chac-input chac-input-sm">
+                        <option value="">Padrão</option>
+                        {dados.horarios.saida.map(h => (
+                          <option key={h.id} value={h.hora}>{h.hora}{h.ajuste !== 0 ? ` (${h.ajuste < 0 ? '-' : '+'}${fmt(Math.abs(h.ajuste))})` : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {(dados.horarios.entrada.length > 0 || dados.horarios.saida.length > 0) && (
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-                    {dados.horarios.entrada.length > 0 && (
-                      <div style={{ flex: '1 1 140px', minWidth: 140 }}>
-                        <label className="chac-field-label">Horário de entrada</label>
-                        <select value={horaEntrada} onChange={e => setHoraEntrada(e.target.value)} className="chac-input">
-                          <option value="">Padrão ({dados.horaEntrada})</option>
-                          {dados.horarios.entrada.map(h => (
-                            <option key={h.id} value={h.hora}>{h.hora}{h.ajuste !== 0 ? ` (${h.ajuste < 0 ? '-' : '+'}${fmt(Math.abs(h.ajuste))})` : ''}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    {dados.horarios.saida.length > 0 && (
-                      <div style={{ flex: '1 1 140px', minWidth: 140 }}>
-                        <label className="chac-field-label">Horário de saída (dia seguinte)</label>
-                        <select value={horaSaida} onChange={e => setHoraSaida(e.target.value)} className="chac-input">
-                          <option value="">Padrão ({dados.horaSaida})</option>
-                          {dados.horarios.saida.map(h => (
-                            <option key={h.id} value={h.hora}>{h.hora}{h.ajuste !== 0 ? ` (${h.ajuste < 0 ? '-' : '+'}${fmt(Math.abs(h.ajuste))})` : ''}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
+                  <p style={{ fontSize: 11, color: 'var(--chac-ink-soft)', margin: '2px 0 12px' }}>
+                    {valor?.pacoteFechado
+                      ? 'Data especial com preço fechado — sem opção de horário.'
+                      : 'Saída sempre no dia seguinte ao último dia da reserva.'}
+                  </p>
                 )}
 
                 {pessoas > 0 && pessoas < dados.precificacao.minimoPessoas && (
@@ -740,7 +747,8 @@ export function SiteChacara() {
                       <div key={i} className="chac-summary-line">{linha}</div>
                     ))}
                     <div className="chac-summary-line" style={{ marginTop: 6 }}>
-                      🕗 Entrada às {horaEntrada || dados.horaEntrada} · Saída às {horaSaida || dados.horaSaida} (dia seguinte)
+                      🕗 Entrada às {valor.pacoteFechado ? dados.horaEntrada : (horaEntrada || dados.horaEntrada)} ·
+                      {' '}Saída às {valor.pacoteFechado ? dados.horaSaida : (horaSaida || dados.horaSaida)} (dia seguinte)
                     </div>
                     <div className="chac-summary-total">Total: {fmt(valor.valorTotal)}</div>
                   </div>
