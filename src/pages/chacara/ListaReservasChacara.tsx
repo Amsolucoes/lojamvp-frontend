@@ -18,6 +18,8 @@ type Reserva = {
   clienteEndereco: string | null;
   clienteNumero: string | null;
   clienteCidade: string | null;
+  horaEntrada: string | null;
+  horaSaida: string | null;
   valor: number;
   valorPago: number;
   status: string;
@@ -74,10 +76,16 @@ export function ListaReservasChacara() {
   }
   const { sucesso, erro: toastErro } = useToast();
 
+  type Horario = { id: number; tipo: 'entrada' | 'saida'; hora: string; ajuste: number };
+  const [horarios, setHorarios] = useState<Horario[]>([]);
+  const horariosEntrada = horarios.filter(h => h.tipo === 'entrada');
+  const horariosSaida = horarios.filter(h => h.tipo === 'saida');
+
   const [modalEditar, setModalEditar] = useState<Reserva | null>(null);
   const [formEditar, setFormEditar] = useState({
     dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '',
     clienteDocumento: '', clienteCep: '', clienteEndereco: '', clienteNumero: '', clienteCidade: '',
+    horaEntrada: '', horaSaida: '',
   });
   const [ajustarValorManual, setAjustarValorManual] = useState(false);
   const [valorManual, setValorManual] = useState(0);
@@ -91,6 +99,7 @@ export function ListaReservasChacara() {
   const [formNova, setFormNova] = useState({
     dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '',
     clienteDocumento: '', clienteCep: '', clienteEndereco: '', clienteNumero: '', clienteCidade: '',
+    horaEntrada: '', horaSaida: '',
     valor: 0, valorPago: 0,
   });
   const [salvandoNova, setSalvandoNova] = useState(false);
@@ -121,6 +130,7 @@ export function ListaReservasChacara() {
   useEffect(() => {
     carregar();
     api.get<any>('/api/loja/situacao').then(res => setSlugLoja(res?.slug ?? '')).catch(() => {});
+    api.get<Horario[]>('/api/chacara/horarios').then(setHorarios).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -375,6 +385,8 @@ export function ListaReservasChacara() {
       clienteEndereco: r.clienteEndereco ?? '',
       clienteNumero: r.clienteNumero ?? '',
       clienteCidade: r.clienteCidade ?? '',
+      horaEntrada: r.horaEntrada ?? '',
+      horaSaida: r.horaSaida ?? '',
     });
     setAjustarValorManual(false);
     setValorManual(r.valor);
@@ -425,6 +437,7 @@ export function ListaReservasChacara() {
     setFormNova({
       dataInicio: '', dataFim: '', pessoas: 1, clienteNome: '', clienteEmail: '', clienteTelefone: '',
       clienteDocumento: '', clienteCep: '', clienteEndereco: '', clienteNumero: '', clienteCidade: '',
+      horaEntrada: '', horaSaida: '',
       valor: 0, valorPago: 0,
     });
     setErroNova('');
@@ -733,6 +746,28 @@ export function ListaReservasChacara() {
                     onChange={e => setFormEditar(f => ({ ...f, clienteCidade: e.target.value }))}
                     placeholder="Cidade - UF" maxLength={100} />
                 </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Horário de entrada</label>
+                    <select value={formEditar.horaEntrada}
+                      onChange={e => setFormEditar(f => ({ ...f, horaEntrada: e.target.value }))}>
+                      <option value="">Sem horário fixo</option>
+                      {horariosEntrada.map(h => (
+                        <option key={h.id} value={h.hora}>{h.hora}{h.ajuste !== 0 ? ` (${h.ajuste < 0 ? '-' : '+'}${fmt(Math.abs(h.ajuste))})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Horário de saída (dia seguinte)</label>
+                    <select value={formEditar.horaSaida}
+                      onChange={e => setFormEditar(f => ({ ...f, horaSaida: e.target.value }))}>
+                      <option value="">Sem horário fixo</option>
+                      {horariosSaida.map(h => (
+                        <option key={h.id} value={h.hora}>{h.hora}{h.ajuste !== 0 ? ` (${h.ajuste < 0 ? '-' : '+'}${fmt(Math.abs(h.ajuste))})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
                   <input type="checkbox" checked={ajustarValorManual}
@@ -846,6 +881,28 @@ export function ListaReservasChacara() {
                   <input value={formNova.clienteCidade}
                     onChange={e => setFormNova(f => ({ ...f, clienteCidade: e.target.value }))}
                     placeholder="Cidade - UF" maxLength={100} />
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Horário de entrada</label>
+                    <select value={formNova.horaEntrada}
+                      onChange={e => setFormNova(f => ({ ...f, horaEntrada: e.target.value }))}>
+                      <option value="">Sem horário fixo</option>
+                      {horariosEntrada.map(h => (
+                        <option key={h.id} value={h.hora}>{h.hora}{h.ajuste !== 0 ? ` (${h.ajuste < 0 ? '-' : '+'}${fmt(Math.abs(h.ajuste))})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Horário de saída (dia seguinte)</label>
+                    <select value={formNova.horaSaida}
+                      onChange={e => setFormNova(f => ({ ...f, horaSaida: e.target.value }))}>
+                      <option value="">Sem horário fixo</option>
+                      {horariosSaida.map(h => (
+                        <option key={h.id} value={h.hora}>{h.hora}{h.ajuste !== 0 ? ` (${h.ajuste < 0 ? '-' : '+'}${fmt(Math.abs(h.ajuste))})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Valor combinado (R$)</label>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { InputMoeda } from '../../components/InputMoeda';
 import './ChacaraForm.css';
 
 type ConfigGeral = {
@@ -30,6 +31,9 @@ const CAMPOS_GERAIS: { chave: keyof ConfigGeral; label: string; tipo: 'moeda' | 
 
 const FAIXA_VAZIA = { pessoasAte: 0, valorDiariaSemana: 0, valorDiariaFimSemana: 0, valorPacote2DiasFimSemana: 0 };
 
+type Horario = { id: number; tipo: 'entrada' | 'saida'; hora: string; ajuste: number; ordem: number };
+const HORARIO_VAZIO = { hora: '', ajusteAbs: 0, sinal: 'desconto' as 'desconto' | 'acrescimo' };
+
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -49,16 +53,31 @@ export function ConfiguracaoPrecoChacara() {
   const [modalExcluir, setModalExcluir] = useState<Faixa | null>(null);
   const [excluindo, setExcluindo] = useState(false);
 
+  const [horarios, setHorarios] = useState<Horario[]>([]);
+  const [modalHorario, setModalHorario] = useState<'nova' | 'editar' | null>(null);
+  const [tipoHorarioModal, setTipoHorarioModal] = useState<'entrada' | 'saida'>('entrada');
+  const [selecionadaHorario, setSelecionadaHorario] = useState<Horario | null>(null);
+  const [formHorario, setFormHorario] = useState(HORARIO_VAZIO);
+  const [salvandoHorario, setSalvandoHorario] = useState(false);
+  const [erroHorario, setErroHorario] = useState('');
+  const [modalExcluirHorario, setModalExcluirHorario] = useState<Horario | null>(null);
+  const [excluindoHorario, setExcluindoHorario] = useState(false);
+
   useEffect(() => {
     api.get<ConfigGeral>('/api/chacara/configuracao-preco')
       .then(setConfig)
       .catch(() => toastErro('Erro ao carregar configuração de preço.'))
       .finally(() => setCarregando(false));
     carregarFaixas();
+    carregarHorarios();
   }, []);
 
   function carregarFaixas() {
     api.get<Faixa[]>('/api/chacara/faixas-preco').then(setFaixas).catch(() => {});
+  }
+
+  function carregarHorarios() {
+    api.get<Horario[]>('/api/chacara/horarios').then(setHorarios).catch(() => {});
   }
 
   function atualizarCampo(chave: keyof ConfigGeral, valor: string) {
@@ -139,6 +158,65 @@ export function ConfiguracaoPrecoChacara() {
   }
 
   const faixasOrdenadas = [...faixas].sort((a, b) => a.pessoasAte - b.pessoasAte);
+
+  function abrirNovoHorario(tipo: 'entrada' | 'saida') {
+    setTipoHorarioModal(tipo);
+    setFormHorario(HORARIO_VAZIO);
+    setErroHorario('');
+    setModalHorario('nova');
+  }
+
+  function abrirEditarHorario(h: Horario) {
+    setTipoHorarioModal(h.tipo);
+    setSelecionadaHorario(h);
+    setFormHorario({ hora: h.hora, ajusteAbs: Math.abs(h.ajuste), sinal: h.ajuste < 0 ? 'desconto' : 'acrescimo' });
+    setErroHorario('');
+    setModalHorario('editar');
+  }
+
+  async function salvarHorario() {
+    if (!formHorario.hora) {
+      setErroHorario('Informe o horário.');
+      return;
+    }
+    setSalvandoHorario(true);
+    setErroHorario('');
+    const ajuste = formHorario.sinal === 'desconto' ? -formHorario.ajusteAbs : formHorario.ajusteAbs;
+    const payload = { tipo: tipoHorarioModal, hora: formHorario.hora, ajuste, ordem: horarios.filter(h => h.tipo === tipoHorarioModal).length };
+    try {
+      if (modalHorario === 'nova') {
+        await api.post('/api/chacara/horarios', payload);
+        sucesso('Horário criado.');
+      } else if (selecionadaHorario) {
+        await api.put(`/api/chacara/horarios/${selecionadaHorario.id}`, { ...payload, ordem: selecionadaHorario.ordem });
+        sucesso('Horário atualizado.');
+      }
+      setModalHorario(null);
+      carregarHorarios();
+    } catch (e) {
+      setErroHorario((e as Error).message);
+    } finally {
+      setSalvandoHorario(false);
+    }
+  }
+
+  async function confirmarExclusaoHorario() {
+    if (!modalExcluirHorario) return;
+    setExcluindoHorario(true);
+    try {
+      await api.delete(`/api/chacara/horarios/${modalExcluirHorario.id}`);
+      sucesso('Horário excluído.');
+      setModalExcluirHorario(null);
+      carregarHorarios();
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setExcluindoHorario(false);
+    }
+  }
+
+  const horariosEntrada = horarios.filter(h => h.tipo === 'entrada').sort((a, b) => a.hora.localeCompare(b.hora));
+  const horariosSaida = horarios.filter(h => h.tipo === 'saida').sort((a, b) => a.hora.localeCompare(b.hora));
 
   if (carregando) {
     return <div className="page"><p>Carregando...</p></div>;
@@ -247,6 +325,49 @@ export function ConfiguracaoPrecoChacara() {
         )}
       </div>
 
+      {/* Horários de entrada e saída */}
+      <div className="card chacara-card-wide" style={{ marginTop: 20 }}>
+        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Horários de entrada e saída</div>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>
+          Defina os horários fixos que o cliente pode escolher, com um ajuste de valor pra cada um (desconto ou acréscimo,
+          somado ao preço calculado pela diária). A saída é sempre no dia seguinte ao último dia da reserva.
+        </p>
+
+        <div className="chacara-grid-2">
+          {(['entrada', 'saida'] as const).map(tipo => (
+            <div key={tipo}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{tipo === 'entrada' ? 'Horários de entrada' : 'Horários de saída'}</div>
+                <button className="btn-ghost" onClick={() => abrirNovoHorario(tipo)}>
+                  <Plus size={14} style={{ verticalAlign: -2 }} /> Novo
+                </button>
+              </div>
+              {(tipo === 'entrada' ? horariosEntrada : horariosSaida).length === 0 ? (
+                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Nenhum horário cadastrado.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {(tipo === 'entrada' ? horariosEntrada : horariosSaida).map(h => (
+                    <div key={h.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                      padding: '10px 12px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                    }}>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{h.hora}</div>
+                      <div style={{ fontSize: 12, color: h.ajuste < 0 ? 'var(--red)' : h.ajuste > 0 ? 'var(--green)' : 'var(--text-3)' }}>
+                        {h.ajuste === 0 ? 'sem ajuste' : `${h.ajuste < 0 ? '-' : '+'} ${fmt(Math.abs(h.ajuste))}`}
+                      </div>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn-ghost" title="Editar" onClick={() => abrirEditarHorario(h)}><Pencil size={13} /></button>
+                        <button className="btn-ghost" title="Excluir" style={{ color: 'var(--red)' }} onClick={() => setModalExcluirHorario(h)}><Trash2 size={13} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Modal nova/editar faixa */}
       {(modal === 'nova' || modal === 'editar') && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>
@@ -314,6 +435,77 @@ export function ConfiguracaoPrecoChacara() {
               <button className="btn-secondary" onClick={() => setModalExcluir(null)}>Cancelar</button>
               <button className="btn-danger" onClick={confirmarExclusaoFaixa} disabled={excluindo}>
                 {excluindo ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal novo/editar horário */}
+      {(modalHorario === 'nova' || modalHorario === 'editar') && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalHorario(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>
+                {modalHorario === 'nova' ? 'Novo horário de' : 'Editar horário de'} {tipoHorarioModal === 'entrada' ? 'entrada' : 'saída'}
+              </h2>
+              <button className="btn-ghost" onClick={() => setModalHorario(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Horário</label>
+                  <input type="time" value={formHorario.hora}
+                    onChange={e => setFormHorario(f => ({ ...f, hora: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Ajuste no valor da reserva</label>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <button type="button"
+                      className={formHorario.sinal === 'desconto' ? 'btn-primary' : 'btn-secondary'}
+                      style={{ flex: 1, justifyContent: 'center' }}
+                      onClick={() => setFormHorario(f => ({ ...f, sinal: 'desconto' }))}>Desconto</button>
+                    <button type="button"
+                      className={formHorario.sinal === 'acrescimo' ? 'btn-primary' : 'btn-secondary'}
+                      style={{ flex: 1, justifyContent: 'center' }}
+                      onClick={() => setFormHorario(f => ({ ...f, sinal: 'acrescimo' }))}>Acréscimo</button>
+                  </div>
+                  <InputMoeda value={formHorario.ajusteAbs} placeholder="0,00"
+                    onChange={v => setFormHorario(f => ({ ...f, ajusteAbs: v }))} />
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    Deixe 0,00 se esse horário não muda o valor da reserva.
+                  </p>
+                </div>
+              </div>
+              {erroHorario && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 12 }}>{erroHorario}</p>}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalHorario(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarHorario} disabled={salvandoHorario}>
+                {salvandoHorario ? 'Salvando...' : 'Salvar horário'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal excluir horário */}
+      {modalExcluirHorario && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalExcluirHorario(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir horário</h2>
+              <button className="btn-ghost" onClick={() => setModalExcluirHorario(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Excluir o horário <strong style={{ color: 'var(--text-1)' }}>{modalExcluirHorario.hora}</strong>?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalExcluirHorario(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={confirmarExclusaoHorario} disabled={excluindoHorario}>
+                {excluindoHorario ? 'Excluindo...' : 'Excluir'}
               </button>
             </div>
           </div>

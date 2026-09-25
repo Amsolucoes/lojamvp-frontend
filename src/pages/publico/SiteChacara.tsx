@@ -3,10 +3,13 @@ import { useParams } from 'react-router-dom';
 import { api } from '../../services/api';
 import { formatarTelefone, formatarCpf, formatarCep, emailValido, buscarEnderecoPorCep } from '../../utils/mascaras';
 
+type HorarioChacara = { id: number; hora: string; ajuste: number };
+
 type DadosChacara = {
   nome: string; logoUrl: string | null; corPrimaria: string;
   descricao: string; endereco: string; mapaEmbedUrl: string | null;
   horaEntrada: string; horaSaida: string; avisosUso: string[];
+  horarios: { entrada: HorarioChacara[]; saida: HorarioChacara[] };
   fotos: string[];
   comodidades: { chave: string; label: string }[];
   comodidadesExtras: string[];
@@ -249,6 +252,8 @@ export function SiteChacara() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [pessoas, setPessoas] = useState(1);
+  const [horaEntrada, setHoraEntrada] = useState('');
+  const [horaSaida, setHoraSaida] = useState('');
   const [disponivel, setDisponivel] = useState<boolean | null>(null);
   const [valor, setValor] = useState<Detalhamento | null>(null);
   const [verificando, setVerificando] = useState(false);
@@ -316,15 +321,16 @@ export function SiteChacara() {
     if ((new Date(dataFim).getTime() - new Date(dataInicio).getTime()) / 86400000 > 29) { setDisponivel(null); setValor(null); return; }
 
     setVerificando(true);
+    const horarioParams = `${horaEntrada ? `&horaEntrada=${encodeURIComponent(horaEntrada)}` : ''}${horaSaida ? `&horaSaida=${encodeURIComponent(horaSaida)}` : ''}`;
     Promise.all([
       api.get<{ disponivel: boolean }>(`/api/publico/${slug}/chacara/disponibilidade?dataInicio=${dataInicio}&dataFim=${dataFim}`),
-      api.get<Detalhamento>(`/api/publico/${slug}/chacara/valor?dataInicio=${dataInicio}&dataFim=${dataFim}&pessoas=${pessoas}`),
+      api.get<Detalhamento>(`/api/publico/${slug}/chacara/valor?dataInicio=${dataInicio}&dataFim=${dataFim}&pessoas=${pessoas}${horarioParams}`),
     ]).then(([disp, val]) => {
       setDisponivel(disp.disponivel);
       setValor(val);
     }).catch(() => { setDisponivel(null); setValor(null); })
       .finally(() => setVerificando(false));
-  }, [slug, dataInicio, dataFim, pessoas]);
+  }, [slug, dataInicio, dataFim, pessoas, horaEntrada, horaSaida]);
 
   async function handleBuscarCep(valor: string) {
     setBuscandoCep(true);
@@ -354,6 +360,7 @@ export function SiteChacara() {
         dataInicio, dataFim, pessoas,
         clienteNome: nome.trim(), clienteEmail: email.trim(), clienteTelefone: telefone.trim(),
         clienteDocumento: cpf.trim() || null, clienteCep: cep.trim() || null, clienteEndereco: enderecoCliente.trim() || null,
+        horaEntrada: horaEntrada || null, horaSaida: horaSaida || null,
       });
       setReservaCriada(res);
       setEtapa('pagamento');
@@ -689,6 +696,33 @@ export function SiteChacara() {
                   </div>
                 </div>
 
+                {(dados.horarios.entrada.length > 0 || dados.horarios.saida.length > 0) && (
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                    {dados.horarios.entrada.length > 0 && (
+                      <div style={{ flex: '1 1 140px', minWidth: 140 }}>
+                        <label className="chac-field-label">Horário de entrada</label>
+                        <select value={horaEntrada} onChange={e => setHoraEntrada(e.target.value)} className="chac-input">
+                          <option value="">Padrão ({dados.horaEntrada})</option>
+                          {dados.horarios.entrada.map(h => (
+                            <option key={h.id} value={h.hora}>{h.hora}{h.ajuste !== 0 ? ` (${h.ajuste < 0 ? '-' : '+'}${fmt(Math.abs(h.ajuste))})` : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {dados.horarios.saida.length > 0 && (
+                      <div style={{ flex: '1 1 140px', minWidth: 140 }}>
+                        <label className="chac-field-label">Horário de saída (dia seguinte)</label>
+                        <select value={horaSaida} onChange={e => setHoraSaida(e.target.value)} className="chac-input">
+                          <option value="">Padrão ({dados.horaSaida})</option>
+                          {dados.horarios.saida.map(h => (
+                            <option key={h.id} value={h.hora}>{h.hora}{h.ajuste !== 0 ? ` (${h.ajuste < 0 ? '-' : '+'}${fmt(Math.abs(h.ajuste))})` : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {pessoas > 0 && pessoas < dados.precificacao.minimoPessoas && (
                   <p className="chac-error">O mínimo é de {dados.precificacao.minimoPessoas} pessoas.</p>
                 )}
@@ -706,7 +740,7 @@ export function SiteChacara() {
                       <div key={i} className="chac-summary-line">{linha}</div>
                     ))}
                     <div className="chac-summary-line" style={{ marginTop: 6 }}>
-                      🕗 Entrada às {dados.horaEntrada} · Saída às {dados.horaSaida}
+                      🕗 Entrada às {horaEntrada || dados.horaEntrada} · Saída às {horaSaida || dados.horaSaida} (dia seguinte)
                     </div>
                     <div className="chac-summary-total">Total: {fmt(valor.valorTotal)}</div>
                   </div>
