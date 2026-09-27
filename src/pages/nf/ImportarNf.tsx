@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Check, X, FileText, Package, PackagePlus, Search, Trash2, ClipboardList } from 'lucide-react';
+import { Upload, Check, X, FileText, Package, PackagePlus, Search, Trash2, ClipboardList, Pencil } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
 import { InputMoeda } from '../../components/InputMoeda';
+import { Paginacao } from '../../components/Paginacao';
+import './ImportarNf.css';
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -65,12 +67,50 @@ interface NfHistorico {
 }
 
 interface ItemNfManual {
-  produtoId: string;
+  chave: string;
+  isNovo: boolean;
+  produtoId?: string; // obrigatório quando !isNovo
   nomeProduto: string;
   variacaoId?: string;
   variacaoLabel?: string;
   quantidade: number;
   precoCusto?: number;
+  // só usados quando isNovo === true
+  categoriaNome?: string;
+  cor?: string;
+  tamanho?: string;
+  precoVenda?: number;
+}
+
+interface NovoProdutoForm {
+  nome: string;
+  categoriaNome: string;
+  cor: string;
+  tamanho: string;
+  quantidade: number;
+  precoCusto: number;
+  precoVenda: number;
+}
+
+const NOVO_PRODUTO_VAZIO: NovoProdutoForm = {
+  nome: '', categoriaNome: '', cor: '', tamanho: '', quantidade: 1, precoCusto: 0, precoVenda: 0,
+};
+
+interface ItemNfEditavel {
+  produtoId: string;
+  variacaoId: string | null;
+  nomeProduto: string;
+  variacaoLabel: string | null;
+  quantidade: number;
+  precoCusto: number | null;
+}
+
+interface EditFormState {
+  fornecedorId: string;
+  numeroNf: string;
+  dataEmissao: string;
+  valorTotal: number;
+  itens: ItemNfEditavel[];
 }
 
 export function ImportarNf() {
@@ -97,6 +137,23 @@ export function ImportarNf() {
   const [manualItens, setManualItens] = useState<ItemNfManual[]>([]);
   const [modalVariacaoManual, setModalVariacaoManual] = useState<{ produtoId: string; nome: string } | null>(null);
   const [enviandoManual, setEnviandoManual] = useState(false);
+  const [categorias, setCategorias] = useState<{ id: string; nome: string }[]>([]);
+  const [mostrarNovoProduto, setMostrarNovoProduto] = useState(false);
+  const [novoProduto, setNovoProduto] = useState<NovoProdutoForm>(NOVO_PRODUTO_VAZIO);
+
+  // Histórico de NF — paginação client-side
+  const [histPagina, setHistPagina] = useState(1);
+  const [histPorPagina, setHistPorPagina] = useState(5);
+
+  // Edição de NF manual já lançada
+  const [editando, setEditando] = useState<NfHistorico | null>(null);
+  const [editForm, setEditForm] = useState<EditFormState | null>(null);
+  const [carregandoEdicao, setCarregandoEdicao] = useState(false);
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+
+  useEffect(() => {
+    api.get<{ id: string; nome: string }[]>('/api/categorias').then(setCategorias).catch(() => {});
+  }, []);
 
   const manualProdsFiltrados = produtos.filter(p =>
     p.ativo && (p.nome.toLowerCase().includes(manualBusca.toLowerCase()) || (p.codigoBarras?.includes(manualBusca) ?? false))
@@ -104,14 +161,33 @@ export function ImportarNf() {
 
   function adicionarItemManual(produtoId: string, nomeProduto: string, variacaoId?: string, variacaoLabel?: string) {
     setManualItens(prev => {
-      const existe = prev.find(i => i.produtoId === produtoId && i.variacaoId === variacaoId);
+      const existe = prev.find(i => !i.isNovo && i.produtoId === produtoId && i.variacaoId === variacaoId);
       if (existe) {
         return prev.map(i => i === existe ? { ...i, quantidade: i.quantidade + 1 } : i);
       }
-      return [...prev, { produtoId, nomeProduto, variacaoId, variacaoLabel, quantidade: 1 }];
+      return [...prev, { chave: crypto.randomUUID(), isNovo: false, produtoId, nomeProduto, variacaoId, variacaoLabel, quantidade: 1 }];
     });
     setManualBusca('');
     setManualShowBusca(false);
+  }
+
+  function adicionarNovoProdutoManual() {
+    if (!novoProduto.nome.trim()) { erro('Informe o nome do novo produto.'); return; }
+    if (novoProduto.quantidade <= 0) { erro('Informe a quantidade do novo produto.'); return; }
+
+    setManualItens(prev => [...prev, {
+      chave: crypto.randomUUID(),
+      isNovo: true,
+      nomeProduto: novoProduto.nome.trim(),
+      quantidade: novoProduto.quantidade,
+      precoCusto: novoProduto.precoCusto,
+      precoVenda: novoProduto.precoVenda,
+      categoriaNome: novoProduto.categoriaNome.trim() || 'Outro',
+      cor: novoProduto.cor.trim() || undefined,
+      tamanho: novoProduto.tamanho.trim() || undefined,
+    }]);
+    setNovoProduto(NOVO_PRODUTO_VAZIO);
+    setMostrarNovoProduto(false);
   }
 
   function escolherProdutoManual(produtoId: string) {
@@ -155,12 +231,21 @@ export function ImportarNf() {
         numeroNf: manualNumeroNf.trim(),
         dataEmissao: manualData || null,
         valorTotal: manualValorTotal > 0 ? manualValorTotal : null,
-        itens: manualItens.map(it => ({
+        itens: manualItens.map(it => it.isNovo ? {
+          acao: 'novo',
+          nomeBase: it.nomeProduto,
+          categoriaNome: it.categoriaNome ?? null,
+          cor: it.cor ?? null,
+          tamanho: it.tamanho ?? null,
+          quantidade: it.quantidade,
+          precoCusto: it.precoCusto ?? null,
+          precoVenda: it.precoVenda ?? null,
+        } : {
           produtoId: it.produtoId,
           variacaoId: it.variacaoId ?? null,
           quantidade: it.quantidade,
           precoCusto: it.precoCusto ?? null,
-        })),
+        }),
       });
       sucesso(res.mensagem ?? 'Nota fiscal lançada.');
       limparManual();
@@ -190,6 +275,69 @@ export function ImportarNf() {
       erro((e as Error).message);
     } finally {
       setDesfazendo(false);
+    }
+  }
+
+  async function abrirEdicao(h: NfHistorico) {
+    setEditando(h);
+    setEditForm(null);
+    setCarregandoEdicao(true);
+    try {
+      const detalhe = await api.get<any>(`/api/nf-importacao/${h.id}`);
+      setEditForm({
+        fornecedorId: detalhe.fornecedorId ?? '',
+        numeroNf: detalhe.numeroNf ?? '',
+        dataEmissao: detalhe.dataEmissao ? String(detalhe.dataEmissao).slice(0, 10) : '',
+        valorTotal: detalhe.valorTotal ?? 0,
+        itens: (detalhe.itens ?? []).map((it: any) => ({
+          produtoId: it.produtoId,
+          variacaoId: it.variacaoId ?? null,
+          nomeProduto: it.nomeProduto,
+          variacaoLabel: it.variacaoLabel ?? null,
+          quantidade: it.quantidade,
+          precoCusto: it.precoCusto ?? null,
+        })),
+      });
+    } catch (e) {
+      erro((e as Error).message);
+      setEditando(null);
+    } finally {
+      setCarregandoEdicao(false);
+    }
+  }
+
+  function alterarItemEdicao(idx: number, campo: 'quantidade' | 'precoCusto', valor: number) {
+    setEditForm(f => f ? { ...f, itens: f.itens.map((it, i) => i === idx ? { ...it, [campo]: valor } : it) } : f);
+  }
+
+  async function salvarEdicao() {
+    if (!editando || !editForm) return;
+    if (!editForm.fornecedorId) { erro('Selecione o fornecedor.'); return; }
+    if (!editForm.numeroNf.trim()) { erro('Informe o número da nota fiscal.'); return; }
+
+    setSalvandoEdicao(true);
+    try {
+      await api.put(`/api/nf-importacao/${editando.id}/editar`, {
+        fornecedorId: editForm.fornecedorId,
+        numeroNf: editForm.numeroNf.trim(),
+        dataEmissao: editForm.dataEmissao || null,
+        valorTotal: editForm.valorTotal > 0 ? editForm.valorTotal : null,
+        itens: editForm.itens.map(it => ({
+          produtoId: it.produtoId,
+          variacaoId: it.variacaoId,
+          quantidade: it.quantidade,
+          precoCusto: it.precoCusto,
+        })),
+      });
+      sucesso('Nota fiscal atualizada.');
+      setEditando(null);
+      setEditForm(null);
+      carregarHistorico();
+      recarregar();
+    } catch (e) {
+      erro((e as Error).message);
+    } finally {
+      setSalvandoEdicao(false);
     }
   }
 
@@ -283,129 +431,254 @@ export function ImportarNf() {
       </div>
 
       {!preview && (
-        <div className="rel-periodo-tabs" style={{ marginBottom: 20 }}>
-          <button className={`cat-tab${modo === 'xml' ? ' active' : ''}`} onClick={() => setModo('xml')}>
-            Importar XML
-          </button>
-          <button className={`cat-tab${modo === 'manual' ? ' active' : ''}`} onClick={() => setModo('manual')}>
-            Lançar manualmente
-          </button>
-        </div>
-      )}
-
-      {!preview && modo === 'manual' && (
-        <>
-          <div className="card" style={{ maxWidth: 640, marginBottom: 24 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Dados da nota</div>
-            <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div className="form-group">
-                <label className="form-label">Fornecedor *</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <select style={{ flex: 1 }} value={manualFornecedorId} onChange={e => setManualFornecedorId(e.target.value)}>
-                    <option value="">Selecione</option>
-                    {fornecedores.filter(f => f.ativo).map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
-                  </select>
-                  <button type="button" className="btn-secondary" onClick={() => navigate('/fornecedores')}>Gerenciar</button>
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Número da nota *</label>
-                <input value={manualNumeroNf} onChange={e => setManualNumeroNf(e.target.value)} placeholder="Ex: 12345" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Data de emissão <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                <input type="date" value={manualData} onChange={e => setManualData(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Valor total da nota <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                <InputMoeda value={manualValorTotal} onChange={setManualValorTotal} placeholder="0,00" />
-              </div>
+        <div className="nf-layout">
+          <div className="nf-layout-form">
+            <div className="rel-periodo-tabs" style={{ marginBottom: 20 }}>
+              <button className={`cat-tab${modo === 'xml' ? ' active' : ''}`} onClick={() => setModo('xml')}>
+                Importar XML
+              </button>
+              <button className={`cat-tab${modo === 'manual' ? ' active' : ''}`} onClick={() => setModo('manual')}>
+                Lançar manualmente
+              </button>
             </div>
-          </div>
 
-          <div className="card" style={{ maxWidth: 640, marginBottom: 24 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Itens</div>
-            <div style={{ position: 'relative' }}>
-              <div className="search-wrap">
-                <Search size={14} className="search-icon" />
-                <input
-                  className="search-input"
-                  placeholder="Buscar produto por nome ou código de barras..."
-                  value={manualBusca}
-                  onChange={e => { setManualBusca(e.target.value); setManualShowBusca(true); }}
-                  onFocus={() => setManualShowBusca(true)}
-                  onBlur={() => setTimeout(() => setManualShowBusca(false), 150)}
-                />
-              </div>
-              {manualShowBusca && manualBusca && (
-                <div className="cx-dropdown">
-                  {manualProdsFiltrados.length === 0 ? (
-                    <div className="cx-dropdown-empty">Nenhum produto encontrado</div>
-                  ) : manualProdsFiltrados.slice(0, 8).map(p => (
-                    <button key={p.id} className="cx-dropdown-item" onMouseDown={() => escolherProdutoManual(p.id)}>
-                      <div className="cx-drop-nome">{p.nome}</div>
-                      <div className="cx-drop-info">
-                        <span style={{ color: 'var(--text-3)', fontSize: 12 }}>
-                          estoque: {p.tipoVenda === 'fracionado'
-                            ? `${p.estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${p.unidadeMedida}`
-                            : `${p.estoque} un.`}
-                        </span>
-                        <span style={{ color: 'var(--text-3)', fontSize: 12 }}>custo atual: {fmt(p.precoCusto)}</span>
+            {modo === 'manual' && (
+              <>
+                <div className="card" style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Dados da nota</div>
+                  <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <div className="form-group">
+                      <label className="form-label">Fornecedor *</label>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <select style={{ flex: 1 }} value={manualFornecedorId} onChange={e => setManualFornecedorId(e.target.value)}>
+                          <option value="">Selecione</option>
+                          {fornecedores.filter(f => f.ativo).map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                        </select>
+                        <button type="button" className="btn-secondary" onClick={() => navigate('/fornecedores')}>Gerenciar</button>
                       </div>
-                    </button>
-                  ))}
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Número da nota *</label>
+                      <input value={manualNumeroNf} onChange={e => setManualNumeroNf(e.target.value)} placeholder="Ex: 12345" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Data de emissão <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                      <input type="date" value={manualData} onChange={e => setManualData(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Valor total da nota <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                      <InputMoeda value={manualValorTotal} onChange={setManualValorTotal} placeholder="0,00" />
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {manualItens.length === 0 ? (
-              <div className="empty" style={{ padding: '24px 0' }}>
-                <ClipboardList size={28} />
-                <p>Busque produtos acima pra adicionar à nota.</p>
-              </div>
-            ) : (
-              <div className="table-wrap" style={{ marginTop: 14 }}>
-                <table>
-                  <thead>
-                    <tr><th>Produto</th><th>Qtd</th><th>Custo unit.</th><th></th></tr>
-                  </thead>
-                  <tbody>
-                    {manualItens.map((it, i) => (
-                      <tr key={i}>
-                        <td>
-                          {it.nomeProduto}
-                          {it.variacaoLabel && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 6 }}>{it.variacaoLabel}</span>}
-                        </td>
-                        <td>
-                          <input type="number" min={0} step="0.001" value={it.quantidade}
-                            onChange={e => alterarItemManual(i, 'quantidade', parseFloat(e.target.value) || 0)}
-                            style={{ width: 80 }} />
-                        </td>
-                        <td>
-                          <input type="number" min={0} step="0.01" value={it.precoCusto ?? ''}
-                            placeholder="mantém atual"
-                            onChange={e => alterarItemManual(i, 'precoCusto', parseFloat(e.target.value) || 0)}
-                            style={{ width: 110 }} />
-                        </td>
-                        <td>
-                          <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removerItemManual(i)}>
-                            <Trash2 size={13} />
+                <div className="card" style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Itens</div>
+                  <div style={{ position: 'relative' }}>
+                    <div className="search-wrap">
+                      <Search size={14} className="search-icon" />
+                      <input
+                        className="search-input"
+                        placeholder="Buscar produto por nome ou código de barras..."
+                        value={manualBusca}
+                        onChange={e => { setManualBusca(e.target.value); setManualShowBusca(true); }}
+                        onFocus={() => setManualShowBusca(true)}
+                        onBlur={() => setTimeout(() => setManualShowBusca(false), 150)}
+                      />
+                    </div>
+                    {manualShowBusca && manualBusca && (
+                      <div className="cx-dropdown">
+                        {manualProdsFiltrados.length === 0 ? (
+                          <div className="cx-dropdown-empty">Nenhum produto encontrado</div>
+                        ) : manualProdsFiltrados.slice(0, 8).map(p => (
+                          <button key={p.id} className="cx-dropdown-item" onMouseDown={() => escolherProdutoManual(p.id)}>
+                            <div className="cx-drop-nome">{p.nome}</div>
+                            <div className="cx-drop-info">
+                              <span style={{ color: 'var(--text-3)', fontSize: 12 }}>
+                                estoque: {p.tipoVenda === 'fracionado'
+                                  ? `${p.estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${p.unidadeMedida}`
+                                  : `${p.estoque} un.`}
+                              </span>
+                              <span style={{ color: 'var(--text-3)', fontSize: 12 }}>custo atual: {fmt(p.precoCusto)}</span>
+                            </div>
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: 10 }}>
+                    {!mostrarNovoProduto ? (
+                      <button type="button" className="btn-secondary" style={{ fontSize: 12 }} onClick={() => setMostrarNovoProduto(true)}>
+                        <PackagePlus size={13} style={{ verticalAlign: -2 }} /> Criar novo produto
+                      </button>
+                    ) : (
+                      <div style={{ border: '1px dashed var(--border)', borderRadius: 8, padding: 12 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10, color: 'var(--text-2)' }}>Novo produto</div>
+                        <div className="form-grid" style={{ gridTemplateColumns: '2fr 1fr', gap: 10 }}>
+                          <div className="form-group">
+                            <label className="form-label">Nome *</label>
+                            <input value={novoProduto.nome} onChange={e => setNovoProduto(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Blusa de Renda" />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Categoria</label>
+                            <input list="nf-categorias" value={novoProduto.categoriaNome}
+                              onChange={e => setNovoProduto(f => ({ ...f, categoriaNome: e.target.value }))} placeholder="Outro" />
+                            <datalist id="nf-categorias">
+                              {categorias.map(c => <option key={c.id} value={c.nome} />)}
+                            </datalist>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Cor <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                            <input value={novoProduto.cor} onChange={e => setNovoProduto(f => ({ ...f, cor: e.target.value }))} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Tamanho <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                            <input value={novoProduto.tamanho} onChange={e => setNovoProduto(f => ({ ...f, tamanho: e.target.value }))} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Quantidade *</label>
+                            <input type="number" min={0} step="0.001" value={novoProduto.quantidade}
+                              onChange={e => setNovoProduto(f => ({ ...f, quantidade: parseFloat(e.target.value) || 0 }))} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Preço de custo</label>
+                            <InputMoeda value={novoProduto.precoCusto} onChange={v => setNovoProduto(f => ({ ...f, precoCusto: v }))} placeholder="0,00" />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Preço de venda</label>
+                            <InputMoeda value={novoProduto.precoVenda} onChange={v => setNovoProduto(f => ({ ...f, precoVenda: v }))} placeholder="0,00" />
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
+                          <button className="btn-secondary" onClick={() => { setMostrarNovoProduto(false); setNovoProduto(NOVO_PRODUTO_VAZIO); }}>Cancelar</button>
+                          <button className="btn-primary" onClick={adicionarNovoProdutoManual}>Adicionar à nota</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {manualItens.length === 0 ? (
+                    <div className="empty" style={{ padding: '24px 0' }}>
+                      <ClipboardList size={28} />
+                      <p>Busque produtos acima ou crie um novo pra adicionar à nota.</p>
+                    </div>
+                  ) : (
+                    <div className="table-wrap" style={{ marginTop: 14 }}>
+                      <table>
+                        <thead>
+                          <tr><th>Produto</th><th>Qtd</th><th>Custo unit.</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                          {manualItens.map((it, i) => (
+                            <tr key={it.chave}>
+                              <td>
+                                {it.nomeProduto}
+                                {it.variacaoLabel && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 6 }}>{it.variacaoLabel}</span>}
+                                {it.isNovo && <span className="badge badge-blue" style={{ fontSize: 10, marginLeft: 6 }}>Novo produto — {it.categoriaNome}</span>}
+                              </td>
+                              <td>
+                                <input type="number" min={0} step="0.001" value={it.quantidade}
+                                  onChange={e => alterarItemManual(i, 'quantidade', parseFloat(e.target.value) || 0)}
+                                  style={{ width: 80 }} />
+                              </td>
+                              <td>
+                                <input type="number" min={0} step="0.01" value={it.precoCusto ?? ''}
+                                  placeholder="mantém atual"
+                                  onChange={e => alterarItemManual(i, 'precoCusto', parseFloat(e.target.value) || 0)}
+                                  style={{ width: 110 }} />
+                              </td>
+                              <td>
+                                <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removerItemManual(i)}>
+                                  <Trash2 size={13} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: 24 }}>
+                  <button className="btn-primary" disabled={enviandoManual} onClick={lancarManual}>
+                    <Check size={14} style={{ verticalAlign: -2 }} /> {enviandoManual ? 'Lançando...' : 'Lançar nota fiscal'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {modo === 'xml' && (
+              <div className="card" style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 14, marginBottom: 12, color: 'var(--text-2)' }}>
+                  Envie o arquivo XML da NF-e emitida pelo seu fornecedor:
+                </div>
+                <input type="file" accept=".xml,text/xml,application/xml"
+                  onChange={e => setArquivo(e.target.files?.[0] ?? null)}
+                  style={{ marginBottom: 12 }} />
+                <div>
+                  <button className="btn-primary" disabled={!arquivo || carregando} onClick={enviarArquivo}>
+                    <Upload size={14} style={{ verticalAlign: -2 }} /> {carregando ? 'Analisando...' : 'Analisar nota'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', maxWidth: 640, marginBottom: 24 }}>
-            <button className="btn-primary" disabled={enviandoManual} onClick={lancarManual}>
-              <Check size={14} style={{ verticalAlign: -2 }} /> {enviandoManual ? 'Lançando...' : 'Lançar nota fiscal'}
-            </button>
+          <div className="nf-layout-historico">
+            <div className="card">
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Histórico de NF</div>
+              {historico.length === 0 ? (
+                <div className="empty" style={{ padding: '16px 0' }}>
+                  <ClipboardList size={24} />
+                  <p>Nenhuma nota lançada ainda.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="nf-historico-scroll">
+                    {historico.slice((histPagina - 1) * histPorPagina, histPagina * histPorPagina).map(h => (
+                      <div key={h.id} className="nf-historico-item" style={{ opacity: h.desfeita ? 0.5 : 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>
+                          NF {h.numeroNf} — {h.nomeFornecedor}
+                          {h.origem === 'manual' && <span className="badge badge-blue" style={{ fontSize: 10, marginLeft: 8 }}>Manual</span>}
+                          {h.desfeita && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 8 }}>Desfeita</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                          {h.qtdItens} item(ns) · {new Date(h.importadoEm).toLocaleString('pt-BR')}
+                          {h.dataEmissao && ` · emitida em ${new Date(h.dataEmissao).toLocaleDateString('pt-BR')}`}
+                          {h.valorTotal ? ` · ${fmt(h.valorTotal)}` : ''}
+                        </div>
+                        {!h.desfeita && (
+                          <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+                            {h.origem === 'manual' && (
+                              <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirEdicao(h)}>
+                                <Pencil size={12} style={{ verticalAlign: -1 }} /> Editar
+                              </button>
+                            )}
+                            <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--red)' }} onClick={() => setConfirmDesfazer(h)}>
+                              Desfazer
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <Paginacao
+                      paginaAtual={histPagina}
+                      totalItens={historico.length}
+                      porPagina={histPorPagina}
+                      onMudarPagina={setHistPagina}
+                      onMudarPorPagina={setHistPorPagina}
+                      opcoesPorPagina={[5, 10, 20]}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Modal seleção variação — lançamento manual */}
@@ -443,55 +716,6 @@ export function ImportarNf() {
         </div>
       )}
 
-      {!preview && modo === 'xml' && (
-        <div className="card" style={{ maxWidth: 520, marginBottom: 24 }}>
-          <div style={{ fontSize: 14, marginBottom: 12, color: 'var(--text-2)' }}>
-            Envie o arquivo XML da NF-e emitida pelo seu fornecedor:
-          </div>
-          <input type="file" accept=".xml,text/xml,application/xml"
-            onChange={e => setArquivo(e.target.files?.[0] ?? null)}
-            style={{ marginBottom: 12 }} />
-          <div>
-            <button className="btn-primary" disabled={!arquivo || carregando} onClick={enviarArquivo}>
-              <Upload size={14} style={{ verticalAlign: -2 }} /> {carregando ? 'Analisando...' : 'Analisar nota'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!preview && historico.length > 0 && (
-        <div className="card" style={{ maxWidth: 720 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Notas lançadas</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {historico.map(h => (
-              <div key={h.id} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
-                opacity: h.desfeita ? 0.5 : 1,
-              }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>
-                    NF {h.numeroNf} — {h.nomeFornecedor}
-                    {h.origem === 'manual' && <span className="badge badge-blue" style={{ fontSize: 10, marginLeft: 8 }}>Manual</span>}
-                    {h.desfeita && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 8 }}>Desfeita</span>}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                    {h.qtdItens} item(ns) · {new Date(h.importadoEm).toLocaleString('pt-BR')}
-                    {h.dataEmissao && ` · emitida em ${new Date(h.dataEmissao).toLocaleDateString('pt-BR')}`}
-                    {h.valorTotal ? ` · ${fmt(h.valorTotal)}` : ''}
-                  </div>
-                </div>
-                {!h.desfeita && (
-                  <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--red)' }} onClick={() => setConfirmDesfazer(h)}>
-                    Desfazer
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {confirmDesfazer && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmDesfazer(null)}>
           <div className="modal" style={{ maxWidth: 420 }}>
@@ -511,6 +735,87 @@ export function ImportarNf() {
               <button className="btn-secondary" onClick={() => setConfirmDesfazer(null)}>Cancelar</button>
               <button className="btn-danger" disabled={desfazendo} onClick={desfazer}>
                 {desfazendo ? 'Desfazendo...' : 'Desfazer importação'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar NF manual já lançada */}
+      {editando && (
+        <div className="modal-overlay" onClick={e => {
+          if (e.target === e.currentTarget && !salvandoEdicao) { setEditando(null); setEditForm(null); }
+        }}>
+          <div className="modal" style={{ maxWidth: 640 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar NF {editando.numeroNf}</h2>
+              <button className="btn-ghost" onClick={() => { setEditando(null); setEditForm(null); }}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              {carregandoEdicao || !editForm ? (
+                <p style={{ color: 'var(--text-3)' }}>Carregando...</p>
+              ) : (
+                <>
+                  <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+                    <div className="form-group">
+                      <label className="form-label">Fornecedor *</label>
+                      <select value={editForm.fornecedorId} onChange={e => setEditForm(f => f && { ...f, fornecedorId: e.target.value })}>
+                        <option value="">Selecione</option>
+                        {fornecedores.filter(f => f.ativo).map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Número da nota *</label>
+                      <input value={editForm.numeroNf} onChange={e => setEditForm(f => f && { ...f, numeroNf: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Data de emissão <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                      <input type="date" value={editForm.dataEmissao} onChange={e => setEditForm(f => f && { ...f, dataEmissao: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Valor total da nota <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                      <InputMoeda value={editForm.valorTotal} onChange={v => setEditForm(f => f && { ...f, valorTotal: v })} placeholder="0,00" />
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Itens</div>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>
+                    Para adicionar ou remover itens, desfaça esta nota e lance novamente.
+                  </p>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr><th>Produto</th><th>Qtd</th><th>Custo unit.</th></tr>
+                      </thead>
+                      <tbody>
+                        {editForm.itens.map((it, i) => (
+                          <tr key={`${it.produtoId}-${it.variacaoId ?? ''}`}>
+                            <td>
+                              {it.nomeProduto}
+                              {it.variacaoLabel && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 6 }}>{it.variacaoLabel}</span>}
+                            </td>
+                            <td>
+                              <input type="number" min={0} step="0.001" value={it.quantidade}
+                                onChange={e => alterarItemEdicao(i, 'quantidade', parseFloat(e.target.value) || 0)}
+                                style={{ width: 80 }} />
+                            </td>
+                            <td>
+                              <input type="number" min={0} step="0.01" value={it.precoCusto ?? ''}
+                                onChange={e => alterarItemEdicao(i, 'precoCusto', parseFloat(e.target.value) || 0)}
+                                style={{ width: 110 }} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => { setEditando(null); setEditForm(null); }}>Cancelar</button>
+              <button className="btn-primary" disabled={!editForm || salvandoEdicao} onClick={salvarEdicao}>
+                {salvandoEdicao ? 'Salvando...' : 'Salvar alterações'}
               </button>
             </div>
           </div>
