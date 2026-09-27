@@ -96,6 +96,18 @@ const NOVO_PRODUTO_VAZIO: NovoProdutoForm = {
   nome: '', categoriaNome: '', cor: '', tamanho: '', quantidade: 1, precoCusto: 0, precoVenda: 0,
 };
 
+interface CategoriaResumo {
+  id: string;
+  nome: string;
+  tipoTamanho: 'letra' | 'numero' | 'personalizado';
+  usaTamanho: boolean;
+  usaCor: boolean;
+  tamanhosPersonalizados: string | null;
+}
+
+const TAMANHOS_LETRA = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
+const TAMANHOS_NUMERO = ['32', '34', '36', '38', '40', '42', '44', '46'];
+
 interface ItemNfEditavel {
   produtoId: string;
   variacaoId: string | null;
@@ -137,7 +149,7 @@ export function ImportarNf() {
   const [manualItens, setManualItens] = useState<ItemNfManual[]>([]);
   const [modalVariacaoManual, setModalVariacaoManual] = useState<{ produtoId: string; nome: string } | null>(null);
   const [enviandoManual, setEnviandoManual] = useState(false);
-  const [categorias, setCategorias] = useState<{ id: string; nome: string }[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaResumo[]>([]);
   const [mostrarNovoProduto, setMostrarNovoProduto] = useState(false);
   const [novoProduto, setNovoProduto] = useState<NovoProdutoForm>(NOVO_PRODUTO_VAZIO);
 
@@ -152,8 +164,17 @@ export function ImportarNf() {
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   useEffect(() => {
-    api.get<{ id: string; nome: string }[]>('/api/categorias').then(setCategorias).catch(() => {});
+    api.get<CategoriaResumo[]>('/api/categorias').then(setCategorias).catch(() => {});
   }, []);
+
+  // Categoria digitada/selecionada no mini-formulário de novo produto — quando ela já
+  // existe e usa tamanho, o campo Tamanho vira um select com as opções da categoria
+  // em vez de texto livre.
+  const catNovoProduto = categorias.find(c => c.nome.toLowerCase() === novoProduto.categoriaNome.trim().toLowerCase());
+  const catNovoProdutoUsaTamanho = catNovoProduto?.usaTamanho ?? true;
+  const tamanhosDoNovoProduto = catNovoProduto?.tipoTamanho === 'personalizado' && catNovoProduto.tamanhosPersonalizados
+    ? catNovoProduto.tamanhosPersonalizados.split(',').map(t => t.trim()).filter(Boolean)
+    : catNovoProduto?.tipoTamanho === 'numero' ? TAMANHOS_NUMERO : TAMANHOS_LETRA;
 
   const manualProdsFiltrados = produtos.filter(p =>
     p.ativo && (p.nome.toLowerCase().includes(manualBusca.toLowerCase()) || (p.codigoBarras?.includes(manualBusca) ?? false))
@@ -184,7 +205,7 @@ export function ImportarNf() {
       precoVenda: novoProduto.precoVenda,
       categoriaNome: novoProduto.categoriaNome.trim() || 'Outro',
       cor: novoProduto.cor.trim() || undefined,
-      tamanho: novoProduto.tamanho.trim() || undefined,
+      tamanho: catNovoProdutoUsaTamanho ? (novoProduto.tamanho.trim() || undefined) : undefined,
     }]);
     setNovoProduto(NOVO_PRODUTO_VAZIO);
     setMostrarNovoProduto(false);
@@ -431,22 +452,24 @@ export function ImportarNf() {
       </div>
 
       {!preview && (
+        <div className="rel-periodo-tabs" style={{ marginBottom: 20 }}>
+          <button className={`cat-tab${modo === 'xml' ? ' active' : ''}`} onClick={() => setModo('xml')}>
+            Importar XML
+          </button>
+          <button className={`cat-tab${modo === 'manual' ? ' active' : ''}`} onClick={() => setModo('manual')}>
+            Lançar manualmente
+          </button>
+        </div>
+      )}
+
+      {!preview && (
         <div className="nf-layout">
           <div className="nf-layout-form">
-            <div className="rel-periodo-tabs" style={{ marginBottom: 20 }}>
-              <button className={`cat-tab${modo === 'xml' ? ' active' : ''}`} onClick={() => setModo('xml')}>
-                Importar XML
-              </button>
-              <button className={`cat-tab${modo === 'manual' ? ' active' : ''}`} onClick={() => setModo('manual')}>
-                Lançar manualmente
-              </button>
-            </div>
-
             {modo === 'manual' && (
               <>
                 <div className="card" style={{ marginBottom: 24 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Dados da nota</div>
-                  <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="form-grid" style={{ gridTemplateColumns: '2.2fr 1fr', gap: 14 }}>
                     <div className="form-group">
                       <label className="form-label">Fornecedor *</label>
                       <div style={{ display: 'flex', gap: 8 }}>
@@ -532,10 +555,19 @@ export function ImportarNf() {
                             <label className="form-label">Cor <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
                             <input value={novoProduto.cor} onChange={e => setNovoProduto(f => ({ ...f, cor: e.target.value }))} />
                           </div>
-                          <div className="form-group">
-                            <label className="form-label">Tamanho <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                            <input value={novoProduto.tamanho} onChange={e => setNovoProduto(f => ({ ...f, tamanho: e.target.value }))} />
-                          </div>
+                          {catNovoProdutoUsaTamanho && (
+                            <div className="form-group">
+                              <label className="form-label">Tamanho <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                              {catNovoProduto ? (
+                                <select value={novoProduto.tamanho} onChange={e => setNovoProduto(f => ({ ...f, tamanho: e.target.value }))}>
+                                  <option value="">Selecione</option>
+                                  {tamanhosDoNovoProduto.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                              ) : (
+                                <input value={novoProduto.tamanho} onChange={e => setNovoProduto(f => ({ ...f, tamanho: e.target.value }))} />
+                              )}
+                            </div>
+                          )}
                           <div className="form-group">
                             <label className="form-label">Quantidade *</label>
                             <input type="number" min={0} step="0.001" value={novoProduto.quantidade}
