@@ -1,0 +1,47 @@
+.nf-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.nf-layout-form {
+  flex: 1;
+  min-width: 0;
+}
+
+.nf-layout-historico {
+  width: 360px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 20px;
+}
+
+.nf-historico-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 560px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.nf-historico-item {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+@media (max-width: 960px) {
+  .nf-layout {
+    flex-direction: column;
+  }
+
+  .nf-layout-historico {
+    width: 100%;
+    position: static;
+  }
+
+  .nf-historico-scroll {
+    max-height: 400px;
+  }
+}
