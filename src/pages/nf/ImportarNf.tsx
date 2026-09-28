@@ -61,6 +61,9 @@ interface NfHistorico {
   origem: 'xml' | 'manual';
   dataEmissao: string | null;
   valorTotal: number | null;
+  valorCustoTotal: number | null;
+  valorVendaTotal: number | null;
+  quantidadeTotal: number | null;
   qtdItens: number;
   importadoEm: string;
   desfeita: boolean;
@@ -204,6 +207,11 @@ export function ImportarNf() {
   const manualProdsFiltrados = produtos.filter(p =>
     p.ativo && (p.nome.toLowerCase().includes(manualBusca.toLowerCase()) || (p.codigoBarras?.includes(manualBusca) ?? false))
   );
+
+  // Só libera o botão "Lançar nota fiscal" com fornecedor, número da nota e
+  // pelo menos um item na lista — mesma checagem que o lancarManual() faz,
+  // só que aqui trava o botão em vez de deixar clicar e mostrar erro depois.
+  const manualFormValido = manualFornecedorId.trim() !== '' && manualNumeroNf.trim() !== '' && manualItens.length > 0;
 
   function adicionarItemManual(produtoId: string, nomeProduto: string, variacaoId?: string, variacaoLabel?: string) {
     setManualItens(prev => {
@@ -736,8 +744,13 @@ export function ImportarNf() {
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: 24 }}>
-                  <button className="btn-primary" disabled={enviandoManual} onClick={lancarManual}>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', alignItems: 'center', marginBottom: 24 }}>
+                  {!manualFormValido && (
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                      Preencha fornecedor, número da nota e adicione ao menos um item.
+                    </span>
+                  )}
+                  <button className="btn-primary" disabled={!manualFormValido || enviandoManual} onClick={lancarManual}>
                     <Check size={14} style={{ verticalAlign: -2 }} /> {enviandoManual ? 'Lançando...' : 'Lançar nota fiscal'}
                   </button>
                 </div>
@@ -784,6 +797,13 @@ export function ImportarNf() {
                           {h.dataEmissao && ` · emitida em ${new Date(h.dataEmissao).toLocaleDateString('pt-BR')}`}
                           {h.valorTotal ? ` · ${fmt(h.valorTotal)}` : ''}
                         </div>
+                        {(h.valorCustoTotal != null || h.valorVendaTotal != null || h.quantidadeTotal != null) && (
+                          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            {h.valorCustoTotal != null && <span>Custo: <strong style={{ color: 'var(--text-2)' }}>{fmt(h.valorCustoTotal)}</strong></span>}
+                            {h.valorVendaTotal != null && <span>Venda: <strong style={{ color: 'var(--text-2)' }}>{fmt(h.valorVendaTotal)}</strong></span>}
+                            {h.quantidadeTotal != null && <span>{h.quantidadeTotal.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} un. lançadas</span>}
+                          </div>
+                        )}
                         {!h.desfeita && (
                           <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
                             {h.origem === 'manual' && (
