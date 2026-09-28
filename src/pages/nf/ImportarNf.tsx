@@ -80,6 +80,8 @@ interface ItemNfManual {
   cor?: string;
   tamanho?: string;
   precoVenda?: number;
+  tipoVenda?: 'unidade' | 'fracionado';
+  unidadeMedida?: string;
 }
 
 interface NovoProdutoForm {
@@ -90,10 +92,13 @@ interface NovoProdutoForm {
   quantidade: number;
   precoCusto: number;
   precoVenda: number;
+  tipoVenda: 'unidade' | 'fracionado';
+  unidadeMedida: string;
 }
 
 const NOVO_PRODUTO_VAZIO: NovoProdutoForm = {
   nome: '', categoriaNome: '', cor: '', tamanho: '', quantidade: 1, precoCusto: 0, precoVenda: 0,
+  tipoVenda: 'unidade', unidadeMedida: 'un',
 };
 
 interface CategoriaResumo {
@@ -167,6 +172,18 @@ export function ImportarNf() {
     api.get<CategoriaResumo[]>('/api/categorias').then(setCategorias).catch(() => {});
   }, []);
 
+  // Valor total da nota = soma do custo (quantidade × custo unitário) de cada item.
+  // Item existente sem custo digitado usa o custo atual do produto. Recalcula sempre
+  // que os itens mudam — se precisar de um valor diferente (ex: frete embutido), dá
+  // pra ajustar o campo manualmente depois de montar a lista.
+  useEffect(() => {
+    const total = manualItens.reduce((soma, it) => {
+      const custoUnit = it.precoCusto ?? (it.isNovo ? 0 : (produtos.find(p => p.id === it.produtoId)?.precoCusto ?? 0));
+      return soma + custoUnit * it.quantidade;
+    }, 0);
+    setManualValorTotal(total);
+  }, [manualItens, produtos]);
+
   // Categoria digitada/selecionada no mini-formulário de novo produto — os campos Cor e
   // Tamanho só aparecem se a categoria já existente usar cada um deles; quando ela usa
   // tamanho, o campo vira um select com as opções da categoria em vez de texto livre.
@@ -176,6 +193,13 @@ export function ImportarNf() {
   const tamanhosDoNovoProduto = catNovoProduto?.tipoTamanho === 'personalizado' && catNovoProduto.tamanhosPersonalizados
     ? catNovoProduto.tamanhosPersonalizados.split(',').map(t => t.trim()).filter(Boolean)
     : catNovoProduto?.tipoTamanho === 'numero' ? TAMANHOS_NUMERO : TAMANHOS_LETRA;
+
+  // Margem de lucro do novo produto — só um jeito a mais de olhar pro mesmo par
+  // custo/venda: editar a margem recalcula o preço de venda, e editar o preço de
+  // venda direto já reflete a margem calculada aqui (sem precisar de estado à parte).
+  const margemNovoProduto = novoProduto.precoCusto > 0
+    ? ((novoProduto.precoVenda - novoProduto.precoCusto) / novoProduto.precoCusto) * 100
+    : 0;
 
   const manualProdsFiltrados = produtos.filter(p =>
     p.ativo && (p.nome.toLowerCase().includes(manualBusca.toLowerCase()) || (p.codigoBarras?.includes(manualBusca) ?? false))
@@ -201,12 +225,14 @@ export function ImportarNf() {
       chave: crypto.randomUUID(),
       isNovo: true,
       nomeProduto: novoProduto.nome.trim(),
-      quantidade: novoProduto.quantidade,
+      quantidade: novoProduto.tipoVenda === 'fracionado' ? novoProduto.quantidade : Math.round(novoProduto.quantidade),
       precoCusto: novoProduto.precoCusto,
       precoVenda: novoProduto.precoVenda,
       categoriaNome: novoProduto.categoriaNome.trim() || 'Outro',
       cor: catNovoProdutoUsaCor ? (novoProduto.cor.trim() || undefined) : undefined,
       tamanho: catNovoProdutoUsaTamanho ? (novoProduto.tamanho.trim() || undefined) : undefined,
+      tipoVenda: novoProduto.tipoVenda,
+      unidadeMedida: novoProduto.tipoVenda === 'fracionado' ? novoProduto.unidadeMedida : undefined,
     }]);
     setNovoProduto(NOVO_PRODUTO_VAZIO);
     setMostrarNovoProduto(false);
@@ -262,6 +288,8 @@ export function ImportarNf() {
           quantidade: it.quantidade,
           precoCusto: it.precoCusto ?? null,
           precoVenda: it.precoVenda ?? null,
+          tipoVenda: it.tipoVenda ?? null,
+          unidadeMedida: it.unidadeMedida ?? null,
         } : {
           produtoId: it.produtoId,
           variacaoId: it.variacaoId ?? null,
@@ -490,8 +518,11 @@ export function ImportarNf() {
                       <input type="date" value={manualData} onChange={e => setManualData(e.target.value)} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Valor total da nota <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                      <label className="form-label">Valor total da nota <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(calculado)</span></label>
                       <InputMoeda value={manualValorTotal} onChange={setManualValorTotal} placeholder="0,00" />
+                      <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                        Somado automaticamente pelo custo dos itens abaixo — pode ajustar se precisar.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -552,6 +583,32 @@ export function ImportarNf() {
                               {categorias.map(c => <option key={c.id} value={c.nome} />)}
                             </datalist>
                           </div>
+                          <div className="form-group">
+                            <label className="form-label">Tipo de venda</label>
+                            <select value={novoProduto.tipoVenda} onChange={e => {
+                              const tv = e.target.value as 'unidade' | 'fracionado';
+                              setNovoProduto(f => ({
+                                ...f, tipoVenda: tv,
+                                unidadeMedida: tv === 'unidade' ? 'un' : (f.unidadeMedida === 'un' ? 'kg' : f.unidadeMedida),
+                                quantidade: tv === 'unidade' ? Math.round(f.quantidade) : f.quantidade,
+                              }));
+                            }}>
+                              <option value="unidade">Por unidade</option>
+                              <option value="fracionado">Fracionado (peso/volume)</option>
+                            </select>
+                          </div>
+                          {novoProduto.tipoVenda === 'fracionado' && (
+                            <div className="form-group">
+                              <label className="form-label">Unidade de medida</label>
+                              <select value={novoProduto.unidadeMedida} onChange={e => setNovoProduto(f => ({ ...f, unidadeMedida: e.target.value }))}>
+                                <option value="kg">Quilograma (kg)</option>
+                                <option value="g">Grama (g)</option>
+                                <option value="L">Litro (L)</option>
+                                <option value="ml">Mililitro (ml)</option>
+                                <option value="m">Metro (m)</option>
+                              </select>
+                            </div>
+                          )}
                           {catNovoProdutoUsaCor && (
                             <div className="form-group">
                               <label className="form-label">Cor <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
@@ -572,17 +629,36 @@ export function ImportarNf() {
                             </div>
                           )}
                           <div className="form-group">
-                            <label className="form-label">Quantidade *</label>
-                            <input type="number" min={0} step="0.001" value={novoProduto.quantidade}
-                              onChange={e => setNovoProduto(f => ({ ...f, quantidade: parseFloat(e.target.value) || 0 }))} />
+                            <label className="form-label">
+                              Quantidade * {novoProduto.tipoVenda === 'fracionado' ? `(${novoProduto.unidadeMedida})` : ''}
+                            </label>
+                            <input type="number" min={0} step={novoProduto.tipoVenda === 'fracionado' ? 0.001 : 1} value={novoProduto.quantidade}
+                              onChange={e => {
+                                const bruto = parseFloat(e.target.value) || 0;
+                                setNovoProduto(f => ({ ...f, quantidade: f.tipoVenda === 'fracionado' ? bruto : Math.round(bruto) }));
+                              }} />
                           </div>
                           <div className="form-group">
-                            <label className="form-label">Preço de custo</label>
+                            <label className="form-label">
+                              Preço de custo{novoProduto.tipoVenda === 'fracionado' ? ` (por ${novoProduto.unidadeMedida})` : ''}
+                            </label>
                             <InputMoeda value={novoProduto.precoCusto} onChange={v => setNovoProduto(f => ({ ...f, precoCusto: v }))} placeholder="0,00" />
                           </div>
                           <div className="form-group">
-                            <label className="form-label">Preço de venda</label>
+                            <label className="form-label">
+                              Preço de venda{novoProduto.tipoVenda === 'fracionado' ? ` (por ${novoProduto.unidadeMedida})` : ''}
+                            </label>
                             <InputMoeda value={novoProduto.precoVenda} onChange={v => setNovoProduto(f => ({ ...f, precoVenda: v }))} placeholder="0,00" />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Margem de lucro (%)</label>
+                            <input type="number" step="0.1" disabled={novoProduto.precoCusto <= 0}
+                              value={novoProduto.precoCusto > 0 ? Math.round(margemNovoProduto * 10) / 10 : ''}
+                              placeholder={novoProduto.precoCusto <= 0 ? 'informe o custo' : '0,0'}
+                              onChange={e => {
+                                const margem = parseFloat(e.target.value) || 0;
+                                setNovoProduto(f => ({ ...f, precoVenda: Math.round(f.precoCusto * (1 + margem / 100) * 100) / 100 }));
+                              }} />
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
@@ -602,34 +678,58 @@ export function ImportarNf() {
                     <div className="table-wrap" style={{ marginTop: 14 }}>
                       <table>
                         <thead>
-                          <tr><th>Produto</th><th>Qtd</th><th>Custo unit.</th><th></th></tr>
+                          <tr>
+                            <th>Produto</th><th>Tamanho</th><th>Cor</th><th>Tipo</th>
+                            <th>Qtd</th><th>Custo unit.</th><th>Venda unit.</th><th>Margem</th><th></th>
+                          </tr>
                         </thead>
                         <tbody>
-                          {manualItens.map((it, i) => (
-                            <tr key={it.chave}>
-                              <td>
-                                {it.nomeProduto}
-                                {it.variacaoLabel && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 6 }}>{it.variacaoLabel}</span>}
-                                {it.isNovo && <span className="badge badge-blue" style={{ fontSize: 10, marginLeft: 6 }}>Novo produto — {it.categoriaNome}</span>}
-                              </td>
-                              <td>
-                                <input type="number" min={0} step="0.001" value={it.quantidade}
-                                  onChange={e => alterarItemManual(i, 'quantidade', parseFloat(e.target.value) || 0)}
-                                  style={{ width: 80 }} />
-                              </td>
-                              <td>
-                                <input type="number" min={0} step="0.01" value={it.precoCusto ?? ''}
-                                  placeholder="mantém atual"
-                                  onChange={e => alterarItemManual(i, 'precoCusto', parseFloat(e.target.value) || 0)}
-                                  style={{ width: 110 }} />
-                              </td>
-                              <td>
-                                <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removerItemManual(i)}>
-                                  <Trash2 size={13} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                          {manualItens.map((it, i) => {
+                            const produtoRef = !it.isNovo ? produtos.find(p => p.id === it.produtoId) : null;
+                            const variacaoRef = it.variacaoId ? produtoRef?.variacoes?.find(v => v.id === it.variacaoId) : null;
+                            const tipoVendaItem = it.isNovo ? (it.tipoVenda ?? 'unidade') : (produtoRef?.tipoVenda ?? 'unidade');
+                            const unidadeMedidaItem = it.isNovo ? (it.unidadeMedida ?? 'un') : (produtoRef?.unidadeMedida ?? 'un');
+                            const tamanhoItem = it.isNovo ? it.tamanho : variacaoRef?.tamanho;
+                            const corItem = it.isNovo ? it.cor : variacaoRef?.cor;
+                            const custoUnitItem = it.precoCusto ?? (it.isNovo ? 0 : (produtoRef?.precoCusto ?? 0));
+                            const vendaUnitItem = it.isNovo ? (it.precoVenda ?? 0) : (produtoRef?.precoVenda ?? 0);
+                            const margemItem = custoUnitItem > 0 ? ((vendaUnitItem - custoUnitItem) / custoUnitItem) * 100 : null;
+                            const stepQtd = tipoVendaItem === 'fracionado' ? 0.001 : 1;
+                            return (
+                              <tr key={it.chave}>
+                                <td>
+                                  {it.nomeProduto}
+                                  {it.isNovo && <span className="badge badge-blue" style={{ fontSize: 10, marginLeft: 6 }}>Novo produto — {it.categoriaNome}</span>}
+                                </td>
+                                <td>{tamanhoItem || '—'}</td>
+                                <td>{corItem || '—'}</td>
+                                <td>{tipoVendaItem === 'fracionado' ? unidadeMedidaItem : 'un.'}</td>
+                                <td>
+                                  <input type="number" min={0} step={stepQtd} value={it.quantidade}
+                                    onChange={e => {
+                                      const bruto = parseFloat(e.target.value) || 0;
+                                      alterarItemManual(i, 'quantidade', tipoVendaItem === 'fracionado' ? bruto : Math.round(bruto));
+                                    }}
+                                    style={{ width: 80 }} />
+                                </td>
+                                <td>
+                                  <input type="number" min={0} step="0.01" value={it.precoCusto ?? ''}
+                                    placeholder="mantém atual"
+                                    onChange={e => alterarItemManual(i, 'precoCusto', parseFloat(e.target.value) || 0)}
+                                    style={{ width: 110 }} />
+                                </td>
+                                <td>{fmt(vendaUnitItem)}</td>
+                                <td style={{ color: margemItem !== null && margemItem < 0 ? 'var(--red)' : undefined }}>
+                                  {margemItem !== null ? `${margemItem.toFixed(1)}%` : '—'}
+                                </td>
+                                <td>
+                                  <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removerItemManual(i)}>
+                                    <Trash2 size={13} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -823,15 +923,21 @@ export function ImportarNf() {
                         <tr><th>Produto</th><th>Qtd</th><th>Custo unit.</th></tr>
                       </thead>
                       <tbody>
-                        {editForm.itens.map((it, i) => (
+                        {editForm.itens.map((it, i) => {
+                          const tipoVendaItem = produtos.find(p => p.id === it.produtoId)?.tipoVenda ?? 'unidade';
+                          const stepQtd = tipoVendaItem === 'fracionado' ? 0.001 : 1;
+                          return (
                           <tr key={`${it.produtoId}-${it.variacaoId ?? ''}`}>
                             <td>
                               {it.nomeProduto}
                               {it.variacaoLabel && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 6 }}>{it.variacaoLabel}</span>}
                             </td>
                             <td>
-                              <input type="number" min={0} step="0.001" value={it.quantidade}
-                                onChange={e => alterarItemEdicao(i, 'quantidade', parseFloat(e.target.value) || 0)}
+                              <input type="number" min={0} step={stepQtd} value={it.quantidade}
+                                onChange={e => {
+                                  const bruto = parseFloat(e.target.value) || 0;
+                                  alterarItemEdicao(i, 'quantidade', tipoVendaItem === 'fracionado' ? bruto : Math.round(bruto));
+                                }}
                                 style={{ width: 80 }} />
                             </td>
                             <td>
@@ -840,7 +946,8 @@ export function ImportarNf() {
                                 style={{ width: 110 }} />
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
