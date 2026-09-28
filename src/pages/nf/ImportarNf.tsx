@@ -167,11 +167,12 @@ export function ImportarNf() {
     api.get<CategoriaResumo[]>('/api/categorias').then(setCategorias).catch(() => {});
   }, []);
 
-  // Categoria digitada/selecionada no mini-formulário de novo produto — quando ela já
-  // existe e usa tamanho, o campo Tamanho vira um select com as opções da categoria
-  // em vez de texto livre.
+  // Categoria digitada/selecionada no mini-formulário de novo produto — os campos Cor e
+  // Tamanho só aparecem se a categoria já existente usar cada um deles; quando ela usa
+  // tamanho, o campo vira um select com as opções da categoria em vez de texto livre.
   const catNovoProduto = categorias.find(c => c.nome.toLowerCase() === novoProduto.categoriaNome.trim().toLowerCase());
   const catNovoProdutoUsaTamanho = catNovoProduto?.usaTamanho ?? true;
+  const catNovoProdutoUsaCor = catNovoProduto?.usaCor ?? true;
   const tamanhosDoNovoProduto = catNovoProduto?.tipoTamanho === 'personalizado' && catNovoProduto.tamanhosPersonalizados
     ? catNovoProduto.tamanhosPersonalizados.split(',').map(t => t.trim()).filter(Boolean)
     : catNovoProduto?.tipoTamanho === 'numero' ? TAMANHOS_NUMERO : TAMANHOS_LETRA;
@@ -204,7 +205,7 @@ export function ImportarNf() {
       precoCusto: novoProduto.precoCusto,
       precoVenda: novoProduto.precoVenda,
       categoriaNome: novoProduto.categoriaNome.trim() || 'Outro',
-      cor: novoProduto.cor.trim() || undefined,
+      cor: catNovoProdutoUsaCor ? (novoProduto.cor.trim() || undefined) : undefined,
       tamanho: catNovoProdutoUsaTamanho ? (novoProduto.tamanho.trim() || undefined) : undefined,
     }]);
     setNovoProduto(NOVO_PRODUTO_VAZIO);
@@ -551,10 +552,12 @@ export function ImportarNf() {
                               {categorias.map(c => <option key={c.id} value={c.nome} />)}
                             </datalist>
                           </div>
-                          <div className="form-group">
-                            <label className="form-label">Cor <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                            <input value={novoProduto.cor} onChange={e => setNovoProduto(f => ({ ...f, cor: e.target.value }))} />
-                          </div>
+                          {catNovoProdutoUsaCor && (
+                            <div className="form-group">
+                              <label className="form-label">Cor <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                              <input value={novoProduto.cor} onChange={e => setNovoProduto(f => ({ ...f, cor: e.target.value }))} />
+                            </div>
+                          )}
                           {catNovoProdutoUsaTamanho && (
                             <div className="form-group">
                               <label className="form-label">Tamanho <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
