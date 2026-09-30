@@ -152,6 +152,7 @@ export function Financeiro() {
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
   const [modalLancarCompra, setModalLancarCompra] = useState(false);
   const [carregandoFatura, setCarregandoFatura] = useState(false);
+  const [carregandoLancamentos, setCarregandoLancamentos] = useState(true);
   const [faturaDados, setFaturaDados] = useState<{
     vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
     parcelasFinanciamento?: {
@@ -228,6 +229,8 @@ export function Financeiro() {
   }
 
   async function carregarLancamentos() {
+    setCarregandoLancamentos(true);
+    try {
     if (aba === 'pagar') {
       await api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?${periodoQuery()}&modo=${modoPagar}`)
         .then(setLinhasPagar).catch(() => {});
@@ -242,6 +245,9 @@ export function Financeiro() {
       }
       await api.get<any[]>(`/api/financeiro/receber-unificado?de=${de}&ate=${ate}`)
         .then(setReceberUnificado).catch(() => {});
+    }
+    } finally {
+      setCarregandoLancamentos(false);
     }
   }
 
@@ -1209,7 +1215,9 @@ export function Financeiro() {
 
       {/* Lista */}
       <div className="card" style={{ borderLeft: `3px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
-        {aba === 'pagar' ? (
+        {carregandoLancamentos ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+        ) : aba === 'pagar' ? (
           listaPagar.length === 0 ? (
             <div className="empty" style={{ padding: '40px 0' }}><p>Nenhuma conta a pagar neste mês.</p></div>
           ) : (
