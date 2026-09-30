@@ -1410,9 +1410,7 @@ export function FinanceiroMobile() {
             )}
           </div>
 
-          {carregandoReceber || filtrandoReceber ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
-          ) : (() => {
+          {carregandoReceber || filtrandoReceber ? null : (() => {
             const baseReceber = buscaReceber
               ? linhasReceber.filter(l => l.descricao.toLowerCase().includes(buscaReceber.toLowerCase()))
               : linhasReceber;
@@ -1455,7 +1453,9 @@ export function FinanceiroMobile() {
           )}
           <input placeholder="Buscar por descrição..." value={buscaReceber} onChange={e => setBuscaReceber(e.target.value)} style={{ marginBottom: 14 }} />
 
-          {carregandoReceber || filtrandoReceber ? null : (() => {
+          {carregandoReceber || filtrandoReceber ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+          ) : (() => {
             const filtrada = linhasReceber.filter(l => {
               const catOk = catFiltroReceber === 'todas'
                 ? true
