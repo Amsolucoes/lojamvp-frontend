@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useFiltrando } from '../../hooks/useFiltrando';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw, Loader2 } from 'lucide-react';
 import { api } from '../../services/api';
@@ -153,6 +154,7 @@ export function Financeiro() {
   const [modalLancarCompra, setModalLancarCompra] = useState(false);
   const [carregandoFatura, setCarregandoFatura] = useState(false);
   const [carregandoLancamentos, setCarregandoLancamentos] = useState(true);
+  const filtrandoLista = useFiltrando([aba, catFiltro, statusFiltro, modoFiltro, buscaDescricao, itensPorPagina]);
   const [faturaDados, setFaturaDados] = useState<{
     vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
     parcelasFinanciamento?: {
@@ -1215,7 +1217,7 @@ export function Financeiro() {
 
       {/* Lista */}
       <div className="card" style={{ borderLeft: `3px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
-        {carregandoLancamentos ? (
+        {carregandoLancamentos || filtrandoLista ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
         ) : aba === 'pagar' ? (
           listaPagar.length === 0 ? (

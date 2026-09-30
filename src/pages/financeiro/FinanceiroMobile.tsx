@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useFiltrando } from '../../hooks/useFiltrando';
 import { useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2 } from 'lucide-react';
 import { api } from '../../services/api';
@@ -118,6 +119,8 @@ export function FinanceiroMobile() {
   const [filtroStatusReceber, setFiltroStatusReceber] = useState<'todos' | 'pendente' | 'pago'>('todos');
   const [catFiltroReceber, setCatFiltroReceber] = useState('todas');
   const [buscaReceber, setBuscaReceber] = useState('');
+  const filtrandoPagar = useFiltrando([filtroStatus, catFiltro, buscaPagar]);
+  const filtrandoReceber = useFiltrando([filtroStatusReceber, catFiltroReceber, buscaReceber]);
   const [paginaListaReceber, setPaginaListaReceber] = useState(1);
   const [mesReceber, setMesReceber] = useState(new Date().getMonth());
   const [anoReceber, setAnoReceber] = useState(new Date().getFullYear());
@@ -1220,7 +1223,7 @@ export function FinanceiroMobile() {
             )}
           </div>
 
-          {carregandoPagar ? (
+          {carregandoPagar || filtrandoPagar ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
           ) : (() => {
             const filtradaTotais = linhasPagar.filter(l => {
@@ -1292,7 +1295,7 @@ export function FinanceiroMobile() {
           )}
           <input placeholder="Buscar por descrição..." value={buscaPagar} onChange={e => setBuscaPagar(e.target.value)} style={{ marginBottom: 14 }} />
 
-          {carregandoPagar ? null : (() => {
+          {carregandoPagar || filtrandoPagar ? null : (() => {
             const filtrada = linhasPagar.filter(l => {
               const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
               const statusReal = ehVencido(l) ? 'vencido' : l.status;
@@ -1407,7 +1410,7 @@ export function FinanceiroMobile() {
             )}
           </div>
 
-          {carregandoReceber ? (
+          {carregandoReceber || filtrandoReceber ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
           ) : (() => {
             const baseReceber = buscaReceber
@@ -1452,7 +1455,7 @@ export function FinanceiroMobile() {
           )}
           <input placeholder="Buscar por descrição..." value={buscaReceber} onChange={e => setBuscaReceber(e.target.value)} style={{ marginBottom: 14 }} />
 
-          {carregandoReceber ? null : (() => {
+          {carregandoReceber || filtrandoReceber ? null : (() => {
             const filtrada = linhasReceber.filter(l => {
               const catOk = catFiltroReceber === 'todas'
                 ? true
