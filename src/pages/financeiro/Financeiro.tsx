@@ -179,6 +179,7 @@ export function Financeiro() {
   const [modalTransferencia, setModalTransferencia] = useState(false);
   const [formTransf, setFormTransf] = useState({ contaOrigemId: '', contaDestinoId: '', valor: '', registrar: true, observacao: '' });
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
+  const [excluindoLancamento, setExcluindoLancamento] = useState(false);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
   const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEdit, setSalvandoEdit] = useState(false);
@@ -227,7 +228,7 @@ export function Financeiro() {
 
   async function carregarLancamentos() {
     if (aba === 'pagar') {
-      api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?${periodoQuery()}&modo=${modoPagar}`)
+      await api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?${periodoQuery()}&modo=${modoPagar}`)
         .then(setLinhasPagar).catch(() => {});
     } else {
       let de: string, ate: string;
@@ -238,7 +239,7 @@ export function Financeiro() {
         de = new Date(anoRef, mesRef, 1).toISOString();
         ate = new Date(anoRef, mesRef + 1, 0).toISOString();
       }
-      api.get<any[]>(`/api/financeiro/receber-unificado?de=${de}&ate=${ate}`)
+      await api.get<any[]>(`/api/financeiro/receber-unificado?de=${de}&ate=${ate}`)
         .then(setReceberUnificado).catch(() => {});
     }
   }
@@ -256,7 +257,7 @@ export function Financeiro() {
   }
 
   async function carregarResumo() {
-    api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoRef}&mes=${mesRef + 1}`)
+    await api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoRef}&mes=${mesRef + 1}`)
       .then(setResumo).catch(() => {});
   }
 
@@ -487,14 +488,16 @@ export function Financeiro() {
 
   async function excluirLancamento(modo: 'unica' | 'todas' = 'unica') {
     if (!confirmExcluir) return;
+    setExcluindoLancamento(true);
     try {
       await api.delete(`/api/financeiro/lancamentos/${confirmExcluir.id}?modo=${modo}`);
+      await Promise.all([carregarLancamentos(), carregarResumo()]);
       setConfirmExcluir(null);
-      carregarLancamentos();
-      carregarResumo();
       sucesso('Lançamento excluído');
     } catch (e) {
       erro((e as Error).message);
+    } finally {
+      setExcluindoLancamento(false);
     }
   }
 
@@ -529,9 +532,8 @@ export function Financeiro() {
         vencimento: formEdit.vencimento,
         observacao: formEdit.observacao || null,
       });
+      await Promise.all([carregarLancamentos(), carregarResumo()]);
       setEditandoLancamento(null);
-      carregarLancamentos();
-      carregarResumo();
       sucesso('Lançamento atualizado!');
     } catch (e) {
       erro((e as Error).message);
@@ -2680,11 +2682,11 @@ export function Financeiro() {
 
       {/* Modal editar lançamento */}
       {editandoLancamento && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditandoLancamento(null)}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !salvandoEdit && setEditandoLancamento(null)}>
           <div className="modal" style={{ maxWidth: 460 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar lançamento</h2>
-              <button className="btn-ghost" onClick={() => setEditandoLancamento(null)}><X size={16} /></button>
+              <button className="btn-ghost" disabled={salvandoEdit} onClick={() => setEditandoLancamento(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -2737,16 +2739,20 @@ export function Financeiro() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setEditandoLancamento(null)}>Cancelar</button>
+              <button className="btn-secondary" disabled={salvandoEdit} onClick={() => setEditandoLancamento(null)}>Cancelar</button>
               {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') ? (
                 <>
-                  <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('unica')}>Só esta</button>
+                  <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('unica')}>
+                    {salvandoEdit ? 'Salvando...' : 'Só esta'}
+                  </button>
                   <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('todas')}>
-                    {editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                    {salvandoEdit ? 'Salvando...' : (editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
-                <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('unica')}>Salvar</button>
+                <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('unica')}>
+                  {salvandoEdit ? 'Salvando...' : 'Salvar'}
+                </button>
               )}
             </div>
           </div>
@@ -2755,11 +2761,11 @@ export function Financeiro() {
 
       {/* Confirmar exclusão */}
       {confirmExcluir && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluir(null)}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !excluindoLancamento && setConfirmExcluir(null)}>
           <div className="modal" style={{ maxWidth: 400 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir lançamento</h2>
-              <button className="btn-ghost" onClick={() => setConfirmExcluir(null)}><X size={16} /></button>
+              <button className="btn-ghost" disabled={excluindoLancamento} onClick={() => setConfirmExcluir(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
@@ -2774,16 +2780,20 @@ export function Financeiro() {
               )}
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setConfirmExcluir(null)}>Cancelar</button>
+              <button className="btn-secondary" disabled={excluindoLancamento} onClick={() => setConfirmExcluir(null)}>Cancelar</button>
               {(confirmExcluir.modo === 'fixa' || confirmExcluir.modo === 'parcelada') ? (
                 <>
-                  <button className="btn-secondary" onClick={() => excluirLancamento('unica')}>Só esta</button>
-                  <button className="btn-danger" onClick={() => excluirLancamento('todas')}>
-                    {confirmExcluir.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  <button className="btn-secondary" disabled={excluindoLancamento} onClick={() => excluirLancamento('unica')}>
+                    {excluindoLancamento ? 'Excluindo...' : 'Só esta'}
+                  </button>
+                  <button className="btn-danger" disabled={excluindoLancamento} onClick={() => excluirLancamento('todas')}>
+                    {excluindoLancamento ? 'Excluindo...' : (confirmExcluir.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
-                <button className="btn-danger" onClick={() => excluirLancamento('unica')}>Excluir</button>
+                <button className="btn-danger" disabled={excluindoLancamento} onClick={() => excluirLancamento('unica')}>
+                  {excluindoLancamento ? 'Excluindo...' : 'Excluir'}
+                </button>
               )}
             </div>
           </div>

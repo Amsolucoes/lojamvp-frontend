@@ -106,6 +106,7 @@ export function FinanceiroMobile() {
   const [periodoAte, setPeriodoAte] = useState(new Date().toISOString().slice(0, 10));
   const itensPorPagina = 20;
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
+  const [excluindoLinha, setExcluindoLinha] = useState(false);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
   const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEdit, setSalvandoEdit] = useState(false);
@@ -123,6 +124,7 @@ export function FinanceiroMobile() {
   const [periodoDeReceber, setPeriodoDeReceber] = useState(new Date().toISOString().slice(0, 10));
   const [periodoAteReceber, setPeriodoAteReceber] = useState(new Date().toISOString().slice(0, 10));
   const [confirmExcluirReceber, setConfirmExcluirReceber] = useState<LinhaReceber | null>(null);
+  const [excluindoReceber, setExcluindoReceber] = useState(false);
   const [editandoReceber, setEditandoReceber] = useState<LinhaReceber | null>(null);
   const [formEditReceber, setFormEditReceber] = useState({ contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEditReceber, setSalvandoEditReceber] = useState(false);
@@ -232,7 +234,7 @@ export function FinanceiroMobile() {
 
   function recarregarPagar() {
     setCarregandoPagar(true);
-    api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?${periodoQueryPagar()}&modo=agrupado`)
+    return api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?${periodoQueryPagar()}&modo=agrupado`)
       .then(setLinhasPagar).catch(() => {}).finally(() => setCarregandoPagar(false));
   }
 
@@ -253,7 +255,7 @@ export function FinanceiroMobile() {
   function recarregarReceber() {
     setCarregandoReceber(true);
     const { de, ate } = periodoQueryReceber();
-    api.get<LinhaReceber[]>(`/api/financeiro/receber-unificado?de=${de}&ate=${ate}`)
+    return api.get<LinhaReceber[]>(`/api/financeiro/receber-unificado?de=${de}&ate=${ate}`)
       .then(setLinhasReceber).catch(() => {}).finally(() => setCarregandoReceber(false));
   }
 
@@ -306,8 +308,8 @@ export function FinanceiroMobile() {
         vencimento: formEditReceber.vencimento,
         observacao: formEditReceber.observacao || null,
       });
+      await recarregarReceber();
       setEditandoReceber(null);
-      recarregarReceber();
     } catch (e) {
       erro((e as Error).message);
     } finally { setSalvandoEditReceber(false); }
@@ -315,12 +317,15 @@ export function FinanceiroMobile() {
 
   async function excluirReceber(modo: 'unica' | 'todas' = 'unica') {
     if (!confirmExcluirReceber) return;
+    setExcluindoReceber(true);
     try {
       await api.delete(`/api/financeiro/lancamentos/${confirmExcluirReceber.id}?modo=${modo}`);
+      await recarregarReceber();
       setConfirmExcluirReceber(null);
-      recarregarReceber();
     } catch (e) {
       erro((e as Error).message);
+    } finally {
+      setExcluindoReceber(false);
     }
   }
 
@@ -757,8 +762,8 @@ export function FinanceiroMobile() {
         vencimento: formEdit.vencimento,
         observacao: formEdit.observacao || null,
       });
+      await recarregarPagar();
       setEditandoLancamento(null);
-      recarregarPagar();
     } catch (e) {
       erro((e as Error).message);
     } finally { setSalvandoEdit(false); }
@@ -766,12 +771,15 @@ export function FinanceiroMobile() {
 
   async function excluirLinha(modo: 'unica' | 'todas' = 'unica') {
     if (!confirmExcluir) return;
+    setExcluindoLinha(true);
     try {
       await api.delete(`/api/financeiro/lancamentos/${confirmExcluir.id}?modo=${modo}`);
+      await recarregarPagar();
       setConfirmExcluir(null);
-      recarregarPagar();
     } catch (e) {
       erro((e as Error).message);
+    } finally {
+      setExcluindoLinha(false);
     }
   }
 
@@ -1653,11 +1661,11 @@ export function FinanceiroMobile() {
       </nav>
 
       {editandoLancamento && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditandoLancamento(null)}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !salvandoEdit && setEditandoLancamento(null)}>
           <div className="modal" style={{ maxWidth: 420 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar lançamento</h2>
-              <button className="btn-ghost" onClick={() => setEditandoLancamento(null)}><X size={16} /></button>
+              <button className="btn-ghost" disabled={salvandoEdit} onClick={() => setEditandoLancamento(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1708,16 +1716,20 @@ export function FinanceiroMobile() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setEditandoLancamento(null)}>Cancelar</button>
+              <button className="btn-secondary" disabled={salvandoEdit} onClick={() => setEditandoLancamento(null)}>Cancelar</button>
               {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') ? (
                 <>
-                  <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicao('unica')}>Só esta</button>
+                  <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicao('unica')}>
+                    {salvandoEdit ? 'Salvando...' : 'Só esta'}
+                  </button>
                   <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicao('todas')}>
-                    {editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                    {salvandoEdit ? 'Salvando...' : (editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
-                <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicao('unica')}>Salvar</button>
+                <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicao('unica')}>
+                  {salvandoEdit ? 'Salvando...' : 'Salvar'}
+                </button>
               )}
             </div>
           </div>
@@ -1725,11 +1737,11 @@ export function FinanceiroMobile() {
       )}
 
       {confirmExcluir && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluir(null)}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !excluindoLinha && setConfirmExcluir(null)}>
           <div className="modal" style={{ maxWidth: 400 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir lançamento</h2>
-              <button className="btn-ghost" onClick={() => setConfirmExcluir(null)}><X size={16} /></button>
+              <button className="btn-ghost" disabled={excluindoLinha} onClick={() => setConfirmExcluir(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
@@ -1744,16 +1756,20 @@ export function FinanceiroMobile() {
               )}
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setConfirmExcluir(null)}>Cancelar</button>
+              <button className="btn-secondary" disabled={excluindoLinha} onClick={() => setConfirmExcluir(null)}>Cancelar</button>
               {(confirmExcluir.modo === 'fixa' || confirmExcluir.modo === 'parcelada') ? (
                 <>
-                  <button className="btn-secondary" onClick={() => excluirLinha('unica')}>Só esta</button>
-                  <button className="btn-danger" onClick={() => excluirLinha('todas')}>
-                    {confirmExcluir.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  <button className="btn-secondary" disabled={excluindoLinha} onClick={() => excluirLinha('unica')}>
+                    {excluindoLinha ? 'Excluindo...' : 'Só esta'}
+                  </button>
+                  <button className="btn-danger" disabled={excluindoLinha} onClick={() => excluirLinha('todas')}>
+                    {excluindoLinha ? 'Excluindo...' : (confirmExcluir.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
-                <button className="btn-danger" onClick={() => excluirLinha('unica')}>Excluir</button>
+                <button className="btn-danger" disabled={excluindoLinha} onClick={() => excluirLinha('unica')}>
+                  {excluindoLinha ? 'Excluindo...' : 'Excluir'}
+                </button>
               )}
             </div>
           </div>
@@ -1761,11 +1777,11 @@ export function FinanceiroMobile() {
       )}
 
       {editandoReceber && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditandoReceber(null)}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !salvandoEditReceber && setEditandoReceber(null)}>
           <div className="modal" style={{ maxWidth: 420 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>Editar lançamento</h2>
-              <button className="btn-ghost" onClick={() => setEditandoReceber(null)}><X size={16} /></button>
+              <button className="btn-ghost" disabled={salvandoEditReceber} onClick={() => setEditandoReceber(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1816,16 +1832,20 @@ export function FinanceiroMobile() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setEditandoReceber(null)}>Cancelar</button>
+              <button className="btn-secondary" disabled={salvandoEditReceber} onClick={() => setEditandoReceber(null)}>Cancelar</button>
               {(editandoReceber.modo === 'fixa' || editandoReceber.modo === 'parcelada') ? (
                 <>
-                  <button className="btn-secondary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('unica')}>Só esta</button>
+                  <button className="btn-secondary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('unica')}>
+                    {salvandoEditReceber ? 'Salvando...' : 'Só esta'}
+                  </button>
                   <button className="btn-primary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('todas')}>
-                    {editandoReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                    {salvandoEditReceber ? 'Salvando...' : (editandoReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
-                <button className="btn-primary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('unica')}>Salvar</button>
+                <button className="btn-primary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('unica')}>
+                  {salvandoEditReceber ? 'Salvando...' : 'Salvar'}
+                </button>
               )}
             </div>
           </div>
@@ -1833,11 +1853,11 @@ export function FinanceiroMobile() {
       )}
 
       {confirmExcluirReceber && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmExcluirReceber(null)}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !excluindoReceber && setConfirmExcluirReceber(null)}>
           <div className="modal" style={{ maxWidth: 400 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--red)' }}>Excluir lançamento</h2>
-              <button className="btn-ghost" onClick={() => setConfirmExcluirReceber(null)}><X size={16} /></button>
+              <button className="btn-ghost" disabled={excluindoReceber} onClick={() => setConfirmExcluirReceber(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
@@ -1852,16 +1872,20 @@ export function FinanceiroMobile() {
               )}
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setConfirmExcluirReceber(null)}>Cancelar</button>
+              <button className="btn-secondary" disabled={excluindoReceber} onClick={() => setConfirmExcluirReceber(null)}>Cancelar</button>
               {(confirmExcluirReceber.modo === 'fixa' || confirmExcluirReceber.modo === 'parcelada') ? (
                 <>
-                  <button className="btn-secondary" onClick={() => excluirReceber('unica')}>Só esta</button>
-                  <button className="btn-danger" onClick={() => excluirReceber('todas')}>
-                    {confirmExcluirReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas'}
+                  <button className="btn-secondary" disabled={excluindoReceber} onClick={() => excluirReceber('unica')}>
+                    {excluindoReceber ? 'Excluindo...' : 'Só esta'}
+                  </button>
+                  <button className="btn-danger" disabled={excluindoReceber} onClick={() => excluirReceber('todas')}>
+                    {excluindoReceber ? 'Excluindo...' : (confirmExcluirReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
-                <button className="btn-danger" onClick={() => excluirReceber('unica')}>Excluir</button>
+                <button className="btn-danger" disabled={excluindoReceber} onClick={() => excluirReceber('unica')}>
+                  {excluindoReceber ? 'Excluindo...' : 'Excluir'}
+                </button>
               )}
             </div>
           </div>
