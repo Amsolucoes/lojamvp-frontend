@@ -973,10 +973,12 @@ export function FinanceiroMobile() {
                   </span>
                   <strong style={{ color: c.saldoAtual >= 0 ? 'var(--text-1)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
                 </div>
-                {c.limite > 0 && c.saldoAtual < 0 && (
+                {c.limite > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 2, paddingLeft: 22 }}>
-                    <span style={{ color: 'var(--text-3)' }}>Disponível</span>
-                    <span style={{ color: 'var(--text-2)' }}>{fmt(Math.max(0, c.limite - Math.abs(c.saldoAtual)))}</span>
+                    <span style={{ color: 'var(--text-3)' }}>Cheque especial</span>
+                    <span style={{ color: 'var(--text-2)' }}>
+                      {fmt(Math.max(0, c.limite - Math.abs(Math.min(0, c.saldoAtual))))} / {fmt(c.limite)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -1622,8 +1624,10 @@ export function FinanceiroMobile() {
                         }} />
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 4 }}>
-                        <span style={{ color: 'var(--text-3)' }}>Disponível</span>
-                        <span style={{ color: 'var(--text-2)' }}>{fmt(Math.max(0, c.limite - Math.abs(Math.min(0, c.saldoAtual))))}</span>
+                        <span style={{ color: 'var(--text-3)' }}>Cheque especial</span>
+                        <span style={{ color: 'var(--text-2)' }}>
+                          {fmt(Math.max(0, c.limite - Math.abs(Math.min(0, c.saldoAtual))))} / {fmt(c.limite)}
+                        </span>
                       </div>
                     </div>
                   )}

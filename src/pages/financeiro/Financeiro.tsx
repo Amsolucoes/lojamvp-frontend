@@ -997,23 +997,30 @@ export function Financeiro() {
                     </span>
                     <strong style={{ color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
                   </div>
-                  {c.limite > 0 && c.saldoAtual < 0 && (
-                    <div style={{ marginTop: 3 }}>
-                      <div style={{ height: 4, background: 'var(--bg-3)', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{
-                          height: '100%', borderRadius: 3,
-                          width: `${Math.min(100, (Math.abs(c.saldoAtual) / c.limite) * 100)}%`,
-                          background: Math.abs(c.saldoAtual) >= c.limite ? 'var(--red)' : 'var(--yellow, #d97706)',
-                        }} />
+                  {c.limite > 0 && (() => {
+                    const usado = Math.abs(Math.min(0, c.saldoAtual));
+                    const disponivel = Math.max(0, c.limite - usado);
+                    return (
+                      <div style={{ marginTop: 3 }}>
+                        <div style={{ height: 4, background: 'var(--bg-3)', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%', borderRadius: 3,
+                            width: `${Math.min(100, (usado / c.limite) * 100)}%`,
+                            background: usado >= c.limite ? 'var(--red)' : 'var(--yellow, #d97706)',
+                          }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4 }}>
+                          <span style={{ color: 'var(--text-3)' }}>Cheque especial</span>
+                          <span>
+                            <strong style={{ color: disponivel <= c.limite * 0.1 ? 'var(--red)' : 'var(--green)' }}>
+                              {fmt(disponivel)}
+                            </strong>
+                            <span style={{ color: 'var(--text-3)' }}> / {fmt(c.limite)}</span>
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4 }}>
-                        <span style={{ color: 'var(--text-3)' }}>Disponível</span>
-                        <strong style={{ color: c.limite - Math.abs(c.saldoAtual) <= c.limite * 0.1 ? 'var(--red)' : 'var(--green)' }}>
-                          {fmt(Math.max(0, c.limite - Math.abs(c.saldoAtual)))}
-                        </strong>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
