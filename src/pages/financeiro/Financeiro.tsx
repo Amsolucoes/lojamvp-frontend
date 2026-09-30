@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw } from 'lucide-react';
+import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw, Loader2 } from 'lucide-react';
 import { api } from '../../services/api';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { InputMoeda } from '../../components/InputMoeda';
@@ -178,6 +178,7 @@ export function Financeiro() {
   const [modalAjuste, setModalAjuste] = useState<Conta | null>(null);
   const [modalTransferencia, setModalTransferencia] = useState(false);
   const [formTransf, setFormTransf] = useState({ contaOrigemId: '', contaDestinoId: '', valor: '', registrar: true, observacao: '' });
+  const [processandoPagamento, setProcessandoPagamento] = useState<string | null>(null);
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [excluindoLancamento, setExcluindoLancamento] = useState(false);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
@@ -212,7 +213,7 @@ export function Financeiro() {
   const [formAjuste, setFormAjuste] = useState({ tipo: 'entrada' as 'entrada' | 'saida' | 'ajuste', valor: '', novoSaldo: '', observacao: '' });
 
   async function carregarContas() {
-    api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {}).finally(() => setCarregandoContas(false));
+    await api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {}).finally(() => setCarregandoContas(false));
   }
 
   async function carregarCategorias() {
@@ -462,10 +463,8 @@ export function Financeiro() {
           avisar: formLanc.avisar,
         });
       }
+      await Promise.all([carregarLancamentos(), carregarResumo(), carregarContas()]);
       setModalLancamento(false);
-      carregarLancamentos();
-      carregarResumo();
-      carregarContas();
       sucesso('Lançamento criado!');
     } catch (e) {
       erro((e as Error).message);
@@ -475,14 +474,15 @@ export function Financeiro() {
   }
 
   async function marcarPagamento(l: Lancamento, pago: boolean) {
+    setProcessandoPagamento(l.id);
     try {
       await api.post(`/api/financeiro/lancamentos/${l.id}/pagamento`, { pago });
-      carregarLancamentos();
-      carregarResumo();
-      carregarContas();
+      await Promise.all([carregarLancamentos(), carregarResumo(), carregarContas()]);
       sucesso(pago ? 'Marcado como pago' : 'Marcado como pendente');
     } catch (e) {
       erro((e as Error).message);
+    } finally {
+      setProcessandoPagamento(null);
     }
   }
 
@@ -545,16 +545,17 @@ export function Financeiro() {
 // ── Fatura do cartão (pagar/desfazer) ──────────────────────────
   async function marcarPagamentoCartaoFatura(l: LinhaPagar, pago: boolean) {
     if (!l.cartaoId) return;
+    setProcessandoPagamento(l.id);
     try {
       await api.post(`/api/financeiro/cartoes/${l.cartaoId}/fatura/pagamento?ano=${anoRef}&mes=${mesRef + 1}`, {
         modo: pago ? 'total' : 'desfazer',
       });
-      carregarLancamentos();
-      carregarResumo();
-      carregarContas();
+      await Promise.all([carregarLancamentos(), carregarResumo(), carregarContas()]);
       sucesso(pago ? 'Fatura marcada como paga' : 'Fatura marcada como pendente');
     } catch (e) {
       erro((e as Error).message);
+    } finally {
+      setProcessandoPagamento(null);
     }
   }
 
@@ -1227,6 +1228,7 @@ export function Financeiro() {
                           const ehFinanciada = l.origem === 'cartao_fatura_financiada';
                           const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
                           const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
+                          const processandoEste = processandoPagamento === l.id;
                           return (
                             <tr key={l.id}>
                           <td>
@@ -1265,14 +1267,20 @@ export function Financeiro() {
                           <td>
                             <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                               {(ehFinanciada || l.status === 'parcial')
-                                ? <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={desfazer}>Desfazer</button>
+                                ? <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} disabled={processandoEste} onClick={desfazer}>
+                                    {processandoEste ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desfazer'}
+                                  </button>
                                 : l.status === 'pago'
-                                ? <button className="btn-ghost" style={{ fontSize: 11 }} onClick={desfazer}>Desfazer</button>
-                                : <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={pagar}><Check size={13} /> Pagar</button>}
+                                ? <button className="btn-ghost" style={{ fontSize: 11 }} disabled={processandoEste} onClick={desfazer}>
+                                    {processandoEste ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desfazer'}
+                                  </button>
+                                : <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} disabled={processandoEste} onClick={pagar}>
+                                    {processandoEste ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : <><Check size={13} /> Pagar</>}
+                                  </button>}
                               {l.origem === 'avulso' && (
                                 <>
-                                  <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarLancamento(l)}>Editar</button>
-                                  <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmExcluir(l as any)}><Trash2 size={13} /></button>
+                                  <button className="btn-ghost" style={{ fontSize: 11 }} disabled={processandoEste} onClick={() => abrirEditarLancamento(l)}>Editar</button>
+                                  <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} disabled={processandoEste} onClick={() => setConfirmExcluir(l as any)}><Trash2 size={13} /></button>
                                 </>
                               )}
                             </div>
@@ -1299,6 +1307,7 @@ export function Financeiro() {
                       const ehFinanciada = l.origem === 'cartao_fatura_financiada';
                       const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
                       const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
+                      const processandoEste = processandoPagamento === l.id;
                       return (
                         <div key={l.id} className="fin-card-mobile">
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -1324,14 +1333,20 @@ export function Financeiro() {
                           : <span className="badge badge-yellow">Pendente</span>}
                         <div style={{ display: 'flex', gap: 6 }}>
                           {(ehFinanciada || l.status === 'parcial')
-                            ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={desfazer}>Desfazer</button>
+                            ? <button className="btn-secondary" style={{ fontSize: 12 }} disabled={processandoEste} onClick={desfazer}>
+                                {processandoEste ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desfazer'}
+                              </button>
                             : l.status === 'pago'
-                            ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={desfazer}>Desfazer</button>
-                            : <button className="btn-primary" style={{ fontSize: 12 }} onClick={pagar}>Pagar</button>}
+                            ? <button className="btn-secondary" style={{ fontSize: 12 }} disabled={processandoEste} onClick={desfazer}>
+                                {processandoEste ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desfazer'}
+                              </button>
+                            : <button className="btn-primary" style={{ fontSize: 12 }} disabled={processandoEste} onClick={pagar}>
+                                {processandoEste ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Pagar'}
+                              </button>}
                           {l.origem === 'avulso' && (
                             <>
-                              <button className="btn-ghost" onClick={() => abrirEditarLancamento(l)}>Editar</button>
-                              <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(l as any)}><Trash2 size={14} /></button>
+                              <button className="btn-ghost" disabled={processandoEste} onClick={() => abrirEditarLancamento(l)}>Editar</button>
+                              <button className="btn-ghost" style={{ color: 'var(--red)' }} disabled={processandoEste} onClick={() => setConfirmExcluir(l as any)}><Trash2 size={14} /></button>
                             </>
                           )}
                         </div>
@@ -1402,10 +1417,14 @@ export function Financeiro() {
                           {l.origem === 'avulso' ? (
                             <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                               {l.status === 'pago'
-                                ? <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => marcarPagamento(l, false)}>Desfazer</button>
-                                : <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => marcarPagamento(l, true)}><Check size={13} /> Receber</button>}
-                              <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarLancamento(l)}>Editar</button>
-                              <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} onClick={() => setConfirmExcluir(l)}><Trash2 size={13} /></button>
+                                ? <button className="btn-ghost" style={{ fontSize: 11 }} disabled={processandoPagamento === l.id} onClick={() => marcarPagamento(l, false)}>
+                                    {processandoPagamento === l.id ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desfazer'}
+                                  </button>
+                                : <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} disabled={processandoPagamento === l.id} onClick={() => marcarPagamento(l, true)}>
+                                    {processandoPagamento === l.id ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : <><Check size={13} /> Receber</>}
+                                  </button>}
+                              <button className="btn-ghost" style={{ fontSize: 11 }} disabled={processandoPagamento === l.id} onClick={() => abrirEditarLancamento(l)}>Editar</button>
+                              <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--red)' }} disabled={processandoPagamento === l.id} onClick={() => setConfirmExcluir(l)}><Trash2 size={13} /></button>
                             </div>
                           ) : (
                             <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => navigate('/planos?aba=assinantes')}>
@@ -1453,10 +1472,14 @@ export function Financeiro() {
                       {l.origem === 'avulso' ? (
                         <div style={{ display: 'flex', gap: 6 }}>
                           {l.status === 'pago'
-                            ? <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => marcarPagamento(l, false)}>Desfazer</button>
-                            : <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => marcarPagamento(l, true)}>Receber</button>}
-                          <button className="btn-ghost" onClick={() => abrirEditarLancamento(l)}>Editar</button>
-                          <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(l)}><Trash2 size={14} /></button>
+                            ? <button className="btn-secondary" style={{ fontSize: 12 }} disabled={processandoPagamento === l.id} onClick={() => marcarPagamento(l, false)}>
+                                {processandoPagamento === l.id ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desfazer'}
+                              </button>
+                            : <button className="btn-primary" style={{ fontSize: 12 }} disabled={processandoPagamento === l.id} onClick={() => marcarPagamento(l, true)}>
+                                {processandoPagamento === l.id ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Receber'}
+                              </button>}
+                          <button className="btn-ghost" disabled={processandoPagamento === l.id} onClick={() => abrirEditarLancamento(l)}>Editar</button>
+                          <button className="btn-ghost" style={{ color: 'var(--red)' }} disabled={processandoPagamento === l.id} onClick={() => setConfirmExcluir(l)}><Trash2 size={14} /></button>
                         </div>
                       ) : (
                         <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => navigate('/planos?aba=assinantes')}>
@@ -1476,13 +1499,13 @@ export function Financeiro() {
 
       {/* Modal novo lançamento */}
       {modalLancamento && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalLancamento(false)}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !salvandoLanc && setModalLancamento(false)}>
           <div className="modal" style={{ maxWidth: 460 }}>
             <div className="modal-header" style={{ borderBottom: `2px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
               <h2 style={{ fontSize: 16, fontWeight: 600, color: aba === 'pagar' ? 'var(--red)' : 'var(--green)' }}>
                 {aba === 'pagar' ? '↓ Nova conta a pagar' : '↑ Nova conta a receber'}
               </h2>
-              <button className="btn-ghost" onClick={() => setModalLancamento(false)}><X size={16} /></button>
+              <button className="btn-ghost" disabled={salvandoLanc} onClick={() => setModalLancamento(false)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <div className="cx-tipo-toggle" style={{ marginBottom: 14, display: 'flex', gap: 8 }}>
@@ -1636,9 +1659,9 @@ export function Financeiro() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setModalLancamento(false)}>Cancelar</button>
+              <button className="btn-secondary" disabled={salvandoLanc} onClick={() => setModalLancamento(false)}>Cancelar</button>
               <button className="btn-primary" onClick={salvarLancamento} disabled={salvandoLanc}>
-                {salvandoLanc ? 'Salvando...' : 'Criar lançamento'}
+                {salvandoLanc ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Criar lançamento'}
               </button>
             </div>
           </div>
@@ -2743,15 +2766,15 @@ export function Financeiro() {
               {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') ? (
                 <>
                   <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('unica')}>
-                    {salvandoEdit ? 'Salvando...' : 'Só esta'}
+                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
                   <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('todas')}>
-                    {salvandoEdit ? 'Salvando...' : (editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
+                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : (editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
                 <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('unica')}>
-                  {salvandoEdit ? 'Salvando...' : 'Salvar'}
+                  {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Salvar'}
                 </button>
               )}
             </div>
@@ -2784,15 +2807,15 @@ export function Financeiro() {
               {(confirmExcluir.modo === 'fixa' || confirmExcluir.modo === 'parcelada') ? (
                 <>
                   <button className="btn-secondary" disabled={excluindoLancamento} onClick={() => excluirLancamento('unica')}>
-                    {excluindoLancamento ? 'Excluindo...' : 'Só esta'}
+                    {excluindoLancamento ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
                   <button className="btn-danger" disabled={excluindoLancamento} onClick={() => excluirLancamento('todas')}>
-                    {excluindoLancamento ? 'Excluindo...' : (confirmExcluir.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
+                    {excluindoLancamento ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : (confirmExcluir.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
                 <button className="btn-danger" disabled={excluindoLancamento} onClick={() => excluirLancamento('unica')}>
-                  {excluindoLancamento ? 'Excluindo...' : 'Excluir'}
+                  {excluindoLancamento ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Excluir'}
                 </button>
               )}
             </div>
