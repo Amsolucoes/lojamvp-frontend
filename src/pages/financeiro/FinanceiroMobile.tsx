@@ -971,7 +971,7 @@ export function FinanceiroMobile() {
                   <span style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <BankBadge bancoId={c.banco} tamanho={16} /> {c.nome}
                   </span>
-                  <strong style={{ color: c.saldoAtual >= 0 ? 'var(--text-1)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
+                  <strong style={{ color: c.saldoAtual > 0 ? 'var(--green)' : c.saldoAtual < 0 ? 'var(--red)' : 'var(--text-1)' }}>{fmt(c.saldoAtual)}</strong>
                 </div>
                 {c.limite > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 2, paddingLeft: 22 }}>
@@ -985,7 +985,7 @@ export function FinanceiroMobile() {
             ))}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 4, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
               <span style={{ color: 'var(--text-3)' }}>Total</span>
-              <strong style={{ color: saldoTotal >= 0 ? 'var(--text-1)' : 'var(--red)' }}>{fmt(saldoTotal)}</strong>
+              <strong style={{ color: saldoTotal > 0 ? 'var(--green)' : saldoTotal < 0 ? 'var(--red)' : 'var(--text-1)' }}>{fmt(saldoTotal)}</strong>
             </div>
           </div>
           )}
