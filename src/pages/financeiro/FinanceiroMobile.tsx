@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw } from 'lucide-react';
+import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { setMobileShellOverride } from '../../utils/mobileShellOverride';
@@ -105,6 +105,7 @@ export function FinanceiroMobile() {
   const [periodoDe, setPeriodoDe] = useState(new Date().toISOString().slice(0, 10));
   const [periodoAte, setPeriodoAte] = useState(new Date().toISOString().slice(0, 10));
   const itensPorPagina = 20;
+  const [processandoPagamento, setProcessandoPagamento] = useState<string | null>(null);
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [excluindoLinha, setExcluindoLinha] = useState(false);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
@@ -123,6 +124,7 @@ export function FinanceiroMobile() {
   const [periodoTipoReceber, setPeriodoTipoReceber] = useState<'mes' | 'personalizado'>('mes');
   const [periodoDeReceber, setPeriodoDeReceber] = useState(new Date().toISOString().slice(0, 10));
   const [periodoAteReceber, setPeriodoAteReceber] = useState(new Date().toISOString().slice(0, 10));
+  const [processandoRecebimento, setProcessandoRecebimento] = useState<string | null>(null);
   const [confirmExcluirReceber, setConfirmExcluirReceber] = useState<LinhaReceber | null>(null);
   const [excluindoReceber, setExcluindoReceber] = useState(false);
   const [editandoReceber, setEditandoReceber] = useState<LinhaReceber | null>(null);
@@ -275,11 +277,14 @@ export function FinanceiroMobile() {
   useEffect(() => { setPaginaListaReceber(1); }, [tela, filtroStatusReceber, catFiltroReceber, buscaReceber, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
 
   async function marcarRecebimentoLocal(l: LinhaReceber, pago: boolean) {
+    setProcessandoRecebimento(l.id);
     try {
       await api.post(`/api/financeiro/lancamentos/${l.id}/pagamento`, { pago });
-      recarregarReceber();
+      await recarregarReceber();
     } catch (e) {
       erro((e as Error).message);
+    } finally {
+      setProcessandoRecebimento(null);
     }
   }
 
@@ -582,7 +587,7 @@ export function FinanceiroMobile() {
   }
 
   function recarregarContas() {
-    api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+    return api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }
 
   function abrirNovaConta() {
@@ -705,9 +710,8 @@ export function FinanceiroMobile() {
         });
       }
       const abaFechada = modalNovoLanc;
+      await Promise.all([abaFechada === 'pagar' ? recarregarPagar() : recarregarReceber(), recarregarContas()]);
       setModalNovoLanc(null);
-      if (abaFechada === 'pagar') recarregarPagar(); else recarregarReceber();
-      recarregarContas();
       sucesso('Lançamento criado!');
     } catch (e) {
       erro((e as Error).message);
@@ -724,6 +728,7 @@ export function FinanceiroMobile() {
 
   async function marcarPagamentoLocal(l: LinhaPagar, pago: boolean) {
     const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
+    setProcessandoPagamento(l.id);
     try {
       if (ehCartao && l.cartaoId) {
         const agora = new Date();
@@ -731,9 +736,11 @@ export function FinanceiroMobile() {
       } else {
         await api.post(`/api/financeiro/lancamentos/${l.id}/pagamento`, { pago });
       }
-      recarregarPagar();
+      await recarregarPagar();
     } catch (e) {
       erro((e as Error).message);
+    } finally {
+      setProcessandoPagamento(null);
     }
   }
 
@@ -1329,13 +1336,13 @@ export function FinanceiroMobile() {
                                 {status === 'pago' ? 'Pago' : status === 'vencido' ? 'Vencido' : 'Pendente'}
                               </span>
                               <div style={{ display: 'flex', gap: 6 }}>
-                                <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => marcarPagamentoLocal(l, l.status !== 'pago')}>
-                                  {l.status === 'pago' ? 'Desfazer' : 'Pagar'}
+                                <button className="btn-secondary" style={{ fontSize: 12 }} disabled={processandoPagamento === l.id} onClick={() => marcarPagamentoLocal(l, l.status !== 'pago')}>
+                                  {processandoPagamento === l.id ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : (l.status === 'pago' ? 'Desfazer' : 'Pagar')}
                                 </button>
                                 {l.origem === 'avulso' && (
                                   <>
-                                    <button className="btn-ghost" onClick={() => abrirEditar(l)}>Editar</button>
-                                    <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluir(l)}><Trash2 size={14} /></button>
+                                    <button className="btn-ghost" disabled={processandoPagamento === l.id} onClick={() => abrirEditar(l)}>Editar</button>
+                                    <button className="btn-ghost" style={{ color: 'var(--red)' }} disabled={processandoPagamento === l.id} onClick={() => setConfirmExcluir(l)}><Trash2 size={14} /></button>
                                   </>
                                 )}
                               </div>
@@ -1495,11 +1502,11 @@ export function FinanceiroMobile() {
                               <div style={{ display: 'flex', gap: 6 }}>
                                 {l.origem === 'avulso' ? (
                                   <>
-                                    <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => marcarRecebimentoLocal(l, l.status !== 'pago')}>
-                                      {l.status === 'pago' ? 'Desfazer' : 'Receber'}
+                                    <button className="btn-secondary" style={{ fontSize: 12 }} disabled={processandoRecebimento === l.id} onClick={() => marcarRecebimentoLocal(l, l.status !== 'pago')}>
+                                      {processandoRecebimento === l.id ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : (l.status === 'pago' ? 'Desfazer' : 'Receber')}
                                     </button>
-                                    <button className="btn-ghost" onClick={() => abrirEditarReceber(l)}>Editar</button>
-                                    <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setConfirmExcluirReceber(l)}><Trash2 size={14} /></button>
+                                    <button className="btn-ghost" disabled={processandoRecebimento === l.id} onClick={() => abrirEditarReceber(l)}>Editar</button>
+                                    <button className="btn-ghost" style={{ color: 'var(--red)' }} disabled={processandoRecebimento === l.id} onClick={() => setConfirmExcluirReceber(l)}><Trash2 size={14} /></button>
                                   </>
                                 ) : (
                                   <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => navigate('/planos?aba=assinantes')}>Ver em Planos</button>
@@ -1720,15 +1727,15 @@ export function FinanceiroMobile() {
               {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') ? (
                 <>
                   <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicao('unica')}>
-                    {salvandoEdit ? 'Salvando...' : 'Só esta'}
+                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
                   <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicao('todas')}>
-                    {salvandoEdit ? 'Salvando...' : (editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
+                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : (editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
                 <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicao('unica')}>
-                  {salvandoEdit ? 'Salvando...' : 'Salvar'}
+                  {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Salvar'}
                 </button>
               )}
             </div>
@@ -1760,15 +1767,15 @@ export function FinanceiroMobile() {
               {(confirmExcluir.modo === 'fixa' || confirmExcluir.modo === 'parcelada') ? (
                 <>
                   <button className="btn-secondary" disabled={excluindoLinha} onClick={() => excluirLinha('unica')}>
-                    {excluindoLinha ? 'Excluindo...' : 'Só esta'}
+                    {excluindoLinha ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
                   <button className="btn-danger" disabled={excluindoLinha} onClick={() => excluirLinha('todas')}>
-                    {excluindoLinha ? 'Excluindo...' : (confirmExcluir.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
+                    {excluindoLinha ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : (confirmExcluir.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
                 <button className="btn-danger" disabled={excluindoLinha} onClick={() => excluirLinha('unica')}>
-                  {excluindoLinha ? 'Excluindo...' : 'Excluir'}
+                  {excluindoLinha ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Excluir'}
                 </button>
               )}
             </div>
@@ -1836,15 +1843,15 @@ export function FinanceiroMobile() {
               {(editandoReceber.modo === 'fixa' || editandoReceber.modo === 'parcelada') ? (
                 <>
                   <button className="btn-secondary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('unica')}>
-                    {salvandoEditReceber ? 'Salvando...' : 'Só esta'}
+                    {salvandoEditReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
                   <button className="btn-primary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('todas')}>
-                    {salvandoEditReceber ? 'Salvando...' : (editandoReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
+                    {salvandoEditReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : (editandoReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
                 <button className="btn-primary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('unica')}>
-                  {salvandoEditReceber ? 'Salvando...' : 'Salvar'}
+                  {salvandoEditReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Salvar'}
                 </button>
               )}
             </div>
@@ -1876,15 +1883,15 @@ export function FinanceiroMobile() {
               {(confirmExcluirReceber.modo === 'fixa' || confirmExcluirReceber.modo === 'parcelada') ? (
                 <>
                   <button className="btn-secondary" disabled={excluindoReceber} onClick={() => excluirReceber('unica')}>
-                    {excluindoReceber ? 'Excluindo...' : 'Só esta'}
+                    {excluindoReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
                   <button className="btn-danger" disabled={excluindoReceber} onClick={() => excluirReceber('todas')}>
-                    {excluindoReceber ? 'Excluindo...' : (confirmExcluirReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
+                    {excluindoReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : (confirmExcluirReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
                   </button>
                 </>
               ) : (
                 <button className="btn-danger" disabled={excluindoReceber} onClick={() => excluirReceber('unica')}>
-                  {excluindoReceber ? 'Excluindo...' : 'Excluir'}
+                  {excluindoReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Excluir'}
                 </button>
               )}
             </div>
@@ -2555,13 +2562,13 @@ export function FinanceiroMobile() {
       )}
 
       {modalNovoLanc && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNovoLanc(null)}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !salvandoNovoLanc && setModalNovoLanc(null)}>
           <div className="modal" style={{ maxWidth: 460 }}>
             <div className="modal-header" style={{ borderBottom: `2px solid ${modalNovoLanc === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
               <h2 style={{ fontSize: 16, fontWeight: 600, color: modalNovoLanc === 'pagar' ? 'var(--red)' : 'var(--green)' }}>
                 {modalNovoLanc === 'pagar' ? '↓ Nova conta a pagar' : '↑ Nova conta a receber'}
               </h2>
-              <button className="btn-ghost" onClick={() => setModalNovoLanc(null)}><X size={16} /></button>
+              <button className="btn-ghost" disabled={salvandoNovoLanc} onClick={() => setModalNovoLanc(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <div className="cx-tipo-toggle" style={{ marginBottom: 14 }}>
@@ -2688,9 +2695,9 @@ export function FinanceiroMobile() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setModalNovoLanc(null)}>Cancelar</button>
+              <button className="btn-secondary" disabled={salvandoNovoLanc} onClick={() => setModalNovoLanc(null)}>Cancelar</button>
               <button className="btn-primary" disabled={salvandoNovoLanc} onClick={salvarNovoLancamento}>
-                {salvandoNovoLanc ? 'Salvando...' : 'Criar lançamento'}
+                {salvandoNovoLanc ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Criar lançamento'}
               </button>
             </div>
           </div>
