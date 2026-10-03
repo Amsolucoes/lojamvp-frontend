@@ -136,6 +136,15 @@ export function Financeiro() {
   const [buscaDescricao, setBuscaDescricao] = useState('');
   const [paginaLista, setPaginaLista] = useState(1);
   const [itensPorPagina, setItensPorPagina] = useState(15);
+  const listaRef = useRef<HTMLDivElement>(null);
+
+  // Troca de página na lista — além de atualizar o estado, rola até o topo da
+  // tabela/lista (não a página inteira), já que senão a tela ficava parada lá
+  // embaixo (onde o botão "Próxima" foi clicado) mostrando o fim da página nova.
+  function irParaPaginaLista(pagina: number) {
+    setPaginaLista(pagina);
+    listaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   const [periodoTipo, setPeriodoTipo] = useState<'mes' | 'personalizado'>('mes');
   const [periodoDe, setPeriodoDe] = useState(new Date().toISOString().slice(0, 10));
   const [periodoAte, setPeriodoAte] = useState(new Date().toISOString().slice(0, 10));
@@ -1206,9 +1215,9 @@ export function Financeiro() {
             </select>
             {totalPaginas > 1 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaLista(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => irParaPaginaLista(Math.max(1, paginaAtual - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
                 <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
-                <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaLista(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+                <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => irParaPaginaLista(Math.min(totalPaginas, paginaAtual + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
               </div>
             )}
           </div>
@@ -1216,7 +1225,7 @@ export function Financeiro() {
       )}
 
       {/* Lista */}
-      <div className="card" style={{ borderLeft: `3px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
+      <div ref={listaRef} className="card" style={{ borderLeft: `3px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
         {carregandoLancamentos || filtrandoLista ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
         ) : aba === 'pagar' ? (
@@ -2841,9 +2850,9 @@ export function Financeiro() {
       )}
       {listaCompletaAtual.length > 0 && totalPaginas > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 16 }}>
-          <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaLista(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+          <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => irParaPaginaLista(Math.max(1, paginaAtual - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
-          <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaLista(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+          <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => irParaPaginaLista(Math.min(totalPaginas, paginaAtual + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
         </div>
       )}
 

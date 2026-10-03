@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFiltrando } from '../../hooks/useFiltrando';
 import { useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2 } from 'lucide-react';
@@ -94,6 +94,11 @@ export function FinanceiroMobile() {
   const [catFiltro, setCatFiltro] = useState('todas');
   const [buscaPagar, setBuscaPagar] = useState('');
   const [paginaLista, setPaginaLista] = useState(1);
+  const listaPagarRef = useRef<HTMLParagraphElement>(null);
+  function irParaPaginaPagar(pagina: number) {
+    setPaginaLista(pagina);
+    listaPagarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   const [mesBalanco, setMesBalanco] = useState(new Date().getMonth());
   const [anoBalanco, setAnoBalanco] = useState(new Date().getFullYear());
   const [abaBalanco, setAbaBalanco] = useState<'categoria' | 'conta'>('categoria');
@@ -122,6 +127,11 @@ export function FinanceiroMobile() {
   const filtrandoPagar = useFiltrando([filtroStatus, catFiltro, buscaPagar]);
   const filtrandoReceber = useFiltrando([filtroStatusReceber, catFiltroReceber, buscaReceber]);
   const [paginaListaReceber, setPaginaListaReceber] = useState(1);
+  const listaReceberRef = useRef<HTMLParagraphElement>(null);
+  function irParaPaginaReceber(pagina: number) {
+    setPaginaListaReceber(pagina);
+    listaReceberRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   const [mesReceber, setMesReceber] = useState(new Date().getMonth());
   const [anoReceber, setAnoReceber] = useState(new Date().getFullYear());
   const [periodoTipoReceber, setPeriodoTipoReceber] = useState<'mes' | 'personalizado'>('mes');
@@ -1309,7 +1319,7 @@ export function FinanceiroMobile() {
             const pagina = filtrada.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina);
             return (
               <>
-                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{filtrada.length} lançamento{filtrada.length !== 1 ? 's' : ''}</p>
+                <p ref={listaPagarRef} style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{filtrada.length} lançamento{filtrada.length !== 1 ? 's' : ''}</p>
                 {agruparPorData(pagina).map(([dia, itens]) => (
                   <div key={dia} style={{ marginBottom: 12 }}>
                     <div className="fm-dia-header">
@@ -1360,9 +1370,9 @@ export function FinanceiroMobile() {
                 ))}
                 {totalPaginas > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, margin: '16px 0' }}>
-                    <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaLista(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                    <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => irParaPaginaPagar(Math.max(1, paginaAtual - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
                     <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
-                    <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaLista(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+                    <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => irParaPaginaPagar(Math.min(totalPaginas, paginaAtual + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
                   </div>
                 )}
               </>
@@ -1472,7 +1482,7 @@ export function FinanceiroMobile() {
             const pagina = filtrada.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina);
             return (
               <>
-                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{filtrada.length} lançamento{filtrada.length !== 1 ? 's' : ''}</p>
+                <p ref={listaReceberRef} style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{filtrada.length} lançamento{filtrada.length !== 1 ? 's' : ''}</p>
                 {agruparPorData(pagina).map(([dia, itens]) => (
                   <div key={dia} style={{ marginBottom: 12 }}>
                     <div className="fm-dia-header" style={{ color: 'var(--green)', background: 'var(--green-bg)', borderColor: 'rgba(74,222,128,0.3)' }}>
@@ -1526,9 +1536,9 @@ export function FinanceiroMobile() {
                 ))}
                 {totalPaginas > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, margin: '16px 0' }}>
-                    <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPaginaListaReceber(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
+                    <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => irParaPaginaReceber(Math.max(1, paginaAtual - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
                     <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{paginaAtual} / {totalPaginas}</span>
-                    <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPaginaListaReceber(p => Math.min(totalPaginas, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
+                    <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => irParaPaginaReceber(Math.min(totalPaginas, paginaAtual + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
                   </div>
                 )}
               </>
