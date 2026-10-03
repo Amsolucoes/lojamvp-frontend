@@ -1330,7 +1330,7 @@ export function FinanceiroMobile() {
                       {itens.map(l => {
                         const status = ehVencido(l) ? 'vencido' : l.status;
                         return (
-                          <div key={l.id} className="card fm-card-linha-completa">
+                          <div key={l.id} className={`card fm-card-linha-completa${l.status === 'pago' ? ' fin-row-pago' : ''}`}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, color: 'var(--text-1)' }}>
@@ -1493,7 +1493,7 @@ export function FinanceiroMobile() {
                       {itens.map(l => {
                         const vencida = l.status === 'pendente' && new Date(l.vencimento) < new Date(new Date().toDateString());
                         return (
-                          <div key={l.id} className="card fm-card-linha-completa">
+                          <div key={l.id} className={`card fm-card-linha-completa${l.status === 'pago' ? ' fin-row-pago' : ''}`}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, color: 'var(--text-1)' }}>

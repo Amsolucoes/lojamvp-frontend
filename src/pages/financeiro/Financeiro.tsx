@@ -1256,7 +1256,7 @@ export function Financeiro() {
                           const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
                           const processandoEste = processandoPagamento === l.id;
                           return (
-                            <tr key={l.id}>
+                            <tr key={l.id} className={l.status === 'pago' ? 'fin-row-pago' : undefined}>
                           <td>
                             <div style={{ fontWeight: 500 }}>
                               {l.origem === 'cartao_fatura' && <CreditCard size={12} style={{ verticalAlign: -1, marginRight: 4, color: 'var(--accent)' }} />}
@@ -1335,7 +1335,7 @@ export function Financeiro() {
                       const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
                       const processandoEste = processandoPagamento === l.id;
                       return (
-                        <div key={l.id} className="fin-card-mobile">
+                        <div key={l.id} className={`fin-card-mobile${l.status === 'pago' ? ' fin-row-pago' : ''}`}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <div>
                           <div style={{ fontWeight: 500 }}>
@@ -1407,7 +1407,7 @@ export function Financeiro() {
                           </td>
                         </tr>
                         {itens.map((l: any) => (
-                      <tr key={l.id}>
+                      <tr key={l.id} className={l.status === 'pago' ? 'fin-row-pago' : undefined}>
                         <td>
                           <div style={{ fontWeight: 500 }}>
                             {l.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
@@ -1475,7 +1475,7 @@ export function Financeiro() {
                       </span>
                     </div>
                     {itens.map((l: any) => (
-                      <div key={l.id} className="fin-card-mobile">
+                      <div key={l.id} className={`fin-card-mobile${l.status === 'pago' ? ' fin-row-pago' : ''}`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <div>
                         <div style={{ fontWeight: 500 }}>

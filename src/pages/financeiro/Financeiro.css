@@ -13,6 +13,10 @@
 }
 .fin-card-mobile:last-child { border-bottom: none; }
 
+tbody tr.fin-row-pago { background: rgba(255, 255, 255, 0.035); }
+tbody tr.fin-row-pago:hover { background: rgba(255, 255, 255, 0.06); }
+.fin-card-mobile.fin-row-pago { background: rgba(255, 255, 255, 0.035); }
+
 .fin-fab-mobile-only { display: none; }
 .fin-fab-spacer { display: none; }
 
