@@ -61,6 +61,7 @@
 .fm-card-linha-completa { padding: 12px; overflow: hidden; }
 .fm-card, .fm-card-linha-completa { overflow: hidden; max-width: 100%; }
 .fm-card *, .fm-card-linha-completa * { min-width: 0; box-sizing: border-box; }
+.fm-card-linha-completa.fin-row-pago { background: rgba(255, 255, 255, 0.035); }
 .fm-balanco-scroll {
   max-height: 260px;
   overflow-y: auto;
