@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useFiltrando } from '../../hooks/useFiltrando';
 import { useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2 } from 'lucide-react';
 import { api } from '../../services/api';
@@ -123,6 +124,8 @@ export function FinanceiroMobile() {
   const [filtroStatusReceber, setFiltroStatusReceber] = useState<'todos' | 'pendente' | 'pago'>('todos');
   const [catFiltroReceber, setCatFiltroReceber] = useState('todas');
   const [buscaReceber, setBuscaReceber] = useState('');
+  const filtrandoPagar = useFiltrando([filtroStatus, catFiltro, buscaPagar]);
+  const filtrandoReceber = useFiltrando([filtroStatusReceber, catFiltroReceber, buscaReceber]);
   const [paginaListaReceber, setPaginaListaReceber] = useState(1);
   const listaReceberRef = useRef<HTMLParagraphElement>(null);
   function irParaPaginaReceber(pagina: number) {
@@ -981,7 +984,7 @@ export function FinanceiroMobile() {
                   <span style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <BankBadge bancoId={c.banco} tamanho={16} /> {c.nome}
                   </span>
-                  <strong style={{ color: c.saldoAtual >= 0 ? 'var(--text-1)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
+                  <strong style={{ color: c.saldoAtual > 0 ? 'var(--green)' : c.saldoAtual < 0 ? 'var(--red)' : 'var(--text-1)' }}>{fmt(c.saldoAtual)}</strong>
                 </div>
                 {c.limite > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 2, paddingLeft: 22 }}>
@@ -995,7 +998,7 @@ export function FinanceiroMobile() {
             ))}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 4, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
               <span style={{ color: 'var(--text-3)' }}>Total</span>
-              <strong style={{ color: saldoTotal >= 0 ? 'var(--text-1)' : 'var(--red)' }}>{fmt(saldoTotal)}</strong>
+              <strong style={{ color: saldoTotal > 0 ? 'var(--green)' : saldoTotal < 0 ? 'var(--red)' : 'var(--text-1)' }}>{fmt(saldoTotal)}</strong>
             </div>
           </div>
           )}
@@ -1230,7 +1233,7 @@ export function FinanceiroMobile() {
             )}
           </div>
 
-          {carregandoPagar ? (
+          {carregandoPagar || filtrandoPagar ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
           ) : (() => {
             const filtradaTotais = linhasPagar.filter(l => {
@@ -1302,7 +1305,7 @@ export function FinanceiroMobile() {
           )}
           <input placeholder="Buscar por descrição..." value={buscaPagar} onChange={e => setBuscaPagar(e.target.value)} style={{ marginBottom: 14 }} />
 
-          {carregandoPagar ? null : (() => {
+          {carregandoPagar || filtrandoPagar ? null : (() => {
             const filtrada = linhasPagar.filter(l => {
               const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
               const statusReal = ehVencido(l) ? 'vencido' : l.status;
@@ -1417,9 +1420,7 @@ export function FinanceiroMobile() {
             )}
           </div>
 
-          {carregandoReceber ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
-          ) : (() => {
+          {carregandoReceber || filtrandoReceber ? null : (() => {
             const baseReceber = buscaReceber
               ? linhasReceber.filter(l => l.descricao.toLowerCase().includes(buscaReceber.toLowerCase()))
               : linhasReceber;
@@ -1462,7 +1463,9 @@ export function FinanceiroMobile() {
           )}
           <input placeholder="Buscar por descrição..." value={buscaReceber} onChange={e => setBuscaReceber(e.target.value)} style={{ marginBottom: 14 }} />
 
-          {carregandoReceber ? null : (() => {
+          {carregandoReceber || filtrandoReceber ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+          ) : (() => {
             const filtrada = linhasReceber.filter(l => {
               const catOk = catFiltroReceber === 'todas'
                 ? true
