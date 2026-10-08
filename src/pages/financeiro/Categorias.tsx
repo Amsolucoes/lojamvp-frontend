@@ -96,14 +96,7 @@ export function Categorias() {
   const visiveis = lista.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina);
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Categorias financeiras</h1>
-          <p className="page-subtitle">Organize seus lançamentos a pagar e a receber</p>
-        </div>
-      </div>
-
+    <div className="page fin-page">
       <div className="contas-acoes">
         <button className="btn-primary" onClick={abrirNova}><Plus size={15} /> Nova categoria</button>
         {categorias.length === 0 && !carregando && (

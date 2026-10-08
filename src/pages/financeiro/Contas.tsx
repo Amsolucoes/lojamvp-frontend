@@ -124,14 +124,7 @@ export function Contas() {
   const corSaldo = (v: number) => v > 0 ? 'var(--green)' : v < 0 ? 'var(--red)' : 'var(--text-1)';
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Contas bancárias</h1>
-          <p className="page-subtitle">Gerencie suas contas, saldos e transferências</p>
-        </div>
-      </div>
-
+    <div className="page fin-page">
       <div className="contas-acoes">
         <button className="btn-primary" onClick={abrirNova}><Plus size={15} /> Nova conta</button>
         <button className="btn-secondary" disabled={ativas.length < 2} title={ativas.length < 2 ? 'É preciso ter pelo menos 2 contas ativas' : undefined}

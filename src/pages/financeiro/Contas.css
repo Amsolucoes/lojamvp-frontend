@@ -27,3 +27,7 @@
 
 .cartao-card { padding: 16px 20px; }
 .cartao-card-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+@media (min-width: 641px) {
+  .page.fin-page { padding-top: 14px; }
+}
