@@ -1056,10 +1056,6 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
               </div>
             </div>
           )}
-            <button className="btn-secondary fin-imprimir-desktop" onClick={imprimirListaAtual}
-              title={`Imprimir / salvar em PDF a lista de contas a ${aba === 'pagar' ? 'pagar' : 'receber'}`}>
-              <Printer size={14} /> Imprimir PDF
-            </button>
           </div>
         </div>
         <div className="fin-filtros-linha" style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -1094,6 +1090,10 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
               Limpar filtros
             </button>
           )}
+          <button className="btn-secondary fin-imprimir-desktop" onClick={imprimirListaAtual}
+              title={`Imprimir / salvar em PDF a lista de contas a ${aba === 'pagar' ? 'pagar' : 'receber'}`}>
+            <Printer size={14} /> Imprimir PDF
+          </button>
         </div>
       </div>
 
