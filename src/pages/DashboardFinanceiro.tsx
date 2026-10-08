@@ -158,9 +158,14 @@ export function DashboardFinanceiro() {
         </div>
 
         <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Saldo do mês</div>
-        <div style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>
-          {fmt((resumo as any)?.previsao?.saldoPrevisto ?? 0)}
-        </div>
+        {(() => {
+          const saldoMes: number = (resumo as any)?.previsao?.saldoPrevisto ?? 0;
+          return (
+            <div style={{ fontSize: 28, fontWeight: 700, color: saldoMes > 0 ? 'var(--green)' : saldoMes < 0 ? 'var(--red)' : 'var(--text-1)' }}>
+              {fmt(saldoMes)}
+            </div>
+          );
+        })()}
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginTop: 16 }}>
           <div onClick={() => navigate(`/financeiro?aba=receber&mes=${mesResumo + 1}&ano=${anoResumo}`)} style={{ cursor: 'pointer' }}>
