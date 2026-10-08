@@ -25,6 +25,8 @@ import { Planos } from './pages/planos/Planos';
 import { Financeiro } from './pages/financeiro/Financeiro';
 import { BalancoMensal } from './pages/financeiro/BalancoMensal';
 import { Contas } from './pages/financeiro/Contas';
+import { Cartoes } from './pages/financeiro/Cartoes';
+import { Categorias } from './pages/financeiro/Categorias';
 import { Configuracoes } from './pages/configuracoes/Configuracoes';
 import { Turmas } from './pages/turmas/Turmas';
 import { Funil } from './pages/funil/Funil';
@@ -95,6 +97,8 @@ function Rotas() {
           <Route path="financeiro" element={<Financeiro />} />
           <Route path="financeiro/balanco" element={<BalancoMensal />} />
           <Route path="financeiro/contas" element={<Contas />} />
+          <Route path="financeiro/cartoes" element={<Cartoes />} />
+          <Route path="financeiro/categorias" element={<Categorias />} />
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="turmas"     element={<Turmas />} />
           <Route path="funil"      element={<Funil />} />

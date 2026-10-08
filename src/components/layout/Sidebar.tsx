@@ -127,8 +127,8 @@ export function Sidebar() {
 
   const SUB_FINANCEIRO = temFinanceiro ? [
     { to: '/financeiro/contas', icon: Wallet, label: 'Contas' },
-    { to: '/financeiro?abrir=cartoes', icon: CreditCard, label: 'Cartões' },
-    { to: '/financeiro?abrir=categorias', icon: Tag, label: 'Categorias' },
+    { to: '/financeiro/cartoes', icon: CreditCard, label: 'Cartões' },
+    { to: '/financeiro/categorias', icon: Tag, label: 'Categorias' },
     { to: '/financeiro/balanco', icon: BarChart3, label: 'Balanço mensal' },
   ] : [];
 
