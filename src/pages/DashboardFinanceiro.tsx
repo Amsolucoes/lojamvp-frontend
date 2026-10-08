@@ -138,6 +138,7 @@ export function DashboardFinanceiro() {
     return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
   }, [mesResumo, anoResumo, anoRef]);
 
+  const qtdVencidos = (resumo?.pagar.qtdVencido ?? 0) + (resumo?.receber.qtdVencido ?? 0);
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
   const mesAtualLabel = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
@@ -195,10 +196,10 @@ export function DashboardFinanceiro() {
               {contas.filter(c => c.ativa).map(c => (
                 <div key={c.id} style={{ marginTop: 6 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, gap: 6 }}>
-                    <span style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <BankBadge bancoId={c.banco} tamanho={16} /> {c.nome}
+                    <span style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      <BankBadge bancoId={c.banco} tamanho={16} /> <span className="dash-ellipsis" title={c.nome}>{c.nome}</span>
                     </span>
-                    <strong style={{ color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
+                    <strong className="dash-nowrap" style={{ color: c.saldoAtual >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(c.saldoAtual)}</strong>
                   </div>
                   {c.limite > 0 && c.saldoAtual < 0 && (
                     <div style={{ marginTop: 3 }}>
@@ -211,7 +212,7 @@ export function DashboardFinanceiro() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4 }}>
                         <span style={{ color: 'var(--text-3)' }}>Disponível</span>
-                        <strong style={{ color: c.limite - Math.abs(c.saldoAtual) <= c.limite * 0.1 ? 'var(--red)' : 'var(--green)' }}>
+                        <strong className="dash-nowrap" style={{ color: c.limite - Math.abs(c.saldoAtual) <= c.limite * 0.1 ? 'var(--red)' : 'var(--green)' }}>
                           {fmt(Math.max(0, c.limite - Math.abs(c.saldoAtual)))}
                         </strong>
                       </div>
@@ -221,7 +222,7 @@ export function DashboardFinanceiro() {
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-3)' }}>Total</span>
-                <strong style={{ color: saldoTotal >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(saldoTotal)}</strong>
+                <strong className="dash-nowrap" style={{ color: saldoTotal >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(saldoTotal)}</strong>
               </div>
             </div>
           ) : (
@@ -235,56 +236,66 @@ export function DashboardFinanceiro() {
               {(resumo as any).previsao.saldoPrevisto >= 0 ? '+' : ''}{fmt((resumo as any).previsao.saldoPrevisto)}
             </div>
             <div className="stat-sub">se tudo for pago/recebido</div>
+            {qtdVencidos > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                <span className="dash-ellipsis" style={{ color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <AlertTriangle size={12} /> Vencido
+                </span>
+                <strong className="dash-nowrap" style={{ color: 'var(--red)' }}>
+                  {qtdVencidos} conta{qtdVencidos > 1 ? 's' : ''} atrasada{qtdVencidos > 1 ? 's' : ''}
+                </strong>
+              </div>
+            )}
           </div>
         )}
         <div className="stat-card" style={(resumo?.receber.qtdVencido ?? 0) > 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
           <div className="stat-label"><TrendingUp size={12} style={{ verticalAlign: -1 }} /> A receber (mês)</div>
-          <div className="stat-value" style={{ color: 'var(--green)', fontSize: 20 }}>
+          <div className="stat-value dash-ellipsis" style={{ color: 'var(--green)', fontSize: 20 }}>
             {fmt((resumo?.receber.totalPendente ?? 0) + (resumo?.receber.totalVencido ?? 0))}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
             <span style={{ color: 'var(--green)' }}>Recebido</span>
-            <strong style={{ color: 'var(--green)' }}>{fmt(resumo?.receber.totalPago ?? 0)}</strong>
+            <strong className="dash-nowrap" style={{ color: 'var(--green)' }}>{fmt(resumo?.receber.totalPago ?? 0)}</strong>
           </div>
           {(resumo?.receber.qtdVencido ?? 0) > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 4 }}>
               <span style={{ color: 'var(--red)' }}>Vencido</span>
-              <strong style={{ color: 'var(--red)' }}>{fmt(resumo?.receber.totalVencido ?? 0)}</strong>
+              <strong className="dash-nowrap" style={{ color: 'var(--red)' }}>{fmt(resumo?.receber.totalVencido ?? 0)}</strong>
             </div>
           )}
         </div>
 
         <div className="stat-card" style={(resumo?.pagar.qtdVencido ?? 0) > 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
           <div className="stat-label"><TrendingDown size={12} style={{ verticalAlign: -1 }} /> A pagar (mês)</div>
-          <div className="stat-value" style={{ color: 'var(--red)', fontSize: 20 }}>
+          <div className="stat-value dash-ellipsis" style={{ color: 'var(--red)', fontSize: 20 }}>
             {fmt((resumo?.pagar.totalPendente ?? 0) + (resumo?.pagar.totalVencido ?? 0))}
           </div>
           {(resumo as any)?.detalhePagar && (
             <div style={{ marginTop: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                 <span style={{ color: 'var(--text-3)' }}>Contas</span>
-                <span style={{ color: 'var(--text-2)' }}>{fmt((resumo as any).detalhePagar.lancamentos)}</span>
+                <span className="dash-nowrap" style={{ color: 'var(--text-2)' }}>{fmt((resumo as any).detalhePagar.lancamentos)}</span>
               </div>
               {(resumo as any).detalhePagar.cartoes.map((c: any) => (
                 <div key={c.nome} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                  <span style={{ color: 'var(--text-3)' }}>💳 {c.nome}</span>
-                  <span style={{ color: 'var(--text-2)' }}>{fmt(c.valor)}</span>
+                  <span className="dash-ellipsis" title={c.nome} style={{ color: 'var(--text-3)' }}>💳 {c.nome}</span>
+                  <span className="dash-nowrap" style={{ color: 'var(--text-2)' }}>{fmt(c.valor)}</span>
                 </div>
               ))}
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
             <span style={{ color: 'var(--green)' }}>Pago</span>
-            <strong style={{ color: 'var(--green)' }}>{fmt(resumo?.pagar.totalPago ?? 0)}</strong>
+            <strong className="dash-nowrap" style={{ color: 'var(--green)' }}>{fmt(resumo?.pagar.totalPago ?? 0)}</strong>
           </div>
           {(resumo?.pagar.qtdVencido ?? 0) > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 4 }}>
               <span style={{ color: 'var(--red)' }}>Vencido</span>
-              <strong style={{ color: 'var(--red)' }}>{fmt(resumo?.pagar.totalVencido ?? 0)}</strong>
+              <strong className="dash-nowrap" style={{ color: 'var(--red)' }}>{fmt(resumo?.pagar.totalVencido ?? 0)}</strong>
             </div>
           )}
         </div>
-        {((resumo?.pagar.qtdVencido ?? 0) + (resumo?.receber.qtdVencido ?? 0)) > 0 && (
+        {!(resumo as any)?.previsao && qtdVencidos > 0 && (
           <div className="stat-card" style={{ borderColor: 'rgba(248,113,113,0.3)' }}>
             <div className="stat-label"><AlertTriangle size={12} style={{ verticalAlign: -1 }} /> Vencido</div>
             <div className="stat-value" style={{ color: 'var(--red)' }}>
