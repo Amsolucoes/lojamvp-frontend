@@ -100,14 +100,7 @@ export function Cartoes() {
   const visiveis = cartoes.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina);
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Cartões de crédito</h1>
-          <p className="page-subtitle">Limites, faturas e vencimentos</p>
-        </div>
-      </div>
-
+    <div className="page fin-page">
       <div className="contas-acoes">
         <button className="btn-primary" onClick={abrirNovo}><Plus size={15} /> Novo cartão</button>
       </div>
