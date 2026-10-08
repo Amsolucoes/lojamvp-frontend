@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFiltrando } from '../../hooks/useFiltrando';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2 } from 'lucide-react';
+import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2, Bell } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { setMobileShellOverride } from '../../utils/mobileShellOverride';
@@ -2809,6 +2809,9 @@ export function FinanceiroMobile() {
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <button className="sidebar-link" onClick={() => { setMenuAberto(false); navigate('/ajuda?voltar=financeiro'); }}>
                 <HelpCircle size={16} /> <span>Central de Ajuda</span>
+              </button>
+              <button className="sidebar-link" onClick={() => { setMenuAberto(false); navigate('/configuracoes?voltar=financeiro&secao=avisos'); }}>
+                <Bell size={16} /> <span>Avisos no celular</span>
               </button>
               <button className="sidebar-link" onClick={() => { setMenuAberto(false); navigate('/configuracoes?voltar=financeiro'); }}>
                 <Settings size={16} /> <span>Configurações</span>

@@ -53,7 +53,7 @@ export function AvisosPush() {
   }
 
   return (
-    <div className="card">
+    <div className="card" id="avisos-push">
       <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
         {ativo ? <Bell size={16} /> : <BellOff size={16} />} Avisos no celular
       </div>

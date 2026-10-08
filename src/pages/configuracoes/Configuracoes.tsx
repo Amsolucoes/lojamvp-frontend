@@ -55,6 +55,7 @@ export function Configuracoes() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const veioDoFinanceiro = searchParams.get('voltar') === 'financeiro';
+  const irParaAvisos = searchParams.get('secao') === 'avisos';
   const [temaAtual, setTemaAtual] = useState<Tema>(carregarTemaSalvo());
   const [modulosPreco, setModulosPreco] = useState<ModuloPreco[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
@@ -298,6 +299,12 @@ export function Configuracoes() {
     }
   }
 
+  useEffect(() => {
+    if (!irParaAvisos) return;
+    const t = setTimeout(() => document.getElementById('avisos-push')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
+    return () => clearTimeout(t);
+  }, [irParaAvisos]);
+
   return (
     <div className="page">
       {veioDoFinanceiro && (
@@ -420,6 +427,9 @@ export function Configuracoes() {
         </div>
       </div>
 
+      {/* Avisos de vencimento no celular */}
+      <AvisosPush />
+
       {/* E-mail de acesso */}
       <div className="card">
         <div style={{ fontSize: 15, fontWeight: 600 }}>E-mail de acesso</div>
@@ -535,9 +545,6 @@ export function Configuracoes() {
           </div>
         </div>
       )}
-
-      {/* Avisos de vencimento no celular */}
-      <AvisosPush />
 
       {/* Módulos */}
       <div className="card">
