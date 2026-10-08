@@ -51,7 +51,7 @@ export async function ativarAvisos(): Promise<void> {
   if (!sub) {
     sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: base64UrlParaBytes(chave),
+      applicationServerKey: base64UrlParaBytes(chave).buffer as ArrayBuffer,
     });
   }
 
