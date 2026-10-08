@@ -442,14 +442,14 @@ export function DashboardFinanceiro() {
               <div className="layout-spinner" />
             </div>
           ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+          <div className="dash-cartoes-grid">
             {cartoesResumo.map(c => {
               const pct = c.limite > 0 ? Math.min(100, (c.usado / c.limite) * 100) : 0;
               return (
                 <div key={c.id} className="stat-card" style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : 'var(--border)', cursor: 'pointer' }}
                   onClick={() => navigate(`/financeiro?abrirFatura=${c.id}`)}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div className="stat-label">{c.nome}</div>
+                    <div className="stat-label dash-ellipsis" title={c.nome}>{c.nome}</div>
                     {c.qtdCompras > 0 && (
                       <span className="badge badge-accent" style={{ fontSize: 10 }}>{c.qtdCompras} compra{c.qtdCompras > 1 ? 's' : ''}</span>
                     )}
