@@ -43,7 +43,12 @@
   background: var(--accent-bg); color: var(--accent);
   font-weight: 500; border: 1px solid var(--accent-border);
 }
-.sidebar-sublink { padding: 7px 10px 7px 34px; font-size: 12.5px; }
+.sidebar-sublink { padding: 6px 10px 6px 34px; font-size: 12.5px; }
+.sidebar-expand {
+  margin-left: auto; display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 4px; background: transparent; color: inherit; padding: 0;
+}
+.sidebar-expand:hover { background: var(--bg-hover); }
 .sidebar-badge {
   margin-left: auto; background: var(--red); color: #fff;
   font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px;

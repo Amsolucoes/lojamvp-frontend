@@ -1,7 +1,7 @@
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
   TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, 
-  FileText, HelpCircle, Home, BarChart3, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck, Truck } from 'lucide-react';
+  FileText, HelpCircle, Home, BarChart3, ChevronDown, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck, Truck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { Fragment, useEffect, useState } from 'react';
@@ -15,6 +15,10 @@ function iniciais(nome: string) {
 }
 
 export function Sidebar() {
+  const { pathname } = useLocation();
+  // Submenu do Financeiro: só aparece quando se está nele (ou se o usuário expandir na seta).
+  const [finAberto, setFinAberto] = useState(pathname.startsWith('/financeiro'));
+  useEffect(() => { setFinAberto(pathname.startsWith('/financeiro')); }, [pathname]);
   const { produtos } = useApp();
   const { usuario, logout } = useAuth();
 
@@ -173,8 +177,14 @@ export function Sidebar() {
               {label === 'Estoque' && alertas > 0 && (
                 <span className="sidebar-badge">{alertas}</span>
               )}
+              {to === '/financeiro' && (
+                <button type="button" className="sidebar-expand" title={finAberto ? 'Recolher' : 'Expandir'}
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); setFinAberto(v => !v); }}>
+                  <ChevronDown size={14} style={{ transform: finAberto ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+                </button>
+              )}
             </NavLink>
-            {to === '/financeiro' && SUB_FINANCEIRO.map(sub => (
+            {to === '/financeiro' && finAberto && SUB_FINANCEIRO.map(sub => (
               sub.to.includes('?') ? (
                 <Link key={sub.to} to={sub.to} className="sidebar-link sidebar-sublink" onClick={() => setAberto(false)}>
                   <sub.icon size={14} />
