@@ -1000,6 +1000,22 @@ export function Financeiro() {
         </div>
       </div>
 
+      {/* Abas */}
+      {!veioComAbaEspecifica && (
+      <div className="planos-tabs fin-abas">
+        <button className={`planos-tab${aba === 'pagar' ? ' ativo' : ''}`}
+          style={aba === 'pagar' ? { color: 'var(--red)', borderBottomColor: 'var(--red)' } : {}}
+          onClick={() => setAba('pagar')}>
+          <TrendingDown size={15} /> A Pagar
+        </button>
+        <button className={`planos-tab${aba === 'receber' ? ' ativo' : ''}`}
+          style={aba === 'receber' ? { color: 'var(--green)', borderBottomColor: 'var(--green)' } : {}}
+          onClick={() => setAba('receber')}>
+          <TrendingUp size={15} /> A Receber
+        </button>
+      </div>
+      )}
+
       {/* Saldo geral */}
       <div className="fin-stats">
         <div className="stat-card fin-saldo-conta-card">
@@ -1115,25 +1131,9 @@ export function Financeiro() {
         )}
       </div>
 
-      {/* Abas */}
-      {!veioComAbaEspecifica && (
-      <div className="planos-tabs">
-        <button className={`planos-tab${aba === 'pagar' ? ' ativo' : ''}`}
-          style={aba === 'pagar' ? { color: 'var(--red)', borderBottomColor: 'var(--red)' } : {}}
-          onClick={() => setAba('pagar')}>
-          <TrendingDown size={15} /> A Pagar
-        </button>
-        <button className={`planos-tab${aba === 'receber' ? ' ativo' : ''}`}
-          style={aba === 'receber' ? { color: 'var(--green)', borderBottomColor: 'var(--green)' } : {}}
-          onClick={() => setAba('receber')}>
-          <TrendingUp size={15} /> A Receber
-        </button>
-      </div>
-      )}
-
       {/* Navegação de mês */}
-      <div className="card fin-filtros-wrap" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div className="fin-mes-linha" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div className="card fin-filtros-wrap" style={{ padding: 14, marginBottom: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div className="fin-mes-linha" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
           <div className="cx-tipo-toggle">
             <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
             <button className={periodoTipo === 'personalizado' ? 'active' : ''} onClick={() => {
@@ -1158,7 +1158,7 @@ export function Financeiro() {
             </>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="fin-filtros-linha" style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
           <input type="text" placeholder="Buscar por descrição..." value={buscaDescricao} onChange={e => setBuscaDescricao(e.target.value)} style={{ width: 200 }} />
           {aba === 'pagar' && (
             <div className="cx-tipo-toggle">

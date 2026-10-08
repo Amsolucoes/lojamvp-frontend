@@ -20,6 +20,24 @@ tbody tr.fin-row-pago:hover { background: var(--row-pago-bg-hover); }
 .fin-fab-mobile-only { display: none; }
 .fin-fab-spacer { display: none; }
 
+/* ── Abas e filtros centralizados (desktop) ── */
+.planos-tabs.fin-abas { justify-content: center; gap: 12px; }
+.planos-tabs.fin-abas .planos-tab { flex: 0 1 220px; justify-content: center; padding: 12px 24px; font-size: 15px; }
+
+@media (min-width: 641px) {
+  .fin-filtros-wrap .fin-mes-linha,
+  .fin-filtros-wrap .fin-filtros-linha { width: 100%; justify-content: center; gap: 12px; }
+  .fin-filtros-wrap input,
+  .fin-filtros-wrap select,
+  .fin-filtros-wrap .cx-tipo-toggle,
+  .fin-filtros-wrap .btn-secondary,
+  .fin-filtros-wrap .btn-ghost { height: 42px; box-sizing: border-box; }
+  .fin-filtros-wrap .cx-tipo-toggle { width: auto; flex: 0 0 auto; }
+  .fin-filtros-wrap .cx-tipo-toggle button { min-width: 120px; padding: 0 22px; font-size: 14px; }
+  .fin-filtros-wrap select { min-width: 190px; }
+  .fin-filtros-wrap input[type="text"] { width: 240px !important; }
+}
+
 @media (max-width: 768px) {
   .fin-table-desktop { display: none; }
   .fin-cards-mobile { display: block; }
