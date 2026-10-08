@@ -163,6 +163,15 @@ export function Financeiro() {
   const [modalLancarCompra, setModalLancarCompra] = useState(false);
   const [carregandoFatura, setCarregandoFatura] = useState(false);
   const [carregandoLancamentos, setCarregandoLancamentos] = useState(true);
+  const novoSentinelaRef = useRef<HTMLDivElement>(null);
+  const [novoFixo, setNovoFixo] = useState(false);
+  useEffect(() => {
+    const el = novoSentinelaRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const obs = new IntersectionObserver(([e]) => setNovoFixo(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
   const filtrandoLista = useFiltrando([aba, catFiltro, statusFiltro, modoFiltro, buscaDescricao, itensPorPagina]);
   const [faturaDados, setFaturaDados] = useState<{
     vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
@@ -1003,9 +1012,12 @@ export function Financeiro() {
           <h1 className="page-title">Financeiro</h1>
           <p className="page-subtitle">Contas a pagar e a receber</p>
         </div>
-        <div className="fin-header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn-primary fin-novo-lanc-desktop" onClick={abrirNovoLancamento}><Plus size={15} /> Novo lançamento</button>
-        </div>
+      </div>
+
+      {/* Botão Novo lançamento: centralizado, acompanha a rolagem (translúcido) */}
+      <div ref={novoSentinelaRef} className="fin-novo-sentinela" />
+      <div className={`fin-novo-sticky${novoFixo ? ' fixo' : ''}`}>
+        <button className="btn-primary fin-novo-lanc-desktop" onClick={abrirNovoLancamento}><Plus size={15} /> Novo lançamento</button>
       </div>
 
       {/* Abas */}
@@ -1023,6 +1035,34 @@ export function Financeiro() {
         </button>
       </div>
       )}
+
+      {/* Período + busca + modo (logo abaixo das abas) */}
+      <div className="fin-topbar">
+        <div className="fin-topbar-esq">
+          <input type="text" placeholder="Buscar por descrição..." value={buscaDescricao} onChange={e => setBuscaDescricao(e.target.value)} />
+        </div>
+        <div className="cx-tipo-toggle fin-sutil">
+          <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
+          <button className={periodoTipo === 'personalizado' ? 'active' : ''} onClick={() => {
+            setPeriodoTipo('personalizado');
+            const primeiroDia = new Date(anoRef, mesRef, 1).toISOString().slice(0, 10);
+            const ultimoDia = new Date(anoRef, mesRef + 1, 0).toISOString().slice(0, 10);
+            setPeriodoDe(primeiroDia);
+            setPeriodoAte(ultimoDia);
+          }}>Personalizado</button>
+        </div>
+        <div className="fin-topbar-dir">
+          {aba === 'pagar' && (
+            <>
+              <span className="fin-topbar-label">Cartões:</span>
+              <div className="cx-tipo-toggle fin-sutil">
+                <button className={modoPagar === 'agrupado' ? 'active' : ''} onClick={() => setModoPagar('agrupado')}>Agrupado</button>
+                <button className={modoPagar === 'detalhado' ? 'active' : ''} onClick={() => setModoPagar('detalhado')}>Detalhado</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Saldo geral */}
       <div className="fin-stats">
@@ -1139,19 +1179,9 @@ export function Financeiro() {
         )}
       </div>
 
-      {/* Navegação de mês */}
+      {/* Mês + filtros (abaixo dos cards) */}
       <div className="card fin-filtros-wrap" style={{ padding: 14, marginBottom: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div className="fin-mes-linha" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <div className="cx-tipo-toggle">
-            <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
-            <button className={periodoTipo === 'personalizado' ? 'active' : ''} onClick={() => {
-              setPeriodoTipo('personalizado');
-              const primeiroDia = new Date(anoRef, mesRef, 1).toISOString().slice(0, 10);
-              const ultimoDia = new Date(anoRef, mesRef + 1, 0).toISOString().slice(0, 10);
-              setPeriodoDe(primeiroDia);
-              setPeriodoAte(ultimoDia);
-            }}>Personalizado</button>
-          </div>
           {periodoTipo === 'mes' ? (
             <>
               <button className="btn-secondary" onClick={() => navMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
@@ -1167,13 +1197,6 @@ export function Financeiro() {
           )}
         </div>
         <div className="fin-filtros-linha" style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <input type="text" placeholder="Buscar por descrição..." value={buscaDescricao} onChange={e => setBuscaDescricao(e.target.value)} style={{ width: 200 }} />
-          {aba === 'pagar' && (
-            <div className="cx-tipo-toggle">
-              <button className={modoPagar === 'agrupado' ? 'active' : ''} onClick={() => setModoPagar('agrupado')}>Agrupado</button>
-              <button className={modoPagar === 'detalhado' ? 'active' : ''} onClick={() => setModoPagar('detalhado')}>Detalhado</button>
-            </div>
-          )}
           {categoriasDaAba.length > 0 && (
             <select value={catFiltro} onChange={e => setCatFiltro(e.target.value)} style={{ width: 'auto', minWidth: 160 }}>
               <option value="todas">Todas as categorias</option>

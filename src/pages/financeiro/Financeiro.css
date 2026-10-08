@@ -20,22 +20,61 @@ tbody tr.fin-row-pago:hover { background: var(--row-pago-bg-hover); }
 .fin-fab-mobile-only { display: none; }
 .fin-fab-spacer { display: none; }
 
-/* ── Abas e filtros centralizados (desktop) ── */
-.planos-tabs.fin-abas { justify-content: center; gap: 12px; }
-.planos-tabs.fin-abas .planos-tab { flex: 0 1 220px; justify-content: center; padding: 12px 24px; font-size: 15px; }
+/* ── Abas, barra de período e filtros (desktop) ── */
+.planos-tabs.fin-abas { gap: 0; margin-bottom: 14px; }
+.planos-tabs.fin-abas .planos-tab { flex: 1 1 0; justify-content: center; padding: 12px 24px; font-size: 15px; }
+
+/* Novo lançamento: centralizado; ao rolar acompanha no topo, translúcido */
+.fin-novo-sentinela { height: 1px; margin-bottom: -1px; pointer-events: none; }
+.fin-novo-sticky {
+  position: sticky; top: 12px; z-index: 60;
+  display: flex; justify-content: center;
+  margin-bottom: 14px; pointer-events: none;
+}
+.fin-novo-sticky .btn-primary {
+  pointer-events: auto;
+  padding: 10px 28px;
+  transition: opacity .35s ease, transform .35s ease, box-shadow .35s ease, filter .35s ease;
+}
+.fin-novo-sticky.fixo .btn-primary { opacity: 0.45; filter: saturate(0.6); transform: translateY(0) scale(0.97); box-shadow: none; }
+.fin-novo-sticky.fixo .btn-primary:hover { opacity: 1; filter: none; transform: scale(1); box-shadow: var(--shadow-lg); }
+
+.fin-topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.fin-topbar-esq { display: flex; justify-content: flex-start; }
+.fin-topbar-esq input { width: 260px; max-width: 100%; }
+.fin-topbar-dir { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.fin-topbar-label { font-size: 12px; color: var(--text-3); }
+
+/* Botões de alternância mais sutis */
+.cx-tipo-toggle.fin-sutil { width: auto; border-color: var(--border); background: transparent; }
+.cx-tipo-toggle.fin-sutil button { min-width: 100px; padding: 0 16px; font-size: 13px; font-weight: 400; color: var(--text-3); }
+.cx-tipo-toggle.fin-sutil button.active { background: var(--bg-3); color: var(--text-1); font-weight: 500; }
 
 @media (min-width: 641px) {
-  .fin-filtros-wrap .fin-mes-linha,
-  .fin-filtros-wrap .fin-filtros-linha { width: 100%; justify-content: center; gap: 12px; }
+  .fin-topbar input,
+  .fin-topbar .cx-tipo-toggle,
   .fin-filtros-wrap input,
   .fin-filtros-wrap select,
-  .fin-filtros-wrap .cx-tipo-toggle,
   .fin-filtros-wrap .btn-secondary,
-  .fin-filtros-wrap .btn-ghost { height: 42px; box-sizing: border-box; }
-  .fin-filtros-wrap .cx-tipo-toggle { width: auto; flex: 0 0 auto; }
-  .fin-filtros-wrap .cx-tipo-toggle button { min-width: 120px; padding: 0 22px; font-size: 14px; }
+  .fin-filtros-wrap .btn-ghost { height: 38px; box-sizing: border-box; }
+  .fin-filtros-wrap .fin-mes-linha,
+  .fin-filtros-wrap .fin-filtros-linha { width: 100%; justify-content: center; gap: 12px; }
   .fin-filtros-wrap select { min-width: 190px; }
-  .fin-filtros-wrap input[type="text"] { width: 240px !important; }
+}
+
+@media (max-width: 900px) {
+  .fin-topbar { grid-template-columns: 1fr; justify-items: center; }
+  .fin-topbar-esq, .fin-topbar-dir { justify-content: center; }
+}
+
+@media (max-width: 640px) {
+  .fin-novo-sticky { display: none; }
 }
 
 @media (max-width: 768px) {
