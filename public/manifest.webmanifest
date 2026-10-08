@@ -1,0 +1,15 @@
+{
+  "name": "Loja — Sistema de Gestão",
+  "short_name": "Loja",
+  "description": "Gestão da sua loja: financeiro, caixa, estoque e mais.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/logo-aldevsoftware-padrao.png", "sizes": "192x192 512x512 1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}
