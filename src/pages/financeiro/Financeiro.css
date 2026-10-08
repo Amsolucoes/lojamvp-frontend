@@ -24,27 +24,48 @@ tbody tr.fin-row-pago:hover { background: var(--row-pago-bg-hover); }
 .planos-tabs.fin-abas { gap: 0; margin-bottom: 14px; }
 .planos-tabs.fin-abas .planos-tab { flex: 1 1 0; justify-content: center; padding: 12px 24px; font-size: 15px; }
 
-/* Novo lançamento: centralizado; ao rolar acompanha no topo, translúcido */
+/* Novo lançamento: centralizado; ao rolar se solta e desce junto no topo da tela, translúcido */
 .fin-novo-sentinela { height: 1px; margin-bottom: -1px; pointer-events: none; }
 .fin-novo-sticky {
-  position: sticky; top: 12px; z-index: 60;
-  display: flex; justify-content: center;
-  margin-bottom: 14px; pointer-events: none;
+  display: flex; justify-content: center; align-items: center;
+  height: 42px; margin-bottom: 14px;
 }
 .fin-novo-sticky .btn-primary {
-  pointer-events: auto;
   padding: 10px 28px;
-  transition: opacity .35s ease, transform .35s ease, box-shadow .35s ease, filter .35s ease;
+  transition: opacity .3s ease, transform .3s ease, box-shadow .3s ease, filter .3s ease;
 }
-.fin-novo-sticky.fixo .btn-primary { opacity: 0.45; filter: saturate(0.6); transform: translateY(0) scale(0.97); box-shadow: none; }
-.fin-novo-sticky.fixo .btn-primary:hover { opacity: 1; filter: none; transform: scale(1); box-shadow: var(--shadow-lg); }
+.fin-novo-sticky.fixo .btn-primary {
+  position: fixed;
+  top: 14px;
+  left: calc(var(--sidebar-w) + (100vw - var(--sidebar-w)) / 2);
+  transform: translateX(-50%);
+  z-index: 60;
+  opacity: 0.45;
+  filter: saturate(0.6);
+  animation: finNovoDesce .45s ease;
+}
+.fin-novo-sticky.fixo .btn-primary:hover {
+  opacity: 1; filter: none;
+  transform: translateX(-50%) scale(1.03);
+  box-shadow: var(--shadow-lg);
+}
+@keyframes finNovoDesce {
+  from { opacity: 0; transform: translateX(-50%) translateY(-26px); }
+  to   { opacity: 0.45; transform: translateX(-50%) translateY(0); }
+}
+
+.fin-periodo {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; margin-bottom: 16px;
+}
+.fin-periodo .fin-mes-linha { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
 
 .fin-topbar {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  width: 100%;
 }
 .fin-topbar-esq { display: flex; justify-content: flex-start; }
 .fin-topbar-esq input { width: 260px; max-width: 100%; }
@@ -59,6 +80,9 @@ tbody tr.fin-row-pago:hover { background: var(--row-pago-bg-hover); }
 @media (min-width: 641px) {
   .fin-topbar input,
   .fin-topbar .cx-tipo-toggle,
+  .fin-periodo .cx-tipo-toggle,
+  .fin-periodo input,
+  .fin-periodo .btn-secondary,
   .fin-filtros-wrap input,
   .fin-filtros-wrap select,
   .fin-filtros-wrap .btn-secondary,

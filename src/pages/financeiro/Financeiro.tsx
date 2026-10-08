@@ -1036,11 +1036,8 @@ export function Financeiro() {
       </div>
       )}
 
-      {/* Período + busca + modo (logo abaixo das abas) */}
-      <div className="fin-topbar">
-        <div className="fin-topbar-esq">
-          <input type="text" placeholder="Buscar por descrição..." value={buscaDescricao} onChange={e => setBuscaDescricao(e.target.value)} />
-        </div>
+      {/* Período (logo abaixo das abas, acima dos cards) */}
+      <div className="fin-periodo">
         <div className="cx-tipo-toggle fin-sutil">
           <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
           <button className={periodoTipo === 'personalizado' ? 'active' : ''} onClick={() => {
@@ -1051,14 +1048,18 @@ export function Financeiro() {
             setPeriodoAte(ultimoDia);
           }}>Personalizado</button>
         </div>
-        <div className="fin-topbar-dir">
-          {aba === 'pagar' && (
+        <div className="fin-mes-linha">
+          {periodoTipo === 'mes' ? (
             <>
-              <span className="fin-topbar-label">Cartões:</span>
-              <div className="cx-tipo-toggle fin-sutil">
-                <button className={modoPagar === 'agrupado' ? 'active' : ''} onClick={() => setModoPagar('agrupado')}>Agrupado</button>
-                <button className={modoPagar === 'detalhado' ? 'active' : ''} onClick={() => setModoPagar('detalhado')}>Detalhado</button>
-              </div>
+              <button className="btn-secondary" onClick={() => navMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
+              <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesRef]} {anoRef}</span>
+              <button className="btn-secondary" onClick={() => navMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
+            </>
+          ) : (
+            <>
+              <input type="date" value={periodoDe} onChange={e => setPeriodoDe(e.target.value)} style={{ width: 'auto' }} />
+              <span style={{ color: 'var(--text-3)' }}>até</span>
+              <input type="date" value={periodoAte} onChange={e => setPeriodoAte(e.target.value)} style={{ width: 'auto' }} />
             </>
           )}
         </div>
@@ -1179,22 +1180,23 @@ export function Financeiro() {
         )}
       </div>
 
-      {/* Mês + filtros (abaixo dos cards) */}
+      {/* Busca, cartões e filtros (abaixo dos cards) */}
       <div className="card fin-filtros-wrap" style={{ padding: 14, marginBottom: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div className="fin-mes-linha" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-          {periodoTipo === 'mes' ? (
+        <div className="fin-topbar">
+          <div className="fin-topbar-esq">
+            <input type="text" placeholder="Buscar por descrição..." value={buscaDescricao} onChange={e => setBuscaDescricao(e.target.value)} />
+          </div>
+          <div className="fin-topbar-dir">
+          {aba === 'pagar' && (
             <>
-              <button className="btn-secondary" onClick={() => navMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
-              <span style={{ fontWeight: 600, fontSize: 15, textTransform: 'capitalize' }}>{MESES[mesRef]} {anoRef}</span>
-              <button className="btn-secondary" onClick={() => navMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
-            </>
-          ) : (
-            <>
-              <input type="date" value={periodoDe} onChange={e => setPeriodoDe(e.target.value)} style={{ width: 'auto' }} />
-              <span style={{ color: 'var(--text-3)' }}>até</span>
-              <input type="date" value={periodoAte} onChange={e => setPeriodoAte(e.target.value)} style={{ width: 'auto' }} />
+              <span className="fin-topbar-label">Cartões:</span>
+              <div className="cx-tipo-toggle fin-sutil">
+                <button className={modoPagar === 'agrupado' ? 'active' : ''} onClick={() => setModoPagar('agrupado')}>Agrupado</button>
+                <button className={modoPagar === 'detalhado' ? 'active' : ''} onClick={() => setModoPagar('detalhado')}>Detalhado</button>
+              </div>
             </>
           )}
+          </div>
         </div>
         <div className="fin-filtros-linha" style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
           {categoriasDaAba.length > 0 && (
