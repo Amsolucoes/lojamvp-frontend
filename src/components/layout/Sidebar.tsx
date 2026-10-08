@@ -1,10 +1,10 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
   TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, 
-  FileText, HelpCircle, Home, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck, Truck } from 'lucide-react';
+  FileText, HelpCircle, Home, BarChart3, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck, Truck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { carregarTemaSalvo } from '../../utils/tema';
 import { useMobileShellOverride } from '../../utils/mobileShellOverride';
@@ -125,6 +125,13 @@ export function Sidebar() {
     { to: '/configuracoes', icon: Settings, label: 'Configurações' },
   ];
 
+  const SUB_FINANCEIRO = temFinanceiro ? [
+    { to: '/financeiro?abrir=contas', icon: Wallet, label: 'Contas' },
+    { to: '/financeiro?abrir=cartoes', icon: CreditCard, label: 'Cartões' },
+    { to: '/financeiro?abrir=categorias', icon: Tag, label: 'Categorias' },
+    { to: '/financeiro/balanco', icon: BarChart3, label: 'Balanço mensal' },
+  ] : [];
+
   return (
     <>
       {/* Topbar mobile */}
@@ -157,7 +164,8 @@ export function Sidebar() {
 
         <nav className="sidebar-nav">
           {NAV.map(({ to, icon: Icon, label }) => (
-            <NavLink key={to} to={to} end={to === '/'}
+            <Fragment key={to}>
+            <NavLink to={to} end={to === '/' || to === '/financeiro'}
               className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
               onClick={() => setAberto(false)}>
               <Icon size={16} />
@@ -166,6 +174,22 @@ export function Sidebar() {
                 <span className="sidebar-badge">{alertas}</span>
               )}
             </NavLink>
+            {to === '/financeiro' && SUB_FINANCEIRO.map(sub => (
+              sub.to.includes('?') ? (
+                <Link key={sub.to} to={sub.to} className="sidebar-link sidebar-sublink" onClick={() => setAberto(false)}>
+                  <sub.icon size={14} />
+                  <span>{sub.label}</span>
+                </Link>
+              ) : (
+                <NavLink key={sub.to} to={sub.to}
+                  className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? ' active' : ''}`}
+                  onClick={() => setAberto(false)}>
+                  <sub.icon size={14} />
+                  <span>{sub.label}</span>
+                </NavLink>
+              )
+            ))}
+            </Fragment>
           ))}
         </nav>
 
