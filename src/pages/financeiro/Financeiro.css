@@ -173,3 +173,7 @@ tbody tr.fin-row-pago:hover { background: var(--row-pago-bg-hover); }
     grid-template-columns: 1fr;
   }
 }
+/* Sem cabeçalho de título: sobe o conteúdo da página */
+@media (min-width: 641px) {
+  .page.fin-page { padding-top: 14px; }
+}
