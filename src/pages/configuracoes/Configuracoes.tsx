@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import { X, Save, Upload, ArrowLeft } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
+import { AvisosPush } from '../../components/AvisosPush';
 import './Configuracoes.css';
 
 const CLOUDINARY_CLOUD = 'dnwnwshvq';
@@ -534,6 +535,9 @@ export function Configuracoes() {
           </div>
         </div>
       )}
+
+      {/* Avisos de vencimento no celular */}
+      <AvisosPush />
 
       {/* Módulos */}
       <div className="card">
