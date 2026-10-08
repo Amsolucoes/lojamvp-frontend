@@ -2023,8 +2023,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                 <>
                   <div className="form-group">
                     <label className="form-label">Valor de entrada (R$) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional, paga agora)</span></label>
-                    <input type="number" min={0} step={0.01} value={formPagFatura.valorEntrada}
-                      onChange={e => setFormPagFatura(f => ({ ...f, valorEntrada: e.target.value }))} placeholder="0,00" />
+                    <InputMoeda value={parseFloat(formPagFatura.valorEntrada) || 0} onChange={v => setFormPagFatura(f => ({ ...f, valorEntrada: String(v) }))} placeholder="0,00" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Em quantas parcelas</label>
