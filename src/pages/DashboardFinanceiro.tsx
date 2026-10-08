@@ -387,6 +387,7 @@ export function DashboardFinanceiro() {
           <div className="dash-card-header">
             <div className="dash-card-title" style={{ color: 'var(--yellow, #d97706)' }}><Clock size={15} /> Vencendo em breve</div>
           </div>
+          <div className="dash-venc-grid">
           {(['pagar', 'receber'] as const).map(tipo => {
             const doTipo = alertas.filter(a => a.tipo === tipo);
             if (doTipo.length === 0) return null;
@@ -400,7 +401,7 @@ export function DashboardFinanceiro() {
             const diasOrdenados = Object.keys(porDia).sort();
 
             return (
-              <div key={tipo} style={{ marginBottom: 10 }}>
+              <div key={tipo} className="dash-venc-col">
                 <div style={{ fontSize: 11, fontWeight: 700, color: tipo === 'pagar' ? 'var(--red)' : 'var(--green)', marginBottom: 4, textTransform: 'uppercase' }}>
                   {tipo === 'pagar' ? '↓ A Pagar' : '↑ A Receber'}
                 </div>
@@ -411,14 +412,14 @@ export function DashboardFinanceiro() {
                   const labelDia = d === 0 ? 'Hoje' : d === 1 ? 'Amanhã' : `Em ${d} dias`;
                   return (
                     <div key={dia} style={{ marginBottom: 6 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: d <= 1 ? 'var(--red)' : 'var(--text-3)', fontWeight: 600, padding: '4px 4px 2px' }}>
-                        <span>{labelDia}</span>
-                        <span>{fmt(totalDia)}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, color: d <= 1 ? 'var(--red)' : 'var(--text-3)', fontWeight: 600, padding: '4px 4px 2px' }}>
+                        <span className="dash-ellipsis">{labelDia}</span>
+                        <span className="dash-nowrap">{fmt(totalDia)}</span>
                       </div>
                       {itensDoDia.map(a => (
-                        <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 4px', borderBottom: '1px solid var(--border)' }}>
-                          <div style={{ fontSize: 13 }}>{a.descricao}</div>
-                          <span style={{ fontWeight: 600, fontSize: 13, color: tipo === 'pagar' ? 'var(--red)' : 'var(--green)' }}>{fmt(a.valor)}</span>
+                        <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '6px 4px', borderBottom: '1px solid var(--border)' }}>
+                          <div className="dash-ellipsis" title={a.descricao} style={{ fontSize: 13 }}>{a.descricao}</div>
+                          <span className="dash-nowrap" style={{ fontWeight: 600, fontSize: 13, color: tipo === 'pagar' ? 'var(--red)' : 'var(--green)' }}>{fmt(a.valor)}</span>
                         </div>
                       ))}
                     </div>
@@ -427,6 +428,7 @@ export function DashboardFinanceiro() {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 

@@ -173,3 +173,12 @@
 .dash-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .dash-nowrap { white-space: nowrap; flex-shrink: 0; }
 .dash-stats .stat-card { min-width: 0; }
+
+/* Vencendo em breve: A pagar e A receber lado a lado no desktop, empilhados em telas estreitas */
+.dash-venc-grid { display: grid; grid-template-columns: 1fr; gap: 0 24px; }
+.dash-venc-col { min-width: 0; margin-bottom: 10px; }
+@media (min-width: 900px) {
+  .dash-venc-grid { grid-template-columns: 1fr 1fr; }
+  .dash-venc-grid > .dash-venc-col + .dash-venc-col { border-left: 1px solid var(--border); padding-left: 24px; }
+}
+.dash-venc-col:only-child { grid-column: 1 / -1; }
