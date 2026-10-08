@@ -796,7 +796,7 @@ export function Financeiro() {
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
 
   return (
-    <div className="page">
+    <div className="page fin-page">
       {veioComAbaEspecifica && (
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <button className="fin-voltar-mobile" onClick={() => navigate(-1)} style={{
@@ -810,12 +810,6 @@ export function Financeiro() {
         </div>
       )}
       <div style={{ height: 4, borderRadius: 4, background: aba === 'pagar' ? 'var(--red)' : 'var(--green)', marginBottom: 16, opacity: 0.7 }} />
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Financeiro</h1>
-          <p className="page-subtitle">Contas a pagar e a receber</p>
-        </div>
-      </div>
 
       {/* Botão Novo lançamento: centralizado, acompanha a rolagem (translúcido) */}
       <div ref={novoSentinelaRef} className="fin-novo-sentinela" />
