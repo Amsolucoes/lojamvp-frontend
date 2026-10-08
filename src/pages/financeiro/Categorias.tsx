@@ -26,6 +26,7 @@ export function Categorias() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [filtro, setFiltro] = useState<Filtro>('todas');
+  const [busca, setBusca] = useState('');
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(15);
 
@@ -37,7 +38,7 @@ export function Categorias() {
     await api.get<Categoria[]>('/api/financeiro/categorias').then(setCategorias).catch(() => {}).finally(() => setCarregando(false));
   }
   useEffect(() => { carregar(); }, []);
-  useEffect(() => { setPagina(1); }, [filtro]);
+  useEffect(() => { setPagina(1); }, [filtro, busca]);
 
   function abrirNova() {
     setEditando(null);
@@ -86,7 +87,10 @@ export function Categorias() {
     }
   }
 
-  const lista = categorias.filter(c => filtro === 'todas' || c.tipo === filtro);
+  const normalizar = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const termo = normalizar(busca);
+  const lista = categorias.filter(c =>
+    (filtro === 'todas' || c.tipo === filtro) && (!termo || normalizar(c.nome).includes(termo)));
   const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
   const paginaSegura = Math.min(pagina, totalPaginas);
   const visiveis = lista.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina);
@@ -131,6 +135,13 @@ export function Categorias() {
       )}
 
       {categorias.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <input type="text" placeholder="Buscar categoria por descrição..." value={busca}
+            onChange={e => setBusca(e.target.value)} style={{ width: 340, maxWidth: '100%' }} />
+        </div>
+      )}
+
+      {categorias.length > 0 && (
         <div className="cat-tabs" style={{ justifyContent: 'center', marginBottom: 16 }}>
           <button className={`cat-tab${filtro === 'todas' ? ' active' : ''}`} onClick={() => setFiltro('todas')}>Todas</button>
           <button className={`cat-tab${filtro === 'pagar' ? ' active' : ''}`} onClick={() => setFiltro('pagar')}>A pagar</button>
@@ -142,7 +153,7 @@ export function Categorias() {
       {carregando ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
       ) : lista.length === 0 ? (
-        <div className="card"><div className="empty" style={{ padding: '40px 0' }}><p>{categorias.length === 0 ? 'Nenhuma categoria cadastrada.' : 'Nenhuma categoria neste filtro.'}</p></div></div>
+        <div className="card"><div className="empty" style={{ padding: '40px 0' }}><p>{categorias.length === 0 ? 'Nenhuma categoria cadastrada.' : busca.trim() ? 'Nenhuma categoria encontrada para essa busca.' : 'Nenhuma categoria neste filtro.'}</p></div></div>
       ) : (
         <>
           <div className="contas-lista">

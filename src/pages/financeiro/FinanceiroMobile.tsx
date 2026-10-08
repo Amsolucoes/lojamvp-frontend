@@ -2456,11 +2456,11 @@ export function FinanceiroMobile() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Saldo inicial</label>
-                  <input type="number" step={0.01} value={formConta.saldoInicial} onChange={e => setFormConta(f => ({ ...f, saldoInicial: e.target.value }))} />
+                  <InputMoeda permitirNegativo value={parseFloat(formConta.saldoInicial) || 0} onChange={v => setFormConta(f => ({ ...f, saldoInicial: String(v) }))} placeholder="0,00" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Limite (cheque especial) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                  <input type="number" min={0} step={0.01} value={formConta.limite} onChange={e => setFormConta(f => ({ ...f, limite: e.target.value }))} />
+                  <InputMoeda value={parseFloat(formConta.limite) || 0} onChange={v => setFormConta(f => ({ ...f, limite: String(v) }))} placeholder="0,00" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Banco</label>
@@ -2509,12 +2509,12 @@ export function FinanceiroMobile() {
               {formAjuste.tipo === 'ajuste' ? (
                 <div className="form-group">
                   <label className="form-label">Novo saldo (R$)</label>
-                  <input type="number" step={0.01} value={formAjuste.novoSaldo} onChange={e => setFormAjuste(f => ({ ...f, novoSaldo: e.target.value }))} />
+                  <InputMoeda permitirNegativo value={parseFloat(formAjuste.novoSaldo) || 0} onChange={v => setFormAjuste(f => ({ ...f, novoSaldo: String(v) }))} placeholder="0,00" />
                 </div>
               ) : (
                 <div className="form-group">
                   <label className="form-label">Valor (R$)</label>
-                  <input type="number" min={0} step={0.01} value={formAjuste.valor} onChange={e => setFormAjuste(f => ({ ...f, valor: e.target.value }))} />
+                  <InputMoeda value={parseFloat(formAjuste.valor) || 0} onChange={v => setFormAjuste(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                 </div>
               )}
               <div className="form-group" style={{ marginTop: 14 }}>
@@ -2555,7 +2555,7 @@ export function FinanceiroMobile() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Valor (R$)</label>
-                  <input type="number" min={0.01} step={0.01} value={formTransf.valor} onChange={e => setFormTransf(f => ({ ...f, valor: e.target.value }))} />
+                  <InputMoeda value={parseFloat(formTransf.valor) || 0} onChange={v => setFormTransf(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
                   <input type="checkbox" checked={formTransf.registrar} style={{ width: 16, height: 16, margin: 0 }}
