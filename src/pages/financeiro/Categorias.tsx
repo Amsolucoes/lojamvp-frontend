@@ -149,7 +149,7 @@ export function Categorias() {
         <div className="card"><div className="empty" style={{ padding: '40px 0' }}><p>{categorias.length === 0 ? 'Nenhuma categoria cadastrada.' : busca.trim() ? 'Nenhuma categoria encontrada para essa busca.' : 'Nenhuma categoria neste filtro.'}</p></div></div>
       ) : (
         <>
-          <div className="contas-lista">
+          <div className="contas-lista categorias-grid">
             {visiveis.map(c => (
               <div key={c.id} className="card conta-card" style={{ padding: '12px 20px' }}>
                 <div className="conta-card-info">

@@ -98,7 +98,14 @@ function ehVencido(l: { status: string; vencimento: string }) {
   return l.status === 'pendente' && new Date(l.vencimento) < new Date(new Date().toDateString());
 }
 
-export function Financeiro() {
+interface FinanceiroProps {
+  // Modo embutido: usado pela tela de Cartões para abrir a fatura por cima dela, sem trocar de página.
+  apenasFatura?: boolean;
+  cartaoParaFatura?: string | null;
+  aoFecharFatura?: () => void;
+}
+
+export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFecharFatura }: FinanceiroProps = {}) {
   const navigate = useNavigate();
   const { sucesso, erro } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -269,6 +276,7 @@ export function Financeiro() {
   useEffect(() => { carregarContas(); carregarCategorias(); carregarCartoes(); }, []);
 
   useEffect(() => {
+    if (apenasFatura) return;
     setBottomNavAction({
       tipo: 'unica',
       corBg: aba === 'pagar' ? 'var(--red-bg)' : 'var(--green-bg)',
@@ -290,7 +298,7 @@ export function Financeiro() {
     return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
   }, [aba, mesRef, anoRef, modoPagar, periodoTipo, periodoDe, periodoAte]);
 
-  useEffect(() => { carregarLancamentos(); carregarResumo(); }, [aba, mesRef, anoRef, modoPagar, periodoTipo, periodoDe, periodoAte]);
+  useEffect(() => { if (apenasFatura) return; carregarLancamentos(); carregarResumo(); }, [aba, mesRef, anoRef, modoPagar, periodoTipo, periodoDe, periodoAte]);
   const primeiraCargaFiltro = useRef(true);
   
   useEffect(() => {
@@ -326,6 +334,28 @@ export function Financeiro() {
       setSearchParams(novosParams, { replace: true });
     }
   }, [cartoes, searchParams]);
+
+  // Modo embutido (tela de Cartões): abre a fatura do cartão pedido uma única vez...
+  const abriuFaturaEmbutida = useRef(false);
+  useEffect(() => {
+    if (!apenasFatura || !cartaoParaFatura || abriuFaturaEmbutida.current || cartoes.length === 0) return;
+    const cartao = cartoes.find(c => c.id === cartaoParaFatura);
+    if (cartao) {
+      abriuFaturaEmbutida.current = true;
+      abrirFatura(cartao);
+    }
+  }, [apenasFatura, cartaoParaFatura, cartoes]);
+
+  // ...e avisa a tela de origem quando a fatura for fechada.
+  const faturaJaFoiAberta = useRef(false);
+  useEffect(() => {
+    if (!apenasFatura) return;
+    if (faturaAberta) faturaJaFoiAberta.current = true;
+    else if (faturaJaFoiAberta.current) {
+      faturaJaFoiAberta.current = false;
+      aoFecharFatura?.();
+    }
+  }, [apenasFatura, faturaAberta]);
 
   function navMes(delta: number) {
     let nm = mesRef + delta, na = anoRef;
@@ -796,7 +826,7 @@ export function Financeiro() {
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
 
   return (
-    <div className="page fin-page">
+    <div className={`page fin-page${apenasFatura ? ' fin-embutido' : ''}`}>
       {veioComAbaEspecifica && (
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <button className="fin-voltar-mobile" onClick={() => navigate(-1)} style={{
