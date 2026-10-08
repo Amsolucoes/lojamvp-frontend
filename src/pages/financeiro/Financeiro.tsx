@@ -92,10 +92,6 @@ interface ItemFaturaDetalhe {
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const ICONES_CATEGORIA = ['🏷️','💵','💰','🤑','$','🏠','💧','💡','📶','📦','👤','🧾','💳','🛒','📁','🍽️','🚗','🎓','🏥','🎮'
-    ,'✈️','🐾','🎁','📱','💊','⛽','🧹','🎬','📈','📉','🔧','🛠️','🎉','👶','💇','🐶'
-    ,'🏢','🏭','🏦','📚','🖥️','🖨️','☎️','🚚','🧴','🪑','🛋️','🧯','🩺','💼','🎨','🧵','✂️','🔌','🔋','🚿'
-    ,'🧼','🍔','☕','🍺','🍷','🎵','🎤','⚽','🏋️','🧘','🩹','🧠','⚖️','🌐','🔒','🧊','🧻','🪒','🚪','🌳'];
 
 function ehVencido(l: { status: string; vencimento: string }) {
   if (!l.vencimento) return false;
@@ -154,10 +150,6 @@ export function Financeiro() {
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [cartoesResumo, setCartoesResumo] = useState<Record<string, { usado: number; disponivel: number; qtdCompras: number; status: string }>>({});
   const [carregandoCartoes, setCarregandoCartoes] = useState(true);
-  const [modalCartoes, setModalCartoes] = useState(false);
-  const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
-  const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
-  const [mostrarFormCartao, setMostrarFormCartao] = useState(false);
 
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
   const [modalLancarCompra, setModalLancarCompra] = useState(false);
@@ -194,7 +186,6 @@ export function Financeiro() {
   });
 
   const [modalLancamento, setModalLancamento] = useState(false);
-  const [modalCategorias, setModalCategorias] = useState(false);
   const [processandoPagamento, setProcessandoPagamento] = useState<string | null>(null);
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [excluindoLancamento, setExcluindoLancamento] = useState(false);
@@ -218,11 +209,6 @@ export function Financeiro() {
   const [salvandoLanc, setSalvandoLanc] = useState(false);
 
 
-  const [formCat, setFormCat] = useState({ nome: '', tipo: 'ambos', icone: '' });
-  const [editandoCategoria, setEditandoCategoria] = useState<Categoria | null>(null);
-  const [mostrarFormCategoria, setMostrarFormCategoria] = useState(false);
-  const [filtroCatModal, setFiltroCatModal] = useState<'todas' | 'pagar' | 'receber' | 'ambos'>('todas');
-  const [paginaCat, setPaginaCat] = useState(1);
 
 
   async function carregarContas() {
@@ -313,7 +299,6 @@ export function Financeiro() {
     setBuscaDescricao('');
   }, [aba]);
   useEffect(() => { setPaginaLista(1); }, [aba, mesRef, anoRef, catFiltro, statusFiltro, modoFiltro, buscaDescricao, periodoTipo, periodoDe, periodoAte, itensPorPagina]);
-  useEffect(() => { setPaginaCat(1); }, [filtroCatModal]);
   useEffect(() => {
     const novo = searchParams.get('novo');
     if (novo === 'pagar' || novo === 'receber') {
@@ -328,17 +313,6 @@ export function Financeiro() {
       setSearchParams(novosParams, { replace: true });
     }
   }, []);
-
-  // Veio do menu lateral (Contas / Cartões / Categorias) — abre o modal correspondente
-  useEffect(() => {
-    const abrir = searchParams.get('abrir');
-    if (!abrir) return;
-    if (abrir === 'cartoes') setModalCartoes(true);
-    else if (abrir === 'categorias') setModalCategorias(true);
-    const novosParams = new URLSearchParams(searchParams);
-    novosParams.delete('abrir');
-    setSearchParams(novosParams, { replace: true });
-  }, [searchParams]);
 
   // Veio do Dashboard clicando num cartão específico — abre a fatura dele direto
   useEffect(() => {
@@ -623,45 +597,6 @@ export function Financeiro() {
   }
 
   // ── Cartões de crédito ──────────────────────────────────────────
-  function abrirNovoCartao() {
-    setEditandoCartao(null);
-    setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: contas[0]?.id ?? '', taxaJurosMensal: '' });
-  }
-
-  function abrirEditarCartao(c: Cartao) {
-    setEditandoCartao(c);
-    setFormCartao({
-      nome: c.nome, limite: String(c.limite),
-      diaFechamento: String(c.diaFechamento), diaVencimento: String(c.diaVencimento),
-      contaBancariaId: c.contaBancariaId,
-      taxaJurosMensal: String(c.taxaJurosMensal ?? 0),
-    });
-    setMostrarFormCartao(true);
-  }
-
-  async function salvarCartao() {
-    if (!formCartao.nome.trim() || !formCartao.contaBancariaId) { erro('Preencha nome e conta vinculada.'); return; }
-    try {
-      const payload = {
-        nome: formCartao.nome.trim(),
-        limite: parseFloat(formCartao.limite) || 0,
-        diaFechamento: parseInt(formCartao.diaFechamento) || 10,
-        diaVencimento: parseInt(formCartao.diaVencimento) || 15,
-        contaBancariaId: formCartao.contaBancariaId,
-        taxaJurosMensal: parseFloat(formCartao.taxaJurosMensal) || 0,
-      };
-      if (editandoCartao) await api.put(`/api/financeiro/cartoes/${editandoCartao.id}`, payload);
-      else await api.post('/api/financeiro/cartoes', payload);
-      setEditandoCartao(null);
-      setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
-      carregarCartoes();
-      carregarLancamentos();
-      sucesso('Cartão salvo!');
-    } catch (e) {
-      erro((e as Error).message);
-    }
-  }
-
   async function carregarFatura(cartaoId: string, ano: number, mes: number) {
     setFaturaDados(null);
     setCarregandoFatura(true);
@@ -857,57 +792,6 @@ export function Financeiro() {
     }
   }
 
-  // ── Categorias ──────────────────────────────────────────────────
-  async function salvarCategoria() {
-    if (!formCat.nome.trim()) { erro('Digite o nome da categoria.'); return; }
-    try {
-      await api.post('/api/financeiro/categorias', { nome: formCat.nome.trim(), tipo: formCat.tipo, icone: formCat.icone || null });
-      setFormCat({ nome: '', tipo: 'ambos', icone: '' });
-      carregarCategorias();
-      sucesso('Categoria criada!');
-    } catch (e) {
-      erro((e as Error).message);
-    }
-  }
-
-  function abrirEditarCategoria(c: Categoria) {
-    setEditandoCategoria(c);
-    setFormCat({ nome: c.nome, tipo: c.tipo, icone: c.icone ?? '' });
-    setMostrarFormCategoria(true);
-  }
-
-  async function salvarEdicaoCategoria() {
-    if (!editandoCategoria) return;
-    if (!formCat.nome.trim()) { erro('Digite o nome da categoria.'); return; }
-    try {
-      await api.put(`/api/financeiro/categorias/${editandoCategoria.id}`, { nome: formCat.nome.trim(), tipo: formCat.tipo, icone: formCat.icone || null });
-      setEditandoCategoria(null);
-      setFormCat({ nome: '', tipo: 'ambos', icone: '' });
-      carregarCategorias();
-      sucesso('Categoria atualizada!');
-    } catch (e) {
-      erro((e as Error).message);
-    }
-  }
-
-  async function excluirCategoria(c: Categoria) {
-    try {
-      const res = await api.delete<any>(`/api/financeiro/categorias/${c.id}`);
-      carregarCategorias();
-      sucesso(res?.mensagem ?? 'Categoria removida.');
-    } catch (e) {
-      erro((e as Error).message);
-    }
-  }
-  async function seedCategoriasPadrao() {
-    try {
-      await api.post('/api/financeiro/categorias/seed-padrao', {});
-      carregarCategorias();
-      sucesso('Categorias padrão criadas!');
-    } catch (e) {
-      erro((e as Error).message);
-    }
-  }
 
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
 
@@ -1646,218 +1530,6 @@ export function Financeiro() {
         </div>
       )}
 
-      {/* Modal categorias */}
-      {modalCategorias && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCategorias(false)}>
-          <div className="modal" style={{ maxWidth: 460 }}>
-            <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Categorias financeiras</h2>
-              <button className="btn-ghost" onClick={() => { setModalCategorias(false); setMostrarFormCategoria(false); setEditandoCategoria(null); }}><X size={16} /></button>
-            </div>
-            <div className="modal-body">
-              {!mostrarFormCategoria && (
-                <button className="btn-primary" style={{ width: '100%', marginBottom: 16 }}
-                  onClick={() => { setEditandoCategoria(null); setFormCat({ nome: '', tipo: 'ambos', icone: '' }); setMostrarFormCategoria(true); }}>
-                  + Nova categoria
-                </button>
-              )}
-
-              {mostrarFormCategoria && (
-                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoCategoria ? 'Editar categoria' : 'Nova categoria'}</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <input value={formCat.nome} onChange={e => setFormCat(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Marketing" autoFocus />
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <select style={{ flex: 1 }} value={formCat.tipo} onChange={e => setFormCat(f => ({ ...f, tipo: e.target.value }))}>
-                        <option value="ambos">Pagar e Receber</option>
-                        <option value="pagar">Só Pagar</option>
-                        <option value="receber">Só Receber</option>
-                      </select>
-                      <select style={{ width: 90 }} value={formCat.icone} onChange={e => setFormCat(f => ({ ...f, icone: e.target.value }))}>
-                        {ICONES_CATEGORIA.map(i => <option key={i} value={i}>{i}</option>)}
-                      </select>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn-primary" style={{ flex: 1 }} onClick={async () => {
-                        if (editandoCategoria) await salvarEdicaoCategoria();
-                        else await salvarCategoria();
-                        setMostrarFormCategoria(false);
-                      }}>
-                        {editandoCategoria ? 'Salvar alterações' : 'Adicionar categoria'}
-                      </button>
-                      <button className="btn-secondary" onClick={() => { setEditandoCategoria(null); setFormCat({ nome: '', tipo: 'ambos', icone: '' }); setMostrarFormCategoria(false); }}>
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {categorias.length === 0 && (
-                <button className="btn-secondary" style={{ width: '100%', marginBottom: 16 }} onClick={seedCategoriasPadrao}>
-                  Usar categorias padrão
-                </button>
-              )}
-              {categorias.length > 0 && (
-                <div className="cat-tabs" style={{ marginBottom: 12 }}>
-                  <button className={`cat-tab${filtroCatModal === 'todas' ? ' active' : ''}`} onClick={() => setFiltroCatModal('todas')}>Todas</button>
-                  <button className={`cat-tab${filtroCatModal === 'pagar' ? ' active' : ''}`} onClick={() => setFiltroCatModal('pagar')}>A pagar</button>
-                  <button className={`cat-tab${filtroCatModal === 'receber' ? ' active' : ''}`} onClick={() => setFiltroCatModal('receber')}>A receber</button>
-                  <button className={`cat-tab${filtroCatModal === 'ambos' ? ' active' : ''}`} onClick={() => setFiltroCatModal('ambos')}>Ambos</button>
-                </div>
-              )}
-              {carregandoCategorias ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0', marginBottom: 12 }}>
-                  <div className="layout-spinner" style={{ width: 28, height: 28 }} />
-                </div>
-              ) : (() => {
-                const listaCat = categorias.filter(c => filtroCatModal === 'todas' || c.tipo === filtroCatModal);
-                const totalPagCat = Math.max(1, Math.ceil(listaCat.length / 15));
-                const pagAtualCat = Math.min(paginaCat, totalPagCat);
-                const catPaginadas = listaCat.slice((pagAtualCat - 1) * 15, pagAtualCat * 15);
-                return (
-                  <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-                      {catPaginadas.map(c => (
-                        <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
-                          <span style={{ fontSize: 13 }}>{c.icone} {c.nome} <span style={{ color: 'var(--text-3)', fontSize: 11 }}>({c.tipo})</span></span>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn-ghost" onClick={() => abrirEditarCategoria(c)}>Editar</button>
-                            <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => excluirCategoria(c)}><Trash2 size={13} /></button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {listaCat.length > 15 && (
-                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                        <button className="btn-secondary" disabled={pagAtualCat <= 1} onClick={() => setPaginaCat(p => Math.max(1, p - 1))} style={{ padding: '4px 10px' }}>Anterior</button>
-                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{pagAtualCat} / {totalPagCat}</span>
-                        <button className="btn-secondary" disabled={pagAtualCat >= totalPagCat} onClick={() => setPaginaCat(p => Math.min(totalPagCat, p + 1))} style={{ padding: '4px 10px' }}>Próxima</button>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-              </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setModalCategorias(false)}>Fechar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal cartões de crédito */}
-      {modalCartoes && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCartoes(false)}>
-          <div className="modal" style={{ maxWidth: 520 }}>
-            <div className="modal-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Cartões de crédito</h2>
-              <button className="btn-ghost" onClick={() => { setModalCartoes(false); setMostrarFormCartao(false); }}><X size={16} /></button>
-            </div>
-            <div className="modal-body">
-              {!mostrarFormCartao && (
-                <button className="btn-primary" style={{ width: '100%', marginBottom: 16 }}
-                  onClick={() => { abrirNovoCartao(); setMostrarFormCartao(true); }}>
-                  + Novo cartão
-                </button>
-              )}
-
-              {mostrarFormCartao && (
-                <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{editandoCartao ? 'Editar cartão' : 'Novo cartão'}</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <input value={formCartao.nome} onChange={e => setFormCartao(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Santander" autoFocus />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      <div className="form-group">
-                        <label className="form-label">Limite (R$)</label>
-                        <InputMoeda value={parseFloat(formCartao.limite) || 0} onChange={v => setFormCartao(f => ({ ...f, limite: String(v) }))} placeholder="0,00" />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Conta de pagamento</label>
-                        <select value={formCartao.contaBancariaId} onChange={e => setFormCartao(f => ({ ...f, contaBancariaId: e.target.value }))}>
-                          <option value="">Selecione...</option>
-                          {contas.filter(c => c.ativa).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Dia de fechamento</label>
-                        <input type="number" min={1} max={28} value={formCartao.diaFechamento} onChange={e => setFormCartao(f => ({ ...f, diaFechamento: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Dia de vencimento</label>
-                        <input type="number" min={1} max={28} value={formCartao.diaVencimento} onChange={e => setFormCartao(f => ({ ...f, diaVencimento: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Taxa de juros (% ao mês)</label>
-                        <input type="number" min={0} step={0.01} value={formCartao.taxaJurosMensal} onChange={e => setFormCartao(f => ({ ...f, taxaJurosMensal: e.target.value }))} placeholder="Ex: 12.5" />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn-primary" onClick={async () => { await salvarCartao(); setMostrarFormCartao(false); }}>
-                        {editandoCartao ? 'Salvar' : 'Adicionar cartão'}
-                      </button>
-                      <button className="btn-secondary" onClick={() => { abrirNovoCartao(); setMostrarFormCartao(false); }}>
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-                {carregandoCartoes ? (
-                  <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
-                    <div className="layout-spinner" />
-                  </div>
-                ) : cartoes.length === 0 ? (
-                  <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhum cartão cadastrado.</p>
-                ) : cartoes.map(c => {
-                  const r = cartoesResumo[c.id];
-                  const pct = r && c.limite > 0 ? Math.min(100, (r.usado / c.limite) * 100) : 0;
-                  return (
-                  <div key={c.id} style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : 'var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontWeight: 600, fontSize: 14 }}>{c.nome}</span>
-                          {r && r.qtdCompras > 0 && (
-                            <span className="badge badge-accent" style={{ fontSize: 10 }}>{r.qtdCompras} compra{r.qtdCompras > 1 ? 's' : ''}</span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Fecha dia {c.diaFechamento} · Vence dia {c.diaVencimento}</div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => { setModalCartoes(false); abrirFatura(c); }}>Ver fatura</button>
-                        <button className="btn-ghost" onClick={() => abrirEditarCartao(c)}>Editar</button>
-                      </div>
-                    </div>
-                    {r && (
-                      <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}>
-                          <strong style={{ fontSize: 16, color: pct > 85 ? 'var(--red)' : 'var(--text-1)' }}>{fmt(r.usado)}</strong>
-                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>/ {fmt(c.limite)}</span>
-                        </div>
-                        <div style={{ height: 6, background: 'var(--bg-3)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${pct}%`, background: pct > 85 ? 'var(--red)' : pct > 60 ? 'var(--yellow, #d97706)' : 'var(--green)', borderRadius: 3 }} />
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-                          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Disponível</span>
-                          <strong style={{ fontSize: 13, color: r.disponivel >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(r.disponivel)}</strong>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  );
-                })}
-              </div>
-              </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setModalCartoes(false)}>Fechar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal fatura do cartão */}
       {faturaAberta && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setFaturaAberta(null)}>
@@ -1865,7 +1537,7 @@ export function Financeiro() {
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <button className="btn-ghost" style={{ padding: 4 }} title="Voltar para Cartões"
-                  onClick={() => { setFaturaAberta(null); setModalCartoes(true); }}>
+                  onClick={() => { setFaturaAberta(null); navigate('/financeiro/cartoes'); }}>
                   <ChevronLeft size={18} />
                 </button>
                 <h2 style={{ fontSize: 16, fontWeight: 600 }}>Fatura — {faturaAberta.nome}</h2>
