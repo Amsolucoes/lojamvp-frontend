@@ -328,6 +328,18 @@ export function Financeiro() {
     }
   }, []);
 
+  // Veio do menu lateral (Contas / Cartões / Categorias) — abre o modal correspondente
+  useEffect(() => {
+    const abrir = searchParams.get('abrir');
+    if (!abrir) return;
+    if (abrir === 'contas') setModalContas(true);
+    else if (abrir === 'cartoes') setModalCartoes(true);
+    else if (abrir === 'categorias') setModalCategorias(true);
+    const novosParams = new URLSearchParams(searchParams);
+    novosParams.delete('abrir');
+    setSearchParams(novosParams, { replace: true });
+  }, [searchParams]);
+
   // Veio do Dashboard clicando num cartão específico — abre a fatura dele direto
   useEffect(() => {
     const cartaoId = searchParams.get('abrirFatura');
@@ -992,10 +1004,6 @@ export function Financeiro() {
           <p className="page-subtitle">Contas a pagar e a receber</p>
         </div>
         <div className="fin-header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn-secondary" onClick={() => setModalContas(true)}><Wallet size={14} /> Contas</button>
-          <button className="btn-secondary" onClick={() => setModalCartoes(true)}><CreditCard size={14} /> Cartões</button>
-          <button className="btn-secondary" onClick={() => setModalCategorias(true)}><Tag size={14} /> Categorias</button>
-          <button className="btn-secondary" onClick={() => navigate('/financeiro/balanco')}><BarChart3 size={14} /> Balanço mensal</button>
           <button className="btn-primary fin-novo-lanc-desktop" onClick={abrirNovoLancamento}><Plus size={15} /> Novo lançamento</button>
         </div>
       </div>

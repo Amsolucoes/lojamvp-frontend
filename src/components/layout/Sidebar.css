@@ -43,6 +43,7 @@
   background: var(--accent-bg); color: var(--accent);
   font-weight: 500; border: 1px solid var(--accent-border);
 }
+.sidebar-sublink { padding: 7px 10px 7px 34px; font-size: 12.5px; }
 .sidebar-badge {
   margin-left: auto; background: var(--red); color: #fff;
   font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px;
