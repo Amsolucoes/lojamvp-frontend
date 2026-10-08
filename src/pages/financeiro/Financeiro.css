@@ -181,3 +181,12 @@ tbody tr.fin-row-pago:hover { background: var(--row-pago-bg-hover); }
 /* Modo embutido (fatura aberta por cima da tela de Cartões): só os modais aparecem */
 .fin-embutido { padding: 0 !important; margin: 0 !important; min-height: 0 !important; height: 0; }
 .fin-embutido > *:not(.modal-overlay) { display: none !important; }
+
+/* Imprimir PDF: fica abaixo do "Cartões:" na área de pesquisa; só no desktop */
+.fin-topbar-dir { flex-direction: column; align-items: flex-end; }
+.fin-topbar-dir > .fin-imprimir-desktop { height: 38px; padding: 0 16px; }
+.fin-topbar-linha { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 900px) { .fin-topbar-dir { align-items: center; } }
+@media (max-width: 768px) {
+  .fin-imprimir-desktop { display: none !important; }
+}

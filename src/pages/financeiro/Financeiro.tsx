@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useFiltrando } from '../../hooks/useFiltrando';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw, Loader2 } from 'lucide-react';
+import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw, Loader2, Printer } from 'lucide-react';
 import { api } from '../../services/api';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { InputMoeda } from '../../components/InputMoeda';
@@ -10,6 +10,7 @@ import { setBottomNavAction } from '../../utils/bottomNavAction';
 import { BANCOS, BankBadge } from '../../utils/bancos';
 import './Financeiro.css';
 import { useApp } from '@/context/AppContext';
+import { imprimirLista } from '../../utils/imprimirLista';
 
 interface Conta {
   id: string;
@@ -438,6 +439,38 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
   const resumoAba = filtroAtivo
     ? resumoDaLista(aba === 'pagar' ? listaPagarCompleta : listaReceberCompleta)
     : (resumo ? resumo[aba] : null);
+
+  // ── Impressão (PDF) da lista atual, respeitando período e filtros ──
+  const { nomeLoja } = useApp();
+  function imprimirListaAtual() {
+    const lista: any[] = listaCompletaAtual;
+    if (lista.length === 0) { erro('Não há lançamentos para imprimir neste período.'); return; }
+
+    const dataBr = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR');
+    const periodo = periodoTipo === 'mes' ? `${MESES[mesRef]} de ${anoRef}` : `${dataBr(periodoDe)} a ${dataBr(periodoAte)}`;
+
+    const filtros: string[] = [];
+    if (catFiltro !== 'todas') filtros.push(`Categoria: ${catFiltro === '__plano__' ? 'Mensalidades (Planos)' : catFiltro}`);
+    if (statusFiltro !== 'todos') filtros.push(statusFiltro === 'pago' ? (aba === 'pagar' ? 'Só pagos' : 'Só recebidos') : 'Só pendentes');
+    if (modoFiltro !== 'todos') filtros.push(`Tipo: ${modoFiltro}`);
+    if (buscaDescricao.trim()) filtros.push(`Busca: "${buscaDescricao.trim()}"`);
+    if (aba === 'pagar') filtros.push(modoPagar === 'detalhado' ? 'Cartões detalhados' : 'Cartões agrupados');
+
+    imprimirLista({
+      tipo: aba,
+      loja: nomeLoja ?? '',
+      periodo,
+      filtros,
+      linhas: lista.map(l => ({
+        descricao: l.descricao + (l.numeroParcela && l.totalParcelas ? ` (${l.numeroParcela}/${l.totalParcelas})` : ''),
+        categoria: l.categoriaNome,
+        conta: l.cartaoNome ?? contas.find(c => c.id === l.contaBancariaId)?.nome ?? null,
+        vencimento: l.vencimento,
+        valor: l.valor,
+        status: l.status,
+      })),
+    });
+  }
 
   // ── Lançamento ──────────────────────────────────────────────────
   function abrirNovoLancamento() {
@@ -1015,14 +1048,18 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
           </div>
           <div className="fin-topbar-dir">
           {aba === 'pagar' && (
-            <>
+            <div className="fin-topbar-linha">
               <span className="fin-topbar-label">Cartões:</span>
               <div className="cx-tipo-toggle fin-sutil">
                 <button className={modoPagar === 'agrupado' ? 'active' : ''} onClick={() => setModoPagar('agrupado')}>Agrupado</button>
                 <button className={modoPagar === 'detalhado' ? 'active' : ''} onClick={() => setModoPagar('detalhado')}>Detalhado</button>
               </div>
-            </>
+            </div>
           )}
+            <button className="btn-secondary fin-imprimir-desktop" onClick={imprimirListaAtual}
+              title={`Imprimir / salvar em PDF a lista de contas a ${aba === 'pagar' ? 'pagar' : 'receber'}`}>
+              <Printer size={14} /> Imprimir PDF
+            </button>
           </div>
         </div>
         <div className="fin-filtros-linha" style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
