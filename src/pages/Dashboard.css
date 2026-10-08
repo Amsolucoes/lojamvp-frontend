@@ -189,3 +189,10 @@
 @media (min-width: 700px) {
   .dash-cartoes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Dashboard financeiro: Saldo por conta, A receber e A pagar na mesma linha */
+.dash-fin-linha { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px; }
+.dash-fin-linha > .stat-card { min-width: 0; }
+@media (min-width: 760px) {
+  .dash-fin-linha { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

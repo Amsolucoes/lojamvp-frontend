@@ -138,19 +138,10 @@ export function DashboardFinanceiro() {
     return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
   }, [mesResumo, anoResumo, anoRef]);
 
-  const qtdVencidos = (resumo?.pagar.qtdVencido ?? 0) + (resumo?.receber.qtdVencido ?? 0);
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
-  const mesAtualLabel = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   return (
     <div className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Financeiro</h1>
-          <p className="page-subtitle" style={{ textTransform: 'capitalize' }}>{mesAtualLabel}</p>
-        </div>
-      </div>
-
       <div className="card" style={{ marginBottom: 16, textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 14 }}>
           <button className="btn-secondary" onClick={() => navResumoMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
@@ -188,7 +179,7 @@ export function DashboardFinanceiro() {
         </div>
       </div>
 
-      <div className="dash-stats">
+      <div className="dash-fin-linha">
         <div className="stat-card">
           <div className="stat-label"><Wallet size={12} style={{ verticalAlign: -1 }} /> Saldo por conta</div>
           {contas.filter(c => c.ativa).length > 0 ? (
@@ -229,25 +220,6 @@ export function DashboardFinanceiro() {
             <div className="stat-value" style={{ fontSize: 20 }}>{fmt(0)}</div>
           )}
         </div>
-        {(resumo as any)?.previsao && (
-          <div className="stat-card" style={{ borderColor: (resumo as any).previsao.saldoPrevisto >= 0 ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)' }}>
-            <div className="stat-label">Previsão do mês</div>
-            <div className="stat-value" style={{ color: (resumo as any).previsao.saldoPrevisto >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {(resumo as any).previsao.saldoPrevisto >= 0 ? '+' : ''}{fmt((resumo as any).previsao.saldoPrevisto)}
-            </div>
-            <div className="stat-sub">se tudo for pago/recebido</div>
-            {qtdVencidos > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-                <span className="dash-ellipsis" style={{ color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <AlertTriangle size={12} /> Vencido
-                </span>
-                <strong className="dash-nowrap" style={{ color: 'var(--red)' }}>
-                  {qtdVencidos} conta{qtdVencidos > 1 ? 's' : ''} atrasada{qtdVencidos > 1 ? 's' : ''}
-                </strong>
-              </div>
-            )}
-          </div>
-        )}
         <div className="stat-card" style={(resumo?.receber.qtdVencido ?? 0) > 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
           <div className="stat-label"><TrendingUp size={12} style={{ verticalAlign: -1 }} /> A receber (mês)</div>
           <div className="stat-value dash-ellipsis" style={{ color: 'var(--green)', fontSize: 20 }}>
@@ -295,15 +267,6 @@ export function DashboardFinanceiro() {
             </div>
           )}
         </div>
-        {!(resumo as any)?.previsao && qtdVencidos > 0 && (
-          <div className="stat-card" style={{ borderColor: 'rgba(248,113,113,0.3)' }}>
-            <div className="stat-label"><AlertTriangle size={12} style={{ verticalAlign: -1 }} /> Vencido</div>
-            <div className="stat-value" style={{ color: 'var(--red)' }}>
-              {(resumo?.pagar.qtdVencido ?? 0) + (resumo?.receber.qtdVencido ?? 0)}
-            </div>
-            <div className="stat-sub">conta(s) atrasada(s)</div>
-          </div>
-        )}
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
