@@ -50,6 +50,10 @@
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
 
   --btn-text: #1a0e06;
+
+  /* Linhas/cards já pagos ou recebidos (mais claro que o fundo no tema escuro) */
+  --row-pago-bg:       rgba(255, 255, 255, 0.10);
+  --row-pago-bg-hover: rgba(255, 255, 255, 0.15);
 }
 
 html, body, #root {
@@ -467,6 +471,10 @@ input, select, textarea {
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.10);
 
   --btn-text: #ffffff;
+
+  /* Linhas/cards já pagos ou recebidos (cinza mais escuro que o fundo nos temas claros) */
+  --row-pago-bg:       #dcdee7;
+  --row-pago-bg-hover: #d1d4de;
 }
 
 /* Template 1 — Azul */
