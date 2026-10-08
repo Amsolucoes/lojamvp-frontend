@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
 import { Paginacao } from '../../components/Paginacao';
+import { Financeiro } from './Financeiro';
 import './Contas.css';
 
 interface Conta { id: string; nome: string; ativa: boolean; }
@@ -26,7 +26,6 @@ const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', curren
 const formVazio = (contaId = '') => ({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: contaId, taxaJurosMensal: '' });
 
 export function Cartoes() {
-  const navigate = useNavigate();
   const { sucesso, erro } = useToast();
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [resumo, setResumo] = useState<Record<string, ResumoCartao>>({});
@@ -38,6 +37,7 @@ export function Cartoes() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editando, setEditando] = useState<Cartao | null>(null);
   const [form, setForm] = useState(formVazio());
+  const [faturaCartaoId, setFaturaCartaoId] = useState<string | null>(null);
 
   function carregar() {
     return Promise.all([
@@ -166,7 +166,7 @@ export function Cartoes() {
                       <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Fecha dia {c.diaFechamento} · Vence dia {c.diaVencimento}</div>
                     </div>
                     <div className="conta-card-acoes">
-                      <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => navigate(`/financeiro?abrirFatura=${c.id}`)}>Ver fatura</button>
+                      <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => setFaturaCartaoId(c.id)}>Ver fatura</button>
                       <button className="btn-ghost" onClick={() => abrirEditar(c)}>Editar</button>
                     </div>
                   </div>
@@ -197,6 +197,15 @@ export function Cartoes() {
             onMudarPorPagina={setPorPagina}
           />
         </>
+      )}
+
+      {/* A fatura abre por cima desta tela (mesmo fundo); ao fechar, atualiza os limites */}
+      {faturaCartaoId && (
+        <Financeiro
+          apenasFatura
+          cartaoParaFatura={faturaCartaoId}
+          aoFecharFatura={() => { setFaturaCartaoId(null); carregar(); }}
+        />
       )}
     </div>
   );

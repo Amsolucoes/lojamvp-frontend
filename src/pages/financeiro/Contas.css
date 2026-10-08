@@ -31,3 +31,10 @@
 @media (min-width: 641px) {
   .page.fin-page { padding-top: 14px; }
 }
+
+/* Categorias: 2 ou 3 cards por linha conforme a largura da tela */
+.contas-lista.categorias-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 12px;
+}
