@@ -1939,7 +1939,7 @@ export function FinanceiroMobile() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group">
                     <label className="form-label">Limite (R$)</label>
-                    <input type="number" step={0.01} value={formCartao.limite} onChange={e => setFormCartao(f => ({ ...f, limite: e.target.value }))} />
+                    <InputMoeda value={parseFloat(formCartao.limite) || 0} onChange={v => setFormCartao(f => ({ ...f, limite: String(v) }))} placeholder="0,00" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Taxa juros (%/mês)</label>
@@ -2340,7 +2340,7 @@ export function FinanceiroMobile() {
               {formPagFatura.modo === 'parcial' && (
                 <div className="form-group">
                   <label className="form-label">Quanto vai pagar agora (R$)</label>
-                  <input type="number" step={0.01} value={formPagFatura.valorPago} onChange={e => setFormPagFatura(f => ({ ...f, valorPago: e.target.value }))} placeholder="0,00" />
+                  <InputMoeda value={parseFloat(formPagFatura.valorPago) || 0} onChange={v => setFormPagFatura(f => ({ ...f, valorPago: String(v) }))} placeholder="0,00" />
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>O restante entra na próxima fatura, com os juros do cartão.</p>
                 </div>
               )}
@@ -2348,7 +2348,7 @@ export function FinanceiroMobile() {
                 <>
                   <div className="form-group">
                     <label className="form-label">Entrada (R$) <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                    <input type="number" step={0.01} value={formPagFatura.valorEntrada} onChange={e => setFormPagFatura(f => ({ ...f, valorEntrada: e.target.value }))} placeholder="0,00" />
+                    <InputMoeda value={parseFloat(formPagFatura.valorEntrada) || 0} onChange={v => setFormPagFatura(f => ({ ...f, valorEntrada: String(v) }))} placeholder="0,00" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Em quantas parcelas</label>
@@ -2398,7 +2398,7 @@ export function FinanceiroMobile() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Valor adiantado (R$)</label>
-                  <input type="number" step={0.01} value={formAntecipado.valor} onChange={e => setFormAntecipado(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" />
+                  <InputMoeda value={parseFloat(formAntecipado.valor) || 0} onChange={v => setFormAntecipado(f => ({ ...f, valor: String(v) }))} placeholder="0,00" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Data</label>
