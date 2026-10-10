@@ -12,7 +12,7 @@ import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
-import { FaturasDoMes, FaturaMes } from './FaturasDoMes';
+import { FaturasDoMes, DetalheFatura, FaturaMes } from './FaturasDoMes';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -1700,6 +1700,14 @@ export function FinanceiroMobile() {
                         </div>
                       </>
                     )}
+                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                      {(() => {
+                        const f = faturasMesCartoes.find(x => x.cartaoId === c.id);
+                        if (f) return <DetalheFatura f={f} rotulo={`Fatura de ${MESES[new Date().getMonth()]}`} />;
+                        if (faturasErro) return <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Não foi possível carregar a fatura do mês.</span>;
+                        return <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Sem fatura neste mês.</span>;
+                      })()}
+                    </div>
                     <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
                       <button className="btn-secondary" style={{ fontSize: 12, flex: 1 }} onClick={() => abrirFatura(c)}>Ver fatura</button>
                       <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirEditarCartao(c)}>Editar</button>
@@ -1710,15 +1718,6 @@ export function FinanceiroMobile() {
             </div>
           )}
 
-          {cartoes.length > 0 && (
-            <FaturasDoMes
-              faturas={faturasMesCartoes}
-              titulo={`Faturas de ${MESES[new Date().getMonth()]}`}
-              mostrarTodas
-              erro={faturasErro}
-              vazio="Nenhuma fatura neste mês."
-            />
-          )}
         </>
       )}
 

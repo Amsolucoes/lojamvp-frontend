@@ -5,7 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
 import { Paginacao } from '../../components/Paginacao';
 import { Financeiro } from './Financeiro';
-import { FaturasDoMes, FaturaMes } from './FaturasDoMes';
+import { DetalheFatura, FaturaMes } from './FaturasDoMes';
 import './Contas.css';
 
 interface Conta { id: string; nome: string; ativa: boolean; }
@@ -195,6 +195,14 @@ export function Cartoes() {
                       </div>
                     </>
                   )}
+                  <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                    {(() => {
+                      const f = faturasMes.find(x => x.cartaoId === c.id);
+                      if (f) return <DetalheFatura f={f} rotulo={`Fatura de ${MESES[new Date().getMonth()]}`} />;
+                      if (faturasErro) return <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Não foi possível carregar a fatura do mês.</span>;
+                      return <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{carregando ? 'Carregando fatura…' : 'Sem fatura neste mês.'}</span>;
+                    })()}
+                  </div>
                 </div>
               );
             })}
@@ -207,16 +215,6 @@ export function Cartoes() {
             onMudarPorPagina={setPorPagina}
           />
         </>
-      )}
-
-      {!carregando && cartoes.length > 0 && (
-        <FaturasDoMes
-          faturas={faturasMes}
-          titulo={`Faturas de ${MESES[new Date().getMonth()]}`}
-          mostrarTodas
-          erro={faturasErro}
-          vazio="Nenhuma fatura neste mês."
-        />
       )}
 
       {/* A fatura abre por cima desta tela (mesmo fundo); ao fechar, atualiza os limites */}
