@@ -101,6 +101,23 @@ export function imprimirLista({ tipo, loja, periodo, filtros, linhas }: Opcoes) 
   <div class="rodape">Emitido em ${new Date().toLocaleString('pt-BR')}</div>
 </body></html>`;
 
+  // Celular: iframe não imprime direito (principalmente no iPhone), então abre o relatório em uma
+  // nova aba que já chama a impressão — de lá dá para "Compartilhar → Imprimir / Salvar em PDF".
+  // Desktop: iframe oculto (sem bloqueio de pop-up e sem mexer na tela atual).
+  const ehCelular = window.matchMedia('(max-width: 768px)').matches || /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  if (ehCelular) {
+    const comImpressao = html.replace('</body>', '<script>window.addEventListener("load",function(){setTimeout(function(){window.print()},400)})</script></body>');
+    const aba = window.open('', '_blank');
+    if (aba) {
+      aba.document.open();
+      aba.document.write(comImpressao);
+      aba.document.close();
+      return;
+    }
+    // pop-up bloqueado: segue para o iframe como alternativa
+  }
+
   // iframe oculto: evita bloqueio de pop-up e não mexe na tela atual
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';

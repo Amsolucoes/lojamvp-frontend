@@ -185,6 +185,3 @@ tbody tr.fin-row-pago:hover { background: var(--row-pago-bg-hover); }
 /* Imprimir PDF: na linha dos filtros (categorias, status, tipos); só no desktop */
 .fin-filtros-linha > .fin-imprimir-desktop { height: 38px; padding: 0 16px; }
 .fin-topbar-linha { display: flex; align-items: center; gap: 8px; }
-@media (max-width: 768px) {
-  .fin-imprimir-desktop { display: none !important; }
-}

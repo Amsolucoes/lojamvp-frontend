@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFiltrando } from '../../hooks/useFiltrando';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2, Bell } from 'lucide-react';
+import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2, Bell, Printer } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { setMobileShellOverride } from '../../utils/mobileShellOverride';
@@ -10,6 +10,8 @@ import { BankBadge, BANCOS } from '../../utils/bancos';
 import { InputMoeda } from '../../components/InputMoeda';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { useToast } from '../../context/ToastContext';
+import { useApp } from '../../context/AppContext';
+import { imprimirLista } from '../../utils/imprimirLista';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -82,6 +84,7 @@ export function FinanceiroMobile() {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
   const { sucesso, erro } = useToast();
+  const { nomeLoja } = useApp();
   const [menuAberto, setMenuAberto] = useState(false);
   const { pull, recarregando, setRef } = usePullToRefresh(() => {
     window.dispatchEvent(new Event('pullToRefresh'));
@@ -251,6 +254,77 @@ export function FinanceiroMobile() {
     setCarregandoPagar(true);
     return api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?${periodoQueryPagar()}&modo=agrupado`)
       .then(setLinhasPagar).catch(() => {}).finally(() => setCarregandoPagar(false));
+  }
+
+  // ── Impressão (PDF) da lista atual, com período e filtros da tela ──
+  function periodoTexto(tipo: 'mes' | 'personalizado', mes: number, ano: number, de: string, ate: string) {
+    const dataBr = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR');
+    return tipo === 'mes' ? `${MESES[mes]} de ${ano}` : `${dataBr(de)} a ${dataBr(ate)}`;
+  }
+
+  function imprimirPagarMobile() {
+    const lista = linhasPagar.filter(l => {
+      const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
+      const statusReal = ehVencido(l) ? 'vencido' : l.status;
+      const statusOk = filtroStatus === 'todos' || statusReal === filtroStatus;
+      const buscaOk = !buscaPagar || l.descricao.toLowerCase().includes(buscaPagar.toLowerCase());
+      return catOk && statusOk && buscaOk;
+    });
+    if (lista.length === 0) { erro('Não há lançamentos para imprimir neste período.'); return; }
+
+    const filtros: string[] = [];
+    if (catFiltro !== 'todas') filtros.push(`Categoria: ${catFiltro}`);
+    if (filtroStatus !== 'todos') filtros.push(`Status: ${filtroStatus}`);
+    if (buscaPagar.trim()) filtros.push(`Busca: "${buscaPagar.trim()}"`);
+
+    imprimirLista({
+      tipo: 'pagar',
+      loja: nomeLoja ?? '',
+      periodo: periodoTexto(periodoTipo, mesPagar, anoPagar, periodoDe, periodoAte),
+      filtros,
+      linhas: lista.map(l => ({
+        descricao: l.descricao + (l.numeroParcela && l.totalParcelas ? ` (${l.numeroParcela}/${l.totalParcelas})` : ''),
+        categoria: l.categoriaNome,
+        conta: l.cartaoNome ?? contas.find(c => c.id === l.contaBancariaId)?.nome ?? null,
+        vencimento: l.vencimento,
+        valor: l.valor,
+        status: l.status,
+      })),
+    });
+  }
+
+  function imprimirReceberMobile() {
+    const lista = linhasReceber.filter(l => {
+      const catOk = catFiltroReceber === 'todas'
+        ? true
+        : catFiltroReceber === '__plano__'
+        ? l.origem === 'plano'
+        : l.origem === 'avulso' && l.categoriaNome === catFiltroReceber;
+      const statusOk = filtroStatusReceber === 'todos' || l.status === filtroStatusReceber;
+      const buscaOk = !buscaReceber || l.descricao.toLowerCase().includes(buscaReceber.toLowerCase());
+      return catOk && statusOk && buscaOk;
+    });
+    if (lista.length === 0) { erro('Não há lançamentos para imprimir neste período.'); return; }
+
+    const filtros: string[] = [];
+    if (catFiltroReceber !== 'todas') filtros.push(`Categoria: ${catFiltroReceber === '__plano__' ? 'Mensalidades (Planos)' : catFiltroReceber}`);
+    if (filtroStatusReceber !== 'todos') filtros.push(`Status: ${filtroStatusReceber}`);
+    if (buscaReceber.trim()) filtros.push(`Busca: "${buscaReceber.trim()}"`);
+
+    imprimirLista({
+      tipo: 'receber',
+      loja: nomeLoja ?? '',
+      periodo: periodoTexto(periodoTipoReceber, mesReceber, anoReceber, periodoDeReceber, periodoAteReceber),
+      filtros,
+      linhas: lista.map(l => ({
+        descricao: l.descricao + (l.numeroParcela && l.totalParcelas ? ` (${l.numeroParcela}/${l.totalParcelas})` : ''),
+        categoria: l.categoriaNome,
+        conta: contas.find(c => c.id === l.contaBancariaId)?.nome ?? null,
+        vencimento: l.vencimento,
+        valor: l.valor,
+        status: l.status,
+      })),
+    });
   }
 
   function navMesPagar(delta: number) {
@@ -1303,7 +1377,13 @@ export function FinanceiroMobile() {
               ))}
             </select>
           )}
-          <input placeholder="Buscar por descrição..." value={buscaPagar} onChange={e => setBuscaPagar(e.target.value)} style={{ marginBottom: 14 }} />
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <input placeholder="Buscar por descrição..." value={buscaPagar} onChange={e => setBuscaPagar(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+            <button className="btn-secondary" onClick={imprimirPagarMobile} title="Imprimir / salvar em PDF"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, padding: '0 14px' }}>
+              <Printer size={16} /> PDF
+            </button>
+          </div>
 
           {carregandoPagar || filtrandoPagar ? null : (() => {
             const filtrada = linhasPagar.filter(l => {
@@ -1461,7 +1541,13 @@ export function FinanceiroMobile() {
               ))}
             </select>
           )}
-          <input placeholder="Buscar por descrição..." value={buscaReceber} onChange={e => setBuscaReceber(e.target.value)} style={{ marginBottom: 14 }} />
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <input placeholder="Buscar por descrição..." value={buscaReceber} onChange={e => setBuscaReceber(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+            <button className="btn-secondary" onClick={imprimirReceberMobile} title="Imprimir / salvar em PDF"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, padding: '0 14px' }}>
+              <Printer size={16} /> PDF
+            </button>
+          </div>
 
           {carregandoReceber || filtrandoReceber ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
