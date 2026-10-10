@@ -12,6 +12,7 @@ import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
+import { FaturasDoMes, FaturaMes } from './FaturasDoMes';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -149,6 +150,10 @@ export function FinanceiroMobile() {
 
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [cartoesResumo, setCartoesResumo] = useState<Record<string, { usado: number; disponivel: number; qtdCompras: number; status: string }>>({});
+  // Faturas de cartão do mês (pagas / parciais / parceladas) — telas de Cartões e Contas a Pagar
+  const [faturasMesCartoes, setFaturasMesCartoes] = useState<FaturaMes[]>([]);
+  const [faturasMesPagar, setFaturasMesPagar] = useState<FaturaMes[]>([]);
+  const [faturasTick, setFaturasTick] = useState(0);
   const [carregandoListaCartoes, setCarregandoListaCartoes] = useState(true);
   const [carregandoResumoCartoes, setCarregandoResumoCartoes] = useState(true);
   const [modalNovoCartao, setModalNovoCartao] = useState(false);
@@ -251,10 +256,23 @@ export function FinanceiroMobile() {
   }
 
   function recarregarPagar() {
+    setFaturasTick(t => t + 1);
     setCarregandoPagar(true);
     return api.get<LinhaPagar[]>(`/api/financeiro/pagar-unificado?${periodoQueryPagar()}&modo=agrupado`)
       .then(setLinhasPagar).catch(() => {}).finally(() => setCarregandoPagar(false));
   }
+
+  useEffect(() => {
+    if (tela === 'cartoes') {
+      const agora = new Date();
+      api.get<FaturaMes[]>(`/api/financeiro/faturas-do-mes?ano=${agora.getFullYear()}&mes=${agora.getMonth() + 1}`)
+        .then(setFaturasMesCartoes).catch(() => {});
+    } else if (tela === 'pagar') {
+      if (periodoTipo !== 'mes') { setFaturasMesPagar([]); return; }
+      api.get<FaturaMes[]>(`/api/financeiro/faturas-do-mes?ano=${anoPagar}&mes=${mesPagar + 1}`)
+        .then(setFaturasMesPagar).catch(() => {});
+    }
+  }, [tela, mesPagar, anoPagar, periodoTipo, faturasTick]);
 
   // ── Impressão (PDF) da lista atual, com período e filtros da tela ──
   function periodoTexto(tipo: 'mes' | 'personalizado', mes: number, ano: number, de: string, ate: string) {
@@ -422,6 +440,7 @@ export function FinanceiroMobile() {
   }
 
   function carregarCartoes() {
+    setFaturasTick(t => t + 1);
     setCarregandoListaCartoes(true);
     setCarregandoResumoCartoes(true);
     api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {}).finally(() => setCarregandoListaCartoes(false));
@@ -1458,6 +1477,8 @@ export function FinanceiroMobile() {
               </>
             );
           })()}
+
+          <FaturasDoMes faturas={faturasMesPagar} titulo={`Faturas de cartão com pagamento · ${MESES[mesPagar]}`} />
         </>
       )}
 
@@ -1686,6 +1707,8 @@ export function FinanceiroMobile() {
               })}
             </div>
           )}
+
+          <FaturasDoMes faturas={faturasMesCartoes} titulo={`Faturas pagas em ${MESES[new Date().getMonth()]}`} />
         </>
       )}
 
