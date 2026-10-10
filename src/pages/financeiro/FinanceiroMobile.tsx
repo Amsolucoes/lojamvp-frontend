@@ -154,6 +154,7 @@ export function FinanceiroMobile() {
   const [faturasMesCartoes, setFaturasMesCartoes] = useState<FaturaMes[]>([]);
   const [faturasMesPagar, setFaturasMesPagar] = useState<FaturaMes[]>([]);
   const [faturasTick, setFaturasTick] = useState(0);
+  const [faturasErro, setFaturasErro] = useState(false);
   const [carregandoListaCartoes, setCarregandoListaCartoes] = useState(true);
   const [carregandoResumoCartoes, setCarregandoResumoCartoes] = useState(true);
   const [modalNovoCartao, setModalNovoCartao] = useState(false);
@@ -266,7 +267,8 @@ export function FinanceiroMobile() {
     if (tela === 'cartoes') {
       const agora = new Date();
       api.get<FaturaMes[]>(`/api/financeiro/faturas-do-mes?ano=${agora.getFullYear()}&mes=${agora.getMonth() + 1}`)
-        .then(setFaturasMesCartoes).catch(() => {});
+        .then(r => { setFaturasMesCartoes(r); setFaturasErro(false); })
+        .catch(() => setFaturasErro(true));
     } else if (tela === 'pagar') {
       if (periodoTipo !== 'mes') { setFaturasMesPagar([]); return; }
       api.get<FaturaMes[]>(`/api/financeiro/faturas-do-mes?ano=${anoPagar}&mes=${mesPagar + 1}`)
@@ -1708,7 +1710,15 @@ export function FinanceiroMobile() {
             </div>
           )}
 
-          <FaturasDoMes faturas={faturasMesCartoes} titulo={`Faturas pagas em ${MESES[new Date().getMonth()]}`} />
+          {cartoes.length > 0 && (
+            <FaturasDoMes
+              faturas={faturasMesCartoes}
+              titulo={`Faturas de ${MESES[new Date().getMonth()]}`}
+              mostrarTodas
+              erro={faturasErro}
+              vazio="Nenhuma fatura neste mês."
+            />
+          )}
         </>
       )}
 
