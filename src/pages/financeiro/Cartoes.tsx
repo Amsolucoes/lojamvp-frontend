@@ -5,7 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
 import { Paginacao } from '../../components/Paginacao';
 import { Financeiro } from './Financeiro';
-import { DetalheFatura, FaturaMes } from './FaturasDoMes';
+import { DetalheFatura, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
 import './Contas.css';
 
 interface Conta { id: string; nome: string; ativa: boolean; }
@@ -42,6 +42,8 @@ export function Cartoes() {
   const [faturaCartaoId, setFaturaCartaoId] = useState<string | null>(null);
   const [faturasMes, setFaturasMes] = useState<FaturaMes[]>([]);
   const [faturasErro, setFaturasErro] = useState(false);
+  const [busca, setBusca] = useState('');
+  const [ordem, setOrdem] = useState<OrdemCartoes>('asc');
 
   function carregar() {
     return Promise.all([
@@ -105,15 +107,22 @@ export function Cartoes() {
     }
   }
 
-  const totalPaginas = Math.max(1, Math.ceil(cartoes.length / porPagina));
+  const cartoesFiltrados = filtrarOrdenarCartoes([...cartoes], faturasMes, busca, ordem);
+  const totalPaginas = Math.max(1, Math.ceil(cartoesFiltrados.length / porPagina));
   const paginaSegura = Math.min(pagina, totalPaginas);
-  const visiveis = cartoes.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina);
+  const visiveis = cartoesFiltrados.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina);
 
   return (
     <div className="page fin-page">
       <div className="contas-acoes">
         <button className="btn-primary" onClick={abrirNovo}><Plus size={15} /> Novo cartão</button>
       </div>
+
+      {cartoes.length > 0 && (
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+          <BarraCartoes busca={busca} setBusca={b => { setBusca(b); setPagina(1); }} ordem={ordem} setOrdem={o => { setOrdem(o); setPagina(1); }} />
+        </div>
+      )}
 
       {mostrarForm && (
         <div className="card contas-form">
@@ -159,12 +168,15 @@ export function Cartoes() {
         <div className="card"><div className="empty" style={{ padding: '40px 0' }}><p>Nenhum cartão cadastrado.</p></div></div>
       ) : (
         <>
+          {cartoesFiltrados.length === 0 && (
+            <div className="card"><div className="empty" style={{ padding: '30px 0' }}><p>Nenhum cartão encontrado.</p></div></div>
+          )}
           <div className="contas-lista">
             {visiveis.map(c => {
               const r = resumo[c.id];
               const pct = r && c.limite > 0 ? Math.min(100, (r.usado / c.limite) * 100) : 0;
               return (
-                <div key={c.id} className="card cartao-card" style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : undefined }}>
+                <div key={c.id} className={`card cartao-card${faturaFoiPaga(faturasMes, c.id) ? ' fin-row-pago' : ''}`} style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : undefined }}>
                   <div className="cartao-card-topo">
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -209,7 +221,7 @@ export function Cartoes() {
           </div>
           <Paginacao
             paginaAtual={paginaSegura}
-            totalItens={cartoes.length}
+            totalItens={cartoesFiltrados.length}
             porPagina={porPagina}
             onMudarPagina={setPagina}
             onMudarPorPagina={setPorPagina}

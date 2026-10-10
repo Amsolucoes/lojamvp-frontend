@@ -1,3 +1,5 @@
+import { ArrowDown, ArrowUp, Search } from 'lucide-react';
+
 // Faturas de cartão de um mês: o que já foi pago, pagamento parcial/adiantado e parcelamento.
 // Usada nas telas de Cartões e Contas a Pagar do mobile.
 
@@ -189,6 +191,60 @@ export function FaturaAninhada({ f }: { f: FaturaMes | undefined }) {
   return (
     <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px dashed var(--border)' }}>
       <DetalheFatura f={f} rotulo="Pagamento da fatura" />
+    </div>
+  );
+}
+
+
+// ── Busca e ordenação da lista de cartões ─────────────────────────────────
+
+export type OrdemCartoes = 'asc' | 'desc';
+
+const normalizar = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+// Fatura com baixa (paga, parcial ou parcelada) — usada para destacar o card em verde
+export function faturaFoiPaga(faturas: FaturaMes[], cartaoId: string): boolean {
+  const f = faturas.find(x => x.cartaoId === cartaoId);
+  return !!f && (f.status === 'pago' || f.status === 'financiada' || f.status === 'parcial');
+}
+
+// Vencimento da fatura do mês; sem fatura, usa o dia de vencimento do cartão no mês atual
+function vencimentoDoCartao(c: { id: string; diaVencimento: number }, faturas: FaturaMes[]): number {
+  const f = faturas.find(x => x.cartaoId === c.id);
+  if (f?.vencimento) return new Date(f.vencimento).getTime();
+  const agora = new Date();
+  const diasNoMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).getDate();
+  return new Date(agora.getFullYear(), agora.getMonth(), Math.min(c.diaVencimento, diasNoMes), 12).getTime();
+}
+
+export function filtrarOrdenarCartoes<T extends { id: string; nome: string; diaVencimento: number }>(
+  cartoes: T[], faturas: FaturaMes[], busca: string, ordem: OrdemCartoes,
+): T[] {
+  const termo = normalizar(busca);
+  const lista = cartoes.filter(c => !termo || normalizar(c.nome).includes(termo));
+  return lista.sort((a, b) => {
+    const d = vencimentoDoCartao(a, faturas) - vencimentoDoCartao(b, faturas);
+    const r = d !== 0 ? d : a.nome.localeCompare(b.nome);
+    return ordem === 'asc' ? r : -r;
+  });
+}
+
+// Pesquisa por nome do cartão + botão de ordenação por vencimento (crescente/decrescente)
+export function BarraCartoes({ busca, setBusca, ordem, setOrdem }: {
+  busca: string; setBusca: (v: string) => void; ordem: OrdemCartoes; setOrdem: (o: OrdemCartoes) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+      <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+        <input type="text" placeholder="Buscar cartão pelo nome..." value={busca} onChange={e => setBusca(e.target.value)}
+          style={{ width: '100%', paddingLeft: 30 }} />
+      </div>
+      <button className="btn-secondary" onClick={() => setOrdem(ordem === 'asc' ? 'desc' : 'asc')}
+        title={ordem === 'asc' ? 'Vencimento: do mais próximo ao mais distante' : 'Vencimento: do mais distante ao mais próximo'}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, padding: '0 14px', whiteSpace: 'nowrap' }}>
+        {ordem === 'asc' ? <ArrowUp size={15} /> : <ArrowDown size={15} />} Vencimento
+      </button>
     </div>
   );
 }
