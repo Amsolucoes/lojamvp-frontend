@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
 import { Paginacao } from '../../components/Paginacao';
 import { Financeiro } from './Financeiro';
+import { FaturasDoMes, FaturaMes } from './FaturasDoMes';
 import './Contas.css';
 
 interface Conta { id: string; nome: string; ativa: boolean; }
@@ -22,6 +23,7 @@ interface Cartao {
 
 interface ResumoCartao { usado: number; disponivel: number; qtdCompras: number; status: string; }
 
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formVazio = (contaId = '') => ({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: contaId, taxaJurosMensal: '' });
 
@@ -38,6 +40,8 @@ export function Cartoes() {
   const [editando, setEditando] = useState<Cartao | null>(null);
   const [form, setForm] = useState(formVazio());
   const [faturaCartaoId, setFaturaCartaoId] = useState<string | null>(null);
+  const [faturasMes, setFaturasMes] = useState<FaturaMes[]>([]);
+  const [faturasErro, setFaturasErro] = useState(false);
 
   function carregar() {
     return Promise.all([
@@ -48,6 +52,12 @@ export function Cartoes() {
         setResumo(mapa);
       }).catch(() => {}),
       api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {}),
+      (() => {
+        const agora = new Date();
+        return api.get<FaturaMes[]>(`/api/financeiro/faturas-do-mes?ano=${agora.getFullYear()}&mes=${agora.getMonth() + 1}`)
+          .then(r => { setFaturasMes(r); setFaturasErro(false); })
+          .catch(() => setFaturasErro(true));
+      })(),
     ]).finally(() => setCarregando(false));
   }
   useEffect(() => { carregar(); }, []);
@@ -197,6 +207,16 @@ export function Cartoes() {
             onMudarPorPagina={setPorPagina}
           />
         </>
+      )}
+
+      {!carregando && cartoes.length > 0 && (
+        <FaturasDoMes
+          faturas={faturasMes}
+          titulo={`Faturas de ${MESES[new Date().getMonth()]}`}
+          mostrarTodas
+          erro={faturasErro}
+          vazio="Nenhuma fatura neste mês."
+        />
       )}
 
       {/* A fatura abre por cima desta tela (mesmo fundo); ao fechar, atualiza os limites */}
