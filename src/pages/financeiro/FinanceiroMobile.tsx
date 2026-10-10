@@ -12,7 +12,7 @@ import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
-import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, FaturaMes } from './FaturasDoMes';
+import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -155,6 +155,8 @@ export function FinanceiroMobile() {
   const [faturasMesPagar, setFaturasMesPagar] = useState<FaturaMes[]>([]);
   const [faturasTick, setFaturasTick] = useState(0);
   const [faturasErro, setFaturasErro] = useState(false);
+  const [buscaCartao, setBuscaCartao] = useState('');
+  const [ordemCartoes, setOrdemCartoes] = useState<OrdemCartoes>('asc');
   const [carregandoListaCartoes, setCarregandoListaCartoes] = useState(true);
   const [carregandoResumoCartoes, setCarregandoResumoCartoes] = useState(true);
   const [modalNovoCartao, setModalNovoCartao] = useState(false);
@@ -1676,12 +1678,17 @@ export function FinanceiroMobile() {
           ) : cartoes.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nenhum cartão cadastrado.</p>
           ) : (
+            <>
+            <BarraCartoes busca={buscaCartao} setBusca={setBuscaCartao} ordem={ordemCartoes} setOrdem={setOrdemCartoes} />
+            {filtrarOrdenarCartoes([...cartoes], faturasMesCartoes, buscaCartao, ordemCartoes).length === 0 && (
+              <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nenhum cartão encontrado.</p>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {cartoes.map(c => {
+              {filtrarOrdenarCartoes([...cartoes], faturasMesCartoes, buscaCartao, ordemCartoes).map(c => {
                 const r = cartoesResumo[c.id];
                 const pct = r && c.limite > 0 ? Math.min(100, (r.usado / c.limite) * 100) : 0;
                 return (
-                  <div key={c.id} className="card fm-card" style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : undefined }}>
+                  <div key={c.id} className={`card fm-card${faturaFoiPaga(faturasMesCartoes, c.id) ? ' fin-row-pago' : ''}`} style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : undefined }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', minWidth: 0 }}>{c.nome}</span>
                       {r && r.qtdCompras > 0 && <span className="fm-tag-neutra" style={{ flexShrink: 0 }}>{r.qtdCompras} compra{r.qtdCompras > 1 ? 's' : ''}</span>}
@@ -1721,6 +1728,7 @@ export function FinanceiroMobile() {
                );
               })}
             </div>
+            </>
           )}
 
         </>
