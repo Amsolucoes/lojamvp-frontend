@@ -12,7 +12,7 @@ import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
-import { FaturasDoMes, DetalheFatura, FaturaMes } from './FaturasDoMes';
+import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, FaturaMes } from './FaturasDoMes';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -1421,11 +1421,11 @@ export function FinanceiroMobile() {
             return (
               <>
                 <p ref={listaPagarRef} style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{filtrada.length} lançamento{filtrada.length !== 1 ? 's' : ''}</p>
-                {agruparPorData(pagina).map(([dia, itens]) => (
+                {agruparComFaturas(agruparPorData(pagina), faturasSemLinha(faturasMesPagar, pagina)).map(({ dia, itens, faturas: faturasDoDia }) => (
                   <div key={dia} style={{ marginBottom: 12 }}>
                     <div className="fm-dia-header">
                       <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
-                      <strong>{fmt(itens.reduce((s, i) => s + i.valor, 0))}</strong>
+                      {itens.length > 0 && <strong>{fmt(itens.reduce((s, i) => s + i.valor, 0))}</strong>}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {itens.map(l => {
@@ -1463,9 +1463,15 @@ export function FinanceiroMobile() {
                                 )}
                               </div>
                             </div>
+                            <FaturaAninhada f={faturaComPagamento(faturasMesPagar, l.cartaoId)} />
                           </div>
                         );
                       })}
+                      {faturasDoDia.map(f => (
+                        <div key={`fat-${f.cartaoId}`} className="card fm-card-linha-completa fin-row-pago">
+                          <DetalheFatura f={f} />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -1480,7 +1486,6 @@ export function FinanceiroMobile() {
             );
           })()}
 
-          <FaturasDoMes faturas={faturasMesPagar} titulo={`Faturas de cartão com pagamento · ${MESES[mesPagar]}`} />
         </>
       )}
 
