@@ -11,6 +11,7 @@ import { BANCOS, BankBadge } from '../../utils/bancos';
 import './Financeiro.css';
 import { useApp } from '@/context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
+import { FaturasDoMes, FaturaMes } from './FaturasDoMes';
 
 interface Conta {
   id: string;
@@ -163,6 +164,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
   const [modalLancarCompra, setModalLancarCompra] = useState(false);
   const [carregandoFatura, setCarregandoFatura] = useState(false);
   const [carregandoLancamentos, setCarregandoLancamentos] = useState(true);
+  const [faturasMes, setFaturasMes] = useState<FaturaMes[]>([]);
   const novoSentinelaRef = useRef<HTMLDivElement>(null);
   const [novoFixo, setNovoFixo] = useState(false);
   useEffect(() => {
@@ -234,7 +236,15 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
     return `ano=${anoRef}&mes=${mesRef + 1}`;
   }
 
+  // Faturas de cartão do mês com pagamento (pago, parcial, parcelado, adiantado)
+  function carregarFaturasMes() {
+    if (aba !== 'pagar' || periodoTipo !== 'mes') { setFaturasMes([]); return; }
+    api.get<FaturaMes[]>(`/api/financeiro/faturas-do-mes?ano=${anoRef}&mes=${mesRef + 1}`)
+      .then(setFaturasMes).catch(() => {});
+  }
+
   async function carregarLancamentos() {
+    carregarFaturasMes();
     setCarregandoLancamentos(true);
     try {
     if (aba === 'pagar') {
@@ -1419,6 +1429,10 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
           )
         )}
       </div>
+
+      {aba === 'pagar' && (
+        <FaturasDoMes faturas={faturasMes} titulo={`Faturas de cartão com pagamento · ${MESES[mesRef]}`} />
+      )}
 
       {/* Modal novo lançamento */}
       {modalLancamento && (
