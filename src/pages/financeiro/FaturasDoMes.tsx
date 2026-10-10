@@ -156,3 +156,39 @@ export function FaturasDoMes({ faturas, titulo, mostrarTodas = false, vazio, err
     </div>
   );
 }
+
+// ── Integração com a lista de Contas a pagar ──────────────────────────────
+
+// Fatura do cartão com algum pagamento (pago, parcial, parcelada ou adiantado), se houver
+export function faturaComPagamento(faturas: FaturaMes[], cartaoId: string | null | undefined): FaturaMes | undefined {
+  if (!cartaoId) return undefined;
+  return faturasComPagamento(faturas).find(f => f.cartaoId === cartaoId);
+}
+
+// Faturas com pagamento que NÃO têm linha na lista (ex.: já 100% pagas) — entram no dia do vencimento
+export function faturasSemLinha(faturas: FaturaMes[], linhas: { cartaoId?: string | null; origem?: string }[]): FaturaMes[] {
+  const comLinha = new Set(linhas.filter(l => l.origem && l.origem.startsWith('cartao') && l.cartaoId).map(l => l.cartaoId as string));
+  return faturasComPagamento(faturas).filter(f => !comLinha.has(f.cartaoId));
+}
+
+// Une os grupos por dia da lista com as faturas órfãs, mantendo a ordem por data
+export function agruparComFaturas<T>(grupos: [string, T[]][], orfas: FaturaMes[]): { dia: string; itens: T[]; faturas: FaturaMes[] }[] {
+  const mapa = new Map<string, { dia: string; itens: T[]; faturas: FaturaMes[] }>();
+  grupos.forEach(([dia, itens]) => mapa.set(dia, { dia, itens, faturas: [] }));
+  orfas.forEach(f => {
+    const dia = f.vencimento ? f.vencimento.slice(0, 10) : 'sem-data';
+    if (!mapa.has(dia)) mapa.set(dia, { dia, itens: [], faturas: [] });
+    mapa.get(dia)!.faturas.push(f);
+  });
+  return [...mapa.values()].sort((a, b) => a.dia.localeCompare(b.dia));
+}
+
+// Detalhe do pagamento dentro do próprio card da fatura na lista
+export function FaturaAninhada({ f }: { f: FaturaMes | undefined }) {
+  if (!f) return null;
+  return (
+    <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px dashed var(--border)' }}>
+      <DetalheFatura f={f} rotulo="Pagamento da fatura" />
+    </div>
+  );
+}

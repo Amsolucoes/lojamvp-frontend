@@ -185,3 +185,8 @@ tbody tr.fin-row-pago:hover { background: var(--row-pago-bg-hover); }
 /* Imprimir PDF: na linha dos filtros (categorias, status, tipos); só no desktop */
 .fin-filtros-linha > .fin-imprimir-desktop { height: 38px; padding: 0 16px; }
 .fin-topbar-linha { display: flex; align-items: center; gap: 8px; }
+
+/* No celular as faturas pagas ficam dentro da lista (junto do vencimento); a seção do fim é só desktop */
+@media (max-width: 768px) {
+  .fin-faturas-desktop { display: none; }
+}

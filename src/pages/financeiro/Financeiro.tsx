@@ -11,7 +11,7 @@ import { BANCOS, BankBadge } from '../../utils/bancos';
 import './Financeiro.css';
 import { useApp } from '@/context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
-import { FaturasDoMes, FaturaMes } from './FaturasDoMes';
+import { FaturasDoMes, DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, FaturaMes } from './FaturasDoMes';
 
 interface Conta {
   id: string;
@@ -1227,13 +1227,15 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                 </table>
               </div>
               <div className="fin-cards-mobile">
-                {agruparPorData(listaPagar).map(([data, itens]) => (
+                {agruparComFaturas(agruparPorData(listaPagar), faturasSemLinha(faturasMes, listaPagar)).map(({ dia: data, itens, faturas: faturasDoDia }) => (
                   <div key={`m-grupo-${data}`}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 16px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
                       {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
-                      <span style={{ fontWeight: 400, color: 'var(--text-2)', marginLeft: 8 }}>
-                        {fmt(itens.reduce((s, i) => s + i.valor, 0))}
-                      </span>
+                      {itens.length > 0 && (
+                        <span style={{ fontWeight: 400, color: 'var(--text-2)', marginLeft: 8 }}>
+                          {fmt(itens.reduce((s, i) => s + i.valor, 0))}
+                        </span>
+                      )}
                     </div>
                     {itens.map(l => {
                       const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
@@ -1284,9 +1286,15 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                           )}
                         </div>
                       </div>
+                      {ehCartao && <FaturaAninhada f={faturaComPagamento(faturasMes, (l as any).cartaoId)} />}
                     </div>
                       );
                     })}
+                    {faturasDoDia.map(f => (
+                      <div key={`fat-${f.cartaoId}`} className="fin-card-mobile fin-row-pago">
+                        <DetalheFatura f={f} />
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -1431,7 +1439,9 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
       </div>
 
       {aba === 'pagar' && (
-        <FaturasDoMes faturas={faturasMes} titulo={`Faturas de cartão com pagamento · ${MESES[mesRef]}`} />
+        <div className="fin-faturas-desktop">
+          <FaturasDoMes faturas={faturasMes} titulo={`Faturas de cartão com pagamento · ${MESES[mesRef]}`} />
+        </div>
       )}
 
       {/* Modal novo lançamento */}
