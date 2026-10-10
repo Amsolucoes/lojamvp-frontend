@@ -190,3 +190,9 @@ tbody tr.fin-row-pago:hover { background: var(--row-pago-bg-hover); }
 @media (max-width: 768px) {
   .fin-faturas-desktop { display: none; }
 }
+
+/* Itens já pagos: fundo verde suave + faixa verde na lateral (linhas de tabela, cards e faturas pagas) */
+tbody tr.fin-row-pago td:first-child { box-shadow: inset 3px 0 0 var(--green); }
+.card.fin-row-pago,
+.fin-card-mobile.fin-row-pago,
+.fm-card-linha-completa.fin-row-pago { background: var(--row-pago-bg); border-left: 3px solid var(--green); }

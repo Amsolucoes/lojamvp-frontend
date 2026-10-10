@@ -51,9 +51,9 @@
 
   --btn-text: #1a0e06;
 
-  /* Linhas/cards já pagos ou recebidos (mais claro que o fundo no tema escuro) */
-  --row-pago-bg:       rgba(255, 255, 255, 0.10);
-  --row-pago-bg-hover: rgba(255, 255, 255, 0.15);
+  /* Linhas/cards já pagos ou recebidos (verde suave) */
+  --row-pago-bg:       rgba(74, 222, 128, 0.12);
+  --row-pago-bg-hover: rgba(74, 222, 128, 0.18);
 }
 
 html, body, #root {
@@ -472,9 +472,9 @@ input, select, textarea {
 
   --btn-text: #ffffff;
 
-  /* Linhas/cards já pagos ou recebidos (cinza mais escuro que o fundo nos temas claros) */
-  --row-pago-bg:       #dcdee7;
-  --row-pago-bg-hover: #d1d4de;
+  /* Linhas/cards já pagos ou recebidos (verde suave) */
+  --row-pago-bg:       rgba(22, 163, 74, 0.13);
+  --row-pago-bg-hover: rgba(22, 163, 74, 0.20);
 }
 
 /* Template 1 — Azul */
