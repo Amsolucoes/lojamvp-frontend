@@ -26,49 +26,20 @@ export function faturasComPagamento(faturas: FaturaMes[]): FaturaMes[] {
 
 const linha = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, fontSize: 12.5, marginTop: 4 } as const;
 
-interface Props {
-  faturas: FaturaMes[];
-  titulo: string;
-  // true: mostra também as faturas ainda em aberto (tela de Cartões); false: só as que já tiveram pagamento
-  mostrarTodas?: boolean;
-  // texto quando não há nada a mostrar (se omitido, a seção some)
-  vazio?: string;
-  erro?: boolean;
-}
-
-export function FaturasDoMes({ faturas, titulo, mostrarTodas = false, vazio, erro = false }: Props) {
-  const lista = mostrarTodas ? faturas : faturasComPagamento(faturas);
-
-  if (erro) {
-    return <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 16, textAlign: 'center' }}>Não foi possível carregar as faturas do mês agora.</p>;
-  }
-  if (lista.length === 0) {
-    if (!vazio) return null;
-    return (
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>{titulo}</div>
-        <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '14px 0' }}>{vazio}</p>
-      </div>
-    );
-  }
+// Conteúdo de uma fatura (título + etiqueta + valores + parcelas). Reutilizado dentro do card do cartão.
+export function DetalheFatura({ f, rotulo }: { f: FaturaMes; rotulo?: string }) {
+  const financiada = f.status === 'financiada';
+  const parcial = f.status === 'parcial';
+  const paga = f.status === 'pago';
+  const soAdiantamento = f.status === 'pendente' && f.totalAntecipado > 0;
+  const emAberto = f.status === 'pendente' && f.totalAntecipado === 0;
+  const restanteParcial = Math.max(0, f.total - f.valorPago);
+  const nParcelas = f.parcelas.length;
 
   return (
-    <div style={{ marginTop: 16 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>{titulo}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {lista.map(f => {
-          const financiada = f.status === 'financiada';
-          const parcial = f.status === 'parcial';
-          const paga = f.status === 'pago';
-          const soAdiantamento = f.status === 'pendente' && f.totalAntecipado > 0;
-          const emAberto = f.status === 'pendente' && f.totalAntecipado === 0;
-          const restanteParcial = Math.max(0, f.total - f.valorPago);
-          const nParcelas = f.parcelas.length;
-
-          return (
-            <div key={f.cartaoId} className={`card fm-card${emAberto ? '' : ' fin-row-pago'}`}>
+    <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', minWidth: 0 }}>💳 Fatura {f.cartaoNome}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', minWidth: 0 }}>{rotulo ?? `💳 Fatura ${f.cartaoNome}`}</span>
                 <span className={`badge badge-${paga ? 'green' : financiada ? 'accent' : emAberto ? 'red' : 'yellow'}`} style={{ fontSize: 10, flexShrink: 0 }}>
                   {paga ? 'Paga' : financiada ? 'Parcelada' : parcial ? 'Pago parcial' : emAberto ? 'Em aberto' : 'Adiantado'}
                 </span>
@@ -142,9 +113,45 @@ export function FaturasDoMes({ faturas, titulo, mostrarTodas = false, vazio, err
                   </div>
                 </details>
               )}
-            </div>
-          );
-        })}
+    </>
+  );
+}
+
+interface Props {
+  faturas: FaturaMes[];
+  titulo: string;
+  // true: mostra também as faturas ainda em aberto (tela de Cartões); false: só as que já tiveram pagamento
+  mostrarTodas?: boolean;
+  // texto quando não há nada a mostrar (se omitido, a seção some)
+  vazio?: string;
+  erro?: boolean;
+}
+
+export function FaturasDoMes({ faturas, titulo, mostrarTodas = false, vazio, erro = false }: Props) {
+  const lista = mostrarTodas ? faturas : faturasComPagamento(faturas);
+
+  if (erro) {
+    return <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 16, textAlign: 'center' }}>Não foi possível carregar as faturas do mês agora.</p>;
+  }
+  if (lista.length === 0) {
+    if (!vazio) return null;
+    return (
+      <div style={{ marginTop: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>{titulo}</div>
+        <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '14px 0' }}>{vazio}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>{titulo}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {lista.map(f => (
+          <div key={f.cartaoId} className={`card fm-card${f.status === 'pendente' && f.totalAntecipado === 0 ? '' : ' fin-row-pago'}`}>
+            <DetalheFatura f={f} />
+          </div>
+        ))}
       </div>
     </div>
   );
