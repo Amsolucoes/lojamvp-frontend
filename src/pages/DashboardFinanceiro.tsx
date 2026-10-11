@@ -61,7 +61,7 @@ export function DashboardFinanceiro() {
   const [contas, setContas] = useState<Conta[]>([]);
   const [resumo, setResumo] = useState<{ pagar: ResumoTipo; receber: ResumoTipo } | null>(null);
   const [anoRef, setAnoRef] = useState(new Date().getFullYear());
-  const [resumoAnual, setResumoAnual] = useState<{ mes: number; pagar: number; receber: number; saldo: number }[]>([]);
+  const [resumoAnual, setResumoAnual] = useState<{ mes: number; pagar: number; receber: number; saldo: number; pagarPago?: number; pagarAberto?: number }[]>([]);
   const [carregandoAnual, setCarregandoAnual] = useState(true);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [cartoesResumo, setCartoesResumo] = useState<CartaoResumo[]>([]);
@@ -138,6 +138,7 @@ export function DashboardFinanceiro() {
     return () => window.removeEventListener('pullToRefresh', aoReceberPullToRefresh);
   }, [mesResumo, anoResumo, anoRef]);
 
+  const temPagoAnual = resumoAnual.some(m => m.pagarPago !== undefined);
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
 
   return (
@@ -308,7 +309,7 @@ export function DashboardFinanceiro() {
         <div className="table-wrap dash-resumo-desktop">
           <table>
             <thead>
-              <tr><th>Mês</th><th>Receitas</th><th>Despesas</th><th>Saldo</th></tr>
+              <tr><th>Mês</th><th>Receitas</th><th>Despesas</th>{temPagoAnual && <><th>Pago</th><th>Falta pagar</th></>}<th>Saldo</th></tr>
             </thead>
             <tbody>
               {resumoAnual.map(m => (
@@ -316,6 +317,14 @@ export function DashboardFinanceiro() {
                   <td>{MESES_ABREV[m.mes - 1]}</td>
                   <td style={{ color: 'var(--green)' }}>{fmt(m.receber)}</td>
                   <td style={{ color: 'var(--red)' }}>{fmt(m.pagar)}</td>
+                  {temPagoAnual && (
+                    <>
+                      <td style={{ color: 'var(--green)' }}>{fmt(m.pagarPago ?? 0)}</td>
+                      <td style={{ color: (m.pagarAberto ?? 0) > 0.005 ? 'var(--yellow, #d97706)' : 'var(--text-3)', fontWeight: 600 }}>
+                        {(m.pagarAberto ?? 0) > 0.005 ? fmt(m.pagarAberto ?? 0) : '—'}
+                      </td>
+                    </>
+                  )}
                   <td style={{ fontWeight: 600, color: m.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
                     {m.saldo >= 0 ? '+' : ''}{fmt(m.saldo)}
                   </td>
@@ -338,6 +347,14 @@ export function DashboardFinanceiro() {
                 <span style={{ color: 'var(--green)' }}>↑ {fmt(m.receber)}</span>
                 <span style={{ color: 'var(--red)' }}>↓ {fmt(m.pagar)}</span>
               </div>
+              {temPagoAnual && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 2 }}>
+                  <span style={{ color: 'var(--green)' }}>Pago {fmt(m.pagarPago ?? 0)}</span>
+                  <span style={{ color: (m.pagarAberto ?? 0) > 0.005 ? 'var(--yellow, #d97706)' : 'var(--text-3)' }}>
+                    Falta {fmt(m.pagarAberto ?? 0)}
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -909,7 +909,7 @@ export function FinanceiroMobile() {
   const [carregandoResumoAnual, setCarregandoResumoAnual] = useState(true);
   const [carregandoAlertas, setCarregandoAlertas] = useState(true);
   const [resumo, setResumo] = useState<{ pagar: ResumoTipo; receber: ResumoTipo } | null>(null);
-  const [resumoAnual, setResumoAnual] = useState<{ mes: number; pagar: number; receber: number; saldo: number }[]>([]);
+  const [resumoAnual, setResumoAnual] = useState<{ mes: number; pagar: number; receber: number; saldo: number; pagarPago?: number; pagarAberto?: number }[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [mostrarMesAMes, setMostrarMesAMes] = useState(false);
   const anoRef = new Date().getFullYear();
@@ -1030,6 +1030,9 @@ export function FinanceiroMobile() {
   const anoPago = resumoAnual.reduce((s, m) => s + m.pagar, 0);
   const anoRecebido = resumoAnual.reduce((s, m) => s + m.receber, 0);
   const anoSaldo = anoRecebido - anoPago;
+  const temPagoAnual = resumoAnual.some(m => m.pagarPago !== undefined);
+  const anoDespesaPaga = resumoAnual.reduce((s, m) => s + (m.pagarPago ?? 0), 0);
+  const anoDespesaAberta = resumoAnual.reduce((s, m) => s + (m.pagarAberto ?? 0), 0);
 
   const proximos = alertas.slice(0, 4);
 
@@ -1247,6 +1250,18 @@ export function FinanceiroMobile() {
               <div className="fm-valor-medio">{fmt(anoRecebido)}</div>
             </div>
           </div>
+          {temPagoAnual && (
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 13 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-3)' }}>Despesas pagas</span>
+                <strong style={{ color: 'var(--green)' }}>{fmt(anoDespesaPaga)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                <span style={{ color: 'var(--text-3)' }}>Falta pagar</span>
+                <strong style={{ color: anoDespesaAberta > 0.005 ? 'var(--yellow, #d97706)' : 'var(--text-3)' }}>{fmt(anoDespesaAberta)}</strong>
+              </div>
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
             <span style={{ color: 'var(--text-3)' }}>Saldo do ano</span>
             <strong style={{ color: anoSaldo >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(anoSaldo)}</strong>
@@ -1256,14 +1271,22 @@ export function FinanceiroMobile() {
               {resumoAnual.map(m => {
                 const saldo = m.receber - m.pagar;
                 return (
-                  <div key={m.mes} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5 }}>
-                    <span style={{ color: 'var(--text-2)', textTransform: 'capitalize', width: 40 }}>{MESES_ABREV[m.mes - 1]}</span>
-                    <span style={{ color: 'var(--green)' }}>{fmt(m.receber)}</span>
-                    <span style={{ color: 'var(--text-3)' }}>−</span>
-                    <span style={{ color: 'var(--red)' }}>{fmt(m.pagar)}</span>
-                    <strong style={{ color: saldo >= 0 ? 'var(--green)' : 'var(--red)', minWidth: 74, textAlign: 'right' }}>
-                      {saldo >= 0 ? '+' : ''}{fmt(saldo)}
-                    </strong>
+                  <div key={m.mes}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5 }}>
+                      <span style={{ color: 'var(--text-2)', textTransform: 'capitalize', width: 40 }}>{MESES_ABREV[m.mes - 1]}</span>
+                      <span style={{ color: 'var(--green)' }}>{fmt(m.receber)}</span>
+                      <span style={{ color: 'var(--text-3)' }}>−</span>
+                      <span style={{ color: 'var(--red)' }}>{fmt(m.pagar)}</span>
+                      <strong style={{ color: saldo >= 0 ? 'var(--green)' : 'var(--red)', minWidth: 74, textAlign: 'right' }}>
+                        {saldo >= 0 ? '+' : ''}{fmt(saldo)}
+                      </strong>
+                    </div>
+                    {temPagoAnual && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, fontSize: 11, marginTop: 1 }}>
+                        <span style={{ color: 'var(--green)' }}>pago {fmt(m.pagarPago ?? 0)}</span>
+                        <span style={{ color: (m.pagarAberto ?? 0) > 0.005 ? 'var(--yellow, #d97706)' : 'var(--text-3)' }}>falta {fmt(m.pagarAberto ?? 0)}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
