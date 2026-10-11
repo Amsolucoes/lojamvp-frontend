@@ -155,6 +155,8 @@ export function FinanceiroMobile() {
   const [faturasMesPagar, setFaturasMesPagar] = useState<FaturaMes[]>([]);
   const [faturasTick, setFaturasTick] = useState(0);
   const [faturasErro, setFaturasErro] = useState(false);
+  // Resumo oficial do mês (mesmo cálculo do Resumo do ano e do Balanço) para os totais de Contas a pagar
+  const [resumoPagarMes, setResumoPagarMes] = useState<any>(null);
   const [buscaCartao, setBuscaCartao] = useState('');
   const [ordemCartoes, setOrdemCartoes] = useState<OrdemCartoes>('asc');
   const [carregandoListaCartoes, setCarregandoListaCartoes] = useState(true);
@@ -272,9 +274,11 @@ export function FinanceiroMobile() {
         .then(r => { setFaturasMesCartoes(r); setFaturasErro(false); })
         .catch(() => setFaturasErro(true));
     } else if (tela === 'pagar') {
-      if (periodoTipo !== 'mes') { setFaturasMesPagar([]); return; }
+      if (periodoTipo !== 'mes') { setFaturasMesPagar([]); setResumoPagarMes(null); return; }
       api.get<FaturaMes[]>(`/api/financeiro/faturas-do-mes?ano=${anoPagar}&mes=${mesPagar + 1}`)
         .then(setFaturasMesPagar).catch(() => {});
+      api.get<any>(`/api/financeiro/resumo-mensal?ano=${anoPagar}&mes=${mesPagar + 1}`)
+        .then(setResumoPagarMes).catch(() => setResumoPagarMes(null));
     }
   }, [tela, mesPagar, anoPagar, periodoTipo, faturasTick]);
 
@@ -1340,11 +1344,19 @@ export function FinanceiroMobile() {
               const buscaOk = !buscaPagar || l.descricao.toLowerCase().includes(buscaPagar.toLowerCase());
               return catOk && statusOk && buscaOk;
             });
-            const totalPago = filtradaTotais.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
-            const totalAberto = filtradaTotais.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
+            // Sem filtros e com o mês inteiro: usa o resumo oficial do servidor (inclui faturas já pagas ou
+            // adiantadas, que não aparecem na lista) — assim bate com o Resumo do ano e o Balanço.
+            const filtroAtivoPagar = catFiltro !== 'todas' || filtroStatus !== 'todos' || buscaPagar.trim() !== '';
+            const resumoOficial = !filtroAtivoPagar && periodoTipo === 'mes' ? resumoPagarMes?.pagar : null;
+            const totalPago = resumoOficial ? resumoOficial.totalPago : filtradaTotais.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
+            const totalAberto = resumoOficial ? resumoOficial.totalPendente + resumoOficial.totalVencido : filtradaTotais.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
             const totalMes = totalPago + totalAberto;
-            const contasAberto = filtradaTotais.filter(l => l.status !== 'pago' && l.origem === 'avulso').reduce((s, l) => s + l.valor, 0);
-            const cartoesAberto = Object.entries(
+            const contasAberto = resumoOficial && resumoPagarMes?.detalhePagar
+              ? resumoPagarMes.detalhePagar.lancamentos
+              : filtradaTotais.filter(l => l.status !== 'pago' && l.origem === 'avulso').reduce((s, l) => s + l.valor, 0);
+            const cartoesAberto: [string, number][] = resumoOficial && resumoPagarMes?.detalhePagar
+              ? resumoPagarMes.detalhePagar.cartoes.map((c: any) => [c.nome, c.valor] as [string, number])
+              : Object.entries(
               filtradaTotais
                 .filter(l => l.status !== 'pago' && (l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada'))
                 .reduce((acc, l) => { const nome = l.cartaoNome ?? 'Cartão'; acc[nome] = (acc[nome] ?? 0) + l.valor; return acc; }, {} as Record<string, number>)
