@@ -28,7 +28,7 @@ export function DetalheCategoriaModal({ ano, mes, categoria, desmembrar, onClose
   const diferente = dados && Math.abs(dados.valorBalanco - dados.totalItens) >= 0.02;
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" style={{ zIndex: 1200 }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 520 }}>
         <div className="modal-header">
           <h3>{categoria}</h3>
