@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, ArrowLeft, TrendingUp, TrendingDown } from '
 import { api } from '../../services/api';
 import { BankBadge } from '../../utils/bancos';
 import { ComparativoCategorias } from './ComparativoCategorias';
+import { DetalheCategoriaModal } from './DetalheCategoriaModal';
 import './BalancoMensal.css';
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -39,6 +40,7 @@ export function BalancoMensal() {
   const [balanco, setBalanco] = useState<Balanco | null>(null);
   const [contas, setContas] = useState<Conta[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [detalhe, setDetalhe] = useState<string | null>(null);
 
   useEffect(() => {
     setCarregando(true);
@@ -150,7 +152,7 @@ export function BalancoMensal() {
               <div>
                 {despesasExibidas.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Sem despesas no mês.</p>}
                 {despesasExibidas.map(d => (
-                  <div key={d.nome} onClick={() => irParaCategoria('pagar', d.nome)}
+                  <div key={d.nome} onClick={() => (aba === 'desmembrado' || d.nome === 'Cartão de Crédito' || d.nome === 'Financiamento de fatura') ? setDetalhe(d.nome) : irParaCategoria('pagar', d.nome)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, cursor: 'pointer' }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: '50%', background: corPara(d.nome) + '33',
@@ -170,7 +172,8 @@ export function BalancoMensal() {
               </div>
             </div>
 
-            <ComparativoCategorias ano={anoRef} mes={mesRef + 1} desmembrar={aba === 'desmembrado'} />
+            <ComparativoCategorias ano={anoRef} mes={mesRef + 1} desmembrar={aba === 'desmembrado'} onSelecionar={setDetalhe} />
+            {detalhe && <DetalheCategoriaModal ano={anoRef} mes={mesRef + 1} categoria={detalhe} desmembrar={aba === 'desmembrado'} onClose={() => setDetalhe(null)} />}
           </>
         )
       ) : (

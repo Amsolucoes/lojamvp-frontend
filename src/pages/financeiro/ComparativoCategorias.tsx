@@ -41,7 +41,7 @@ function Variacao({ diferenca, pct }: { diferenca: number; pct: number | null })
   );
 }
 
-export function ComparativoCategorias({ ano, mes, desmembrar }: { ano: number; mes: number; desmembrar: boolean }) {
+export function ComparativoCategorias({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: number; desmembrar: boolean; onSelecionar?: (nome: string) => void }) {
   const [dados, setDados] = useState<Comparativo | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
@@ -83,7 +83,7 @@ export function ComparativoCategorias({ ano, mes, desmembrar }: { ano: number; m
           {dados.categorias.map(c => {
             const ehMelhor = c.melhorMes === mes && c.atual > 0;
             return (
-              <div key={c.nome} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div key={c.nome} onClick={onSelecionar ? () => onSelecionar(c.nome) : undefined} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: onSelecionar ? 'pointer' : undefined }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 13.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.icone} {c.nome}</span>
                   <Variacao diferenca={c.diferenca} pct={c.variacaoPct} />
