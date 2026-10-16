@@ -59,8 +59,7 @@ export function DetalheCategoriaModal({ ano, mes, categoria, desmembrar, onClose
               </div>
               {diferente && (
                 <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
-                  Esta lista mostra o que foi lançado em {MESES[mes - 1]} (avulsos pela data de vencimento e compras do cartão pela data da compra). O balanço mostra {fmt(dados.valorBalanco)} porque considera as faturas que vencem neste mês, que incluem compras de meses anteriores.
-                </p>
+                  Esta lista mostra o que foi lançado em {MESES[mes - 1]} (avulsos pelo vencimento e compras do cartão pela data da compra). O balanço mostra {fmt(dados.valorBalanco)}, pois nesta visão o cartão entra pelas faturas que vencem no mês.</p>
               )}
             </>
           )}

@@ -1166,6 +1166,12 @@ export function FinanceiroMobile() {
             <button className={abaBalanco === 'conta' ? 'active' : ''} onClick={() => setAbaBalanco('conta')}>Saldo por conta</button>
           </div>
 
+          {abaBalanco !== 'conta' && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <ComparativoCategorias ano={anoBalanco} mes={mesBalanco + 1} desmembrar={abaBalanco === 'desmembrado'} onSelecionar={setDetalheCat} />
+            </div>
+          )}
+
           <div className="fm-balanco-scroll">
             {abaBalanco !== 'conta' ? (
               carregandoBalanco ? (
@@ -1235,8 +1241,7 @@ export function FinanceiroMobile() {
         </div>
 
         {abaBalanco !== 'conta' && (
-          <div style={{ marginBottom: 18, marginTop: -8 }}>
-            <ComparativoCategorias ano={anoBalanco} mes={mesBalanco + 1} desmembrar={abaBalanco === 'desmembrado'} onSelecionar={setDetalheCat} />
+          <div>
             {detalheCat && <DetalheCategoriaModal ano={anoBalanco} mes={mesBalanco + 1} categoria={detalheCat} desmembrar={abaBalanco === 'desmembrado'} onClose={() => setDetalheCat(null)} />}
           </div>
         )}
