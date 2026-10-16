@@ -13,6 +13,7 @@ import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
 import { ComparativoCategorias } from './ComparativoCategorias';
+import { DetalheCategoriaModal } from './DetalheCategoriaModal';
 import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
 import './FinanceiroMobile.css';
 
@@ -106,6 +107,7 @@ export function FinanceiroMobile() {
   }
   const [mesBalanco, setMesBalanco] = useState(new Date().getMonth());
   const [anoBalanco, setAnoBalanco] = useState(new Date().getFullYear());
+  const [detalheCat, setDetalheCat] = useState<string | null>(null);
   const [abaBalanco, setAbaBalanco] = useState<'categoria' | 'desmembrado' | 'conta'>('categoria');
   const [balanco, setBalanco] = useState<Balanco | null>(null);
   const [carregandoBalanco, setCarregandoBalanco] = useState(true);
@@ -1206,7 +1208,7 @@ export function FinanceiroMobile() {
                     </div>
                     <div>
                       {(abaBalanco === 'desmembrado' && balanco.despesasDesmembradas ? balanco.despesasDesmembradas : balanco.despesas).map(d => (
-                        <div key={d.nome} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                        <div key={d.nome} onClick={() => setDetalheCat(d.nome)} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer' }}>
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: corParaCategoria(d.nome), flexShrink: 0 }} />
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
@@ -1234,7 +1236,8 @@ export function FinanceiroMobile() {
 
         {abaBalanco !== 'conta' && (
           <div style={{ marginBottom: 18, marginTop: -8 }}>
-            <ComparativoCategorias ano={anoBalanco} mes={mesBalanco + 1} desmembrar={abaBalanco === 'desmembrado'} />
+            <ComparativoCategorias ano={anoBalanco} mes={mesBalanco + 1} desmembrar={abaBalanco === 'desmembrado'} onSelecionar={setDetalheCat} />
+            {detalheCat && <DetalheCategoriaModal ano={anoBalanco} mes={mesBalanco + 1} categoria={detalheCat} desmembrar={abaBalanco === 'desmembrado'} onClose={() => setDetalheCat(null)} />}
           </div>
         )}
 
