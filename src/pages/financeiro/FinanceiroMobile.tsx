@@ -107,7 +107,7 @@ export function FinanceiroMobile() {
   }
   const [mesBalanco, setMesBalanco] = useState(new Date().getMonth());
   const [anoBalanco, setAnoBalanco] = useState(new Date().getFullYear());
-  const [detalheCat, setDetalheCat] = useState<string | null>(null);
+  const [detalheCat, setDetalheCat] = useState<{ nome: string; mes: number; ano: number } | null>(null);
   const [abaBalanco, setAbaBalanco] = useState<'categoria' | 'desmembrado' | 'conta'>('categoria');
   const [balanco, setBalanco] = useState<Balanco | null>(null);
   const [carregandoBalanco, setCarregandoBalanco] = useState(true);
@@ -1168,7 +1168,7 @@ export function FinanceiroMobile() {
 
           {abaBalanco !== 'conta' && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-              <ComparativoCategorias ano={anoBalanco} mes={mesBalanco + 1} desmembrar={abaBalanco === 'desmembrado'} onSelecionar={setDetalheCat} />
+              <ComparativoCategorias ano={anoBalanco} mes={mesBalanco + 1} desmembrar={abaBalanco === 'desmembrado'} onSelecionar={(nome, mes, ano) => setDetalheCat({ nome, mes, ano })} />
             </div>
           )}
 
@@ -1214,7 +1214,7 @@ export function FinanceiroMobile() {
                     </div>
                     <div>
                       {(abaBalanco === 'desmembrado' && balanco.despesasDesmembradas ? balanco.despesasDesmembradas : balanco.despesas).map(d => (
-                        <div key={d.nome} onClick={() => setDetalheCat(d.nome)} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer' }}>
+                        <div key={d.nome} onClick={() => setDetalheCat({ nome: d.nome, mes: mesBalanco + 1, ano: anoBalanco })} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer' }}>
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: corParaCategoria(d.nome), flexShrink: 0 }} />
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
@@ -1242,7 +1242,7 @@ export function FinanceiroMobile() {
 
         {abaBalanco !== 'conta' && (
           <div>
-            {detalheCat && <DetalheCategoriaModal ano={anoBalanco} mes={mesBalanco + 1} categoria={detalheCat} desmembrar={abaBalanco === 'desmembrado'} onClose={() => setDetalheCat(null)} />}
+            {detalheCat && <DetalheCategoriaModal ano={detalheCat.ano} mes={detalheCat.mes} categoria={detalheCat.nome} desmembrar={abaBalanco === 'desmembrado'} onClose={() => setDetalheCat(null)} />}
           </div>
         )}
 

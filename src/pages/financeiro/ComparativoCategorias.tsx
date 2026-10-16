@@ -1,125 +1,110 @@
 import { useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, Equal, Trophy, X, BarChart3 } from 'lucide-react';
+import { X, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../services/api';
 
-// Despesas por categoria: mês escolhido x mês anterior, e o melhor mês do ano de cada categoria.
+// Despesas por categoria mês a mês no ano (tabela), com o menor e o maior mês de cada categoria em destaque.
 
-interface CategoriaComparativo {
-  nome: string;
-  icone: string;
-  atual: number;
-  anterior: number;
-  diferenca: number;
-  variacaoPct: number | null;
-  melhorMes: number | null;
-  melhorValor: number | null;
-}
-
-interface Comparativo {
-  ano: number;
-  mes: number;
-  anterior: { ano: number; mes: number };
-  totalAtual: number;
-  totalAnterior: number;
-  categorias: CategoriaComparativo[];
-}
+interface CategoriaAno { nome: string; icone: string; serie: number[]; }
+interface DadosAno { ano: number; totaisMes: number[]; categorias: CategoriaAno[]; }
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const MESES_ABREV = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-function Variacao({ diferenca, pct }: { diferenca: number; pct: number | null }) {
-  if (Math.abs(diferenca) < 0.005) {
-    return <span style={{ color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Equal size={12} /> igual</span>;
-  }
-  const menos = diferenca < 0;
-  const cor = menos ? 'var(--green)' : 'var(--red)';
-  return (
-    <span style={{ color: cor, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }}>
-      {menos ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
-      {fmt(Math.abs(diferenca))}{pct !== null && ` (${menos ? '-' : '+'}${Math.abs(pct).toFixed(0)}%)`}
-    </span>
-  );
-}
-
-function ConteudoComparativo({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: number; desmembrar: boolean; onSelecionar?: (nome: string) => void }) {
-  const [dados, setDados] = useState<Comparativo | null>(null);
+function TabelaAno({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: number; desmembrar: boolean; onSelecionar?: (nome: string, mes: number) => void }) {
+  const [dados, setDados] = useState<DadosAno | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
 
   useEffect(() => {
     let ativo = true;
     setCarregando(true);
-    api.get<Comparativo>(`/api/financeiro/balanco-comparativo?ano=${ano}&mes=${mes}&desmembrar=${desmembrar}`)
+    api.get<DadosAno>(`/api/financeiro/balanco-comparativo?ano=${ano}&mes=${mes}&desmembrar=${desmembrar}`)
       .then(r => { if (ativo) { setDados(r); setErro(false); } })
       .catch(() => { if (ativo) setErro(true); })
       .finally(() => { if (ativo) setCarregando(false); });
     return () => { ativo = false; };
   }, [ano, mes, desmembrar]);
 
-  const nomeAnterior = dados ? `${MESES_ABREV[dados.anterior.mes - 1]}` : '';
-  const nomeAtual = MESES_ABREV[mes - 1];
+  if (carregando) return <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}><div className="layout-spinner" style={{ width: 22, height: 22 }} /></div>;
+  if (erro || !dados) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center' }}>Não foi possível carregar o comparativo.</p>;
+  if (dados.categorias.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center' }}>Sem despesas neste ano.</p>;
+
+  const agora = new Date();
+  const ultimo = ano < agora.getFullYear() ? 12 : ano === agora.getFullYear() ? agora.getMonth() + 1 : 0;
+  const cel: React.CSSProperties = { padding: '7px 8px', textAlign: 'right', whiteSpace: 'nowrap', fontSize: 12.5, borderBottom: '1px solid var(--border)' };
+  const primeira: React.CSSProperties = { ...cel, textAlign: 'left', position: 'sticky', left: 0, background: 'var(--bg-2)', zIndex: 1, minWidth: 130, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis' };
 
   return (
-    <div>
-      <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 12 }}>
-        {nomeAtual} contra {nomeAnterior || 'o mês anterior'} · e o melhor mês do ano de cada categoria (menor gasto).
-      </p>
-
-      {carregando ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0' }}><div className="layout-spinner" style={{ width: 22, height: 22 }} /></div>
-      ) : erro || !dados ? (
-        <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '10px 0' }}>Não foi possível carregar o comparativo.</p>
-      ) : dados.categorias.length === 0 ? (
-        <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '10px 0' }}>Sem despesas nesses dois meses.</p>
-      ) : (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13, padding: '8px 0 10px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-            <strong>Total</strong>
-            <span style={{ color: 'var(--text-3)' }}>{nomeAnterior}: {fmt(dados.totalAnterior)} → {nomeAtual}: <span style={{ color: 'var(--text-1)' }}>{fmt(dados.totalAtual)}</span></span>
-            <Variacao diferenca={dados.totalAtual - dados.totalAnterior} pct={dados.totalAnterior > 0 ? ((dados.totalAtual - dados.totalAnterior) / dados.totalAnterior) * 100 : null} />
-          </div>
-
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr>
+            <th style={{ ...primeira, fontWeight: 600, color: 'var(--text-3)' }}>Categoria</th>
+            {MESES_ABREV.map((m, i) => (
+              <th key={m} style={{ ...cel, fontWeight: 600, color: i + 1 === mes ? 'var(--text-1)' : 'var(--text-3)' }}>{m}</th>
+            ))}
+            <th style={{ ...cel, fontWeight: 600 }}>Total</th>
+          </tr>
+        </thead>
+        <tbody>
           {dados.categorias.map(c => {
-            const ehMelhor = c.melhorMes === mes && c.atual > 0;
+            const validos = c.serie.slice(0, ultimo).filter(v => v > 0);
+            const menor = validos.length > 1 ? Math.min(...validos) : null;
+            const maior = validos.length > 1 ? Math.max(...validos) : null;
             return (
-              <div key={c.nome} onClick={onSelecionar ? () => onSelecionar(c.nome) : undefined} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: onSelecionar ? 'pointer' : undefined }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.icone} {c.nome}</span>
-                  <Variacao diferenca={c.diferenca} pct={c.variacaoPct} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, color: 'var(--text-3)', marginTop: 3, flexWrap: 'wrap' }}>
-                  <span>{nomeAnterior}: {fmt(c.anterior)} → {nomeAtual}: <span style={{ color: 'var(--text-2)' }}>{fmt(c.atual)}</span></span>
-                  {c.melhorMes !== null && c.melhorValor !== null && (
-                    <span style={{ color: ehMelhor ? 'var(--green)' : 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      <Trophy size={11} /> {ehMelhor ? 'Melhor mês do ano!' : `Melhor mês: ${MESES_ABREV[c.melhorMes - 1]} (${fmt(c.melhorValor)})`}
-                    </span>
-                  )}
-                </div>
-              </div>
+              <tr key={c.nome}>
+                <td style={primeira} title={c.nome}>{c.icone} {c.nome}</td>
+                {c.serie.map((v, i) => {
+                  const cor = v > 0 && i < ultimo ? (v === menor ? 'var(--green)' : v === maior ? 'var(--red)' : undefined) : undefined;
+                  return (
+                    <td key={i} onClick={v > 0 && onSelecionar ? () => onSelecionar(c.nome, i + 1) : undefined}
+                      style={{ ...cel, color: v > 0 ? cor : 'var(--text-3)', fontWeight: cor ? 700 : 400, cursor: v > 0 && onSelecionar ? 'pointer' : undefined, opacity: i >= ultimo ? 0.6 : 1 }}>
+                      {v > 0 ? fmt(v) : '–'}
+                    </td>
+                  );
+                })}
+                <td style={{ ...cel, fontWeight: 700 }}>{fmt(c.serie.reduce((a, b) => a + b, 0))}</td>
+              </tr>
             );
           })}
-        </>
-      )}
+          <tr>
+            <td style={{ ...primeira, fontWeight: 700 }}>Total</td>
+            {dados.totaisMes.map((v, i) => <td key={i} style={{ ...cel, fontWeight: 700 }}>{v > 0 ? fmt(v) : '–'}</td>)}
+            <td style={{ ...cel, fontWeight: 700 }}>{fmt(dados.totaisMes.reduce((a, b) => a + b, 0))}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 10 }}>
+        <span style={{ color: 'var(--green)', fontWeight: 700 }}>Verde</span> = mês de menor gasto da categoria · <span style={{ color: 'var(--red)', fontWeight: 700 }}>vermelho</span> = maior gasto (só meses já ocorridos). Toque num valor para ver os lançamentos.
+      </p>
     </div>
   );
 }
 
-export function ComparativoCategorias({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: number; desmembrar: boolean; onSelecionar?: (nome: string) => void }) {
+export function ComparativoCategorias({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: number; desmembrar: boolean; onSelecionar?: (nome: string, mes: number, ano: number) => void }) {
   const [aberto, setAberto] = useState(false);
+  const [anoTabela, setAnoTabela] = useState(ano);
+  useEffect(() => { setAnoTabela(ano); }, [ano]);
   return (
     <>
       <button className="btn-secondary" onClick={() => setAberto(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        <BarChart3 size={15} /> Comparativo com o mês anterior
+        <BarChart3 size={15} /> Comparativo do ano
       </button>
       {aberto && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setAberto(false)}>
-          <div className="modal" style={{ maxWidth: 640 }}>
+          <div className="modal" style={{ maxWidth: 1100, width: '96vw' }}>
             <div className="modal-header">
-              <h3>Comparativo por categoria</h3>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                Despesas por categoria
+                <button className="btn-ghost" onClick={() => setAnoTabela(a => a - 1)} style={{ padding: 4 }}><ChevronLeft size={16} /></button>
+                {anoTabela}
+                <button className="btn-ghost" onClick={() => setAnoTabela(a => a + 1)} style={{ padding: 4 }}><ChevronRight size={16} /></button>
+              </h3>
               <button className="btn-ghost" onClick={() => setAberto(false)} style={{ padding: 6 }}><X size={18} /></button>
             </div>
-            <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-              <ConteudoComparativo ano={ano} mes={mes} desmembrar={desmembrar} onSelecionar={onSelecionar ? (n => { setAberto(false); onSelecionar(n); }) : undefined} />
+            <div className="modal-body" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
+              <TabelaAno ano={anoTabela} mes={mes} desmembrar={desmembrar}
+                onSelecionar={onSelecionar ? ((n, m) => { setAberto(false); onSelecionar(n, m, anoTabela); }) : undefined} />
             </div>
           </div>
         </div>
