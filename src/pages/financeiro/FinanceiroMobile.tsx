@@ -12,6 +12,7 @@ import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
+import { ComparativoCategorias } from './ComparativoCategorias';
 import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
 import './FinanceiroMobile.css';
 
@@ -40,8 +41,8 @@ interface Categoria { id: string; nome: string; tipo: string; icone: string | nu
 interface Cartao { id: string; nome: string; limite: number; diaFechamento: number; diaVencimento: number; contaBancariaId: string; ativo: boolean; taxaJurosMensal: number; }
 interface ItemFaturaDetalhe { id: string; descricao: string; valor: number; dataCompra: string; categoriaNome: string | null; categoriaId: string | null; modo: string; observacao: string | null; numeroParcela: number | null; totalParcelas: number | null; }
 interface AntecipadoItem { id: string; valor: number; data: string; contaBancariaId: string; observacao: string | null; }
-interface ItemCategoriaBalanco { nome: string; icone: string; valor: number; }
-interface Balanco { receitas: ItemCategoriaBalanco[]; despesas: ItemCategoriaBalanco[]; totalReceitas: number; totalDespesas: number; saldo: number; }
+interface ItemCategoriaBalanco { nome: string; icone: string; valor: number; valorCartao?: number; valorAvulso?: number; }
+interface Balanco { receitas: ItemCategoriaBalanco[]; despesas: ItemCategoriaBalanco[]; despesasDesmembradas?: ItemCategoriaBalanco[]; totalReceitas: number; totalDespesas: number; saldo: number; }
 
 const CORES_BALANCO = ['#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#f97316', '#06b6d4'];
 const ICONES_CATEGORIA = ['🏷️','💵','💰','🤑','$','🏠','💧','💡','📶','📦','👤','🧾','💳','🛒','📁','🍽️','🚗','🎓','🏥','🎮'
@@ -105,7 +106,7 @@ export function FinanceiroMobile() {
   }
   const [mesBalanco, setMesBalanco] = useState(new Date().getMonth());
   const [anoBalanco, setAnoBalanco] = useState(new Date().getFullYear());
-  const [abaBalanco, setAbaBalanco] = useState<'categoria' | 'conta'>('categoria');
+  const [abaBalanco, setAbaBalanco] = useState<'categoria' | 'desmembrado' | 'conta'>('categoria');
   const [balanco, setBalanco] = useState<Balanco | null>(null);
   const [carregandoBalanco, setCarregandoBalanco] = useState(true);
 
@@ -1159,11 +1160,12 @@ export function FinanceiroMobile() {
 
           <div className="cx-tipo-toggle" style={{ marginBottom: 10 }}>
             <button className={abaBalanco === 'categoria' ? 'active' : ''} onClick={() => setAbaBalanco('categoria')}>Por categoria</button>
+            <button className={abaBalanco === 'desmembrado' ? 'active' : ''} onClick={() => setAbaBalanco('desmembrado')}>Com cartão aberto</button>
             <button className={abaBalanco === 'conta' ? 'active' : ''} onClick={() => setAbaBalanco('conta')}>Saldo por conta</button>
           </div>
 
           <div className="fm-balanco-scroll">
-            {abaBalanco === 'categoria' ? (
+            {abaBalanco !== 'conta' ? (
               carregandoBalanco ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}><div className="layout-spinner" style={{ width: 24, height: 24 }} /></div>
               ) : !balanco ? (
@@ -1203,12 +1205,15 @@ export function FinanceiroMobile() {
                       ))}
                     </div>
                     <div>
-                      {balanco.despesas.map(d => (
+                      {(abaBalanco === 'desmembrado' && balanco.despesasDesmembradas ? balanco.despesasDesmembradas : balanco.despesas).map(d => (
                         <div key={d.nome} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: corParaCategoria(d.nome), flexShrink: 0 }} />
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
                             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--red)' }}>-{fmt(d.valor)}</div>
+                            {abaBalanco === 'desmembrado' && (d.valorCartao ?? 0) > 0 && (
+                              <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>💳 {fmt(d.valorCartao ?? 0)}</div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1226,6 +1231,12 @@ export function FinanceiroMobile() {
             )}
           </div>
         </div>
+
+        {abaBalanco !== 'conta' && (
+          <div style={{ marginBottom: 18, marginTop: -8 }}>
+            <ComparativoCategorias ano={anoBalanco} mes={mesBalanco + 1} desmembrar={abaBalanco === 'desmembrado'} />
+          </div>
+        )}
 
         <div className="card fm-card" style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
