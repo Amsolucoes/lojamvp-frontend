@@ -104,7 +104,7 @@ export function ComparativoCategorias({ ano, mes, desmembrar, onSelecionar }: { 
             </div>
             <div className="modal-body" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
               <TabelaAno ano={anoTabela} mes={mes} desmembrar={desmembrar}
-                onSelecionar={onSelecionar ? ((n, m) => { setAberto(false); onSelecionar(n, m, anoTabela); }) : undefined} />
+                onSelecionar={onSelecionar ? ((n, m) => onSelecionar(n, m, anoTabela)) : undefined} />
             </div>
           </div>
         </div>
