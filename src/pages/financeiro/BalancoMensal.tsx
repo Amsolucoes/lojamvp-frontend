@@ -131,6 +131,10 @@ export function BalancoMensal() {
               </div>
             </div>
 
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <ComparativoCategorias ano={anoRef} mes={mesRef + 1} desmembrar={aba === 'desmembrado'} onSelecionar={setDetalhe} />
+            </div>
+
             {/* Categorias lado a lado */}
             <div className="balanco-cat-grid">
               <div>
@@ -172,7 +176,6 @@ export function BalancoMensal() {
               </div>
             </div>
 
-            <ComparativoCategorias ano={anoRef} mes={mesRef + 1} desmembrar={aba === 'desmembrado'} onSelecionar={setDetalhe} />
             {detalhe && <DetalheCategoriaModal ano={anoRef} mes={mesRef + 1} categoria={detalhe} desmembrar={aba === 'desmembrado'} onClose={() => setDetalhe(null)} />}
           </>
         )

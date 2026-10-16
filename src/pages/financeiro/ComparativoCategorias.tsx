@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, Equal, Trophy } from 'lucide-react';
+import { ArrowDown, ArrowUp, Equal, Trophy, X, BarChart3 } from 'lucide-react';
 import { api } from '../../services/api';
 
 // Despesas por categoria: mês escolhido x mês anterior, e o melhor mês do ano de cada categoria.
@@ -41,7 +41,7 @@ function Variacao({ diferenca, pct }: { diferenca: number; pct: number | null })
   );
 }
 
-export function ComparativoCategorias({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: number; desmembrar: boolean; onSelecionar?: (nome: string) => void }) {
+function ConteudoComparativo({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: number; desmembrar: boolean; onSelecionar?: (nome: string) => void }) {
   const [dados, setDados] = useState<Comparativo | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
@@ -60,8 +60,7 @@ export function ComparativoCategorias({ ano, mes, desmembrar, onSelecionar }: { 
   const nomeAtual = MESES_ABREV[mes - 1];
 
   return (
-    <div className="card" style={{ marginTop: 20, padding: 16 }}>
-      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Comparativo de despesas por categoria</div>
+    <div>
       <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 12 }}>
         {nomeAtual} contra {nomeAnterior || 'o mês anterior'} · e o melhor mês do ano de cada categoria (menor gasto).
       </p>
@@ -102,5 +101,29 @@ export function ComparativoCategorias({ ano, mes, desmembrar, onSelecionar }: { 
         </>
       )}
     </div>
+  );
+}
+
+export function ComparativoCategorias({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: number; desmembrar: boolean; onSelecionar?: (nome: string) => void }) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <button className="btn-secondary" onClick={() => setAberto(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <BarChart3 size={15} /> Comparativo com o mês anterior
+      </button>
+      {aberto && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setAberto(false)}>
+          <div className="modal" style={{ maxWidth: 640 }}>
+            <div className="modal-header">
+              <h3>Comparativo por categoria</h3>
+              <button className="btn-ghost" onClick={() => setAberto(false)} style={{ padding: 6 }}><X size={18} /></button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <ConteudoComparativo ano={ano} mes={mes} desmembrar={desmembrar} onSelecionar={onSelecionar ? (n => { setAberto(false); onSelecionar(n); }) : undefined} />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
