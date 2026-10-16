@@ -3,15 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 import { api } from '../../services/api';
 import { BankBadge } from '../../utils/bancos';
+import { ComparativoCategorias } from './ComparativoCategorias';
 import './BalancoMensal.css';
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-interface ItemCategoria { nome: string; icone: string; valor: number; }
+interface ItemCategoria { nome: string; icone: string; valor: number; valorCartao?: number; valorAvulso?: number; }
 interface Balanco {
   receitas: ItemCategoria[];
   despesas: ItemCategoria[];
+  despesasDesmembradas?: ItemCategoria[];
   totalReceitas: number;
   totalDespesas: number;
   saldo: number;
@@ -33,7 +35,7 @@ export function BalancoMensal() {
   const hoje = new Date();
   const [mesRef, setMesRef] = useState(hoje.getMonth());
   const [anoRef, setAnoRef] = useState(hoje.getFullYear());
-  const [aba, setAba] = useState<'categoria' | 'conta'>('categoria');
+  const [aba, setAba] = useState<'categoria' | 'desmembrado' | 'conta'>('categoria');
   const [balanco, setBalanco] = useState<Balanco | null>(null);
   const [contas, setContas] = useState<Conta[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -65,6 +67,7 @@ export function BalancoMensal() {
     setMesRef(nm); setAnoRef(na);
   }
 
+  const despesasExibidas = aba === 'desmembrado' && balanco?.despesasDesmembradas ? balanco.despesasDesmembradas : (balanco?.despesas ?? []);
   const saldoTotalContas = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
 
   function irParaCategoria(tipo: 'pagar' | 'receber', nome: string) {
@@ -90,13 +93,14 @@ export function BalancoMensal() {
         <button className="btn-secondary" onClick={() => navMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
       </div>
 
-      {/* Toggle categoria / conta */}
-      <div className="cx-tipo-toggle" style={{ marginBottom: 20, maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>
+      {/* Toggle categoria / desmembrado por cartão / conta */}
+      <div className="cx-tipo-toggle" style={{ marginBottom: 20, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
         <button className={aba === 'categoria' ? 'active' : ''} onClick={() => setAba('categoria')}>Balanço por categoria</button>
+        <button className={aba === 'desmembrado' ? 'active' : ''} onClick={() => setAba('desmembrado')} title="Mostra as compras do cartão dentro de cada categoria">Desmembrado por cartão</button>
         <button className={aba === 'conta' ? 'active' : ''} onClick={() => setAba('conta')}>Saldo por conta</button>
       </div>
 
-      {aba === 'categoria' ? (
+      {aba !== 'conta' ? (
         carregando ? (
           <div className="empty" style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
         ) : !balanco ? (
@@ -144,8 +148,8 @@ export function BalancoMensal() {
                 ))}
               </div>
               <div>
-                {balanco.despesas.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Sem despesas no mês.</p>}
-                {balanco.despesas.map(d => (
+                {despesasExibidas.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Sem despesas no mês.</p>}
+                {despesasExibidas.map(d => (
                   <div key={d.nome} onClick={() => irParaCategoria('pagar', d.nome)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, cursor: 'pointer' }}>
                     <div style={{
@@ -155,11 +159,18 @@ export function BalancoMensal() {
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
                       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--red)' }}>{fmt(d.valor)}</div>
+                      {aba === 'desmembrado' && (d.valorCartao ?? 0) > 0 && (
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                          💳 {fmt(d.valorCartao ?? 0)}{(d.valorAvulso ?? 0) > 0 && ` · avulso ${fmt(d.valorAvulso ?? 0)}`}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+
+            <ComparativoCategorias ano={anoRef} mes={mesRef + 1} desmembrar={aba === 'desmembrado'} />
           </>
         )
       ) : (
