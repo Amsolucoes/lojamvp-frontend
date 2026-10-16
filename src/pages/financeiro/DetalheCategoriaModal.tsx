@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 interface Item { origem: string; descricao: string; valor: number; data: string; status: string; cartaoNome?: string | null; }
 interface Detalhe { categoria: string; valorBalanco: number; totalItens: number; itens: Item[]; }
 
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtData = (d: string) => new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
@@ -47,7 +48,7 @@ export function DetalheCategoriaModal({ ano, mes, categoria, desmembrar, onClose
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.descricao}</div>
                     <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
-                      {fmtData(i.data)}{i.cartaoNome ? ` · 💳 ${i.cartaoNome}` : ''} · <span style={{ color: i.status === 'pago' ? 'var(--green)' : 'var(--text-3)' }}>{i.status === 'pago' ? 'pago' : 'pendente'}</span>
+                      {fmtData(i.data)}{i.cartaoNome ? ` · 💳 ${i.cartaoNome}` : ''} · {i.status === 'cartao' ? 'compra no cartão' : <span style={{ color: i.status === 'pago' ? 'var(--green)' : 'var(--text-3)' }}>{i.status === 'pago' ? 'pago' : 'pendente'}</span>}
                     </div>
                   </div>
                   <strong style={{ fontSize: 13.5, whiteSpace: 'nowrap' }}>{fmt(i.valor)}</strong>
@@ -58,7 +59,7 @@ export function DetalheCategoriaModal({ ano, mes, categoria, desmembrar, onClose
               </div>
               {diferente && (
                 <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
-                  O balanço mostra {fmt(dados.valorBalanco)}: a diferença vem do rateio proporcional da fatura do cartão (ex.: pagamentos parciais ou adiantamentos).
+                  Esta lista mostra o que foi lançado em {MESES[mes - 1]} (avulsos pela data de vencimento e compras do cartão pela data da compra). O balanço mostra {fmt(dados.valorBalanco)} porque considera as faturas que vencem neste mês, que incluem compras de meses anteriores.
                 </p>
               )}
             </>
