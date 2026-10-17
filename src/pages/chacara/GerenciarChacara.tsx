@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Upload, X, GripVertical } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatarCpf, formatarRg, formatarTelefone, formatarCep } from '../../utils/mascaras';
 import './ChacaraForm.css';
 
 const CLOUDINARY_CLOUD = 'dnwnwshvq';
@@ -127,6 +128,10 @@ export function GerenciarChacara() {
   const [salvandoDescricao, setSalvandoDescricao] = useState(false);
   const [salvandoLocador, setSalvandoLocador] = useState(false);
   const [end, setEnd] = useState({ rua: '', numero: '', cidade: '', uf: '' });
+  const [cep, setCep] = useState('');
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [enderecoLiberado, setEnderecoLiberado] = useState(false);
+  const [modalCep, setModalCep] = useState<null | 'nao_encontrado' | 'manual'>(null);
   const [carregando, setCarregando] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const { sucesso, erro: toastErro } = useToast();
@@ -135,7 +140,7 @@ export function GerenciarChacara() {
     Promise.all([
       api.get<Foto[]>('/api/chacara/fotos'),
       api.get<Info>('/api/chacara/info'),
-    ]).then(([f, i]) => { setFotos(f); setInfo(i); setEnd(separarEndereco(i.locadorEndereco)); })
+    ]).then(([f, i]) => { setFotos(f); setInfo(i); const e = separarEndereco(i.locadorEndereco); setEnd(e); setEnderecoLiberado(!!e.rua); })
       .catch(() => toastErro('Erro ao carregar dados da chácara.'))
       .finally(() => setCarregando(false));
   }, []);
@@ -210,6 +215,30 @@ export function GerenciarChacara() {
       toastErro((e as Error).message);
     } finally {
       setSalvandoDescricao(false);
+    }
+  }
+
+  async function aoDigitarCep(valor: string) {
+    const formatado = formatarCep(valor);
+    setCep(formatado);
+    const digitos = formatado.replace(/\D/g, '');
+    if (digitos.length !== 8) return;
+    setBuscandoCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
+      const dados = await res.json();
+      if (dados.erro) throw new Error('nao_encontrado');
+      setEnd(v => ({
+        ...v,
+        rua: [dados.logradouro, dados.bairro].filter(Boolean).join(', '),
+        cidade: dados.localidade ?? '',
+        uf: (dados.uf ?? '').toUpperCase(),
+      }));
+      setEnderecoLiberado(true);
+    } catch {
+      setModalCep('nao_encontrado');
+    } finally {
+      setBuscandoCep(false);
     }
   }
 
@@ -376,35 +405,47 @@ export function GerenciarChacara() {
             </div>
             <div className="form-group" style={{ flex: '1 1 130px' }}>
               <label className="form-label">RG</label>
-              <input value={info.locadorRg ?? ''} onChange={e => setInfo(i => ({ ...i, locadorRg: e.target.value }))} />
+              <input value={info.locadorRg ?? ''} onChange={e => setInfo(i => ({ ...i, locadorRg: formatarRg(e.target.value) }))} inputMode="numeric" placeholder="00.000.000-0" />
             </div>
             <div className="form-group" style={{ flex: '1 1 150px' }}>
               <label className="form-label">CPF</label>
-              <input value={info.locadorCpf ?? ''} onChange={e => setInfo(i => ({ ...i, locadorCpf: e.target.value }))} />
+              <input value={info.locadorCpf ?? ''} onChange={e => setInfo(i => ({ ...i, locadorCpf: formatarCpf(e.target.value) }))} inputMode="numeric" placeholder="000.000.000-00" />
+            </div>
+          </div>
+          <div className="chacara-full" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className="form-group" style={{ flex: '0 1 160px' }}>
+              <label className="form-label">CEP</label>
+              <input value={cep} onChange={e => aoDigitarCep(e.target.value)} inputMode="numeric" placeholder="00000-000" />
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', paddingBottom: 12 }}>
+              {buscandoCep ? 'Buscando CEP...' : enderecoLiberado ? '' : 'Informe o CEP para liberar o endereço.'}
+              {!enderecoLiberado && !buscandoCep && (
+                <> <button type="button" className="btn-ghost" style={{ padding: '0 4px', fontSize: 12, textDecoration: 'underline' }} onClick={() => setModalCep('manual')}>Preencher manualmente</button></>
+              )}
             </div>
           </div>
           <div className="chacara-full" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <div className="form-group" style={{ flex: '3 1 240px' }}>
               <label className="form-label">Endereço</label>
-              <input value={end.rua} onChange={e => setEnd(v => ({ ...v, rua: e.target.value }))} placeholder="Rua, bairro" />
+              <input disabled={!enderecoLiberado} value={end.rua} onChange={e => setEnd(v => ({ ...v, rua: e.target.value }))} placeholder="Rua, bairro" />
             </div>
             <div className="form-group" style={{ flex: '0 1 90px' }}>
               <label className="form-label">Número</label>
-              <input value={end.numero} onChange={e => setEnd(v => ({ ...v, numero: e.target.value }))} />
+              <input disabled={!enderecoLiberado} value={end.numero} onChange={e => setEnd(v => ({ ...v, numero: e.target.value }))} />
             </div>
             <div className="form-group" style={{ flex: '2 1 160px' }}>
               <label className="form-label">Cidade</label>
-              <input value={end.cidade} onChange={e => setEnd(v => ({ ...v, cidade: e.target.value }))} />
+              <input disabled={!enderecoLiberado} value={end.cidade} onChange={e => setEnd(v => ({ ...v, cidade: e.target.value }))} />
             </div>
             <div className="form-group" style={{ flex: '0 1 70px' }}>
               <label className="form-label">UF</label>
-              <input value={end.uf} maxLength={2} onChange={e => setEnd(v => ({ ...v, uf: e.target.value.toUpperCase() }))} />
+              <input disabled={!enderecoLiberado} value={end.uf} maxLength={2} onChange={e => setEnd(v => ({ ...v, uf: e.target.value.toUpperCase() }))} />
             </div>
           </div>
           <div className="chacara-full" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <div className="form-group" style={{ flex: '1 1 180px' }}>
               <label className="form-label">Telefone</label>
-              <input value={info.locadorTelefone ?? ''} onChange={e => setInfo(i => ({ ...i, locadorTelefone: e.target.value }))} />
+              <input value={info.locadorTelefone ?? ''} onChange={e => setInfo(i => ({ ...i, locadorTelefone: formatarTelefone(e.target.value) }))} inputMode="tel" placeholder="(00) 00000-0000" />
             </div>
             <div className="form-group" style={{ flex: '1 1 240px' }}>
               <label className="form-label">Cidade para assinatura do contrato</label>
@@ -417,6 +458,26 @@ export function GerenciarChacara() {
           </button>
         </div>
       </div>
+
+      {modalCep && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCep(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header"><h3>{modalCep === 'nao_encontrado' ? 'CEP não encontrado' : 'Preencher manualmente'}</h3></div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14 }}>
+                {modalCep === 'nao_encontrado'
+                  ? 'Não encontramos esse CEP. Confira se digitou certo, ou preencha o endereço manualmente.'
+                  : 'Você vai preencher o endereço sem buscar pelo CEP. Confira rua, número, cidade e UF com atenção, pois eles vão para o contrato.'}
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>Ao clicar em OK, os campos de endereço serão liberados.</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setModalCep(null)}>Corrigir CEP</button>
+              <button className="btn-primary" onClick={() => { setEnderecoLiberado(true); setModalCep(null); }}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <PagamentoOnline />
     </div>
