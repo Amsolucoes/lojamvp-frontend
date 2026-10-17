@@ -8,7 +8,7 @@ type HorarioChacara = { id: number; hora: string; ajuste: number };
 type DadosChacara = {
   nome: string; logoUrl: string | null; corPrimaria: string;
   descricao: string; endereco: string; mapaEmbedUrl: string | null;
-  horaEntrada: string; horaSaida: string; avisosUso: string[];
+  horaEntrada: string; horaSaida: string; avisosUso: string[]; pagamentoOnline?: boolean;
   horarios: { entrada: HorarioChacara[]; saida: HorarioChacara[] };
   fotos: string[];
   comodidades: { chave: string; label: string }[];
@@ -754,7 +754,12 @@ export function SiteChacara() {
                   </div>
                 )}
 
-                <button className="chac-btn" disabled={!disponivel || !valor} onClick={() => setEtapa('dados')}>
+                {dados.pagamentoOnline === false && (
+                  <p style={{ fontSize: 13, color: '#b3261e', marginBottom: 10 }}>
+                    As reservas online estão temporariamente indisponíveis. Entre em contato diretamente com a chácara.
+                  </p>
+                )}
+                <button className="chac-btn" disabled={!disponivel || !valor || dados.pagamentoOnline === false} onClick={() => setEtapa('dados')}>
                   Continuar
                 </button>
               </>
