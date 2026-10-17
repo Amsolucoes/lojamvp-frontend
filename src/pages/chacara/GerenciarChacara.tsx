@@ -29,6 +29,21 @@ const COMODIDADES_OPCOES: { chave: string; label: string }[] = [
   { chave: 'ar_condicionado', label: 'Ar-condicionado' },
 ];
 
+// O contrato usa um único texto de endereço: "Rua, 123 - Cidade/UF". Aqui ele é separado em campos para edição.
+function separarEndereco(texto: string | null): { rua: string; numero: string; cidade: string; uf: string } {
+  const m = (texto ?? '').match(/^(.*), ([^,]+?) - (.+)\/([A-Za-z]{2})$/);
+  if (m) return { rua: m[1], numero: m[2], cidade: m[3], uf: m[4].toUpperCase() };
+  return { rua: texto ?? '', numero: '', cidade: '', uf: '' };
+}
+
+function juntarEndereco(e: { rua: string; numero: string; cidade: string; uf: string }): string {
+  const rua = e.rua.trim(), numero = e.numero.trim(), cidade = e.cidade.trim(), uf = e.uf.trim().toUpperCase();
+  if (!rua && !numero && !cidade && !uf) return '';
+  // Sem número/cidade/UF preenchidos, mantém só a rua (evita virar texto que o parse não reconhece)
+  if (!numero || !cidade || !uf) return [rua, numero, [cidade, uf].filter(Boolean).join('/')].filter(Boolean).join(', ');
+  return `${rua}, ${numero} - ${cidade}/${uf}`;
+}
+
 export function GerenciarChacara() {
   const [fotos, setFotos] = useState<Foto[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -39,6 +54,7 @@ export function GerenciarChacara() {
   });
   const [salvandoDescricao, setSalvandoDescricao] = useState(false);
   const [salvandoLocador, setSalvandoLocador] = useState(false);
+  const [end, setEnd] = useState({ rua: '', numero: '', cidade: '', uf: '' });
   const [carregando, setCarregando] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const { sucesso, erro: toastErro } = useToast();
@@ -47,7 +63,7 @@ export function GerenciarChacara() {
     Promise.all([
       api.get<Foto[]>('/api/chacara/fotos'),
       api.get<Info>('/api/chacara/info'),
-    ]).then(([f, i]) => { setFotos(f); setInfo(i); })
+    ]).then(([f, i]) => { setFotos(f); setInfo(i); setEnd(separarEndereco(i.locadorEndereco)); })
       .catch(() => toastErro('Erro ao carregar dados da chácara.'))
       .finally(() => setCarregando(false));
   }, []);
@@ -128,8 +144,9 @@ export function GerenciarChacara() {
   async function salvarLocador() {
     setSalvandoLocador(true);
     try {
-      const atualizado = await api.put<Info>('/api/chacara/info', info);
+      const atualizado = await api.put<Info>('/api/chacara/info', { ...info, locadorEndereco: juntarEndereco(end) });
       setInfo(atualizado);
+      setEnd(separarEndereco(atualizado.locadorEndereco));
       sucesso('Meus dados salvos.');
     } catch (e) {
       toastErro((e as Error).message);
@@ -267,7 +284,7 @@ export function GerenciarChacara() {
             </p>
           </div>
 
-          <button className="btn-primary chacara-full" onClick={salvarDescricao} disabled={salvandoDescricao} style={{ alignSelf: 'flex-start' }}>
+          <button className="btn-primary" onClick={salvarDescricao} disabled={salvandoDescricao} style={{ gridColumn: '1 / -1', justifySelf: 'start', width: 'auto', minWidth: 160 }}>
             {salvandoDescricao ? 'Salvando...' : 'Salvar informações'}
           </button>
         </div>
@@ -280,37 +297,50 @@ export function GerenciarChacara() {
           Usados para preencher automaticamente o contrato de locação gerado nas reservas.
         </p>
         <div className="chacara-grid-2">
-          <div className="form-group chacara-full">
-            <label className="form-label">Nome completo</label>
-            <input value={info.locadorNome ?? ''} onChange={e => setInfo(i => ({ ...i, locadorNome: e.target.value }))} />
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div className="form-group" style={{ flex: 1 }}>
+          <div className="chacara-full" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div className="form-group" style={{ flex: '3 1 260px' }}>
+              <label className="form-label">Nome completo</label>
+              <input value={info.locadorNome ?? ''} onChange={e => setInfo(i => ({ ...i, locadorNome: e.target.value }))} />
+            </div>
+            <div className="form-group" style={{ flex: '1 1 130px' }}>
               <label className="form-label">RG</label>
               <input value={info.locadorRg ?? ''} onChange={e => setInfo(i => ({ ...i, locadorRg: e.target.value }))} />
             </div>
-            <div className="form-group" style={{ flex: 1 }}>
+            <div className="form-group" style={{ flex: '1 1 150px' }}>
               <label className="form-label">CPF</label>
               <input value={info.locadorCpf ?? ''} onChange={e => setInfo(i => ({ ...i, locadorCpf: e.target.value }))} />
             </div>
           </div>
-          <div className="form-group chacara-full">
-            <label className="form-label">Endereço completo</label>
-            <input value={info.locadorEndereco ?? ''} onChange={e => setInfo(i => ({ ...i, locadorEndereco: e.target.value }))}
-              placeholder="Rua, número, bairro, cidade - UF" />
+          <div className="chacara-full" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div className="form-group" style={{ flex: '3 1 240px' }}>
+              <label className="form-label">Endereço</label>
+              <input value={end.rua} onChange={e => setEnd(v => ({ ...v, rua: e.target.value }))} placeholder="Rua, bairro" />
+            </div>
+            <div className="form-group" style={{ flex: '0 1 90px' }}>
+              <label className="form-label">Número</label>
+              <input value={end.numero} onChange={e => setEnd(v => ({ ...v, numero: e.target.value }))} />
+            </div>
+            <div className="form-group" style={{ flex: '2 1 160px' }}>
+              <label className="form-label">Cidade</label>
+              <input value={end.cidade} onChange={e => setEnd(v => ({ ...v, cidade: e.target.value }))} />
+            </div>
+            <div className="form-group" style={{ flex: '0 1 70px' }}>
+              <label className="form-label">UF</label>
+              <input value={end.uf} maxLength={2} onChange={e => setEnd(v => ({ ...v, uf: e.target.value.toUpperCase() }))} />
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div className="form-group" style={{ flex: 1 }}>
+          <div className="chacara-full" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div className="form-group" style={{ flex: '1 1 180px' }}>
               <label className="form-label">Telefone</label>
               <input value={info.locadorTelefone ?? ''} onChange={e => setInfo(i => ({ ...i, locadorTelefone: e.target.value }))} />
             </div>
-            <div className="form-group" style={{ flex: 1 }}>
+            <div className="form-group" style={{ flex: '1 1 240px' }}>
               <label className="form-label">Cidade para assinatura do contrato</label>
               <input value={info.cidadeAssinatura ?? ''} onChange={e => setInfo(i => ({ ...i, cidadeAssinatura: e.target.value }))}
                 placeholder="Ex: Campo Grande – MS" />
             </div>
           </div>
-          <button className="btn-primary chacara-full" onClick={salvarLocador} disabled={salvandoLocador} style={{ alignSelf: 'flex-start' }}>
+          <button className="btn-primary" onClick={salvarLocador} disabled={salvandoLocador} style={{ gridColumn: '1 / -1', justifySelf: 'start', width: 'auto', minWidth: 160 }}>
             {salvandoLocador ? 'Salvando...' : 'Salvar meus dados'}
           </button>
         </div>
