@@ -277,7 +277,7 @@ export function SiteChacara() {
 
   // ── Pagamento ──────────────────────────────────────────────────
   const [formaPag, setFormaPag] = useState<'pix' | 'cartao' | 'combinado' | null>(null);
-  const [infoPagamento, setInfoPagamento] = useState<{ valorPix: number; valorCartao: number; parcelasMax: number } | null>(null);
+  const [infoPagamento, setInfoPagamento] = useState<{ valorPix: number; valorCartao: number; parcelasMax: number; mpPublicKey?: string | null } | null>(null);
   const [escolhendoForma, setEscolhendoForma] = useState(false);
 
   const [pixDados, setPixDados] = useState<{ qrCode: string; qrCodeBase64: string; valor: number } | null>(null);
@@ -398,7 +398,7 @@ export function SiteChacara() {
     setEscolhendoForma(true);
     setErro('');
     try {
-      const res = await api.post<{ valorPix: number; valorCartao: number; parcelasMax: number }>(
+      const res = await api.post<{ valorPix: number; valorCartao: number; parcelasMax: number; mpPublicKey?: string | null }>(
         `/api/publico/${slug}/chacara/reservas/${reservaCriada.id}/pagamento/escolher`,
         { formaPagamento: forma }
       );
@@ -463,7 +463,7 @@ export function SiteChacara() {
       return;
     }
 
-    const publicKey = import.meta.env.VITE_MP_PUBLIC_KEY;
+    const publicKey = infoPagamento.mpPublicKey || import.meta.env.VITE_MP_PUBLIC_KEY;
     const mp = new window.MercadoPago(publicKey, { locale: 'pt-BR' });
     const bricksBuilder = mp.bricks();
 

@@ -44,6 +44,78 @@ function juntarEndereco(e: { rua: string; numero: string; cidade: string; uf: st
   return `${rua}, ${numero} - ${cidade}/${uf}`;
 }
 
+type PagamentoCfg = { configurado: boolean; contaPlataforma: boolean; tokenFinal: string | null; publicKey: string | null };
+
+function PagamentoOnline() {
+  const [cfg, setCfg] = useState<PagamentoCfg | null>(null);
+  const [token, setToken] = useState('');
+  const [chave, setChave] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const { sucesso, erro: toastErro } = useToast();
+
+  useEffect(() => { api.get<PagamentoCfg>('/api/chacara/info/pagamento').then(setCfg).catch(() => {}); }, []);
+
+  async function salvar() {
+    setSalvando(true);
+    try {
+      await api.put('/api/chacara/info/pagamento', { accessToken: token, publicKey: chave });
+      setToken(''); setChave('');
+      setCfg(await api.get<PagamentoCfg>('/api/chacara/info/pagamento'));
+      sucesso('Conta do Mercado Pago conectada.');
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function remover() {
+    if (!window.confirm('Remover a conta do Mercado Pago? Os clientes não poderão mais pagar online.')) return;
+    try {
+      await api.delete('/api/chacara/info/pagamento');
+      setCfg(await api.get<PagamentoCfg>('/api/chacara/info/pagamento'));
+      sucesso('Conta removida.');
+    } catch (e) {
+      toastErro((e as Error).message);
+    }
+  }
+
+  return (
+    <div className="card chacara-card-wide" style={{ marginTop: 20 }}>
+      <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Pagamento online (Mercado Pago)</div>
+      <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>
+        O Pix e o cartão das reservas caem direto na sua conta do Mercado Pago. No painel do Mercado Pago, em Seus negócios → Configurações → Credenciais, copie o Access Token e a Public Key de <strong>produção</strong>.
+      </p>
+      {cfg?.contaPlataforma && (
+        <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12 }}>Esta chácara usa a conta de pagamento da plataforma. Para trocar, cadastre a conta abaixo.</p>
+      )}
+      {cfg?.configurado ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+          <span style={{ color: 'var(--green)', fontWeight: 600 }}>✓ Conta conectada</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Access Token terminado em {cfg.tokenFinal}</span>
+          <button className="btn-secondary" onClick={remover}>Remover conta</button>
+        </div>
+      ) : (!cfg?.contaPlataforma && (
+        <p style={{ fontSize: 13, color: 'var(--red)', marginBottom: 12 }}>Nenhuma conta conectada: os clientes não conseguem pagar online até você cadastrar.</p>
+      ))}
+      <div className="chacara-grid-2">
+        <div className="form-group">
+          <label className="form-label">Access Token (produção)</label>
+          <input type="password" autoComplete="off" value={token} onChange={e => setToken(e.target.value)} placeholder="APP_USR-..." />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Public Key (produção)</label>
+          <input value={chave} onChange={e => setChave(e.target.value)} placeholder="APP_USR-..." />
+        </div>
+        <button className="btn-primary" onClick={salvar} disabled={salvando || !token.trim() || !chave.trim()}
+          style={{ gridColumn: '1 / -1', justifySelf: 'start', width: 'auto', minWidth: 160 }}>
+          {salvando ? 'Validando...' : cfg?.configurado ? 'Atualizar conta' : 'Conectar conta'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function GerenciarChacara() {
   const [fotos, setFotos] = useState<Foto[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -345,6 +417,8 @@ export function GerenciarChacara() {
           </button>
         </div>
       </div>
+
+      <PagamentoOnline />
     </div>
   );
 }
