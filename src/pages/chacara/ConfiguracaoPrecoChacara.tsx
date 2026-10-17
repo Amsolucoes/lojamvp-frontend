@@ -11,6 +11,10 @@ type ConfigGeral = {
   valorTaxaLimpeza: number;
   valorMultaNaoLimpeza: number;
   percentualEntradaMinimo: number;
+  percentualTaxaCartao: number;
+  valorLimiteParcelas: number;
+  parcelasAteLimite: number;
+  parcelasAcimaLimite: number;
 };
 
 type Faixa = {
@@ -27,6 +31,10 @@ const CAMPOS_GERAIS: { chave: keyof ConfigGeral; label: string; tipo: 'moeda' | 
   { chave: 'valorTaxaLimpeza', label: 'Taxa de limpeza', tipo: 'moeda', ajuda: 'Cobrada junto no pagamento quando ultrapassa o limite acima' },
   { chave: 'valorMultaNaoLimpeza', label: 'Multa por não limpar ao sair', tipo: 'moeda', ajuda: 'Só informativa — avisada ao cliente, cobrança é manual' },
   { chave: 'percentualEntradaMinimo', label: '% mínimo de entrada', tipo: 'numero', ajuda: 'Só uma sugestão exibida na tela de reservas' },
+  { chave: 'percentualTaxaCartao', label: 'Taxa do cartão repassada (%)', tipo: 'numero', ajuda: 'Somada ao valor cobrado no cartão para cobrir a taxa do Mercado Pago (0 a 15)' },
+  { chave: 'valorLimiteParcelas', label: 'Valor limite para parcelar menos', tipo: 'moeda', ajuda: 'Reservas até este valor usam o parcelamento "até o limite"; acima, o outro' },
+  { chave: 'parcelasAteLimite', label: 'Parcelas máximas até o limite', tipo: 'numero', ajuda: 'Máximo de parcelas no cartão (1 a 12)' },
+  { chave: 'parcelasAcimaLimite', label: 'Parcelas máximas acima do limite', tipo: 'numero', ajuda: 'Máximo de parcelas no cartão (1 a 12)' },
 ];
 
 const FAIXA_VAZIA = { pessoasAte: 0, valorDiariaSemana: 0, valorDiariaFimSemana: 0, valorPacote2DiasFimSemana: 0 };
@@ -253,7 +261,7 @@ export function ConfiguracaoPrecoChacara() {
                 <input
                   type="number"
                   min={0}
-                  step={campo.tipo === 'moeda' ? '0.01' : '1'}
+                  step={campo.tipo === 'moeda' || campo.chave === 'percentualTaxaCartao' ? '0.01' : '1'}
                   value={config[campo.chave] === 0 ? '' : config[campo.chave]}
                   onChange={e => atualizarCampo(campo.chave, e.target.value)}
                   onFocus={e => e.target.select()}
