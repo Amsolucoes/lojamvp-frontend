@@ -8,7 +8,7 @@ type HorarioChacara = { id: number; hora: string; ajuste: number };
 type DadosChacara = {
   nome: string; logoUrl: string | null; corPrimaria: string;
   descricao: string; endereco: string; mapaEmbedUrl: string | null;
-  horaEntrada: string; horaSaida: string; avisosUso: string[]; pagamentoOnline?: boolean;
+  horaEntrada: string; horaSaida: string; avisosUso: string[]; pagamentoOnline?: boolean; reservasDisponiveis?: boolean;
   horarios: { entrada: HorarioChacara[]; saida: HorarioChacara[] };
   fotos: string[];
   comodidades: { chave: string; label: string }[];
@@ -263,7 +263,7 @@ export function SiteChacara() {
   const [mesCalendario, setMesCalendario] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [datasOcupadas, setDatasOcupadas] = useState<{ dataInicio: string; dataFim: string }[]>([]);
 
-  const [etapa, setEtapa] = useState<'datas' | 'dados' | 'pagamento' | 'sucesso'>('datas');
+  const [etapa, setEtapa] = useState<'datas' | 'dados' | 'pagamento' | 'sucesso' | 'solicitada'>('datas');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -358,14 +358,14 @@ export function SiteChacara() {
     setEnviando(true);
     setErro('');
     try {
-      const res = await api.post<{ id: number; valor: number }>(`/api/publico/${slug}/chacara/reservar`, {
+      const res = await api.post<{ id: number; valor: number; semPagamentoOnline?: boolean }>(`/api/publico/${slug}/chacara/reservar`, {
         dataInicio, dataFim, pessoas,
         clienteNome: nome.trim(), clienteEmail: email.trim(), clienteTelefone: telefone.trim(),
         clienteDocumento: cpf.trim() || null, clienteCep: cep.trim() || null, clienteEndereco: enderecoCliente.trim() || null,
         horaEntrada: horaEntrada || null, horaSaida: horaSaida || null,
       });
       setReservaCriada(res);
-      setEtapa('pagamento');
+      setEtapa(res.semPagamentoOnline ? 'solicitada' : 'pagamento');
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -754,12 +754,17 @@ export function SiteChacara() {
                   </div>
                 )}
 
-                {dados.pagamentoOnline === false && (
+                {dados.reservasDisponiveis === false && (
                   <p style={{ fontSize: 13, color: '#b3261e', marginBottom: 10 }}>
-                    As reservas online estão temporariamente indisponíveis. Entre em contato diretamente com a chácara.
+                    As reservas online desta chácara ainda não estão habilitadas. Entre em contato diretamente com a chácara.
                   </p>
                 )}
-                <button className="chac-btn" disabled={!disponivel || !valor || dados.pagamentoOnline === false} onClick={() => setEtapa('dados')}>
+                {dados.reservasDisponiveis !== false && dados.pagamentoOnline === false && (
+                  <p style={{ fontSize: 12.5, color: 'var(--chac-ink-soft)', marginBottom: 10 }}>
+                    Esta chácara confirma as reservas manualmente: você envia a solicitação e ela entra em contato para combinar o pagamento.
+                  </p>
+                )}
+                <button className="chac-btn" disabled={!disponivel || !valor || dados.reservasDisponiveis === false} onClick={() => setEtapa('dados')}>
                   Continuar
                 </button>
               </>
@@ -907,6 +912,18 @@ export function SiteChacara() {
                   </div>
                 )}
               </>
+            )}
+
+            {etapa === 'solicitada' && reservaCriada && (
+              <div className="chac-success">
+                <div className="chac-success-icon">✓</div>
+                <h3 className="chac-success-title">Solicitação enviada!</h3>
+                <p style={{ fontSize: 13, color: 'var(--chac-ink-soft)' }}>
+                  Recebemos sua solicitação de reserva. A chácara vai confirmar e entrar em contato para combinar o pagamento.
+                  As datas ficam reservadas para você por até 48 horas; se não houver confirmação, a solicitação expira.
+                  Você receberá as atualizações por e-mail.
+                </p>
+              </div>
             )}
 
             {etapa === 'sucesso' && reservaCriada && (
