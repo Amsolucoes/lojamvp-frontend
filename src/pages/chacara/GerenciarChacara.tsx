@@ -117,6 +117,9 @@ function PagamentoOnline() {
   );
 }
 
+const ERRO: React.CSSProperties = { borderColor: 'var(--red)', boxShadow: '0 0 0 1px var(--red)' };
+const MSG_ERRO: React.CSSProperties = { fontSize: 11.5, color: 'var(--red)', marginTop: 4 };
+
 export function GerenciarChacara() {
   const [fotos, setFotos] = useState<Foto[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -128,6 +131,8 @@ export function GerenciarChacara() {
   const [salvandoDescricao, setSalvandoDescricao] = useState(false);
   const [salvandoLocador, setSalvandoLocador] = useState(false);
   const [end, setEnd] = useState({ rua: '', numero: '', cidade: '', uf: '' });
+  const [tentouInfo, setTentouInfo] = useState(false);
+  const [tentouLocador, setTentouLocador] = useState(false);
   const [cep, setCep] = useState('');
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [enderecoLiberado, setEnderecoLiberado] = useState(false);
@@ -205,7 +210,25 @@ export function GerenciarChacara() {
     setInfo(i => ({ ...i, comodidades: nova.join(',') }));
   }
 
+  const faltaFoto = fotos.length === 0;
+  const faltaDescricao = !info.descricao.trim();
+  const faltaComodidade = info.comodidades.split(',').filter(Boolean).length === 0;
+  const infoValida = !faltaFoto && !faltaDescricao && !faltaComodidade;
+
+  const faltaNome = !(info.locadorNome ?? '').trim();
+  const faltaCpf = (info.locadorCpf ?? '').replace(/\D/g, '').length !== 11;
+  const faltaRua = !end.rua.trim();
+  const faltaNumero = !end.numero.trim();
+  const faltaCidade = !end.cidade.trim();
+  const faltaUf = end.uf.trim().length !== 2;
+  const locadorValido = !faltaNome && !faltaCpf && !faltaRua && !faltaNumero && !faltaCidade && !faltaUf;
+
   async function salvarDescricao() {
+    setTentouInfo(true);
+    if (!infoValida) {
+      toastErro('Preencha os campos destacados em vermelho (foto, descrição e ao menos uma comodidade).');
+      return;
+    }
     setSalvandoDescricao(true);
     try {
       const atualizado = await api.put<Info>('/api/chacara/info', info);
@@ -243,6 +266,11 @@ export function GerenciarChacara() {
   }
 
   async function salvarLocador() {
+    setTentouLocador(true);
+    if (!locadorValido) {
+      toastErro('Preencha os campos destacados em vermelho.');
+      return;
+    }
     setSalvandoLocador(true);
     try {
       const atualizado = await api.put<Info>('/api/chacara/info', { ...info, locadorEndereco: juntarEndereco(end) });
@@ -272,6 +300,7 @@ export function GerenciarChacara() {
       {/* Galeria de fotos */}
       <div className="card chacara-card-wide">
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Fotos ({fotos.length}/{LIMITE_FOTOS})</div>
+        {tentouInfo && faltaFoto && <p style={{ ...MSG_ERRO, marginTop: 0, marginBottom: 8 }}>Adicione pelo menos 1 foto.</p>}
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>
           A primeira foto é a capa. Use as setas para reordenar.
         </p>
@@ -313,9 +342,10 @@ export function GerenciarChacara() {
         <div className="chacara-grid-2">
           <div className="form-group chacara-full">
             <label className="form-label">Descrição</label>
-            <textarea rows={4} value={info.descricao}
+            <textarea rows={4} style={tentouInfo && faltaDescricao ? ERRO : undefined} value={info.descricao}
               onChange={e => setInfo(i => ({ ...i, descricao: e.target.value }))}
               placeholder="Conte sobre a chácara: estrutura, capacidade, diferenciais..." />
+            {tentouInfo && faltaDescricao && <p style={MSG_ERRO}>Informe uma descrição.</p>}
           </div>
 
           <div className="form-group">
@@ -340,7 +370,7 @@ export function GerenciarChacara() {
 
           <div className="form-group chacara-full">
             <label className="form-label">Comodidades</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6, ...(tentouInfo && faltaComodidade ? { padding: 8, border: '1px solid var(--red)', borderRadius: 8 } : {}) }}>
               {COMODIDADES_OPCOES.map(op => {
                 const ativa = comodidadesAtivas.includes(op.chave);
                 return (
@@ -352,6 +382,7 @@ export function GerenciarChacara() {
                 );
               })}
             </div>
+            {tentouInfo && faltaComodidade && <p style={MSG_ERRO}>Marque pelo menos 1 comodidade.</p>}
           </div>
 
           <div className="form-group chacara-full">
@@ -401,7 +432,7 @@ export function GerenciarChacara() {
           <div className="chacara-full" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <div className="form-group" style={{ flex: '3 1 260px' }}>
               <label className="form-label">Nome completo</label>
-              <input value={info.locadorNome ?? ''} onChange={e => setInfo(i => ({ ...i, locadorNome: e.target.value }))} />
+              <input style={tentouLocador && faltaNome ? ERRO : undefined} value={info.locadorNome ?? ''} onChange={e => setInfo(i => ({ ...i, locadorNome: e.target.value }))} />
             </div>
             <div className="form-group" style={{ flex: '1 1 130px' }}>
               <label className="form-label">RG</label>
@@ -409,13 +440,13 @@ export function GerenciarChacara() {
             </div>
             <div className="form-group" style={{ flex: '1 1 150px' }}>
               <label className="form-label">CPF</label>
-              <input value={info.locadorCpf ?? ''} onChange={e => setInfo(i => ({ ...i, locadorCpf: formatarCpf(e.target.value) }))} inputMode="numeric" placeholder="000.000.000-00" />
+              <input style={tentouLocador && faltaCpf ? ERRO : undefined} value={info.locadorCpf ?? ''} onChange={e => setInfo(i => ({ ...i, locadorCpf: formatarCpf(e.target.value) }))} inputMode="numeric" placeholder="000.000.000-00" />
             </div>
           </div>
           <div className="chacara-full" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div className="form-group" style={{ flex: '0 1 160px' }}>
               <label className="form-label">CEP</label>
-              <input value={cep} onChange={e => aoDigitarCep(e.target.value)} inputMode="numeric" placeholder="00000-000" />
+              <input style={tentouLocador && !enderecoLiberado ? ERRO : undefined} value={cep} onChange={e => aoDigitarCep(e.target.value)} inputMode="numeric" placeholder="00000-000" />
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', paddingBottom: 12 }}>
               {buscandoCep ? 'Buscando CEP...' : enderecoLiberado ? '' : 'Informe o CEP para liberar o endereço.'}
@@ -427,19 +458,19 @@ export function GerenciarChacara() {
           <div className="chacara-full" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <div className="form-group" style={{ flex: '3 1 240px' }}>
               <label className="form-label">Endereço</label>
-              <input disabled={!enderecoLiberado} value={end.rua} onChange={e => setEnd(v => ({ ...v, rua: e.target.value }))} placeholder="Rua, bairro" />
+              <input disabled={!enderecoLiberado} style={tentouLocador && faltaRua ? ERRO : undefined} value={end.rua} onChange={e => setEnd(v => ({ ...v, rua: e.target.value }))} placeholder="Rua, bairro" />
             </div>
             <div className="form-group" style={{ flex: '0 1 90px' }}>
               <label className="form-label">Número</label>
-              <input disabled={!enderecoLiberado} value={end.numero} onChange={e => setEnd(v => ({ ...v, numero: e.target.value }))} />
+              <input disabled={!enderecoLiberado} style={tentouLocador && faltaNumero ? ERRO : undefined} value={end.numero} onChange={e => setEnd(v => ({ ...v, numero: e.target.value }))} />
             </div>
             <div className="form-group" style={{ flex: '2 1 160px' }}>
               <label className="form-label">Cidade</label>
-              <input disabled={!enderecoLiberado} value={end.cidade} onChange={e => setEnd(v => ({ ...v, cidade: e.target.value }))} />
+              <input disabled={!enderecoLiberado} style={tentouLocador && faltaCidade ? ERRO : undefined} value={end.cidade} onChange={e => setEnd(v => ({ ...v, cidade: e.target.value }))} />
             </div>
             <div className="form-group" style={{ flex: '0 1 70px' }}>
               <label className="form-label">UF</label>
-              <input disabled={!enderecoLiberado} value={end.uf} maxLength={2} onChange={e => setEnd(v => ({ ...v, uf: e.target.value.toUpperCase() }))} />
+              <input disabled={!enderecoLiberado} style={tentouLocador && faltaUf ? ERRO : undefined} value={end.uf} maxLength={2} onChange={e => setEnd(v => ({ ...v, uf: e.target.value.toUpperCase() }))} />
             </div>
           </div>
           <div className="chacara-full" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
