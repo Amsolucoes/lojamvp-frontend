@@ -14,6 +14,14 @@ export function formatarCpf(valor: string): string {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
+export function formatarRg(valor: string): string {
+  const d = valor.replace(/[^0-9xX]/g, '').slice(0, 9).toUpperCase();
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}-${d.slice(8)}`;
+}
+
 export function formatarCep(valor: string): string {
   const d = valor.replace(/\D/g, '').slice(0, 8);
   if (d.length <= 5) return d;
