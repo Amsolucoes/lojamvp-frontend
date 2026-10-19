@@ -10,13 +10,15 @@ interface LinhaCategoria {
   categoriaId: string; nome: string; icone: string; ativo: boolean; valor: number;
   gastoAvulso: number; gastoCartao: number; gasto: number;
 }
+interface LinhaReceita { categoriaId: string; nome: string; icone: string; ativo: boolean; valor: number; recebido: number; aReceber: number; total: number; }
 interface Meta { id: string; nome: string; icone: string | null; valorAlvo: number; valorGuardado: number; dataAlvo: string | null; porMes: number | null; }
 interface Plano {
   ano: number; mes: number;
   receitaPlanejada: number | null; receitaPrevista: number; receita: number;
   percentualPoupanca: number; poupar: number; disponivelParaGastar: number;
   totalPlanejado: number; gastoPlanejadas: number; gastoTotal: number;
-  categorias: LinhaCategoria[]; metas: Meta[];
+  totalPlanejadoReceber: number; recebidoPlanejadas: number; aReceberPlanejadas: number;
+  categorias: LinhaCategoria[]; categoriasReceita: LinhaReceita[]; metas: Meta[];
 }
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -35,7 +37,8 @@ export function Planejamento() {
 
   // Edição local (só vai para o servidor ao salvar)
   const [edit, setEdit] = useState<Record<string, { ativo: boolean; valor: number }>>({});
-  const [receitaEdit, setReceitaEdit] = useState(0);
+  const [editR, setEditR] = useState<Record<string, { ativo: boolean; valor: number }>>({});
+  const [aba, setAba] = useState<'despesas' | 'receitas' | 'metas'>('despesas');
   const [percEdit, setPercEdit] = useState(30);
   const [busca, setBusca] = useState('');
   const [salvando, setSalvando] = useState(false);
@@ -54,7 +57,9 @@ export function Planejamento() {
       const e: Record<string, { ativo: boolean; valor: number }> = {};
       p.categorias.forEach(c => { e[c.categoriaId] = { ativo: c.ativo, valor: c.valor }; });
       setEdit(e);
-      setReceitaEdit(p.receitaPlanejada ?? 0);
+      const er: Record<string, { ativo: boolean; valor: number }> = {};
+      p.categoriasReceita.forEach(c => { er[c.categoriaId] = { ativo: c.ativo, valor: c.valor }; });
+      setEditR(er);
       setPercEdit(p.percentualPoupanca);
     } catch {
       erro('Não foi possível carregar o planejamento.');
@@ -73,12 +78,13 @@ export function Planejamento() {
 
   const alterado = useMemo(() => {
     if (!plano) return false;
-    if ((plano.receitaPlanejada ?? 0) !== receitaEdit || plano.percentualPoupanca !== percEdit) return true;
-    return plano.categorias.some(c => {
-      const e = edit[c.categoriaId];
-      return e && (e.ativo !== c.ativo || e.valor !== c.valor);
-    });
-  }, [plano, edit, receitaEdit, percEdit]);
+    if (plano.percentualPoupanca !== percEdit) return true;
+    const mudou = (c: { categoriaId: string; ativo: boolean; valor: number }, m: Record<string, { ativo: boolean; valor: number }>) => {
+      const e = m[c.categoriaId];
+      return !!e && (e.ativo !== c.ativo || e.valor !== c.valor);
+    };
+    return plano.categorias.some(c => mudou(c, edit)) || plano.categoriasReceita.some(c => mudou(c, editR));
+  }, [plano, edit, editR, percEdit]);
 
   // Totais recalculados com a edição em andamento
   const calc = useMemo(() => {
@@ -86,20 +92,27 @@ export function Planejamento() {
     const ativas = plano.categorias.filter(c => edit[c.categoriaId]?.ativo);
     const totalPlanejado = ativas.reduce((s, c) => s + (edit[c.categoriaId]?.valor ?? 0), 0);
     const gastoPlanejadas = ativas.reduce((s, c) => s + c.gasto, 0);
-    const receita = receitaEdit > 0 ? receitaEdit : plano.receitaPrevista;
+    const ativasR = plano.categoriasReceita.filter(c => editR[c.categoriaId]?.ativo);
+    const totalReceber = ativasR.reduce((sum, c) => sum + (editR[c.categoriaId]?.valor ?? 0), 0);
+    const recebidoPlanejadas = ativasR.reduce((sum, c) => sum + c.recebido, 0);
+    const totalRecebidoCats = ativasR.reduce((sum, c) => sum + c.total, 0);
+    const receita = totalReceber > 0 ? totalReceber : plano.receitaPrevista;
     const poupar = Math.round(receita * percEdit) / 100;
     const disponivel = receita - poupar;
     const estouradas = ativas.filter(c => (edit[c.categoriaId]?.valor ?? 0) > 0 && c.gasto > (edit[c.categoriaId]?.valor ?? 0));
-    return { totalPlanejado, gastoPlanejadas, receita, poupar, disponivel, estouradas };
-  }, [plano, edit, receitaEdit, percEdit]);
+    return { totalPlanejado, gastoPlanejadas, receita, poupar, disponivel, estouradas, totalReceber, recebidoPlanejadas, totalRecebidoCats };
+  }, [plano, edit, editR, percEdit]);
 
   async function salvar() {
     if (!plano) return;
     setSalvando(true);
     try {
-      await api.put('/api/financeiro/planejamento/config', { receitaPlanejada: receitaEdit > 0 ? receitaEdit : null, percentualPoupanca: percEdit });
+      await api.put('/api/financeiro/planejamento/config', { receitaPlanejada: null, percentualPoupanca: percEdit });
       await api.put('/api/financeiro/planejamento/categorias', {
-        itens: plano.categorias.map(c => ({ categoriaId: c.categoriaId, ativo: edit[c.categoriaId]?.ativo ?? false, valor: edit[c.categoriaId]?.valor ?? 0 })),
+        itens: [
+          ...plano.categorias.map(c => ({ categoriaId: c.categoriaId, tipo: 'pagar', ativo: edit[c.categoriaId]?.ativo ?? false, valor: edit[c.categoriaId]?.valor ?? 0 })),
+          ...plano.categoriasReceita.map(c => ({ categoriaId: c.categoriaId, tipo: 'receber', ativo: editR[c.categoriaId]?.ativo ?? false, valor: editR[c.categoriaId]?.valor ?? 0 })),
+        ],
       });
       sucesso('Planejamento salvo.');
       await carregar();
@@ -176,7 +189,9 @@ export function Planejamento() {
             <div className="stat-card">
               <div className="stat-label">Planejado para receber</div>
               <div className="stat-value" style={{ fontSize: 20, color: 'var(--green)' }}>{fmt(calc.receita)}</div>
-              {receitaEdit <= 0 && plano.receitaPrevista > 0 && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>previsto nos lançamentos</div>}
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                {calc.totalReceber > 0 ? `recebido ${fmt(calc.recebidoPlanejadas)}` : plano.receitaPrevista > 0 ? 'previsto nos lançamentos' : 'defina na aba Receitas'}
+              </div>
             </div>
             <div className="stat-card">
               <div className="stat-label">Já gasto (planejadas)</div>
@@ -191,12 +206,14 @@ export function Planejamento() {
           </div>
 
           <div className="card" style={{ marginBottom: 16, padding: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14, marginBottom: 10 }}><PiggyBank size={16} /> Receita e quanto guardar</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14, marginBottom: 10 }}><PiggyBank size={16} /> Quanto guardar</div>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ flex: '1 1 200px' }}>
-                <label className="form-label">Quanto planeja receber no mês</label>
-                <InputMoeda value={receitaEdit} onChange={setReceitaEdit} placeholder={plano.receitaPrevista > 0 ? fmt(plano.receitaPrevista) : '0,00'} />
-                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Vazio = usa o que já está lançado a receber no mês ({fmt(plano.receitaPrevista)}).</p>
+              <div style={{ flex: '1 1 200px', fontSize: 13 }}>
+                <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Receita considerada</div>
+                <strong style={{ fontSize: 16, color: 'var(--green)' }}>{fmt(calc.receita)}</strong>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                  {calc.totalReceber > 0 ? 'Soma das metas de receita marcadas na aba Receitas.' : `Sem metas de receita: usando o previsto nos lançamentos do mês. Defina metas na aba Receitas.`}
+                </p>
               </div>
               <div style={{ flex: '0 1 150px' }}>
                 <label className="form-label">Guardar (% da receita)</label>
@@ -210,7 +227,10 @@ export function Planejamento() {
           </div>
 
           <div className="plan-alertas">
-            {calc.receita <= 0 && <div className="plan-alerta">Informe quanto pretende receber no mês para ver quanto precisa guardar e quanto sobra para gastar.</div>}
+            {calc.receita <= 0 && <div className="plan-alerta">Defina metas de receita (aba Receitas) para ver quanto precisa guardar e quanto sobra para gastar.</div>}
+            {calc.totalReceber > 0 && calc.totalRecebidoCats < calc.totalReceber && (
+              <div className="plan-alerta">Ainda faltam {fmt(calc.totalReceber - calc.totalRecebidoCats)} para atingir o que planejou receber (já recebido ou lançado a receber: {fmt(calc.totalRecebidoCats)}).</div>
+            )}
             {calc.receita > 0 && calc.totalPlanejado > calc.disponivel && (
               <div className="plan-alerta ruim">O que você planejou gastar ({fmt(calc.totalPlanejado)}) passa em {fmt(calc.totalPlanejado - calc.disponivel)} do que sobra depois de guardar {percEdit}% ({fmt(calc.disponivel)}).</div>
             )}
@@ -225,6 +245,13 @@ export function Planejamento() {
             ))}
           </div>
 
+          <div className="cx-tipo-toggle" style={{ marginBottom: 16, maxWidth: 560 }}>
+            <button className={aba === 'despesas' ? 'active' : ''} onClick={() => setAba('despesas')}>Despesas</button>
+            <button className={aba === 'receitas' ? 'active' : ''} onClick={() => setAba('receitas')}>Receitas</button>
+            <button className={aba === 'metas' ? 'active' : ''} onClick={() => setAba('metas')}>Metas</button>
+          </div>
+
+          {aba === 'despesas' && (
           <div className="card" style={{ padding: 16, marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
               <div style={{ fontWeight: 600, fontSize: 14 }}>Categorias</div>
@@ -278,7 +305,69 @@ export function Planejamento() {
               </button>
             </div>
           </div>
+          )}
 
+          {aba === 'receitas' && (
+            <div className="card" style={{ padding: 16, marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>Receitas</div>
+                <input placeholder="Buscar categoria..." value={busca} onChange={e => setBusca(e.target.value)} style={{ maxWidth: 240 }} />
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>
+                Marque as categorias de receita que quer planejar e informe quanto pretende receber no mês. A soma delas vira a sua receita planejada.
+              </p>
+              {plano.categoriasReceita.filter(c => c.nome.toLowerCase().includes(busca.trim().toLowerCase())).length === 0 && (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', padding: '12px 0' }}>Nenhuma categoria de receita encontrada. Cadastre em Categorias.</p>
+              )}
+              {plano.categoriasReceita.filter(c => c.nome.toLowerCase().includes(busca.trim().toLowerCase())).map(c => {
+                const e = editR[c.categoriaId] ?? { ativo: false, valor: 0 };
+                const pctRec = e.valor > 0 ? (c.recebido / e.valor) * 100 : 0;
+                const pctTotal = e.valor > 0 ? (c.total / e.valor) * 100 : 0;
+                const bateu = e.ativo && e.valor > 0 && c.total >= e.valor;
+                const larg = (parte: number) => (e.valor > 0 ? Math.min(100, (parte / e.valor) * 100) : 0);
+                return (
+                  <div key={c.categoriaId} className="plan-linha" style={{ opacity: e.ativo ? 1 : 0.7 }}>
+                    <div className="plan-linha-topo">
+                      <div className="plan-linha-nome" style={{ cursor: 'pointer', justifyContent: 'flex-start' }}
+                        onClick={() => setEditR(st => ({ ...st, [c.categoriaId]: { ...e, ativo: !e.ativo } }))}>
+                        <input type="checkbox" checked={e.ativo} readOnly style={{ width: 18, height: 18, flex: 'none', padding: 0 }} />
+                        <span>{c.icone}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nome}</span>
+                      </div>
+                      <div className="plan-linha-valor">
+                        <InputMoeda value={e.valor} onChange={v => setEditR(st => ({ ...st, [c.categoriaId]: { ...e, valor: v } }))} placeholder="Quanto quer receber" />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-3)', margin: '8px 0 4px' }}>
+                      <span>
+                        Recebido: <strong style={{ color: 'var(--green)' }}>{fmt(c.recebido)}</strong>
+                        {c.aReceber > 0 && <> · a receber {fmt(c.aReceber)}</>}
+                      </span>
+                      {e.ativo && e.valor > 0 && (
+                        <span style={{ color: bateu ? 'var(--green)' : 'var(--text-2)', fontWeight: 600 }}>
+                          {bateu ? '✓ Meta atingida' : `Faltam ${fmt(e.valor - c.total)}`} ({Math.min(pctTotal, 999).toFixed(0)}%{pctRec !== pctTotal ? `, ${pctRec.toFixed(0)}% já recebido` : ''})
+                        </span>
+                      )}
+                    </div>
+                    {e.ativo && e.valor > 0 && (
+                      <div className="plan-bar" title={`Recebido ${fmt(c.recebido)} · a receber ${fmt(c.aReceber)}`}>
+                        <span style={{ width: `${larg(c.recebido)}%`, background: 'var(--green)' }} />
+                        <span style={{ width: `${Math.min(larg(c.aReceber), 100 - larg(c.recebido))}%`, background: 'rgba(74,222,128,.45)' }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                <button className="btn-primary" onClick={salvar} disabled={salvando || !alterado} style={{ width: 'auto', minWidth: 180 }}>
+                  {salvando ? 'Salvando...' : alterado ? 'Salvar planejamento' : 'Planejamento salvo'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {aba === 'metas' && (
+            <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0 10px' }}>
             <div style={{ fontWeight: 600, fontSize: 15 }}>Metas</div>
             <button className="btn-secondary" onClick={() => abrirMeta(null)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Plus size={14} /> Nova meta</button>
@@ -315,6 +404,8 @@ export function Planejamento() {
                 );
               })}
             </div>
+          )}
+            </>
           )}
         </>
       )}
