@@ -242,11 +242,12 @@ export function Planejamento() {
               return (
                 <div key={c.categoriaId} className="plan-linha" style={{ opacity: e.ativo ? 1 : 0.7 }}>
                   <div className="plan-linha-topo">
-                    <label className="plan-linha-nome" style={{ cursor: 'pointer' }}>
-                      <input type="checkbox" checked={e.ativo} onChange={ev => setEdit(s => ({ ...s, [c.categoriaId]: { ...e, ativo: ev.target.checked } }))} />
+                    <div className="plan-linha-nome" style={{ cursor: 'pointer', justifyContent: 'flex-start' }}
+                      onClick={() => setEdit(s => ({ ...s, [c.categoriaId]: { ...e, ativo: !e.ativo } }))}>
+                      <input type="checkbox" checked={e.ativo} readOnly style={{ width: 18, height: 18, flex: 'none', padding: 0 }} />
                       <span>{c.icone}</span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nome}</span>
-                    </label>
+                    </div>
                     <div className="plan-linha-valor">
                       <InputMoeda value={e.valor} onChange={v => setEdit(s => ({ ...s, [c.categoriaId]: { ...e, valor: v } }))} placeholder="Teto do mês" />
                     </div>
