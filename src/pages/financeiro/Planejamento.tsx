@@ -435,7 +435,7 @@ export function Planejamento() {
         </>
       )}
 
-      {detalheCat && <DetalheCategoriaModal ano={ano} mes={mes + 1} categoria={detalheCat} desmembrar onClose={() => setDetalheCat(null)} />}
+      {detalheCat && <DetalheCategoriaModal ano={ano} mes={mes + 1} categoria={detalheCat} desmembrar onClose={() => setDetalheCat(null)} onAlterado={carregar} />}
 
       {modalMeta && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMeta(null)}>
