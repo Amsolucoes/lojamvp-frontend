@@ -1,7 +1,7 @@
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
   TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, 
-  FileText, HelpCircle, Home, BarChart3, ChevronDown, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck, Truck } from 'lucide-react';
+  FileText, HelpCircle, Home, BarChart3, Target, ChevronDown, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck, Truck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { Fragment, useEffect, useState } from 'react';
@@ -134,6 +134,7 @@ export function Sidebar() {
     { to: '/financeiro/cartoes', icon: CreditCard, label: 'Cartões' },
     { to: '/financeiro/categorias', icon: Tag, label: 'Categorias' },
     { to: '/financeiro/balanco', icon: BarChart3, label: 'Balanço mensal' },
+    { to: '/financeiro/planejamento', icon: Target, label: 'Planejamento' },
   ] : [];
 
   return (

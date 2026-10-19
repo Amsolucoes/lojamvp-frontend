@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { setBottomNavAction } from '../utils/bottomNavAction';
 import { BankBadge } from '../utils/bancos';
+import { PlanejamentoCard } from '../components/PlanejamentoCard';
 import './Dashboard.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -179,6 +180,8 @@ export function DashboardFinanceiro() {
           </div>
         </div>
       </div>
+
+      <PlanejamentoCard />
 
       <div className="dash-fin-linha">
         <div className="stat-card">
