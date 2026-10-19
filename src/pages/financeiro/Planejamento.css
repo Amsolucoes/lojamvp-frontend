@@ -1,0 +1,16 @@
+.plan-resumo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.plan-resumo .stat-card { padding: 14px; }
+.plan-bar { height: 8px; background: var(--bg-3); border-radius: 4px; overflow: hidden; display: flex; }
+.plan-bar > span { display: block; height: 100%; }
+.plan-linha { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.plan-linha:last-child { border-bottom: none; }
+.plan-linha-topo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.plan-linha-nome { flex: 1 1 160px; min-width: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.plan-linha-valor { width: 150px; }
+.plan-alertas { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.plan-alerta { padding: 10px 14px; border-radius: 8px; font-size: 13px; border: 1px solid var(--border); background: var(--bg-3); }
+.plan-alerta.ruim { border-color: rgba(248,113,113,.5); color: var(--red); }
+.plan-alerta.ok { border-color: rgba(74,222,128,.5); color: var(--green); }
+.plan-metas { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .plan-resumo { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .plan-linha-valor { width: 100%; } }

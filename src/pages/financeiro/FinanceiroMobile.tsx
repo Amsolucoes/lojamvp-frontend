@@ -14,6 +14,7 @@ import { useApp } from '../../context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
 import { ComparativoCategorias } from './ComparativoCategorias';
 import { DetalheCategoriaModal } from './DetalheCategoriaModal';
+import { PlanejamentoCard } from '../../components/PlanejamentoCard';
 import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
 import './FinanceiroMobile.css';
 
@@ -1147,6 +1148,8 @@ export function FinanceiroMobile() {
         )}
         </>
         )}
+
+        <PlanejamentoCard compacto />
 
         <div className="card fm-card" style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
