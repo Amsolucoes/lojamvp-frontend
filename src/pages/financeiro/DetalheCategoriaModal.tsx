@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../../services/api';
 
-interface Item { origem: string; descricao: string; valor: number; data: string; status: string; cartaoNome?: string | null; }
+interface Item { origem: string; descricao: string; valor: number; data: string; status: string; cartaoNome?: string | null; contaNome?: string | null; }
 interface Detalhe { categoria: string; valorBalanco: number; totalItens: number; itens: Item[]; }
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -48,12 +48,22 @@ export function DetalheCategoriaModal({ ano, mes, categoria, desmembrar, onClose
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.descricao}</div>
                     <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
-                      {fmtData(i.data)}{i.cartaoNome ? ` · 💳 ${i.cartaoNome}` : ''} · {i.status === 'cartao' ? 'compra no cartão' : <span style={{ color: i.status === 'pago' ? 'var(--green)' : 'var(--text-3)' }}>{i.status === 'pago' ? 'pago' : 'pendente'}</span>}
+                      {fmtData(i.data)} · {i.cartaoNome ? `💳 Cartão de crédito: ${i.cartaoNome}` : `🏦 Débito/avulso${i.contaNome ? `: ${i.contaNome}` : ''}`} · {i.status === 'cartao' ? 'compra no cartão' : <span style={{ color: i.status === 'pago' ? 'var(--green)' : 'var(--text-3)' }}>{i.status === 'pago' ? 'pago' : 'pendente'}</span>}
                     </div>
                   </div>
                   <strong style={{ fontSize: 13.5, whiteSpace: 'nowrap' }}>{fmt(i.valor)}</strong>
                 </div>
               ))}
+              {(() => {
+                const cartao = dados.itens.filter(i => i.cartaoNome).reduce((t, i) => t + i.valor, 0);
+                const debito = dados.itens.filter(i => !i.cartaoNome).reduce((t, i) => t + i.valor, 0);
+                return cartao > 0 && debito > 0 ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-3)', paddingTop: 10 }}>
+                    <span>💳 Cartão de crédito: <strong style={{ color: 'var(--text-2)' }}>{fmt(cartao)}</strong></span>
+                    <span>🏦 Débito/avulso: <strong style={{ color: 'var(--text-2)' }}>{fmt(debito)}</strong></span>
+                  </div>
+                ) : null;
+              })()}
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, fontWeight: 700 }}>
                 <span>Total ({dados.itens.length})</span><span>{fmt(dados.totalItens)}</span>
               </div>

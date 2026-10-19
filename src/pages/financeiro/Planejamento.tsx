@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, PiggyBan
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
+import { DetalheCategoriaModal } from './DetalheCategoriaModal';
 import './Planejamento.css';
 
 interface LinhaCategoria {
@@ -42,6 +43,7 @@ export function Planejamento() {
   const [percEdit, setPercEdit] = useState(30);
   const [busca, setBusca] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [detalheCat, setDetalheCat] = useState<string | null>(null);
 
   const [modalMeta, setModalMeta] = useState<null | { id: string | null }>(null);
   const [formMeta, setFormMeta] = useState(META_VAZIA);
@@ -215,8 +217,8 @@ export function Planejamento() {
                   {calc.totalReceber > 0 ? 'Soma das metas de receita marcadas na aba Receitas.' : `Sem metas de receita: usando o previsto nos lançamentos do mês. Defina metas na aba Receitas.`}
                 </p>
               </div>
-              <div style={{ flex: '0 1 150px' }}>
-                <label className="form-label">Guardar (% da receita)</label>
+              <div style={{ flex: '0 0 190px' }}>
+                <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Guardar (% da receita)</label>
                 <input type="number" min={0} max={100} value={percEdit} onChange={e => setPercEdit(Math.min(100, Math.max(0, Number(e.target.value) || 0)))} />
               </div>
               <div style={{ flex: '1 1 200px', fontSize: 13 }}>
@@ -225,6 +227,27 @@ export function Planejamento() {
               </div>
             </div>
           </div>
+
+          {calc.poupar > 0 && (() => {
+            const mesesRestantes = 12 - hoje.getMonth();
+            const anos = Array.from({ length: 5 }, (_, i) => hoje.getFullYear() + i);
+            return (
+              <div className="card" style={{ marginBottom: 16, padding: 16 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Quanto você terá guardado</div>
+                <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 12 }}>
+                  Guardando {fmt(calc.poupar)} por mês, sem contar rendimento. O primeiro ano considera os meses que faltam ({mesesRestantes}).
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+                  {anos.map((a, i) => (
+                    <div key={a} className="stat-card" style={{ padding: 12 }}>
+                      <div className="stat-label">Ao fim de {a}</div>
+                      <div className="stat-value" style={{ fontSize: 17, color: 'var(--green)' }}>{fmt(calc.poupar * (mesesRestantes + 12 * i))}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="plan-alertas">
             {calc.receita <= 0 && <div className="plan-alerta">Defina metas de receita (aba Receitas) para ver quanto precisa guardar e quanto sobra para gastar.</div>}
@@ -278,6 +301,8 @@ export function Planejamento() {
                     <div className="plan-linha-valor">
                       <InputMoeda value={e.valor} onChange={v => setEdit(s => ({ ...s, [c.categoriaId]: { ...e, valor: v } }))} placeholder="Teto do mês" />
                     </div>
+                    <button type="button" className="btn-secondary" disabled={c.gasto <= 0} onClick={() => setDetalheCat(c.nome)}
+                      style={{ padding: '6px 12px', fontSize: 12, width: 'auto', whiteSpace: 'nowrap' }}>Ver detalhes</button>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-3)', margin: '8px 0 4px' }}>
                     <span>
@@ -409,6 +434,8 @@ export function Planejamento() {
           )}
         </>
       )}
+
+      {detalheCat && <DetalheCategoriaModal ano={ano} mes={mes + 1} categoria={detalheCat} desmembrar onClose={() => setDetalheCat(null)} />}
 
       {modalMeta && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMeta(null)}>
