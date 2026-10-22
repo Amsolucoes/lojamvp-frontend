@@ -15,7 +15,7 @@ import { imprimirLista } from '../../utils/imprimirLista';
 import { ComparativoCategorias } from './ComparativoCategorias';
 import { DetalheCategoriaModal } from './DetalheCategoriaModal';
 import { PlanejamentoCard } from '../../components/PlanejamentoCard';
-import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
+import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes, faturaPagaCompleta, PagosDoMes } from './FaturasDoMes';
 import { contemTexto } from '../../utils/texto';
 import './FinanceiroMobile.css';
 
@@ -31,8 +31,6 @@ function passaTipo(l: { modo?: string | null; origem?: string | null }, tipo: Fi
   if (tipo === 'plano') return origem === 'plano';
   return !origem.startsWith('cartao') && origem !== 'plano' && l.modo === tipo;
 }
-// Fatura do cartão já quitada (paga ou financiada): some da lista e vira linha verde no card de totais
-const faturaPagaCompleta = (f: FaturaMes) => f.status === 'pago' || f.status === 'financiada';
 
 interface Conta { id: string; nome: string; saldoInicial: number; saldoAtual: number; ativa: boolean; banco?: string | null; limite: number; }
 interface ResumoTipo { totalPago: number; qtdPago: number; totalPendente: number; qtdPendente: number; totalVencido: number; qtdVencido: number; }
@@ -1432,7 +1430,7 @@ export function FinanceiroMobile() {
                 <div className="fm-card-kicker" style={{ textAlign: 'center' }}>Total a pagar</div>
                 <div className="fm-valor-destaque" style={{ color: 'var(--red)', fontSize: 26, textAlign: 'center' }}>{fmt(totalAberto)}</div>
 
-                {(contasAberto > 0 || cartoesAberto.length > 0 || cartoesPagos.length > 0) && (
+                {(contasAberto > 0 || cartoesAberto.length > 0) && (
                   <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
                     {contasAberto > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
@@ -1446,13 +1444,13 @@ export function FinanceiroMobile() {
                         <span style={{ color: 'var(--text-2)' }}>{fmt(valor)}</span>
                       </div>
                     ))}
-                    {cartoesPagos.map(f => (
-                      <div key={`pago-${f.cartaoId}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
-                        <span style={{ color: 'var(--green)' }}>💳 {f.cartaoNome} · pago ✓</span>
-                        <span style={{ color: 'var(--green)', fontWeight: 600 }}>{fmt(f.valorPago > 0 ? f.valorPago : f.total)}</span>
-                      </div>
-                    ))}
                   </div>
+                )}
+
+                {mostrarPagos && (
+                  <PagosDoMes faturas={cartoesPagos}
+                    avulsas={filtradaTotais.filter(l => l.status === 'pago' && l.origem === 'avulso').map(l => ({ id: l.id, descricao: l.descricao, valor: l.valor, pagoEm: l.pagoEm, vencimento: l.vencimento }))}
+                    titulo="Pagos (cartões e débito)" />
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>

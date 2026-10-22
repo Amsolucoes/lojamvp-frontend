@@ -248,3 +248,44 @@ export function BarraCartoes({ busca, setBusca, ordem, setOrdem }: {
     </div>
   );
 }
+
+
+// Fatura quitada (paga ou financiada)
+export const faturaPagaCompleta = (f: FaturaMes) => f.status === 'pago' || f.status === 'financiada';
+
+export interface PagoAvulso { id: string; descricao: string; valor: number; pagoEm: string | null; vencimento: string; }
+
+const fmtMoeda = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// "Pagos": faturas de cartão quitadas e contas avulsas (débito) pagas, juntas e em ordem cronológica
+export function PagosDoMes({ faturas, avulsas, titulo = 'Pagos' }: { faturas: FaturaMes[]; avulsas: PagoAvulso[]; titulo?: string }) {
+  const itens = [
+    ...faturas.filter(faturaPagaCompleta).map(f => ({
+      chave: `f-${f.cartaoId}`, tipo: 'cartao' as const, descricao: `Fatura ${f.cartaoNome}`,
+      valor: f.valorPago > 0 ? f.valorPago : f.total, data: f.pagoEm ?? f.vencimento,
+    })),
+    ...avulsas.map(a => ({ chave: `a-${a.id}`, tipo: 'debito' as const, descricao: a.descricao, valor: a.valor, data: a.pagoEm ?? a.vencimento })),
+  ].sort((x, y) => (x.data ?? '').localeCompare(y.data ?? ''));
+  if (itens.length === 0) return null;
+  const total = itens.reduce((t, i) => t + i.valor, 0);
+
+  return (
+    <details className="card fm-card" style={{ marginTop: 14 }} open>
+      <summary style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, fontWeight: 600 }}>
+        <span>{titulo} ({itens.length})</span>
+        <span style={{ color: 'var(--green)' }}>{fmtMoeda(total)}</span>
+      </summary>
+      <div style={{ marginTop: 10 }}>
+        {itens.map(i => (
+          <div key={i.chave} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '6px 0', borderTop: '1px solid var(--border)', fontSize: 13 }}>
+            <span style={{ minWidth: 0, color: 'var(--text-2)' }}>
+              <span style={{ color: 'var(--text-3)', fontSize: 11.5, marginRight: 6 }}>{i.data ? new Date(i.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }) : '--'}</span>
+              {i.tipo === 'cartao' ? '💳' : '🏦'} {i.descricao}
+            </span>
+            <strong style={{ color: 'var(--green)', whiteSpace: 'nowrap' }}>{fmtMoeda(i.valor)}</strong>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
