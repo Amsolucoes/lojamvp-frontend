@@ -12,7 +12,7 @@ import { contemTexto } from '../../utils/texto';
 import './Financeiro.css';
 import { useApp } from '@/context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
-import { FaturasDoMes, DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, FaturaMes, faturaPagaCompleta, PagosDoMes } from './FaturasDoMes';
+import { FaturasDoMes, DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, FaturaMes } from './FaturasDoMes';
 
 interface Conta {
   id: string;
@@ -411,12 +411,8 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
     return contemTexto(descricao, buscaDescricao);
   }
 
-  // Cartões com a fatura quitada não entram na tabela: aparecem no bloco "Pagos", em ordem cronológica com as contas avulsas pagas
-  const cartoesPagosIds = new Set(faturasMes.filter(faturaPagaCompleta).map(f => f.cartaoId));
-  const ehCartaoPago = (l: { origem?: string | null; cartaoId?: string | null; status: string }) =>
-    !!l.origem && l.origem.startsWith('cartao') && ((!!l.cartaoId && cartoesPagosIds.has(l.cartaoId)) || l.status === 'pago');
   const listaPagarCompleta = linhasPagar.filter(l =>
-    !ehCartaoPago(l) && (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaStatus(l.status) && passaModo(l.modo) && passaBusca(l.descricao)
+    (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaStatus(l.status) && passaModo(l.modo) && passaBusca(l.descricao)
   );
   const listaReceberCompleta = receberUnificado.filter((l: any) => {
     const catOk = catFiltro === 'todas'
@@ -1232,7 +1228,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                 </table>
               </div>
               <div className="fin-cards-mobile">
-                {agruparComFaturas(agruparPorData(listaPagar), faturasSemLinha(faturasMes, listaPagar).filter(f => !faturaPagaCompleta(f))).map(({ dia: data, itens, faturas: faturasDoDia }) => (
+                {agruparComFaturas(agruparPorData(listaPagar), faturasSemLinha(faturasMes, listaPagar)).map(({ dia: data, itens, faturas: faturasDoDia }) => (
                   <div key={`m-grupo-${data}`}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 16px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
                       {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
@@ -1445,18 +1441,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
 
       {aba === 'pagar' && (
         <div className="fin-faturas-desktop">
-          <FaturasDoMes faturas={faturasMes.filter(f => !faturaPagaCompleta(f))} titulo={`Faturas de cartão com pagamento · ${MESES[mesRef]}`} />
-        </div>
-      )}
-
-      {aba === 'pagar' && (
-        <div className="page-section" style={{ padding: '0 0 8px' }}>
-          <PagosDoMes
-            faturas={catFiltro === 'todas' && modoFiltro === 'todos' && !buscaDescricao.trim() ? faturasMes : []}
-            avulsas={linhasPagar
-              .filter(l => l.status === 'pago' && l.origem === 'avulso' && (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaModo(l.modo) && passaBusca(l.descricao))
-              .map(l => ({ id: l.id, descricao: l.descricao, valor: l.valor, pagoEm: l.pagoEm, vencimento: l.vencimento }))}
-            titulo={`Pagos · cartões e débito · ${MESES[mesRef]}`} />
+          <FaturasDoMes faturas={faturasMes} titulo={`Faturas de cartão com pagamento · ${MESES[mesRef]}`} />
         </div>
       )}
 
