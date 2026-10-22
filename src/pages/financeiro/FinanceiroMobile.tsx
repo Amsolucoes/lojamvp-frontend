@@ -16,11 +16,21 @@ import { ComparativoCategorias } from './ComparativoCategorias';
 import { DetalheCategoriaModal } from './DetalheCategoriaModal';
 import { PlanejamentoCard } from '../../components/PlanejamentoCard';
 import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
+import { contemTexto } from '../../utils/texto';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function fmt(n: number) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+// Tipo do lançamento: avulsa | parcelada | fixa | cartao (compra/fatura no cartão) | plano (mensalidade)
+type FiltroTipo = 'todos' | 'avulsa' | 'parcelada' | 'fixa' | 'cartao' | 'plano';
+function passaTipo(l: { modo?: string | null; origem?: string | null }, tipo: FiltroTipo) {
+  if (tipo === 'todos') return true;
+  const origem = l.origem ?? '';
+  if (tipo === 'cartao') return origem.startsWith('cartao');
+  if (tipo === 'plano') return origem === 'plano';
+  return !origem.startsWith('cartao') && origem !== 'plano' && l.modo === tipo;
+}
 // Fatura do cartão já quitada (paga ou financiada): some da lista e vira linha verde no card de totais
 const faturaPagaCompleta = (f: FaturaMes) => f.status === 'pago' || f.status === 'financiada';
 
@@ -101,6 +111,8 @@ export function FinanceiroMobile() {
   const [categoriasPagar, setCategoriasPagar] = useState<Categoria[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'vencido' | 'pago'>('todos');
   const [catFiltro, setCatFiltro] = useState('todas');
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
+  const [filtroTipoReceber, setFiltroTipoReceber] = useState<FiltroTipo>('todos');
   const [buscaPagar, setBuscaPagar] = useState('');
   const [paginaLista, setPaginaLista] = useState(1);
   const listaPagarRef = useRef<HTMLParagraphElement>(null);
@@ -134,8 +146,8 @@ export function FinanceiroMobile() {
   const [filtroStatusReceber, setFiltroStatusReceber] = useState<'todos' | 'pendente' | 'pago'>('todos');
   const [catFiltroReceber, setCatFiltroReceber] = useState('todas');
   const [buscaReceber, setBuscaReceber] = useState('');
-  const filtrandoPagar = useFiltrando([filtroStatus, catFiltro, buscaPagar]);
-  const filtrandoReceber = useFiltrando([filtroStatusReceber, catFiltroReceber, buscaReceber]);
+  const filtrandoPagar = useFiltrando([filtroStatus, catFiltro, buscaPagar, filtroTipo]);
+  const filtrandoReceber = useFiltrando([filtroStatusReceber, catFiltroReceber, buscaReceber, filtroTipoReceber]);
   const [paginaListaReceber, setPaginaListaReceber] = useState(1);
   const listaReceberRef = useRef<HTMLParagraphElement>(null);
   function irParaPaginaReceber(pagina: number) {
@@ -297,14 +309,16 @@ export function FinanceiroMobile() {
   function imprimirPagarMobile() {
     const lista = linhasPagar.filter(l => {
       const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
+      const tipoOk = passaTipo(l, filtroTipo);
       const statusReal = ehVencido(l) ? 'vencido' : l.status;
       const statusOk = filtroStatus === 'todos' || statusReal === filtroStatus;
-      const buscaOk = !buscaPagar || l.descricao.toLowerCase().includes(buscaPagar.toLowerCase());
-      return catOk && statusOk && buscaOk;
+      const buscaOk = contemTexto(l.descricao, buscaPagar);
+      return catOk && tipoOk && statusOk && buscaOk;
     });
     if (lista.length === 0) { erro('Não há lançamentos para imprimir neste período.'); return; }
 
     const filtros: string[] = [];
+    if (filtroTipo !== 'todos') filtros.push(`Tipo: ${filtroTipo}`);
     if (catFiltro !== 'todas') filtros.push(`Categoria: ${catFiltro}`);
     if (filtroStatus !== 'todos') filtros.push(`Status: ${filtroStatus}`);
     if (buscaPagar.trim()) filtros.push(`Busca: "${buscaPagar.trim()}"`);
@@ -333,13 +347,15 @@ export function FinanceiroMobile() {
         ? l.origem === 'plano'
         : l.origem === 'avulso' && l.categoriaNome === catFiltroReceber;
       const statusOk = filtroStatusReceber === 'todos' || l.status === filtroStatusReceber;
-      const buscaOk = !buscaReceber || l.descricao.toLowerCase().includes(buscaReceber.toLowerCase());
-      return catOk && statusOk && buscaOk;
+      const tipoOk = passaTipo(l, filtroTipoReceber);
+      const buscaOk = contemTexto(l.descricao, buscaReceber);
+      return catOk && tipoOk && statusOk && buscaOk;
     });
     if (lista.length === 0) { erro('Não há lançamentos para imprimir neste período.'); return; }
 
     const filtros: string[] = [];
     if (catFiltroReceber !== 'todas') filtros.push(`Categoria: ${catFiltroReceber === '__plano__' ? 'Mensalidades (Planos)' : catFiltroReceber}`);
+    if (filtroTipoReceber !== 'todos') filtros.push(`Tipo: ${filtroTipoReceber}`);
     if (filtroStatusReceber !== 'todos') filtros.push(`Status: ${filtroStatusReceber}`);
     if (buscaReceber.trim()) filtros.push(`Busca: "${buscaReceber.trim()}"`);
 
@@ -393,7 +409,7 @@ export function FinanceiroMobile() {
     api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasReceber(cats.filter(c => c.tipo === 'receber' || c.tipo === 'ambos'))).catch(() => {});
   }, [tela, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
 
-  useEffect(() => { setPaginaListaReceber(1); }, [tela, filtroStatusReceber, catFiltroReceber, buscaReceber, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
+  useEffect(() => { setPaginaListaReceber(1); }, [tela, filtroStatusReceber, catFiltroReceber, filtroTipoReceber, buscaReceber, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
 
   async function marcarRecebimentoLocal(l: LinhaReceber, pago: boolean) {
     setProcessandoRecebimento(l.id);
@@ -844,7 +860,7 @@ export function FinanceiroMobile() {
     api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasPagar(cats.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos'))).catch(() => {});
   }, [tela, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
 
-  useEffect(() => { setPaginaLista(1); }, [tela, filtroStatus, catFiltro, buscaPagar, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
+  useEffect(() => { setPaginaLista(1); }, [tela, filtroStatus, catFiltro, filtroTipo, buscaPagar, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
 
   async function marcarPagamentoLocal(l: LinhaPagar, pago: boolean) {
     const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
@@ -1386,14 +1402,15 @@ export function FinanceiroMobile() {
           ) : (() => {
             const filtradaTotais = linhasPagar.filter(l => {
               const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
+      const tipoOk = passaTipo(l, filtroTipo);
               const statusReal = ehVencido(l) ? 'vencido' : l.status;
               const statusOk = filtroStatus === 'todos' || statusReal === filtroStatus;
-              const buscaOk = !buscaPagar || l.descricao.toLowerCase().includes(buscaPagar.toLowerCase());
-              return catOk && statusOk && buscaOk;
+              const buscaOk = contemTexto(l.descricao, buscaPagar);
+              return catOk && tipoOk && statusOk && buscaOk;
             });
             // Sem filtros e com o mês inteiro: usa o resumo oficial do servidor (inclui faturas já pagas ou
             // adiantadas, que não aparecem na lista) — assim bate com o Resumo do ano e o Balanço.
-            const filtroAtivoPagar = catFiltro !== 'todas' || filtroStatus !== 'todos' || buscaPagar.trim() !== '';
+            const filtroAtivoPagar = catFiltro !== 'todas' || filtroTipo !== 'todos' || filtroStatus !== 'todos' || buscaPagar.trim() !== '';
             const resumoOficial = !filtroAtivoPagar && periodoTipo === 'mes' ? resumoPagarMes?.pagar : null;
             const totalPago = resumoOficial ? resumoOficial.totalPago : filtradaTotais.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
             const totalAberto = resumoOficial ? resumoOficial.totalPendente + resumoOficial.totalVencido : filtradaTotais.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
@@ -1408,7 +1425,7 @@ export function FinanceiroMobile() {
                 .filter(l => l.status !== 'pago' && (l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada'))
                 .reduce((acc, l) => { const nome = l.cartaoNome ?? 'Cartão'; acc[nome] = (acc[nome] ?? 0) + l.valor; return acc; }, {} as Record<string, number>)
             );
-            const mostrarPagos = catFiltro === 'todas' && !buscaPagar.trim() && (filtroStatus === 'todos' || filtroStatus === 'pago') && periodoTipo === 'mes';
+            const mostrarPagos = catFiltro === 'todas' && filtroTipo === 'todos' && !buscaPagar.trim() && (filtroStatus === 'todos' || filtroStatus === 'pago') && periodoTipo === 'mes';
             const cartoesPagos = mostrarPagos ? faturasMesPagar.filter(faturaPagaCompleta) : [];
             return (
               <div className="card fm-card" style={{ marginBottom: 14 }}>
@@ -1467,6 +1484,13 @@ export function FinanceiroMobile() {
               ))}
             </select>
           )}
+          <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value as FiltroTipo)} style={{ marginBottom: 14 }}>
+            <option value="todos">Todos os tipos</option>
+            <option value="avulsa">Avulsa</option>
+            <option value="fixa">Fixa (recorrente)</option>
+            <option value="parcelada">Parcelada</option>
+            <option value="cartao">Cartão de crédito</option>
+          </select>
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <input placeholder="Buscar por descrição..." value={buscaPagar} onChange={e => setBuscaPagar(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
             <button className="btn-secondary" onClick={imprimirPagarMobile} title="Imprimir / salvar em PDF"
@@ -1481,10 +1505,11 @@ export function FinanceiroMobile() {
             const filtrada = linhasPagar.filter(l => {
               if (l.origem && l.origem.startsWith('cartao') && ((l.cartaoId && cartoesPagosIds.has(l.cartaoId)) || l.status === 'pago')) return false;
               const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
+      const tipoOk = passaTipo(l, filtroTipo);
               const statusReal = ehVencido(l) ? 'vencido' : l.status;
               const statusOk = filtroStatus === 'todos' || statusReal === filtroStatus;
-              const buscaOk = !buscaPagar || l.descricao.toLowerCase().includes(buscaPagar.toLowerCase());
-              return catOk && statusOk && buscaOk;
+              const buscaOk = contemTexto(l.descricao, buscaPagar);
+              return catOk && tipoOk && statusOk && buscaOk;
             });
             if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
             const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
@@ -1601,8 +1626,8 @@ export function FinanceiroMobile() {
           </div>
 
           {carregandoReceber || filtrandoReceber ? null : (() => {
-            const baseReceber = buscaReceber
-              ? linhasReceber.filter(l => l.descricao.toLowerCase().includes(buscaReceber.toLowerCase()))
+            const baseReceber = (buscaReceber || filtroTipoReceber !== 'todos')
+              ? linhasReceber.filter(l => contemTexto(l.descricao, buscaReceber) && passaTipo(l, filtroTipoReceber))
               : linhasReceber;
             const totalRecebido = baseReceber.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
             const totalAberto = baseReceber.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
@@ -1641,6 +1666,13 @@ export function FinanceiroMobile() {
               ))}
             </select>
           )}
+          <select value={filtroTipoReceber} onChange={e => setFiltroTipoReceber(e.target.value as FiltroTipo)} style={{ marginBottom: 14 }}>
+            <option value="todos">Todos os tipos</option>
+            <option value="avulsa">Avulsa</option>
+            <option value="fixa">Fixa (recorrente)</option>
+            <option value="parcelada">Parcelada</option>
+            <option value="plano">Mensalidade (plano)</option>
+          </select>
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <input placeholder="Buscar por descrição..." value={buscaReceber} onChange={e => setBuscaReceber(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
             <button className="btn-secondary" onClick={imprimirReceberMobile} title="Imprimir / salvar em PDF"
@@ -1659,8 +1691,9 @@ export function FinanceiroMobile() {
                 ? l.origem === 'plano'
                 : l.origem === 'avulso' && l.categoriaNome === catFiltroReceber;
               const statusOk = filtroStatusReceber === 'todos' || l.status === filtroStatusReceber;
-              const buscaOk = !buscaReceber || l.descricao.toLowerCase().includes(buscaReceber.toLowerCase());
-              return catOk && statusOk && buscaOk;
+              const tipoOk = passaTipo(l, filtroTipoReceber);
+              const buscaOk = contemTexto(l.descricao, buscaReceber);
+              return catOk && tipoOk && statusOk && buscaOk;
             });
             if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
             const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));

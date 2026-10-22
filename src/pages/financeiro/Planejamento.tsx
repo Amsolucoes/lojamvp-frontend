@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
 import { DetalheCategoriaModal } from './DetalheCategoriaModal';
+import { contemTexto } from '../../utils/texto';
 import './Planejamento.css';
 
 interface LinhaCategoria {
@@ -161,7 +162,7 @@ export function Planejamento() {
     } catch (e) { erro((e as Error).message); }
   }
 
-  const visiveis = (plano?.categorias ?? []).filter(c => c.nome.toLowerCase().includes(busca.trim().toLowerCase()));
+  const visiveis = (plano?.categorias ?? []).filter(c => contemTexto(c.nome, busca));
 
   return (
     <div className="page" style={{ paddingBottom: 40 }}>
@@ -341,10 +342,10 @@ export function Planejamento() {
               <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>
                 Marque as categorias de receita que quer planejar e informe quanto pretende receber no mês. A soma delas vira a sua receita planejada.
               </p>
-              {plano.categoriasReceita.filter(c => c.nome.toLowerCase().includes(busca.trim().toLowerCase())).length === 0 && (
+              {plano.categoriasReceita.filter(c => contemTexto(c.nome, busca)).length === 0 && (
                 <p style={{ fontSize: 13, color: 'var(--text-3)', padding: '12px 0' }}>Nenhuma categoria de receita encontrada. Cadastre em Categorias.</p>
               )}
-              {plano.categoriasReceita.filter(c => c.nome.toLowerCase().includes(busca.trim().toLowerCase())).map(c => {
+              {plano.categoriasReceita.filter(c => contemTexto(c.nome, busca)).map(c => {
                 const e = editR[c.categoriaId] ?? { ativo: false, valor: 0 };
                 const pctRec = e.valor > 0 ? (c.recebido / e.valor) * 100 : 0;
                 const pctTotal = e.valor > 0 ? (c.total / e.valor) * 100 : 0;

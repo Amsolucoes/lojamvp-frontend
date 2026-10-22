@@ -8,6 +8,7 @@ import { InputMoeda } from '../../components/InputMoeda';
 import { useToast } from '../../context/ToastContext';
 import { setBottomNavAction } from '../../utils/bottomNavAction';
 import { BANCOS, BankBadge } from '../../utils/bancos';
+import { contemTexto } from '../../utils/texto';
 import './Financeiro.css';
 import { useApp } from '@/context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
@@ -407,7 +408,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
   }
 
   function passaBusca(descricao: string) {
-    return !buscaDescricao || descricao.toLowerCase().includes(buscaDescricao.toLowerCase());
+    return contemTexto(descricao, buscaDescricao);
   }
 
   const listaPagarCompleta = linhasPagar.filter(l =>
@@ -1763,7 +1764,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                     mesOrigemFatura: p.mesOrigemFatura, anoOrigemFatura: p.anoOrigemFatura,
                   }));
                   const todosItens: any[] = [...itensCompra, ...itensFinanciamento];
-                  const itensFiltrados = todosItens.filter(i => !buscaFatura || i.descricao.toLowerCase().includes(buscaFatura.toLowerCase()));
+                  const itensFiltrados = todosItens.filter(i => contemTexto(i.descricao, buscaFatura));
                   if (itensFiltrados.length === 0) {
                     return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Nenhuma compra neste ciclo.</p>;
                   }
@@ -1858,7 +1859,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                 const itensCompra: any[] = (faturaDados?.itens ?? []).map(i => ({ ...i, vencimento: i.dataCompra }));
                 const itensFinanciamento: any[] = faturaDados?.parcelasFinanciamento ?? [];
                 const todosItens: any[] = [...itensCompra, ...itensFinanciamento];
-                const itensFiltrados = todosItens.filter(i => !buscaFatura || i.descricao.toLowerCase().includes(buscaFatura.toLowerCase()));
+                const itensFiltrados = todosItens.filter(i => contemTexto(i.descricao, buscaFatura));
                 const totalPagFatura = Math.max(1, Math.ceil(itensFiltrados.length / 15));
                 const pagAtualFatura = Math.min(paginaFatura, totalPagFatura);
                 if (itensFiltrados.length <= 15) return null;
