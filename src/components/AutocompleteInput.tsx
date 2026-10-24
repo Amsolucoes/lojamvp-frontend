@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { normalizarTexto } from '../utils/texto';
 
 interface Opcao {
@@ -16,10 +17,38 @@ interface Props {
 export function AutocompleteInput({ value, options, onChange, placeholder }: Props) {
   const [aberto, setAberto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; maxHeight: number } | null>(null);
+
+  // A lista é desenhada num portal (fora do modal), para não ficar escondida atrás dos botões nem cortada pela rolagem do modal
+  function calcularPosicao() {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const abaixo = window.innerHeight - r.bottom - 8;
+    const acima = r.top - 8;
+    if (abaixo < 160 && acima > abaixo) {
+      setPos({ bottom: window.innerHeight - r.top + 4, left: r.left, width: r.width, maxHeight: Math.min(220, acima) });
+    } else {
+      setPos({ top: r.bottom + 4, left: r.left, width: r.width, maxHeight: Math.min(220, Math.max(100, abaixo)) });
+    }
+  }
+
+  useLayoutEffect(() => {
+    if (!aberto) return;
+    calcularPosicao();
+    window.addEventListener('resize', calcularPosicao);
+    window.addEventListener('scroll', calcularPosicao, true);
+    return () => {
+      window.removeEventListener('resize', calcularPosicao);
+      window.removeEventListener('scroll', calcularPosicao, true);
+    };
+  }, [aberto, value]);
 
   useEffect(() => {
     function aoClicarFora(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+      const alvo = e.target as Node;
+      if (ref.current && !ref.current.contains(alvo) && !(menuRef.current && menuRef.current.contains(alvo))) setAberto(false);
     }
     document.addEventListener('mousedown', aoClicarFora);
     return () => document.removeEventListener('mousedown', aoClicarFora);
@@ -40,11 +69,11 @@ export function AutocompleteInput({ value, options, onChange, placeholder }: Pro
         onChange={e => { onChange(e.target.value); setAberto(true); }}
         onFocus={() => setAberto(true)}
       />
-      {aberto && filtradas.length > 0 && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
+      {aberto && filtradas.length > 0 && pos && createPortal(
+        <div ref={menuRef} style={{
+          position: 'fixed', top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, zIndex: 3000,
           background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8,
-          marginTop: 4, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-lg)',
+          maxHeight: pos.maxHeight, overflowY: 'auto', boxShadow: 'var(--shadow-lg)',
         }}>
           {filtradas.map(op => (
             <div key={op.value}
@@ -54,7 +83,8 @@ export function AutocompleteInput({ value, options, onChange, placeholder }: Pro
               {op.icone ? `${op.icone} ` : ''}{op.value}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
