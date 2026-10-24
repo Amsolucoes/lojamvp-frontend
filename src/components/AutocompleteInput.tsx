@@ -18,20 +18,18 @@ export function AutocompleteInput({ value, options, onChange, placeholder }: Pro
   const [aberto, setAberto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; maxHeight: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
 
-  // A lista é desenhada num portal (fora do modal), para não ficar escondida atrás dos botões nem cortada pela rolagem do modal
+  // A lista é desenhada num portal (fora do modal), para não ficar escondida atrás dos botões nem cortada pela rolagem do modal.
+  // Sempre abre para baixo do campo; a altura considera a área visível (com o teclado do celular aberto) e a lista rola.
   function calcularPosicao() {
     const el = ref.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const abaixo = window.innerHeight - r.bottom - 8;
-    const acima = r.top - 8;
-    if (abaixo < 160 && acima > abaixo) {
-      setPos({ bottom: window.innerHeight - r.top + 4, left: r.left, width: r.width, maxHeight: Math.min(220, acima) });
-    } else {
-      setPos({ top: r.bottom + 4, left: r.left, width: r.width, maxHeight: Math.min(220, Math.max(100, abaixo)) });
-    }
+    const vv = window.visualViewport;
+    const fundoVisivel = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    const disponivel = fundoVisivel - r.bottom - 12;
+    setPos({ top: r.bottom + 4, left: r.left, width: r.width, maxHeight: Math.max(96, Math.min(220, disponivel)) });
   }
 
   useLayoutEffect(() => {
@@ -39,9 +37,13 @@ export function AutocompleteInput({ value, options, onChange, placeholder }: Pro
     calcularPosicao();
     window.addEventListener('resize', calcularPosicao);
     window.addEventListener('scroll', calcularPosicao, true);
+    window.visualViewport?.addEventListener('resize', calcularPosicao);
+    window.visualViewport?.addEventListener('scroll', calcularPosicao);
     return () => {
       window.removeEventListener('resize', calcularPosicao);
       window.removeEventListener('scroll', calcularPosicao, true);
+      window.visualViewport?.removeEventListener('resize', calcularPosicao);
+      window.visualViewport?.removeEventListener('scroll', calcularPosicao);
     };
   }, [aberto, value]);
 
@@ -67,13 +69,13 @@ export function AutocompleteInput({ value, options, onChange, placeholder }: Pro
         autoComplete="off"
         placeholder={placeholder}
         onChange={e => { onChange(e.target.value); setAberto(true); }}
-        onFocus={() => setAberto(true)}
+        onFocus={() => { setAberto(true); if (window.matchMedia('(pointer: coarse)').matches) setTimeout(() => ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 250); }}
       />
       {aberto && filtradas.length > 0 && pos && createPortal(
         <div ref={menuRef} style={{
-          position: 'fixed', top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, zIndex: 3000,
+          position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 3000,
           background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8,
-          maxHeight: pos.maxHeight, overflowY: 'auto', boxShadow: 'var(--shadow-lg)',
+          maxHeight: pos.maxHeight, overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', boxShadow: 'var(--shadow-lg)',
         }}>
           {filtradas.map(op => (
             <div key={op.value}
