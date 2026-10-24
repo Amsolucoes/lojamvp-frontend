@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useRef, useEffect } from 'react';
 import { normalizarTexto } from '../utils/texto';
 
 interface Opcao {
@@ -17,43 +16,17 @@ interface Props {
 export function AutocompleteInput({ value, options, onChange, placeholder }: Props) {
   const [aberto, setAberto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
-
-  // A lista é desenhada num portal (fora do modal), para não ficar escondida atrás dos botões nem cortada pela rolagem do modal.
-  // Sempre abre para baixo do campo; a altura considera a área visível (com o teclado do celular aberto) e a lista rola.
-  function calcularPosicao() {
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const vv = window.visualViewport;
-    const fundoVisivel = vv ? vv.offsetTop + vv.height : window.innerHeight;
-    const disponivel = fundoVisivel - r.bottom - 12;
-    setPos({ top: r.bottom + 4, left: r.left, width: r.width, maxHeight: Math.max(96, Math.min(220, disponivel)) });
-  }
-
-  useLayoutEffect(() => {
-    if (!aberto) return;
-    calcularPosicao();
-    window.addEventListener('resize', calcularPosicao);
-    window.addEventListener('scroll', calcularPosicao, true);
-    window.visualViewport?.addEventListener('resize', calcularPosicao);
-    window.visualViewport?.addEventListener('scroll', calcularPosicao);
-    return () => {
-      window.removeEventListener('resize', calcularPosicao);
-      window.removeEventListener('scroll', calcularPosicao, true);
-      window.visualViewport?.removeEventListener('resize', calcularPosicao);
-      window.visualViewport?.removeEventListener('scroll', calcularPosicao);
-    };
-  }, [aberto, value]);
 
   useEffect(() => {
-    function aoClicarFora(e: MouseEvent) {
-      const alvo = e.target as Node;
-      if (ref.current && !ref.current.contains(alvo) && !(menuRef.current && menuRef.current.contains(alvo))) setAberto(false);
+    function aoClicarFora(e: MouseEvent | TouchEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
     }
     document.addEventListener('mousedown', aoClicarFora);
-    return () => document.removeEventListener('mousedown', aoClicarFora);
+    document.addEventListener('touchstart', aoClicarFora);
+    return () => {
+      document.removeEventListener('mousedown', aoClicarFora);
+      document.removeEventListener('touchstart', aoClicarFora);
+    };
   }, []);
 
   const normalizadas: Opcao[] = options.map(o => typeof o === 'string' ? { value: o } : o);
@@ -62,20 +35,29 @@ export function AutocompleteInput({ value, options, onChange, placeholder }: Pro
     ? normalizadas.filter(o => normalizarTexto(o.value).includes(normalizarTexto(value)) && normalizarTexto(o.value) !== normalizarTexto(value))
     : normalizadas;
 
+  // A lista fica ancorada logo abaixo do campo (nunca para cima). O contêiner ganha z-index alto enquanto aberto
+  // para ficar na frente dos botões; se faltar espaço, o formulário rola e a lista rola por conta própria.
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={ref} style={{ position: 'relative', zIndex: aberto ? 60 : undefined }}>
       <input
         value={value}
         autoComplete="off"
         placeholder={placeholder}
         onChange={e => { onChange(e.target.value); setAberto(true); }}
-        onFocus={() => { setAberto(true); if (window.matchMedia('(pointer: coarse)').matches) setTimeout(() => ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 250); }}
+        onFocus={() => {
+          setAberto(true);
+          // No celular, leva o campo para o alto da área visível para dar espaço à lista acima do teclado
+          if (window.matchMedia('(pointer: coarse)').matches) {
+            setTimeout(() => ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 250);
+          }
+        }}
       />
-      {aberto && filtradas.length > 0 && pos && createPortal(
-        <div ref={menuRef} style={{
-          position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 3000,
+      {aberto && filtradas.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 60,
           background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8,
-          maxHeight: pos.maxHeight, overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', boxShadow: 'var(--shadow-lg)',
+          marginTop: 4, maxHeight: 200, overflowY: 'auto', overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch', boxShadow: 'var(--shadow-lg)',
         }}>
           {filtradas.map(op => (
             <div key={op.value}
@@ -85,8 +67,7 @@ export function AutocompleteInput({ value, options, onChange, placeholder }: Pro
               {op.icone ? `${op.icone} ` : ''}{op.value}
             </div>
           ))}
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );
