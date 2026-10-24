@@ -500,3 +500,103 @@ input, select, textarea {
   --accent-bg:     rgba(124, 58, 237, 0.10);
   --accent-border: rgba(124, 58, 237, 0.25);
 }
+/* ══════════════════ REFINAMENTO VISUAL (base) ══════════════════
+   Ajustes globais e aditivos: escala de cantos e sombras, tipografia, botões, badges, tabelas,
+   modais e estados (foco, hover, desabilitado). Fica por último para valer em todos os temas. */
+
+:root {
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+  --ring: 0 0 0 3px var(--accent-bg);
+}
+
+html, body, #root {
+  font-variant-numeric: tabular-nums;   /* valores e datas alinhados em colunas */
+  text-rendering: optimizeLegibility;
+}
+::selection { background: var(--accent-bg); color: var(--text-1); }
+
+/* Títulos */
+.page-header { margin-bottom: 22px; }
+.page-title { font-size: 22px; font-weight: 650; letter-spacing: -0.015em; line-height: 1.25; }
+.page-subtitle { font-size: 13px; color: var(--text-3); margin-top: 4px; line-height: 1.45; }
+.form-label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.05em; }
+
+/* Cards */
+.card, .stat-card {
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.stat-card { border-radius: var(--radius-lg); }
+.stat-label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.07em; }
+.stat-value { font-weight: 650; letter-spacing: -0.02em; }
+
+/* Botões */
+.btn-primary, .btn-secondary, .btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+.btn-primary { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14); }
+.btn-primary:hover { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+button:disabled, .btn-primary:disabled, .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+button:disabled:active { transform: none; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:focus:not(:focus-visible) { outline: none; }
+
+/* Campos */
+input:hover:not(:focus):not(:disabled), select:hover:not(:focus):not(:disabled), textarea:hover:not(:focus):not(:disabled) { border-color: var(--border-2); }
+input:disabled, select:disabled, textarea:disabled { opacity: 0.55; cursor: not-allowed; background: var(--bg); }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+input:focus, select:focus, textarea:focus { box-shadow: var(--ring); }
+
+/* Selos de status */
+.badge {
+  border: 1px solid transparent;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  padding: 1px 9px;
+}
+.badge-green  { border-color: color-mix(in srgb, var(--green) 28%, transparent); }
+.badge-red    { border-color: color-mix(in srgb, var(--red) 28%, transparent); }
+.badge-yellow { border-color: color-mix(in srgb, var(--yellow) 30%, transparent); }
+.badge-blue   { border-color: color-mix(in srgb, var(--blue) 28%, transparent); }
+.badge-accent { border-color: var(--accent-border); }
+
+/* Tabelas */
+thead th { font-weight: 600; background: color-mix(in srgb, var(--bg-3) 55%, transparent); }
+thead th:first-child { border-top-left-radius: var(--radius-sm); }
+thead th:last-child { border-top-right-radius: var(--radius-sm); }
+tbody td { font-variant-numeric: tabular-nums; }
+
+/* Modais */
+.modal { box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.02); }
+.modal-header h2, .modal-header h3 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+.modal-footer { background: color-mix(in srgb, var(--bg-3) 40%, transparent); border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg); }
+
+/* Seletor de opções (abas em forma de botões) */
+.cx-tipo-toggle { background: var(--bg-3); padding: 3px; gap: 2px; border-radius: var(--radius); }
+.cx-tipo-toggle button { border-radius: var(--radius-sm); font-weight: 600; }
+.cx-tipo-toggle button.active { background: var(--bg-2); color: var(--accent); box-shadow: var(--shadow); }
+
+/* Carregamento por esqueleto (use <div className="skeleton" style={{ height: 16 }} />) */
+.skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--bg-3) 25%, var(--bg-hover) 37%, var(--bg-3) 63%);
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.3s ease infinite;
+}
+@keyframes skeletonShimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+/* Barra de rolagem mais discreta */
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
