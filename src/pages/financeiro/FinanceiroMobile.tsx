@@ -16,7 +16,7 @@ import { ComparativoCategorias } from './ComparativoCategorias';
 import { DetalheCategoriaModal } from './DetalheCategoriaModal';
 import { PlanejamentoCard } from '../../components/PlanejamentoCard';
 import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
-import { contemTexto } from '../../utils/texto';
+import { contemTexto, normalizarTexto } from '../../utils/texto';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -1940,7 +1940,7 @@ export function FinanceiroMobile() {
                     value={categoriasPagar.find(c => c.id === formEdit.categoriaId)?.nome ?? formEdit.categoriaTexto}
                     options={categoriasPagar.map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
-                      const encontrada = categoriasPagar.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      const encontrada = categoriasPagar.find(c => normalizarTexto(c.nome) === normalizarTexto(texto));
                       setFormEdit(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
@@ -2056,7 +2056,7 @@ export function FinanceiroMobile() {
                     value={categoriasReceber.find(c => c.id === formEditReceber.categoriaId)?.nome ?? formEditReceber.categoriaTexto}
                     options={categoriasReceber.map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
-                      const encontrada = categoriasReceber.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      const encontrada = categoriasReceber.find(c => normalizarTexto(c.nome) === normalizarTexto(texto));
                       setFormEditReceber(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
@@ -2428,7 +2428,7 @@ export function FinanceiroMobile() {
                   value={categoriasPagar.find(c => c.id === formCompra.categoriaId)?.nome ?? formCompra.categoriaTexto}
                   options={categoriasPagar.map(c => ({ value: c.nome, icone: c.icone }))}
                   onChange={texto => {
-                    const encontrada = categoriasPagar.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                    const encontrada = categoriasPagar.find(c => normalizarTexto(c.nome) === normalizarTexto(texto));
                     setFormCompra(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                   }}
                   placeholder="Categoria (digite ou escolha)..."
@@ -2463,7 +2463,7 @@ export function FinanceiroMobile() {
                     value={categoriasPagar.find(c => c.id === formEditItemCartao.categoriaId)?.nome ?? formEditItemCartao.categoriaTexto}
                     options={categoriasPagar.map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
-                      const encontrada = categoriasPagar.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      const encontrada = categoriasPagar.find(c => normalizarTexto(c.nome) === normalizarTexto(texto));
                       setFormEditItemCartao(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
@@ -2863,7 +2863,7 @@ export function FinanceiroMobile() {
                     value={(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).find(c => c.id === formNovoLanc.categoriaId)?.nome ?? formNovoLanc.categoriaTexto}
                     options={(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
-                      const encontrada = (modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      const encontrada = (modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).find(c => normalizarTexto(c.nome) === normalizarTexto(texto));
                       setFormNovoLanc(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."

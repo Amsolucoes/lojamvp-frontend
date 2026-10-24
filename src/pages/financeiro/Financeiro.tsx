@@ -8,7 +8,7 @@ import { InputMoeda } from '../../components/InputMoeda';
 import { useToast } from '../../context/ToastContext';
 import { setBottomNavAction } from '../../utils/bottomNavAction';
 import { BANCOS, BankBadge } from '../../utils/bancos';
-import { contemTexto } from '../../utils/texto';
+import { contemTexto, normalizarTexto } from '../../utils/texto';
 import './Financeiro.css';
 import { useApp } from '@/context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
@@ -1512,7 +1512,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                     value={categoriasDaAba.find(c => c.id === formLanc.categoriaId)?.nome ?? formLanc.categoriaTexto ?? ''}
                     options={categoriasDaAba.map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
-                      const encontrada = categoriasDaAba.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      const encontrada = categoriasDaAba.find(c => normalizarTexto(c.nome) === normalizarTexto(texto));
                       setFormLanc(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
@@ -1930,7 +1930,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                   value={categorias.find(c => c.id === formCompra.categoriaId)?.nome ?? formCompra.categoriaTexto ?? ''}
                   options={categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').map(c => ({ value: c.nome, icone: c.icone }))}
                   onChange={texto => {
-                    const encontrada = categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                    const encontrada = categorias.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos').find(c => normalizarTexto(c.nome) === normalizarTexto(texto));
                     setFormCompra(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                   }}
                   placeholder="Categoria (digite ou escolha)..."
@@ -2257,7 +2257,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                     value={categorias.find(c => c.id === formEdit.categoriaId)?.nome ?? formEdit.categoriaTexto ?? ''}
                     options={categorias.map(c => ({ value: c.nome, icone: c.icone }))}
                     onChange={texto => {
-                      const encontrada = categorias.find(c => c.nome.toLowerCase() === texto.toLowerCase());
+                      const encontrada = categorias.find(c => normalizarTexto(c.nome) === normalizarTexto(texto));
                       setFormEdit(f => ({ ...f, categoriaTexto: texto, categoriaId: encontrada?.id ?? '' }));
                     }}
                     placeholder="Digite ou escolha..."
