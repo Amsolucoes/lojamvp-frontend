@@ -1425,14 +1425,12 @@ export function FinanceiroMobile() {
                 .filter(l => l.status !== 'pago' && (l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada'))
                 .reduce((acc, l) => { const nome = l.cartaoNome ?? 'Cartão'; acc[nome] = (acc[nome] ?? 0) + l.valor; return acc; }, {} as Record<string, number>)
             );
-            const mostrarPagos = catFiltro === 'todas' && filtroTipo === 'todos' && !buscaPagar.trim() && (filtroStatus === 'todos' || filtroStatus === 'pago') && periodoTipo === 'mes';
-            const cartoesPagos = mostrarPagos ? faturasMesPagar.filter(faturaPagaCompleta) : [];
             return (
               <div className="card fm-card" style={{ marginBottom: 14 }}>
                 <div className="fm-card-kicker" style={{ textAlign: 'center' }}>Total a pagar</div>
                 <div className="fm-valor-destaque" style={{ color: 'var(--red)', fontSize: 26, textAlign: 'center' }}>{fmt(totalAberto)}</div>
 
-                {(contasAberto > 0 || cartoesAberto.length > 0 || cartoesPagos.length > 0) && (
+                {(contasAberto > 0 || cartoesAberto.length > 0) && (
                   <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
                     {contasAberto > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
@@ -1444,12 +1442,6 @@ export function FinanceiroMobile() {
                       <div key={nome} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
                         <span style={{ color: 'var(--text-3)' }}>💳 {nome}</span>
                         <span style={{ color: 'var(--text-2)' }}>{fmt(valor)}</span>
-                      </div>
-                    ))}
-                    {cartoesPagos.map(f => (
-                      <div key={`pago-${f.cartaoId}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
-                        <span style={{ color: 'var(--green)' }}>💳 {f.cartaoNome} · pago ✓</span>
-                        <span style={{ color: 'var(--green)', fontWeight: 600 }}>{fmt(f.valorPago > 0 ? f.valorPago : f.total)}</span>
                       </div>
                     ))}
                   </div>
@@ -1500,10 +1492,7 @@ export function FinanceiroMobile() {
           </div>
 
           {carregandoPagar || filtrandoPagar ? null : (() => {
-            // Cartões com a fatura já paga não entram na lista: aparecem em verde no card de totais acima
-            const cartoesPagosIds = new Set(faturasMesPagar.filter(faturaPagaCompleta).map(f => f.cartaoId));
-            const filtrada = linhasPagar.filter(l => {
-              if (l.origem && l.origem.startsWith('cartao') && ((l.cartaoId && cartoesPagosIds.has(l.cartaoId)) || l.status === 'pago')) return false;
+            const filtradaBase = linhasPagar.filter(l => {
               const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
       const tipoOk = passaTipo(l, filtroTipo);
               const statusReal = ehVencido(l) ? 'vencido' : l.status;
@@ -1511,6 +1500,17 @@ export function FinanceiroMobile() {
               const buscaOk = contemTexto(l.descricao, buscaPagar);
               return catOk && tipoOk && statusOk && buscaOk;
             });
+            // Faturas já pagas não têm linha na lista: entram nela como um item (fundo cinza), na ordem da data de vencimento,
+            // misturadas com as contas no débito — uma única vez, e não repetidas no fim de cada página
+            const semFiltroCartao = catFiltro === 'todas' && (filtroTipo === 'todos' || filtroTipo === 'cartao') && !buscaPagar.trim() && periodoTipo === 'mes';
+            const orfas = semFiltroCartao
+              ? faturasSemLinha(faturasMesPagar, linhasPagar).filter(f => filtroStatus === 'todos' || (filtroStatus === 'pago' && faturaPagaCompleta(f)))
+              : [];
+            const itensFatura = orfas.map(f => ({
+              __fatura: f, id: `fat-${f.cartaoId}`, vencimento: f.vencimento, valor: f.valorPago > 0 ? f.valorPago : f.total, status: 'pago',
+              origem: 'cartao_fatura_orfa', descricao: `Fatura ${f.cartaoNome}`, categoriaNome: null, modo: 'avulsa',
+            })) as unknown as LinhaPagar[];
+            const filtrada = [...filtradaBase, ...itensFatura].sort((a, b) => (a.vencimento ?? '').slice(0, 10).localeCompare((b.vencimento ?? '').slice(0, 10)));
             if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
             const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
             const paginaAtual = Math.min(paginaLista, totalPaginas);
@@ -1518,7 +1518,7 @@ export function FinanceiroMobile() {
             return (
               <>
                 <p ref={listaPagarRef} style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{filtrada.length} lançamento{filtrada.length !== 1 ? 's' : ''}</p>
-                {agruparComFaturas(agruparPorData(pagina), faturasSemLinha(faturasMesPagar, pagina).filter(f => !faturaPagaCompleta(f))).map(({ dia, itens, faturas: faturasDoDia }) => (
+                {agruparComFaturas(agruparPorData(pagina), []).map(({ dia, itens, faturas: faturasDoDia }) => (
                   <div key={dia} style={{ marginBottom: 12 }}>
                     <div className="fm-dia-header">
                       <span>{dia !== 'sem-data' ? new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}</span>
@@ -1526,6 +1526,13 @@ export function FinanceiroMobile() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {itens.map(l => {
+                        if ((l as any).__fatura) {
+                          return (
+                            <div key={l.id} className="card fm-card-linha-completa fin-row-pago-cartao">
+                              <DetalheFatura f={(l as any).__fatura as FaturaMes} />
+                            </div>
+                          );
+                        }
                         const status = ehVencido(l) ? 'vencido' : l.status;
                         return (
                           <div key={l.id} className={`card fm-card-linha-completa${l.status === 'pago' ? ((l.origem ?? '').startsWith('cartao') ? ' fin-row-pago-cartao' : ' fin-row-pago-neutro') : ''}`}>
