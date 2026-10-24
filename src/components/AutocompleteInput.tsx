@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { normalizarTexto } from '../utils/texto';
 
 interface Opcao {
   value: string;
@@ -27,7 +28,7 @@ export function AutocompleteInput({ value, options, onChange, placeholder }: Pro
   const normalizadas: Opcao[] = options.map(o => typeof o === 'string' ? { value: o } : o);
 
   const filtradas = value
-    ? normalizadas.filter(o => o.value.toLowerCase().includes(value.toLowerCase()) && o.value.toLowerCase() !== value.toLowerCase())
+    ? normalizadas.filter(o => normalizarTexto(o.value).includes(normalizarTexto(value)) && normalizarTexto(o.value) !== normalizarTexto(value))
     : normalizadas;
 
   return (
