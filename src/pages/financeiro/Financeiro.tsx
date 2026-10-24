@@ -1164,7 +1164,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                           const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
                           const processandoEste = processandoPagamento === l.id;
                           return (
-                            <tr key={l.id} className={l.status === 'pago' ? 'fin-row-pago' : undefined}>
+                            <tr key={l.id} className={(l.status === 'pago' ? ((l.origem ?? '').startsWith('cartao') ? 'fin-row-pago-cartao' : 'fin-row-pago-neutro') : undefined)}>
                           <td>
                             <div style={{ fontWeight: 500 }}>
                               {l.origem === 'cartao_fatura' && <CreditCard size={12} style={{ verticalAlign: -1, marginRight: 4, color: 'var(--accent)' }} />}
@@ -1185,7 +1185,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                           <td style={{ fontSize: 13 }}>
                             {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}
                             {l.pagoEm && (
-                              <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 2 }}>
+                              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
                                 Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}
                               </div>
                             )}
@@ -1194,7 +1194,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                           <td>
                             {ehFinanciada ? <span className="badge badge-blue">Financiada</span>
                               : l.status === 'parcial' ? <span className="badge badge-yellow">Pago parcialmente</span>
-                              : l.status === 'pago' ? <span className="badge badge-green">Pago</span>
+                              : l.status === 'pago' ? <span className="badge badge-neutro">Pago</span>
                               : ehVencido(l as any) ? <span className="badge badge-red">Vencido</span>
                               : <span className="badge badge-yellow">Pendente</span>}
                           </td>
@@ -1245,7 +1245,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                       const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
                       const processandoEste = processandoPagamento === l.id;
                       return (
-                        <div key={l.id} className={`fin-card-mobile${l.status === 'pago' ? ' fin-row-pago' : ''}`}>
+                        <div key={l.id} className={`fin-card-mobile${l.status === 'pago' ? (ehCartao ? ' fin-row-pago-cartao' : ' fin-row-pago-neutro') : ''}`}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <div>
                           <div style={{ fontWeight: 500 }}>
@@ -1256,7 +1256,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                           <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                             {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'} · {nomeConta(l.contaBancariaId)} · {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}
                           </div>
-                          {l.pagoEm && <div style={{ fontSize: 11, color: 'var(--green)' }}>Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}</div>}
+                          {l.pagoEm && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}</div>}
                           {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
                         </div>
                         <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>
@@ -1264,7 +1264,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                         {ehFinanciada ? <span className="badge badge-blue">Financiada</span>
                           : l.status === 'parcial' ? <span className="badge badge-yellow">Pago parcialmente</span>
-                          : l.status === 'pago' ? <span className="badge badge-green">Pago</span>
+                          : l.status === 'pago' ? <span className="badge badge-neutro">Pago</span>
                           : ehVencido(l as any) ? <span className="badge badge-red">Vencido</span>
                           : <span className="badge badge-yellow">Pendente</span>}
                         <div style={{ display: 'flex', gap: 6 }}>
@@ -1292,7 +1292,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                       );
                     })}
                     {faturasDoDia.map(f => (
-                      <div key={`fat-${f.cartaoId}`} className="fin-card-mobile fin-row-pago">
+                      <div key={`fat-${f.cartaoId}`} className="fin-card-mobile fin-row-pago-cartao">
                         <DetalheFatura f={f} />
                       </div>
                     ))}
@@ -1438,12 +1438,6 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
           )
         )}
       </div>
-
-      {aba === 'pagar' && (
-        <div className="fin-faturas-desktop">
-          <FaturasDoMes faturas={faturasMes} titulo={`Faturas de cartão com pagamento · ${MESES[mesRef]}`} />
-        </div>
-      )}
 
       {/* Modal novo lançamento */}
       {modalLancamento && (

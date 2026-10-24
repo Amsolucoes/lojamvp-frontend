@@ -196,3 +196,16 @@ tbody tr.fin-row-pago td:first-child { box-shadow: inset 3px 0 0 var(--green); }
 .card.fin-row-pago,
 .fin-card-mobile.fin-row-pago,
 .fm-card-linha-completa.fin-row-pago { background: var(--row-pago-bg); border-left: 3px solid var(--green); }
+
+
+/* Contas a pagar: fatura de cartão paga = cinza escuro; demais pagos = sem destaque verde */
+:root { --row-cartao-pago-bg: rgba(100, 116, 139, 0.30); --row-cartao-pago-bg-hover: rgba(100, 116, 139, 0.38); --row-cartao-pago-borda: #64748b; }
+.theme-light-blue, .theme-light-green, .theme-light-purple { --row-cartao-pago-bg: rgba(71, 85, 105, 0.20); --row-cartao-pago-bg-hover: rgba(71, 85, 105, 0.27); --row-cartao-pago-borda: #475569; }
+tbody tr.fin-row-pago-cartao { background: var(--row-cartao-pago-bg); }
+tbody tr.fin-row-pago-cartao:hover { background: var(--row-cartao-pago-bg-hover); }
+tbody tr.fin-row-pago-cartao td:first-child { box-shadow: inset 3px 0 0 var(--row-cartao-pago-borda); }
+.card.fin-row-pago-cartao,
+.fin-card-mobile.fin-row-pago-cartao,
+.fm-card-linha-completa.fin-row-pago-cartao { background: var(--row-cartao-pago-bg); border-left: 3px solid var(--row-cartao-pago-borda); }
+
+.badge-neutro { background: rgba(148,163,184,.18); color: var(--text-2); }

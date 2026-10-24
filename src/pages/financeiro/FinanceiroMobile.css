@@ -81,4 +81,10 @@
 input[type="date"] {
   max-width: 100%;
   min-width: 0;
-}
+}.theme-light-blue, .theme-light-green, .theme-light-purple { --row-cartao-pago-bg: rgba(71, 85, 105, 0.20); --row-cartao-pago-bg-hover: rgba(71, 85, 105, 0.27); --row-cartao-pago-borda: #475569; }
+.card.fin-row-pago-cartao,
+.fin-card-mobile.fin-row-pago-cartao,
+.fm-card-linha-completa.fin-row-pago-cartao { background: var(--row-cartao-pago-bg); border-left: 3px solid var(--row-cartao-pago-borda); }
+
+.badge-neutro { background: rgba(148,163,184,.18); color: var(--text-2); }
+:root { --row-cartao-pago-bg: rgba(100, 116, 139, 0.30); --row-cartao-pago-borda: #64748b; }

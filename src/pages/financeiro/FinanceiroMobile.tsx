@@ -1528,7 +1528,7 @@ export function FinanceiroMobile() {
                       {itens.map(l => {
                         const status = ehVencido(l) ? 'vencido' : l.status;
                         return (
-                          <div key={l.id} className={`card fm-card-linha-completa${l.status === 'pago' ? ' fin-row-pago' : ''}`}>
+                          <div key={l.id} className={`card fm-card-linha-completa${l.status === 'pago' ? ((l.origem ?? '').startsWith('cartao') ? ' fin-row-pago-cartao' : ' fin-row-pago-neutro') : ''}`}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, color: 'var(--text-1)' }}>
@@ -1538,14 +1538,14 @@ export function FinanceiroMobile() {
                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
                                   {l.categoriaNome && <span className="fm-tag-neutra">{iconeCategoria(categoriasPagar, l.categoriaNome)} {l.categoriaNome}</span>}
                                   <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{new Date(l.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
-                                  {l.pagoEm && <span style={{ fontSize: 11.5, color: 'var(--green)' }}>· Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>}
+                                  {l.pagoEm && <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>· Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>}
                                   {l.numeroParcela && <span className="fm-tag-neutra">{l.numeroParcela}/{l.totalParcelas}</span>}
                                 </div>
                               </div>
                               <div style={{ fontSize: 14, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{fmt(l.valor)}</div>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                              <span className={`badge badge-${status === 'pago' ? 'green' : status === 'vencido' ? 'red' : 'yellow'}`} style={{ fontSize: 10 }}>
+                              <span className={`badge badge-${status === 'pago' ? 'neutro' : status === 'vencido' ? 'red' : 'yellow'}`} style={{ fontSize: 10 }}>
                                 {status === 'pago' ? 'Pago' : status === 'vencido' ? 'Vencido' : 'Pendente'}
                               </span>
                               <div style={{ display: 'flex', gap: 6 }}>
@@ -1565,7 +1565,7 @@ export function FinanceiroMobile() {
                         );
                       })}
                       {faturasDoDia.map(f => (
-                        <div key={`fat-${f.cartaoId}`} className="card fm-card-linha-completa fin-row-pago">
+                        <div key={`fat-${f.cartaoId}`} className="card fm-card-linha-completa fin-row-pago-cartao">
                           <DetalheFatura f={f} />
                         </div>
                       ))}
