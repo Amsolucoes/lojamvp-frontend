@@ -142,6 +142,22 @@ export function DashboardFinanceiro() {
   const temPagoAnual = resumoAnual.some(m => m.pagarPago !== undefined);
   const saldoTotal = contas.filter(c => c.ativa).reduce((s, c) => s + c.saldoAtual, 0);
 
+  // Variação contra o mês anterior (usa o resumo do ano; só quando o ano exibido é o mesmo e não é janeiro)
+  const mesAtualAnual = anoRef === anoResumo ? resumoAnual.find(m => m.mes === mesResumo + 1) : undefined;
+  const mesAnteriorAnual = anoRef === anoResumo && mesResumo > 0 ? resumoAnual.find(m => m.mes === mesResumo) : undefined;
+  function variacao(atual?: number, anterior?: number, boaSeSobe = true) {
+    if (atual === undefined || anterior === undefined || anterior <= 0) return null;
+    const pct = ((atual - anterior) / anterior) * 100;
+    if (Math.abs(pct) < 0.5) return <span style={{ fontSize: 11, color: 'var(--text-3)' }}>igual ao mês anterior</span>;
+    const subiu = pct > 0;
+    const bom = subiu === boaSeSobe;
+    return (
+      <span style={{ fontSize: 11, fontWeight: 600, color: bom ? 'var(--green)' : 'var(--red)' }}>
+        {subiu ? '▲' : '▼'} {Math.abs(pct).toFixed(0)}% <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>vs mês anterior</span>
+      </span>
+    );
+  }
+
   return (
     <div className="page">
       <div className="card" style={{ marginBottom: 16, textAlign: 'center' }}>
@@ -169,6 +185,7 @@ export function DashboardFinanceiro() {
             <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 19, marginTop: 2 }}>
               {fmt((resumo as any)?.previsao?.receitaPrevista ?? 0)}
             </div>
+            <div style={{ marginTop: 2 }}>{variacao(mesAtualAnual?.receber, mesAnteriorAnual?.receber, true)}</div>
           </div>
           <div onClick={() => navigate(`/financeiro?aba=pagar&mes=${mesResumo + 1}&ano=${anoResumo}`)} style={{ cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--red)', fontSize: 12 }}>
@@ -177,11 +194,13 @@ export function DashboardFinanceiro() {
             <div style={{ fontWeight: 700, color: 'var(--red)', fontSize: 19, marginTop: 2 }}>
               {fmt((resumo as any)?.previsao?.despesaPrevista ?? 0)}
             </div>
+            <div style={{ marginTop: 2 }}>{variacao(mesAtualAnual?.pagar, mesAnteriorAnual?.pagar, false)}</div>
           </div>
         </div>
       </div>
 
       <PlanejamentoCard />
+
 
       <div className="dash-fin-linha">
         <div className="stat-card">

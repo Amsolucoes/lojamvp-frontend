@@ -5,6 +5,7 @@ import { InputMoeda } from '../../components/InputMoeda';
 import { useToast } from '../../context/ToastContext';
 import { BANCOS, BankBadge } from '../../utils/bancos';
 import { Paginacao } from '../../components/Paginacao';
+import { SkeletonLista } from '../../components/Skeleton';
 import './Contas.css';
 
 interface Conta {
@@ -175,7 +176,7 @@ export function Contas() {
       )}
 
       {carregando ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+        <SkeletonLista />
       ) : contas.length === 0 ? (
         <div className="card"><div className="empty" style={{ padding: '40px 0' }}><p>Nenhuma conta cadastrada.</p></div></div>
       ) : (
