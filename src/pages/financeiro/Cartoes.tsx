@@ -6,6 +6,7 @@ import { InputMoeda } from '../../components/InputMoeda';
 import { Paginacao } from '../../components/Paginacao';
 import { Financeiro } from './Financeiro';
 import { DetalheFatura, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
+import { SkeletonLista } from '../../components/Skeleton';
 import './Contas.css';
 
 interface Conta { id: string; nome: string; ativa: boolean; }
@@ -163,7 +164,7 @@ export function Cartoes() {
       )}
 
       {carregando ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+        <SkeletonLista />
       ) : cartoes.length === 0 ? (
         <div className="card"><div className="empty" style={{ padding: '40px 0' }}><p>Nenhum cartão cadastrado.</p></div></div>
       ) : (

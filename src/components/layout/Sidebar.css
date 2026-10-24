@@ -116,3 +116,27 @@
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+/* ── Refinamento: navegação ──────────────────────────────────────── */
+.sidebar { padding-top: 16px; }
+.sidebar-logo { padding: 6px 18px 18px; margin-bottom: 8px; }
+.sidebar-logo-name { font-weight: 650; letter-spacing: -0.01em; }
+.sidebar-secao {
+  padding: 14px 12px 6px; font-size: 10.5px; font-weight: 600; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.sidebar-link { padding: 8px 10px 8px 12px; font-weight: 450; }
+.sidebar-link svg { flex-shrink: 0; opacity: .85; }
+.sidebar-link:hover svg, .sidebar-link.active svg { opacity: 1; }
+.sidebar-link.active {
+  border: 1px solid transparent; font-weight: 600;
+  background: var(--accent-bg);
+}
+.sidebar-link.active::before {
+  content: ''; position: absolute; left: -10px; top: 7px; bottom: 7px; width: 3px;
+  border-radius: 0 3px 3px 0; background: var(--accent);
+}
+.sidebar-sublink { margin-left: 14px; padding-left: 22px; border-left: 1px solid var(--border); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 12.5px; }
+.sidebar-sublink.active { border-left-color: var(--accent); }
+.sidebar-sublink.active::before { display: none; }
+.sidebar-user { box-shadow: var(--shadow); }
+.sidebar-user-nome { font-weight: 600; }

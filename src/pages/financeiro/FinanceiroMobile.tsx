@@ -17,6 +17,7 @@ import { DetalheCategoriaModal } from './DetalheCategoriaModal';
 import { PlanejamentoCard } from '../../components/PlanejamentoCard';
 import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
 import { contemTexto, normalizarTexto } from '../../utils/texto';
+import { SkeletonLista, EstadoVazio } from '../../components/Skeleton';
 import './FinanceiroMobile.css';
 
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -1398,7 +1399,7 @@ export function FinanceiroMobile() {
           </div>
 
           {carregandoPagar || filtrandoPagar ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+            <SkeletonLista />
           ) : (() => {
             const filtradaTotais = linhasPagar.filter(l => {
               const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
@@ -1511,7 +1512,7 @@ export function FinanceiroMobile() {
               origem: 'cartao_fatura_orfa', descricao: `Fatura ${f.cartaoNome}`, categoriaNome: null, modo: 'avulsa',
             })) as unknown as LinhaPagar[];
             const filtrada = [...filtradaBase, ...itensFatura].sort((a, b) => (a.vencimento ?? '').slice(0, 10).localeCompare((b.vencimento ?? '').slice(0, 10)));
-            if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
+            if (filtrada.length === 0) return <EstadoVazio titulo="Nada encontrado" dica="Ajuste ou limpe os filtros para ver mais lançamentos." />;
             const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
             const paginaAtual = Math.min(paginaLista, totalPaginas);
             const pagina = filtrada.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina);
@@ -1689,7 +1690,7 @@ export function FinanceiroMobile() {
           </div>
 
           {carregandoReceber || filtrandoReceber ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+            <SkeletonLista />
           ) : (() => {
             const filtrada = linhasReceber.filter(l => {
               const catOk = catFiltroReceber === 'todas'
@@ -1702,7 +1703,7 @@ export function FinanceiroMobile() {
               const buscaOk = contemTexto(l.descricao, buscaReceber);
               return catOk && tipoOk && statusOk && buscaOk;
             });
-            if (filtrada.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nada encontrado com esse filtro.</p>;
+            if (filtrada.length === 0) return <EstadoVazio titulo="Nada encontrado" dica="Ajuste ou limpe os filtros para ver mais lançamentos." />;
             const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
             const paginaAtual = Math.min(paginaListaReceber, totalPaginas);
             const pagina = filtrada.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina);
@@ -1784,7 +1785,7 @@ export function FinanceiroMobile() {
           </div>
 
           {carregandoListaCartoes ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+            <SkeletonLista />
           ) : cartoes.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nenhum cartão cadastrado.</p>
           ) : (
@@ -1854,7 +1855,7 @@ export function FinanceiroMobile() {
           </div>
 
           {carregandoContas ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+            <SkeletonLista />
           ) : contas.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '30px 0' }}>Nenhuma conta cadastrada.</p>
           ) : (

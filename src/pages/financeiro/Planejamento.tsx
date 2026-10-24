@@ -6,6 +6,7 @@ import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
 import { DetalheCategoriaModal } from './DetalheCategoriaModal';
 import { contemTexto } from '../../utils/texto';
+import { SkeletonLista } from '../../components/Skeleton';
 import './Planejamento.css';
 
 interface LinhaCategoria {
@@ -181,7 +182,7 @@ export function Planejamento() {
       </div>
 
       {carregando || !plano || !calc ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+        <SkeletonLista />
       ) : (
         <>
           <div className="plan-resumo">

@@ -168,8 +168,10 @@ export function Sidebar() {
         </div>
 
         <nav className="sidebar-nav">
+          <div className="sidebar-secao">Menu</div>
           {NAV.map(({ to, icon: Icon, label }) => (
             <Fragment key={to}>
+            {to === '/ajuda' && <div className="sidebar-secao">Sistema</div>}
             <NavLink to={to} end={to === '/' || to === '/financeiro'}
               className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
               onClick={() => setAberto(false)}>

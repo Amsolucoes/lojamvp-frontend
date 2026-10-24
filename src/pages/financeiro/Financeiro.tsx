@@ -9,6 +9,7 @@ import { useToast } from '../../context/ToastContext';
 import { setBottomNavAction } from '../../utils/bottomNavAction';
 import { BANCOS, BankBadge } from '../../utils/bancos';
 import { contemTexto, normalizarTexto } from '../../utils/texto';
+import { SkeletonLista } from '../../components/Skeleton';
 import './Financeiro.css';
 import { useApp } from '@/context/AppContext';
 import { imprimirLista } from '../../utils/imprimirLista';
@@ -1135,7 +1136,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
       {/* Lista */}
       <div ref={listaRef} className="card" style={{ borderLeft: `3px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
         {carregandoLancamentos || filtrandoLista ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+          <SkeletonLista />
         ) : aba === 'pagar' ? (
           listaPagar.length === 0 ? (
             <div className="empty" style={{ padding: '40px 0' }}><p>Nenhuma conta a pagar neste mês.</p></div>

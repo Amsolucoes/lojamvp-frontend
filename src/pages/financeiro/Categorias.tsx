@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { Paginacao } from '../../components/Paginacao';
+import { SkeletonLista } from '../../components/Skeleton';
 import './Contas.css';
 
 interface Categoria {
@@ -144,7 +145,7 @@ export function Categorias() {
       )}
 
       {carregando ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="layout-spinner" /></div>
+        <SkeletonLista />
       ) : lista.length === 0 ? (
         <div className="card"><div className="empty" style={{ padding: '40px 0' }}><p>{categorias.length === 0 ? 'Nenhuma categoria cadastrada.' : busca.trim() ? 'Nenhuma categoria encontrada para essa busca.' : 'Nenhuma categoria neste filtro.'}</p></div></div>
       ) : (
