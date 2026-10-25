@@ -423,7 +423,7 @@ export function Produtos() {
           {/* Mobile: menu "Mais ações" */}
           <div className="cat-select-wrap prod-actions-mobile" ref={acoesMenuRef}>
             <button type="button" className="cat-select-btn" onClick={() => setAcoesMenuAberto(v => !v)}>
-              <span>Mais ações</span>
+              <span>Gerenciar</span>
               <ChevronDown size={14} style={{ transform: acoesMenuAberto ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
             </button>
             {acoesMenuAberto && (
@@ -450,6 +450,32 @@ export function Produtos() {
           </button>
         </div>
       </div>
+
+      {/* Resumo do catálogo */}
+      {(() => {
+        const ativos = produtos.filter(p => p.ativo);
+        const emFalta = ativos.filter(p => {
+          const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
+          if (vars?.length > 0) return vars.some((v: any) => v.estoque <= v.estoqueMinimo);
+          return p.estoque <= p.estoqueMinimo;
+        }).length;
+        const valorEstoque = ativos.reduce((t, p) => {
+          const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
+          const qtd = vars?.length > 0 ? vars.reduce((s2: number, v: any) => s2 + (v.estoque || 0), 0) : (p.estoque || 0);
+          return t + qtd * (p.precoCusto || 0);
+        }, 0);
+        return (
+          <div className="dash-stats" style={{ marginBottom: 16 }}>
+            <div className="stat-card"><div className="stat-label">Produtos</div><div className="stat-value">{produtos.length}</div><div className="stat-sub">{ativos.length} ativos · {produtos.length - ativos.length} inativos</div></div>
+            <div className="stat-card" style={emFalta > 0 ? { borderColor: 'rgba(251,191,36,0.35)' } : undefined}>
+              <div className="stat-label">Estoque baixo</div>
+              <div className="stat-value" style={emFalta > 0 ? { color: 'var(--yellow)' } : undefined}>{emFalta}</div>
+              <div className="stat-sub">no mínimo ou abaixo</div>
+            </div>
+            <div className="stat-card"><div className="stat-label">Valor em estoque</div><div className="stat-value">{fmt(valorEstoque)}</div><div className="stat-sub">a preço de custo</div></div>
+          </div>
+        );
+      })()}
 
       {/* Filtros */}
       <div className="prod-filters">

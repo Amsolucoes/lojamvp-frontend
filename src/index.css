@@ -600,3 +600,22 @@ tbody td { font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ══ Menu mais estreito + telas internas sem recuo duplo ══ */
+@media (min-width: 769px) { :root { --sidebar-w: 204px; } }
+.page > .page { padding: 0; }                       /* tela dentro de tela (abas do dashboard) não recua duas vezes */
+
+/* Indicadores (KPIs) mais compactos e em grade que aproveita a largura */
+.dash-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.dash-stats .stat-card { padding: 14px 16px; }
+.dash-stats .stat-value { font-size: 22px; }
+.dash-stats .stat-sub { font-size: 11.5px; }
+@media (max-width: 1100px) { .dash-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } }
+@media (max-width: 768px) { .dash-stats, .est-stats, .rel-stats { grid-template-columns: 1fr 1fr !important; gap: 10px; } }
+@media (max-width: 480px) {
+  .dash-stats, .est-stats, .rel-stats { grid-template-columns: 1fr 1fr !important; gap: 8px; }
+  .dash-stats .stat-card { padding: 12px 12px; }
+  .dash-stats .stat-value { font-size: 18px; }
+  .dash-stats .stat-label { font-size: 10.5px; letter-spacing: .04em; }
+}
+@media (max-width: 768px) { .dash-stats > .stat-card:last-child:nth-child(odd) { grid-column: 1 / -1; } }
