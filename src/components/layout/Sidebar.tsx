@@ -1,7 +1,7 @@
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, BarChart2, Boxes, 
   TrendingUp, LogOut, Menu, X, Scissors, Calendar, CreditCard, Wallet, Users2, Filter, Settings, 
-  FileText, HelpCircle, Home, BarChart3, Target, ChevronDown, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck, Truck } from 'lucide-react';
+  FileText, HelpCircle, Home, BarChart3, Target, ChevronDown, ChevronsLeft, ChevronsRight, Image, CalendarHeart, UserCog, Percent, Tag, Wrench, ClipboardCheck, Truck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { Fragment, useEffect, useState } from 'react';
@@ -19,6 +19,12 @@ export function Sidebar() {
   // Submenu do Financeiro: só aparece quando se está nele (ou se o usuário expandir na seta).
   const [finAberto, setFinAberto] = useState(pathname.startsWith('/financeiro'));
   useEffect(() => { setFinAberto(pathname.startsWith('/financeiro')); }, [pathname]);
+  // Menu recolhido (só ícones) no desktop — a escolha fica salva no navegador
+  const [recolhida, setRecolhida] = useState(() => { try { return localStorage.getItem('loja:menu-recolhido') === '1'; } catch { return false; } });
+  useEffect(() => {
+    document.documentElement.classList.toggle('menu-recolhido', recolhida);
+    try { localStorage.setItem('loja:menu-recolhido', recolhida ? '1' : '0'); } catch { /* sem armazenamento */ }
+  }, [recolhida]);
   const { produtos } = useApp();
   const { usuario, logout } = useAuth();
 
@@ -158,7 +164,7 @@ export function Sidebar() {
       )}
 
       {/* Sidebar */}
-      <aside className={`sidebar${aberto ? ' sidebar-open' : ''}`}>
+      <aside className={`sidebar${aberto ? ' sidebar-open' : ''}${recolhida ? ' sidebar-recolhida' : ''}`}>
         <div className="sidebar-logo">
           {logoEl}
           <div>
@@ -174,6 +180,7 @@ export function Sidebar() {
             {to === '/ajuda' && <div className="sidebar-secao">Sistema</div>}
             <NavLink to={to} end={to === '/' || to === '/financeiro'}
               className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+              title={recolhida ? label : undefined}
               onClick={() => setAberto(false)}>
               <Icon size={16} />
               <span>{label}</span>
@@ -196,6 +203,7 @@ export function Sidebar() {
               ) : (
                 <NavLink key={sub.to} to={sub.to}
                   className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? ' active' : ''}`}
+                  title={recolhida ? sub.label : undefined}
                   onClick={() => setAberto(false)}>
                   <sub.icon size={14} />
                   <span>{sub.label}</span>
@@ -205,6 +213,11 @@ export function Sidebar() {
             </Fragment>
           ))}
         </nav>
+
+        <button type="button" className="sidebar-toggle" onClick={() => setRecolhida(v => !v)}
+          title={recolhida ? 'Expandir menu' : 'Recolher menu'} aria-label={recolhida ? 'Expandir menu' : 'Recolher menu'}>
+          {recolhida ? <ChevronsRight size={16} /> : <><ChevronsLeft size={16} /><span>Recolher menu</span></>}
+        </button>
 
         <div className="sidebar-user">
           <div className="sidebar-user-avatar">{iniciais(usuario?.nome ?? 'U')}</div>

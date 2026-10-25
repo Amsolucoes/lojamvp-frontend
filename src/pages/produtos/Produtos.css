@@ -324,16 +324,13 @@ tr:hover .row-actions { opacity: 1; }
   flex-shrink: 0;
 }
 
-.prod-actions-desktop {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.prod-actions-mobile { display: none; }
+.prod-actions-desktop { display: none; }
+.prod-actions-mobile { display: block; position: relative; }
+.prod-header-actions .cat-select-menu { right: 0; left: auto; min-width: 220px; }
 
 @media (max-width: 768px) {
-  .prod-actions-desktop { display: none; }
   .prod-actions-mobile { display: block; width: 100%; }
+  .prod-header-actions .cat-select-menu { left: 0; right: 0; min-width: 0; }
 
   .prod-header-actions .cat-select-menu button {
     width: 100%;
@@ -341,3 +338,5 @@ tr:hover .row-actions { opacity: 1; }
     border-radius: 0;
   }
 }
+/* Botão "Gerenciar" no cabeçalho: mesmo porte dos demais botões */
+.prod-header-actions .prod-actions-mobile .cat-select-btn { min-height: 36px; padding: 8px 14px; font-size: 14px; font-weight: 600; border-radius: var(--radius-sm); gap: 8px; }
