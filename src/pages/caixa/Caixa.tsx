@@ -1192,13 +1192,13 @@ export function Caixa() {
         {/* Data e origem da venda */}
         <div className="card cx-section">
           <div className="cx-section-title">Data e origem</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="cx-grid2">
             <div className="form-group">
               <label className="form-label">Data da venda</label>
               <input type="date" value={dataVenda} max={hojeStr()}
                 onChange={e => setDataVenda(e.target.value)} />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ gridColumn: '1 / -1', order: 3 }}>
               <label className="form-label">Origem <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <select style={{ flex: 1 }} value={origemVendaId} onChange={e => setOrigemVendaId(e.target.value)}>
@@ -1220,10 +1220,15 @@ export function Caixa() {
           </div>
         </div>
 
-        {/* Desconto */}
-        <div className="card cx-section">
-          <div className="cx-section-title">Desconto</div>
-          <div className="cx-desc-row">
+        {/* Totais */}
+        <div className="card cx-totais">
+          <div className="cx-total-row">
+            <span>Subtotal</span>
+            <span>{fmt(subtotal)}</span>
+          </div>
+          <div className="cx-desc-linha">
+            <span className="cx-desc-rot">Desconto</span>
+<div className="cx-desc-row">
             <input
               type="number"
               min={0}
@@ -1242,14 +1247,8 @@ export function Caixa() {
               — {fmt(descontoVal)} de desconto
             </div>
           )}
-        </div>
-
-        {/* Totais */}
-        <div className="card cx-totais">
-          <div className="cx-total-row">
-            <span>Subtotal</span>
-            <span>{fmt(subtotal)}</span>
           </div>
+
           {descontoVal > 0 && (
             <div className="cx-total-row" style={{ color: 'var(--red)' }}>
               <span>Desconto</span>

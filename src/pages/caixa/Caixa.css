@@ -315,18 +315,35 @@
   }
 }
 
-/* Painel da venda: rola por dentro quando é mais alto que a tela, e o botão Finalizar fica sempre à vista */
-@media (min-width: 901px) {
-  .caixa-right { max-height: calc(100vh - 40px); overflow-y: auto; padding-bottom: 2px; scrollbar-width: thin; }
-  .caixa-right .cx-finalizar { position: sticky; bottom: 0; z-index: 3; box-shadow: 0 -10px 14px -6px var(--bg); }
-}
+/* ═════ Caixa compacto: tudo do painel da venda à vista, sem rolagem no desktop ═════ */
+.caixa-page { grid-template-columns: 1fr 340px; gap: 16px; padding: 20px 24px; }
+.caixa-right { gap: 8px; }
+.caixa-right .cx-section, .caixa-right .cx-totais { padding: 10px 12px; }
+.caixa-right .cx-section-title { margin-bottom: 6px; font-size: 11px; }
+.cx-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cx-grid2 .form-label { font-size: 10.5px; margin-bottom: 2px; }
+.cx-grid2 input, .cx-grid2 select { padding: 6px 8px; font-size: 14px; }
+.caixa-right input { padding: 7px 10px; }
 
-/* Celular: o botão Finalizar venda acompanha a tela, logo acima da barra de navegação */
+/* Desconto dentro dos totais */
+.cx-desc-linha { display: flex; align-items: center; gap: 8px; padding: 4px 0 6px; border-bottom: 1px dashed var(--border); margin-bottom: 4px; }
+.cx-desc-rot { font-size: 13px; color: var(--text-2); min-width: 64px; }
+.cx-desc-linha .cx-desc-row { flex: 1; }
+.cx-desc-linha input { padding: 5px 8px; }
+.cx-toggle-pill button { padding: 5px 10px; }
+.cx-totais .cx-total-row { padding: 2px 0; }
+.cx-total-final { font-size: 20px; margin-top: 4px; padding-top: 6px; }
+
+/* Formas de pagamento: 4 em uma linha */
+.cx-formas { grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.cx-forma-btn { padding: 7px 2px; gap: 2px; font-size: 11.5px; }
+.cx-forma-btn span:first-child { font-size: 15px; }
+
+/* Finalizar: botão normal no fim do painel (sem fixar nem sobrepor) */
+.cx-finalizar { padding: 12px; }
+.cx-finalizar:disabled, .cx-finalizar.disabled { opacity: 1; background: color-mix(in srgb, var(--accent) 28%, var(--bg-2)); color: var(--text-2); }
+
 @media (max-width: 900px) {
+  .caixa-page { grid-template-columns: 1fr; padding: 16px; }
   .caixa-right .cx-finalizar { position: sticky; bottom: calc(var(--bottom-nav-h) + 8px); z-index: 20; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35); }
-}
-
-/* Botão fixo não pode ser translúcido (o conteúdo aparecia por baixo quando desabilitado) */
-.caixa-right .cx-finalizar:disabled, .caixa-right .cx-finalizar.disabled {
-  opacity: 1; background: color-mix(in srgb, var(--accent) 28%, var(--bg-2)); color: var(--text-2); box-shadow: none;
 }
