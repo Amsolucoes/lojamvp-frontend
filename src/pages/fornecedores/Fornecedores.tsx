@@ -103,7 +103,7 @@ export function Fornecedores() {
       </div>
 
       <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input placeholder="Buscar por nome, CNPJ/CPF ou telefone..." value={busca}
+        <input placeholder="Nome, CNPJ/CPF ou telefone..." value={busca}
           onChange={e => { setBusca(e.target.value); setPagina(1); }} style={{ flex: 1, minWidth: 200 }} />
         <select value={statusFiltro} onChange={e => { setStatusFiltro(e.target.value as any); setPagina(1); }} style={{ width: 'auto', minWidth: 130 }}>
           <option value="todos">Todos os status</option>
