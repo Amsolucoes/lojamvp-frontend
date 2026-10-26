@@ -443,7 +443,7 @@ export function Agenda() {
             <button className="btn-secondary" onClick={() => navDia(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
             <button className="btn-secondary" onClick={() => setDia(hojeStr())} style={{ padding: '6px 14px' }}>Hoje</button>
             <button className="btn-secondary" onClick={() => navDia(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
-            <span style={{ fontWeight: 600, fontSize: 15, marginLeft: 8, textTransform: 'capitalize' }}>
+            <span className="cap-primeira" style={{ fontWeight: 600, fontSize: 15, marginLeft: 8 }}>
               {dia.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
               {ehHoje && <span className="badge badge-accent" style={{ marginLeft: 8, fontSize: 10 }}>Hoje</span>}
             </span>
@@ -575,7 +575,7 @@ export function Agenda() {
               return (
                 <div key={ymd(d)} className="card" style={{ padding: 0, overflow: 'hidden' }}>
                   <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: ehHojeDia ? 'var(--accent-bg)' : 'transparent' }}>
-                    <span style={{ fontWeight: 600, fontSize: 13, textTransform: 'capitalize' }}>
+                    <span className="cap-primeira" style={{ fontWeight: 600, fontSize: 13 }}>
                       {d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}
                       {ehHojeDia && <span className="badge badge-accent" style={{ marginLeft: 8, fontSize: 10 }}>Hoje</span>}
                     </span>
@@ -614,7 +614,7 @@ export function Agenda() {
             <button className="btn-secondary" onClick={() => { const d = new Date(dia); d.setMonth(d.getMonth() - 1); setDia(d); }} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
             <button className="btn-secondary" onClick={() => setDia(hojeStr())} style={{ padding: '6px 14px' }}>Hoje</button>
             <button className="btn-secondary" onClick={() => { const d = new Date(dia); d.setMonth(d.getMonth() + 1); setDia(d); }} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
-            <span style={{ fontWeight: 600, fontSize: 15, marginLeft: 8, textTransform: 'capitalize' }}>
+            <span className="cap-primeira" style={{ fontWeight: 600, fontSize: 15, marginLeft: 8 }}>
               {dia.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
             </span>
           </div>

@@ -900,7 +900,7 @@ export function Caixa() {
               <input
                 ref={buscaRef}
                 className="search-input"
-                placeholder="Buscar produto por nome ou código de barras..."
+                placeholder="Nome ou código de barras..."
                 value={buscaProd}
                 onChange={e => { setBuscaProd(e.target.value); setShowProd(true); }}
                 onFocus={() => setShowProd(true)}
