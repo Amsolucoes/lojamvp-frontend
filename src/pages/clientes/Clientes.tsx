@@ -212,6 +212,22 @@ export function Clientes() {
         </button>
       </div>
 
+      {/* Resumo da base */}
+      {clientes.length > 0 && (() => {
+        const agora = new Date();
+        const novosNoMes = clientes.filter(c => { const d = new Date(c.criadoEm); return d.getMonth() === agora.getMonth() && d.getFullYear() === agora.getFullYear(); }).length;
+        const comCredito = clientes.filter(c => (c.creditoLoja ?? 0) > 0);
+        const totalCredito = comCredito.reduce((t, c) => t + (c.creditoLoja ?? 0), 0);
+        const aniversariantes = clientes.filter(c => c.dataNascimento && new Date(c.dataNascimento).getUTCMonth() === agora.getMonth()).length;
+        return (
+          <div className="dash-stats" style={{ marginBottom: 16 }}>
+            <div className="stat-card"><div className="stat-label">{labelPlural}</div><div className="stat-value">{clientes.length}</div><div className="stat-sub">{novosNoMes} novo(s) neste mês</div></div>
+            <div className="stat-card"><div className="stat-label">Aniversariantes</div><div className="stat-value">{aniversariantes}</div><div className="stat-sub">neste mês</div></div>
+            <div className="stat-card"><div className="stat-label">Crédito na loja</div><div className="stat-value">{fmt(totalCredito)}</div><div className="stat-sub">{comCredito.length} cliente(s) com saldo</div></div>
+          </div>
+        );
+      })()}
+
       {/* Busca */}
       <div className="cli-filters">
         <div className="search-wrap" style={{ maxWidth: 360 }}>
