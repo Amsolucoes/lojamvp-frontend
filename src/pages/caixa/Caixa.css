@@ -314,3 +314,9 @@
     padding: 4mm;
   }
 }
+
+/* Painel da venda: rola por dentro quando é mais alto que a tela, e o botão Finalizar fica sempre à vista */
+@media (min-width: 901px) {
+  .caixa-right { max-height: calc(100vh - 40px); overflow-y: auto; padding-bottom: 2px; scrollbar-width: thin; }
+  .caixa-right .cx-finalizar { position: sticky; bottom: 0; z-index: 3; box-shadow: 0 -10px 14px -6px var(--bg); }
+}
