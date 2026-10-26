@@ -619,3 +619,7 @@ tbody td { font-variant-numeric: tabular-nums; }
   .dash-stats .stat-label { font-size: 10.5px; letter-spacing: .04em; }
 }
 @media (max-width: 768px) { .dash-stats > .stat-card:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+
+/* Só a primeira letra maiúscula (datas por extenso: "Segunda-feira, 26 de outubro") */
+.cap-primeira { display: inline-block; }
+.cap-primeira::first-letter { text-transform: uppercase; }

@@ -320,3 +320,13 @@
   .caixa-right { max-height: calc(100vh - 40px); overflow-y: auto; padding-bottom: 2px; scrollbar-width: thin; }
   .caixa-right .cx-finalizar { position: sticky; bottom: 0; z-index: 3; box-shadow: 0 -10px 14px -6px var(--bg); }
 }
+
+/* Celular: o botão Finalizar venda acompanha a tela, logo acima da barra de navegação */
+@media (max-width: 900px) {
+  .caixa-right .cx-finalizar { position: sticky; bottom: calc(var(--bottom-nav-h) + 8px); z-index: 20; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35); }
+}
+
+/* Botão fixo não pode ser translúcido (o conteúdo aparecia por baixo quando desabilitado) */
+.caixa-right .cx-finalizar:disabled, .caixa-right .cx-finalizar.disabled {
+  opacity: 1; background: color-mix(in srgb, var(--accent) 28%, var(--bg-2)); color: var(--text-2); box-shadow: none;
+}
