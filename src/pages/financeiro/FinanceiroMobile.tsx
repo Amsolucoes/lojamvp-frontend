@@ -168,6 +168,7 @@ export function FinanceiroMobile() {
   const [salvandoEditReceber, setSalvandoEditReceber] = useState(false);
 
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
+  const seqCartoes = useRef(0);
   const [cartoesResumo, setCartoesResumo] = useState<Record<string, { usado: number; disponivel: number; qtdCompras: number; status: string }>>({});
   // Faturas de cartão do mês (pagas / parciais / parceladas) — telas de Cartões e Contas a Pagar
   const [faturasMesCartoes, setFaturasMesCartoes] = useState<FaturaMes[]>([]);
@@ -474,12 +475,22 @@ export function FinanceiroMobile() {
     setFaturasTick(t => t + 1);
     setCarregandoListaCartoes(true);
     setCarregandoResumoCartoes(true);
-    api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {}).finally(() => setCarregandoListaCartoes(false));
+    // Só a resposta da chamada MAIS RECENTE vale: uma chamada antiga e lenta (ex.: a de quando a tela abriu)
+    // não pode chegar depois e sobrescrever o saldo já atualizado com a compra recém lançada
+    const seq = ++seqCartoes.current;
+    api.get<Cartao[]>('/api/financeiro/cartoes').then(l => { if (seq === seqCartoes.current) setCartoes(l); }).catch(() => {}).finally(() => { if (seq === seqCartoes.current) setCarregandoListaCartoes(false); });
     api.get<any[]>('/api/financeiro/cartoes-resumo').then(lista => {
+      if (seq !== seqCartoes.current) return;
       const mapa: Record<string, any> = {};
       lista.forEach(c => { mapa[c.id] = { usado: c.usado, disponivel: c.disponivel, qtdCompras: c.qtdCompras, status: c.status }; });
       setCartoesResumo(mapa);
-    }).catch(() => {}).finally(() => setCarregandoResumoCartoes(false));
+    }).catch(() => {}).finally(() => { if (seq === seqCartoes.current) setCarregandoResumoCartoes(false); });
+  }
+
+  // Fechar a fatura sempre atualiza o saldo dos cartões (qualquer compra/pagamento feito lá dentro)
+  function fecharFatura() {
+    setFaturaAberta(null);
+    carregarCartoes();
   }
 
   useEffect(() => {
@@ -2207,11 +2218,11 @@ export function FinanceiroMobile() {
       )}
 
       {faturaAberta && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setFaturaAberta(null)}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && fecharFatura()}>
           <div className="modal" style={{ maxWidth: 480 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>Fatura — {faturaAberta.nome}</h2>
-              <button className="btn-ghost" onClick={() => setFaturaAberta(null)}><X size={16} /></button>
+              <button className="btn-ghost" onClick={fecharFatura}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
@@ -2393,7 +2404,7 @@ export function FinanceiroMobile() {
               )}
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setFaturaAberta(null)}>Fechar</button>
+              <button className="btn-secondary" onClick={fecharFatura}>Fechar</button>
             </div>
           </div>
         </div>
