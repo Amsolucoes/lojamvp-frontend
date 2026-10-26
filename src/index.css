@@ -623,3 +623,9 @@ tbody td { font-variant-numeric: tabular-nums; }
 /* Só a primeira letra maiúscula (datas por extenso: "Segunda-feira, 26 de outubro") */
 .cap-primeira { display: inline-block; }
 .cap-primeira::first-letter { text-transform: uppercase; }
+
+/* Abas em segmentos com 3 ou mais opções: o texto quebra em duas linhas em vez de sobrepor o vizinho (celular) */
+.cx-tipo-toggle button { min-width: 0; }
+@media (max-width: 520px) {
+  .cx-tipo-toggle button { white-space: normal; line-height: 1.2; padding: 6px 4px; font-size: 11.5px; }
+}

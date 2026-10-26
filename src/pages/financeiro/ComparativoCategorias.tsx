@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { X, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, BarChart3, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
 import { api } from '../../services/api';
+import { normalizarTexto } from '../../utils/texto';
 
 // Despesas por categoria mês a mês no ano (tabela), com o menor e o maior mês de cada categoria em destaque.
 
@@ -10,10 +11,21 @@ interface DadosAno { ano: number; totaisMes: number[]; categorias: CategoriaAno[
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const MESES_ABREV = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
+function Seta({ ativo, dir }: { ativo: boolean; dir?: 'asc' | 'desc' }) {
+  if (!ativo) return null;
+  return dir === 'asc' ? <ArrowUp size={11} style={{ marginLeft: 3, verticalAlign: -1 }} /> : <ArrowDown size={11} style={{ marginLeft: 3, verticalAlign: -1 }} />;
+}
+
 function TabelaAno({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: number; desmembrar: boolean; onSelecionar?: (nome: string, mes: number) => void }) {
   const [dados, setDados] = useState<DadosAno | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
+  // Ordenação ao clicar no cabeçalho: categoria (A→Z), mês ou total; clicar de novo inverte, e uma terceira vez volta ao padrão
+  const [ordem, setOrdem] = useState<{ col: 'nome' | 'total' | number; dir: 'asc' | 'desc' } | null>(null);
+
+  function ordenarPor(col: 'nome' | 'total' | number) {
+    setOrdem(o => !o || o.col !== col ? { col, dir: col === 'nome' ? 'asc' : 'desc' } : o.dir === (col === 'nome' ? 'asc' : 'desc') ? { col, dir: col === 'nome' ? 'desc' : 'asc' } : null);
+  }
 
   useEffect(() => {
     let ativo = true;
@@ -29,6 +41,17 @@ function TabelaAno({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: n
   if (erro || !dados) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center' }}>Não foi possível carregar o comparativo.</p>;
   if (dados.categorias.length === 0) return <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center' }}>Sem despesas neste ano.</p>;
 
+  const categoriasOrdenadas = [...dados.categorias];
+  if (ordem) {
+    const f = ordem.dir === 'asc' ? 1 : -1;
+    categoriasOrdenadas.sort((a, b) => {
+      if (ordem.col === 'nome') return f * normalizarTexto(a.nome).localeCompare(normalizarTexto(b.nome), 'pt-BR');
+      const va = ordem.col === 'total' ? a.serie.reduce((x, y) => x + y, 0) : a.serie[ordem.col];
+      const vb = ordem.col === 'total' ? b.serie.reduce((x, y) => x + y, 0) : b.serie[ordem.col];
+      return f * (va - vb);
+    });
+  }
+
   const agora = new Date();
   const ultimo = ano < agora.getFullYear() ? 12 : ano === agora.getFullYear() ? agora.getMonth() + 1 : 0;
   const cel: React.CSSProperties = { padding: '7px 8px', textAlign: 'right', whiteSpace: 'nowrap', fontSize: 12.5, borderBottom: '1px solid var(--border)' };
@@ -39,15 +62,23 @@ function TabelaAno({ ano, mes, desmembrar, onSelecionar }: { ano: number; mes: n
       <table style={{ borderCollapse: 'collapse', width: '100%' }}>
         <thead>
           <tr>
-            <th style={{ ...primeira, fontWeight: 600, color: 'var(--text-3)' }}>Categoria</th>
+            <th style={{ ...primeira, fontWeight: 600, color: ordem?.col === 'nome' ? 'var(--text-1)' : 'var(--text-3)', cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => ordenarPor('nome')} title="Ordenar por categoria (A–Z)">
+              Categoria <Seta ativo={ordem?.col === 'nome'} dir={ordem?.dir} />
+            </th>
             {MESES_ABREV.map((m, i) => (
-              <th key={m} style={{ ...cel, fontWeight: 600, color: i + 1 === mes ? 'var(--text-1)' : 'var(--text-3)' }}>{m}</th>
+              <th key={m} onClick={() => ordenarPor(i)} title={`Ordenar por ${m}`}
+                style={{ ...cel, fontWeight: 600, cursor: 'pointer', userSelect: 'none', color: ordem?.col === i || i + 1 === mes ? 'var(--text-1)' : 'var(--text-3)' }}>
+                {m}<Seta ativo={ordem?.col === i} dir={ordem?.dir} />
+              </th>
             ))}
-            <th style={{ ...cel, fontWeight: 600 }}>Total</th>
+            <th onClick={() => ordenarPor('total')} title="Ordenar pelo total" style={{ ...cel, fontWeight: 600, cursor: 'pointer', userSelect: 'none' }}>
+              Total<Seta ativo={ordem?.col === 'total'} dir={ordem?.dir} />
+            </th>
           </tr>
         </thead>
         <tbody>
-          {dados.categorias.map(c => {
+          {categoriasOrdenadas.map(c => {
             const validos = c.serie.slice(0, ultimo).filter(v => v > 0);
             const menor = validos.length > 1 ? Math.min(...validos) : null;
             const maior = validos.length > 1 ? Math.max(...validos) : null;
