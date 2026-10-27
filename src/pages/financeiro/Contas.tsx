@@ -3,7 +3,7 @@ import { X, Plus, Settings, Repeat } from 'lucide-react';
 import { api } from '../../services/api';
 import { InputMoeda } from '../../components/InputMoeda';
 import { useToast } from '../../context/ToastContext';
-import { BANCOS, BankBadge } from '../../utils/bancos';
+import { BankBadge, SeletorBanco } from '../../utils/bancos';
 import { Paginacao } from '../../components/Paginacao';
 import { SkeletonLista } from '../../components/Skeleton';
 import './Contas.css';
@@ -154,19 +154,7 @@ export function Contas() {
           </div>
           <div className="form-group">
             <label className="form-label">Banco</label>
-            <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
-              <button type="button" onClick={() => setForm(f => ({ ...f, banco: '' }))}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: form.banco === '' ? 'var(--accent-bg)' : 'transparent', border: 'none', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
-                Nenhum / não informar
-              </button>
-              {BANCOS.map(b => (
-                <button key={b.id} type="button" onClick={() => setForm(f => ({ ...f, banco: b.id }))}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: form.banco === b.id ? 'var(--accent-bg)' : 'transparent', border: 'none', borderTop: '1px solid var(--border)', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
-                  <BankBadge bancoId={b.id} tamanho={18} />
-                  {b.nome}
-                </button>
-              ))}
-            </div>
+            <SeletorBanco valor={form.banco ?? ''} onChange={id => setForm(f => ({ ...f, banco: id }))} />
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button className="btn-primary" onClick={salvar}>{editando ? 'Salvar' : 'Adicionar conta'}</button>

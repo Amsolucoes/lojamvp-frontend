@@ -6,7 +6,7 @@ import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { setMobileShellOverride } from '../../utils/mobileShellOverride';
 import { usePullToRefresh } from '../../components/layout/Layout';
-import { BankBadge, BANCOS } from '../../utils/bancos';
+import { BankBadge, SeletorBanco } from '../../utils/bancos';
 import { InputMoeda } from '../../components/InputMoeda';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { useToast } from '../../context/ToastContext';
@@ -2717,18 +2717,7 @@ export function FinanceiroMobile() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Banco</label>
-                  <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
-                    <button type="button" onClick={() => setFormConta(f => ({ ...f, banco: '' }))}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: formConta.banco === '' ? 'var(--accent-bg)' : 'transparent', border: 'none', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
-                      Nenhum
-                    </button>
-                    {BANCOS.map(b => (
-                      <button key={b.id} type="button" onClick={() => setFormConta(f => ({ ...f, banco: b.id }))}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: formConta.banco === b.id ? 'var(--accent-bg)' : 'transparent', border: 'none', borderTop: '1px solid var(--border)', textAlign: 'left', fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }}>
-                        <BankBadge bancoId={b.id} tamanho={18} /> {b.nome}
-                      </button>
-                    ))}
-                  </div>
+                  <SeletorBanco valor={formConta.banco ?? ''} onChange={id => setFormConta(f => ({ ...f, banco: id }))} altura={160} rotuloNenhum="Nenhum" />
                 </div>
               </div>
             </div>
