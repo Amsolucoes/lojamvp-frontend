@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, Users, X, Phone, Mail, MapPin, FileText } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Search, Edit2, Trash2, Users, X, Phone, Mail, MapPin, FileText, ArrowUp, ArrowDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Cliente } from '../../types';
 import { api } from '../../services/api';
 import './Clientes.css';
 import { Paginacao } from '@/components/Paginacao';
+import { contemTexto } from '../../utils/texto';
 
 type FormData = Omit<Cliente, 'id' | 'criadoEm'>;
 const EMPTY: FormData = { nome: '', telefone: '', cpf: '', email: '', endereco: '', observacoes: '', dataNascimento: undefined };
@@ -67,11 +68,44 @@ export function Clientes() {
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(12);
 
-  const lista = clientes.filter(c =>
-    c.nome.toLowerCase().includes(busca.toLowerCase()) ||
+  type ColunaOrdem = 'nome' | 'credito' | 'compras' | 'gasto' | 'ultima';
+  const [ordem, setOrdem] = useState<{ col: ColunaOrdem; dir: 1 | -1 }>({ col: 'nome', dir: 1 });
+  function ordenarPor(col: ColunaOrdem) {
+    setOrdem(o => o.col === col ? { col, dir: (o.dir * -1) as 1 | -1 } : { col, dir: col === 'nome' ? 1 : -1 });
+  }
+
+  // Resumo de compras por cliente, calculado uma vez (evita varrer as vendas a cada linha)
+  const resumoVendas = useMemo(() => {
+    const mapa: Record<string, { qtd: number; total: number; ultima: any }> = {};
+    for (const v of vendas) {
+      if (!v.clienteId) continue;
+      const r = mapa[v.clienteId] ?? (mapa[v.clienteId] = { qtd: 0, total: 0, ultima: null });
+      r.qtd++; r.total += v.totalFinal;
+      if (!r.ultima || new Date(v.criadaEm).getTime() > new Date(r.ultima.criadaEm).getTime()) r.ultima = v;
+    }
+    return mapa;
+  }, [vendas]);
+
+  const filtrados = clientes.filter(c =>
+    contemTexto(c.nome, busca) ||
     c.telefone.includes(busca) ||
     (c.cpf?.includes(busca) ?? false)
   );
+  const lista = [...filtrados].sort((a, b) => {
+    const valor = (c: Cliente) => {
+      const r = resumoVendas[c.id];
+      switch (ordem.col) {
+        case 'credito': return c.creditoLoja ?? 0;
+        case 'compras': return r?.qtd ?? 0;
+        case 'gasto':   return r?.total ?? 0;
+        case 'ultima':  return r?.ultima ? new Date(r.ultima.criadaEm).getTime() : 0;
+        default:        return c.nome;
+      }
+    };
+    const va = valor(a), vb = valor(b);
+    const cmp = typeof va === 'string' ? va.localeCompare(vb as string, 'pt-BR') : (va as number) - (vb as number);
+    return cmp * ordem.dir || a.nome.localeCompare(b.nome, 'pt-BR');
+  });
 
   const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
   const paginaSegura = Math.min(pagina, totalPaginas);
@@ -125,19 +159,9 @@ export function Clientes() {
     }
   }
 
-  function totalGasto(clienteId: string) {
-    return vendas.filter(v => v.clienteId === clienteId).reduce((s, v) => s + v.totalFinal, 0);
-  }
-
-  function qtdCompras(clienteId: string) {
-    return vendas.filter(v => v.clienteId === clienteId).length;
-  }
-
-  function ultimaCompra(clienteId: string) {
-    const vs = vendas.filter(v => v.clienteId === clienteId);
-    if (!vs.length) return null;
-    return vs.sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime())[0];
-  }
+  function totalGasto(clienteId: string) { return resumoVendas[clienteId]?.total ?? 0; }
+  function qtdCompras(clienteId: string) { return resumoVendas[clienteId]?.qtd ?? 0; }
+  function ultimaCompra(clienteId: string) { return resumoVendas[clienteId]?.ultima ?? null; }
 
   function qtdServicos(clienteId: string) {
     return resumoServicos[clienteId]?.qtd ?? 0;
@@ -200,6 +224,11 @@ export function Clientes() {
       .catch(() => {});
   }, []);
 
+  const mostrarCompras = !soServicos && !temCorretora;
+  const temOS = Object.keys(resumoOS).length > 0;
+  const iconeOrdem = (col: ColunaOrdem) => ordem.col !== col ? null
+    : ordem.dir === 1 ? <ArrowUp size={11} /> : <ArrowDown size={11} />;
+
   return (
     <div className="page">
       <div className="page-header">
@@ -250,7 +279,66 @@ export function Clientes() {
           </div>
         </div>
       ) : (
-        <div className="cli-grid">
+        <>
+        {/* Desktop: tabela */}
+        <div className="table-wrap cli-tabela-desktop">
+          <table>
+            <thead>
+              <tr>
+                <th><button type="button" className="cli-th-sort" onClick={() => ordenarPor('nome')}>{labelCap}{iconeOrdem('nome')}</button></th>
+                <th>Contato</th>
+                <th>Aniversário</th>
+                <th style={{ textAlign: 'right' }}><button type="button" className="cli-th-sort" onClick={() => ordenarPor('credito')}>Crédito{iconeOrdem('credito')}</button></th>
+                {mostrarCompras && <th style={{ textAlign: 'right' }}><button type="button" className="cli-th-sort" onClick={() => ordenarPor('compras')}>Compras{iconeOrdem('compras')}</button></th>}
+                {mostrarCompras && <th style={{ textAlign: 'right' }}><button type="button" className="cli-th-sort" onClick={() => ordenarPor('gasto')}>Total gasto{iconeOrdem('gasto')}</button></th>}
+                {temServicos && <th style={{ textAlign: 'right' }}>Serviços</th>}
+                {temOS && <th style={{ textAlign: 'right' }}>Ordens de serviço</th>}
+                {mostrarCompras && <th><button type="button" className="cli-th-sort" onClick={() => ordenarPor('ultima')}>Última compra{iconeOrdem('ultima')}</button></th>}
+                <th style={{ width: 70 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {listaPaginada.map(c => {
+                const ultima = ultimaCompra(c.id);
+                return (
+                  <tr key={c.id} className="cli-linha" onClick={() => abrirVer(c)}>
+                    <td>
+                      <div className="cli-celula-nome">
+                        <div className="cli-avatar cli-avatar-sm">{iniciais(c.nome)}</div>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="cli-nome-tab">{c.nome}{assinantesIds.has(c.id) && <span className="cli-plano-flag">⭐ Plano</span>}</div>
+                          {c.cpf && <div className="cli-sub-tab">{c.cpf}</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div>{c.telefone}</div>
+                      {c.email && <div className="cli-sub-tab">{c.email}</div>}
+                    </td>
+                    <td>{c.dataNascimento ? new Date(c.dataNascimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : <span className="cli-vazio">—</span>}</td>
+                    <td style={{ textAlign: 'right', color: (c.creditoLoja ?? 0) > 0 ? 'var(--green)' : undefined, fontWeight: (c.creditoLoja ?? 0) > 0 ? 600 : undefined }}>
+                      {(c.creditoLoja ?? 0) > 0 ? fmt(c.creditoLoja ?? 0) : <span className="cli-vazio">—</span>}
+                    </td>
+                    {mostrarCompras && <td style={{ textAlign: 'right' }}>{qtdCompras(c.id) || <span className="cli-vazio">—</span>}</td>}
+                    {mostrarCompras && <td style={{ textAlign: 'right', color: totalGasto(c.id) > 0 ? 'var(--green)' : undefined, fontWeight: 600 }}>{totalGasto(c.id) > 0 ? fmt(totalGasto(c.id)) : <span className="cli-vazio">—</span>}</td>}
+                    {temServicos && <td style={{ textAlign: 'right' }}>{qtdServicos(c.id) > 0 ? <><span style={{ color: 'var(--green)', fontWeight: 600 }}>{fmt(totalServicos(c.id))}</span><div className="cli-sub-tab">{qtdServicos(c.id)} serviço(s)</div></> : <span className="cli-vazio">—</span>}</td>}
+                    {temOS && <td style={{ textAlign: 'right' }}>{qtdOS(c.id) > 0 ? <><span style={{ color: osTemAndamento(c.id) ? 'var(--yellow)' : 'var(--green)', fontWeight: 600 }}>{fmt(totalOS(c.id))}</span><div className="cli-sub-tab">{qtdOS(c.id)} ordem(ns){osTemAndamento(c.id) ? ' · em andamento' : ''}</div></> : <span className="cli-vazio">—</span>}</td>}
+                    {mostrarCompras && <td>{ultima ? new Date(ultima.criadaEm).toLocaleDateString('pt-BR') : <span className="cli-vazio">—</span>}</td>}
+                    <td onClick={e => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                        <button className="btn-ghost" onClick={() => abrirEditar(c)} title="Editar"><Edit2 size={13} /></button>
+                        <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => setDel(c.id)} title="Excluir"><Trash2 size={13} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Celular: cards */}
+        <div className="cli-grid cli-cards-mobile">
           {listaPaginada.map(c => {
             const compras = qtdCompras(c.id);
             const gasto   = totalGasto(c.id);
@@ -316,6 +404,7 @@ export function Clientes() {
             );
           })}
         </div>
+        </>
       )}
 
       {lista.length > 0 && (

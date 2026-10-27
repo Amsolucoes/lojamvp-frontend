@@ -193,3 +193,23 @@ input[type="date"] {
     box-sizing: border-box;
   }
 }
+
+/* ── Desktop: tabela · Celular: cards ─────────────────────────────── */
+.cli-cards-mobile { display: none; }
+.cli-celula-nome { display: flex; align-items: center; gap: 10px; }
+.cli-avatar-sm { width: 30px; height: 30px; font-size: 11px; }
+.cli-nome-tab { font-weight: 600; color: var(--text-1); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cli-sub-tab { font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+.cli-vazio { color: var(--text-3); opacity: .6; }
+.cli-linha { cursor: pointer; }
+.cli-th-sort {
+  display: inline-flex; align-items: center; gap: 4px; padding: 0; background: transparent; border: none;
+  color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer;
+}
+.cli-th-sort:hover { color: var(--text-1); }
+.cli-linha .btn-ghost { opacity: .55; }
+.cli-linha:hover .btn-ghost { opacity: 1; }
+@media (max-width: 768px) {
+  .cli-tabela-desktop { display: none; }
+  .cli-cards-mobile { display: grid; }
+}

@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Plus, X, Trash2, Truck, Edit2, Phone, Mail, MapPin } from 'lucide-react';
+import { Plus, X, Trash2, Truck, Edit2, Phone, Mail, MapPin, ArrowUp, ArrowDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Fornecedor } from '../../types';
 import { useToast } from '../../context/ToastContext';
-import { formatarTelefone } from '../../utils/mascaras';
+import { formatarTelefone, formatarCep, buscarCepDetalhado } from '../../utils/mascaras';
+import { contemTexto } from '../../utils/texto';
+import './Fornecedores.css';
 import { Paginacao } from '@/components/Paginacao';
 
 function formatarCnpjCpf(valor: string): string {
@@ -20,7 +22,18 @@ function formatarCnpjCpf(valor: string): string {
 }
 
 type FormData = Omit<Fornecedor, 'id' | 'criadoEm' | 'qtdProdutos'>;
-const EMPTY: FormData = { nome: '', cnpjCpf: '', telefone: '', email: '', endereco: '', observacoes: '', ativo: true };
+const EMPTY: FormData = { nome: '', cnpjCpf: '', telefone: '', email: '', endereco: '', cep: '', rua: '', numero: '', bairro: '', cidade: '', uf: '', observacoes: '', ativo: true };
+
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+// Endereço em uma linha (usa os campos separados; cai no texto antigo se o cadastro for anterior)
+function enderecoCompleto(f: Fornecedor) {
+  const temDetalhe = f.rua || f.numero || f.bairro || f.cidade || f.uf;
+  if (!temDetalhe) return f.endereco ?? '';
+  const ruaNum = [f.rua, f.numero].filter(Boolean).join(', ');
+  const cidadeUf = [f.cidade, f.uf].filter(Boolean).join('/');
+  return [ruaNum, f.bairro, cidadeUf].filter(Boolean).join(' - ');
+}
 
 export function Fornecedores() {
   const { fornecedores, addFornecedor, updateFornecedor, deleteFornecedor } = useApp();
@@ -36,13 +49,41 @@ export function Fornecedores() {
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(15);
 
+  const [ordem, setOrdem] = useState<{ col: 'nome' | 'produtos'; dir: 1 | -1 }>({ col: 'nome', dir: 1 });
+  function ordenarPor(col: 'nome' | 'produtos') {
+    setOrdem(o => o.col === col ? { col, dir: (o.dir * -1) as 1 | -1 } : { col, dir: col === 'nome' ? 1 : -1 });
+  }
+  const iconeOrdem = (col: 'nome' | 'produtos') => ordem.col !== col ? null
+    : ordem.dir === 1 ? <ArrowUp size={11} /> : <ArrowDown size={11} />;
+
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [cepNaoEncontrado, setCepNaoEncontrado] = useState(false);
+  async function aoDigitarCep(valor: string) {
+    const formatado = formatarCep(valor);
+    setForm(f => ({ ...f, cep: formatado }));
+    setCepNaoEncontrado(false);
+    if (formatado.replace(/\D/g, '').length !== 8) return;
+    setBuscandoCep(true);
+    const dados = await buscarCepDetalhado(formatado);
+    setBuscandoCep(false);
+    if (!dados) { setCepNaoEncontrado(true); return; }
+    setForm(f => ({
+      ...f,
+      rua: dados.rua || f.rua, bairro: dados.bairro || f.bairro,
+      cidade: dados.cidade || f.cidade, uf: dados.uf || f.uf,
+    }));
+  }
+
   const lista = fornecedores.filter(f => {
     const passaBusca = !busca ||
-      f.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      contemTexto(f.nome, busca) ||
       (f.cnpjCpf?.includes(busca) ?? false) ||
       (f.telefone?.includes(busca) ?? false);
     const passaStatus = statusFiltro === 'todos' ? true : statusFiltro === 'ativo' ? f.ativo : !f.ativo;
     return passaBusca && passaStatus;
+  }).sort((a, b) => {
+    const cmp = ordem.col === 'nome' ? a.nome.localeCompare(b.nome, 'pt-BR') : a.qtdProdutos - b.qtdProdutos;
+    return cmp * ordem.dir || a.nome.localeCompare(b.nome, 'pt-BR');
   });
   const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
   const paginaSegura = Math.min(pagina, totalPaginas);
@@ -50,6 +91,7 @@ export function Fornecedores() {
 
   function abrirNovo() {
     setForm(EMPTY);
+    setCepNaoEncontrado(false);
     setEditId(null);
     setModal('novo');
   }
@@ -58,8 +100,11 @@ export function Fornecedores() {
     setForm({
       nome: f.nome, cnpjCpf: f.cnpjCpf ?? '', telefone: f.telefone ?? '',
       email: f.email ?? '', endereco: f.endereco ?? '', observacoes: f.observacoes ?? '',
+      cep: f.cep ?? '', rua: f.rua ?? '', numero: f.numero ?? '', bairro: f.bairro ?? '',
+      cidade: f.cidade ?? '', uf: f.uf ?? '',
       ativo: f.ativo,
     });
+    setCepNaoEncontrado(false);
     setEditId(f.id);
     setModal('editar');
   }
@@ -133,7 +178,53 @@ export function Fornecedores() {
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <>
+        {/* Desktop: tabela */}
+        <div className="table-wrap forn-tabela-desktop">
+          <table>
+            <thead>
+              <tr>
+                <th><button type="button" className="forn-th-sort" onClick={() => ordenarPor('nome')}>Fornecedor{iconeOrdem('nome')}</button></th>
+                <th>Contato</th>
+                <th>Endereço</th>
+                <th style={{ textAlign: 'right' }}><button type="button" className="forn-th-sort" onClick={() => ordenarPor('produtos')}>Produtos{iconeOrdem('produtos')}</button></th>
+                <th>Status</th>
+                <th style={{ width: 70 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {listaPaginada.map(f => (
+                <tr key={f.id} className="forn-linha" style={{ opacity: f.ativo ? 1 : 0.55 }} onClick={() => abrirEditar(f)}>
+                  <td>
+                    <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>{f.nome}</div>
+                    {f.cnpjCpf && <div className="forn-sub">{f.cnpjCpf}</div>}
+                  </td>
+                  <td>
+                    {f.telefone ? <div>{f.telefone}</div> : null}
+                    {f.email && <div className="forn-sub">{f.email}</div>}
+                    {!f.telefone && !f.email && <span className="forn-vazio">—</span>}
+                  </td>
+                  <td style={{ maxWidth: 300 }}>
+                    {enderecoCompleto(f)
+                      ? <div className="forn-endereco" title={enderecoCompleto(f)}>{enderecoCompleto(f)}</div>
+                      : <span className="forn-vazio">—</span>}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>{f.qtdProdutos > 0 ? f.qtdProdutos : <span className="forn-vazio">—</span>}</td>
+                  <td>{f.ativo ? <span className="badge badge-green">Ativo</span> : <span className="badge badge-accent">Inativo</span>}</td>
+                  <td onClick={e => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                      <button className="btn-ghost" title="Editar" onClick={() => abrirEditar(f)}><Edit2 size={13} /></button>
+                      <button className="btn-ghost" style={{ color: 'var(--red)' }} title="Excluir" onClick={() => setConfirmDel(f)}><Trash2 size={13} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Celular: cards */}
+        <div className="forn-cards-mobile" style={{ flexDirection: 'column', gap: 10 }}>
           {listaPaginada.map(f => (
             <div key={f.id} className="card" style={{ opacity: f.ativo ? 1 : 0.5 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
@@ -145,7 +236,7 @@ export function Fornecedores() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 6, fontSize: 13, color: 'var(--text-3)' }}>
                     {f.telefone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={12} />{f.telefone}</span>}
                     {f.email && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Mail size={12} />{f.email}</span>}
-                    {f.endereco && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={12} />{f.endereco}</span>}
+                    {enderecoCompleto(f) && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={12} />{enderecoCompleto(f)}</span>}
                     {f.cnpjCpf && <span>CNPJ/CPF: {f.cnpjCpf}</span>}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
@@ -165,6 +256,7 @@ export function Fornecedores() {
             </div>
           ))}
         </div>
+        </>
       )}
 
       {lista.length > 0 && (
@@ -206,10 +298,46 @@ export function Fornecedores() {
                   <label className="form-label">E-mail <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
                   <input type="email" value={form.email ?? ''} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="contato@fornecedor.com" />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Endereço <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                  <input value={form.endereco ?? ''} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} placeholder="Rua, número, bairro, cidade" />
+                <div className="form-group" style={{ gridColumn: '1/-1', marginBottom: 0 }}>
+                  <div className="forn-secao">Endereço <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></div>
                 </div>
+                <div className="form-group">
+                  <label className="form-label">CEP</label>
+                  <input value={form.cep ?? ''} onChange={e => aoDigitarCep(e.target.value)} inputMode="numeric" placeholder="00000-000" />
+                  {(buscandoCep || cepNaoEncontrado) && (
+                    <div style={{ fontSize: 11.5, marginTop: 4, color: cepNaoEncontrado ? 'var(--red)' : 'var(--text-3)' }}>
+                      {buscandoCep ? 'Buscando CEP...' : 'CEP não encontrado. Preencha manualmente.'}
+                    </div>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Rua</label>
+                  <input value={form.rua ?? ''} onChange={e => setForm(f => ({ ...f, rua: e.target.value }))} placeholder="Rua / Avenida" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Número</label>
+                  <input value={form.numero ?? ''} onChange={e => setForm(f => ({ ...f, numero: e.target.value }))} placeholder="123" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Bairro</label>
+                  <input value={form.bairro ?? ''} onChange={e => setForm(f => ({ ...f, bairro: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Cidade</label>
+                  <input value={form.cidade ?? ''} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Estado</label>
+                  <select value={form.uf ?? ''} onChange={e => setForm(f => ({ ...f, uf: e.target.value }))}>
+                    <option value="">UF</option>
+                    {UFS.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+                {!(form.rua || form.numero || form.bairro || form.cidade || form.uf) && form.endereco && (
+                  <div style={{ gridColumn: '1/-1', fontSize: 12, color: 'var(--text-3)', background: 'var(--bg-3)', borderRadius: 8, padding: '8px 10px' }}>
+                    Endereço antigo cadastrado: <strong style={{ color: 'var(--text-2)' }}>{form.endereco}</strong>. Preencha os campos acima para substituir.
+                  </div>
+                )}
                 <div className="form-group" style={{ gridColumn: '1/-1' }}>
                   <label className="form-label">Observações</label>
                   <textarea rows={2} value={form.observacoes ?? ''} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} placeholder="Prazo de entrega, condições de pagamento..." />
