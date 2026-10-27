@@ -602,7 +602,7 @@ tbody td { font-variant-numeric: tabular-nums; }
 }
 
 /* ══ Menu mais estreito + telas internas sem recuo duplo ══ */
-@media (min-width: 769px) { :root { --sidebar-w: 204px; } }
+@media (min-width: 769px) { :root { --sidebar-w: 224px; } }
 .page > .page { padding: 0; }                       /* tela dentro de tela (abas do dashboard) não recua duas vezes */
 
 /* Indicadores (KPIs) mais compactos e em grade que aproveita a largura */
