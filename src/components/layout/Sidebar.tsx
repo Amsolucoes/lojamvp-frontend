@@ -213,7 +213,7 @@ export function Sidebar() {
                   {to === '/financeiro' && finAberto && SUB_FINANCEIRO.map(sub => (
                     sub.to.includes('?') ? (
                       <Link key={sub.to} to={sub.to} className="sidebar-link sidebar-sublink" onClick={() => setAberto(false)}>
-                        <sub.icon size={14} />
+                        <i className={`sidebar-ico sidebar-ico-sm ico-${grupo.cor}`}><sub.icon size={12} /></i>
                         <span>{sub.label}</span>
                       </Link>
                     ) : (
@@ -221,7 +221,7 @@ export function Sidebar() {
                         className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? ' active' : ''}`}
                         title={recolhida ? sub.label : undefined}
                         onClick={() => setAberto(false)}>
-                        <sub.icon size={14} />
+                        <i className={`sidebar-ico sidebar-ico-sm ico-${grupo.cor}`}><sub.icon size={12} /></i>
                         <span>{sub.label}</span>
                       </NavLink>
                     )
