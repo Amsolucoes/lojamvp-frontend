@@ -196,7 +196,7 @@ export function Sidebar() {
                   <Fragment key={to}>
                   <NavLink to={to} end={to === '/' || to === '/financeiro'}
                     className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-                    title={recolhida ? label : undefined}
+                    title={label}
                     onClick={() => setAberto(false)}>
                     <i className={`sidebar-ico ico-${grupo.cor}`}><Icon size={15} /></i>
                     <span>{label}</span>
@@ -219,7 +219,7 @@ export function Sidebar() {
                     ) : (
                       <NavLink key={sub.to} to={sub.to}
                         className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? ' active' : ''}`}
-                        title={recolhida ? sub.label : undefined}
+                        title={sub.label}
                         onClick={() => setAberto(false)}>
                         <i className={`sidebar-ico sidebar-ico-sm ico-${grupo.cor}`}><sub.icon size={12} /></i>
                         <span>{sub.label}</span>

@@ -231,3 +231,8 @@ html[class*="theme-light"] .ico-indigo { --ico: #4f46e5; }
 @media (min-width: 769px) {
   .sidebar-recolhida .sidebar-sublink:has(.sidebar-ico) { padding: 4px 0; }
 }
+
+/* Nome nunca é cortado de forma feia: uma linha, reticências só em último caso */
+.sidebar-link > span:not(.sidebar-badge) { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-link:has(.sidebar-ico) { gap: 9px; }
+.sidebar-sublink:has(.sidebar-ico) { gap: 8px; }
