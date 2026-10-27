@@ -10,17 +10,17 @@ import { carregarTemaSalvo } from '../../utils/tema';
 import { useMobileShellOverride } from '../../utils/mobileShellOverride';
 import './Sidebar.css';
 
-// Cor do ícone por grupo de função (vendas, estoque, pessoas, dinheiro, análise, sistema)
-const COR_ICONE: Record<string, string> = {
-  '/': 'azul', '/caixa': 'verde', '/servicos': 'verde', '/agenda': 'verde', '/planos': 'verde',
-  '/produtos': 'ambar', '/estoque': 'ambar', '/etiquetas': 'ambar', '/nf': 'ambar', '/fornecedores': 'ambar',
-  '/clientes': 'azul', '/funcionarios': 'azul', '/comissoes': 'azul', '/turmas': 'azul', '/funil': 'azul',
-  '/financeiro': 'teal', '/chacara/preco': 'teal',
-  '/relatorios': 'roxo', '/fluxo': 'roxo',
-  '/ordem-servico': 'rosa', '/patrimonio': 'rosa',
-  '/chacara/info': 'rosa', '/chacara/datas-especiais': 'rosa', '/chacara/reservas': 'verde',
-  '/ajuda': 'cinza', '/configuracoes': 'cinza',
-};
+// Grupos do menu: cada módulo tem título e cor própria
+const GRUPOS = [
+  { id: 'geral',      titulo: '',           cor: 'indigo' },
+  { id: 'cadastros',  titulo: 'Cadastros',  cor: 'azul'   },
+  { id: 'vendas',     titulo: 'Vendas',     cor: 'verde'  },
+  { id: 'servicos',   titulo: 'Serviços',   cor: 'roxo'   },
+  { id: 'equipe',     titulo: 'Equipe',     cor: 'ambar'  },
+  { id: 'financeiro', titulo: 'Financeiro', cor: 'teal'   },
+  { id: 'chacara',    titulo: 'Chácara',    cor: 'rosa'   },
+  { id: 'sistema',    titulo: 'Sistema',    cor: 'cinza'  },
+];
 
 function iniciais(nome: string) {
   return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
@@ -119,32 +119,32 @@ export function Sidebar() {
   const temOrdemServico = modulos.includes('ordem_servico');
 
   const NAV = [
-    { to: '/',           icon: LayoutDashboard, label: 'Dashboard'      },
-    ...(temProdutos ? [{ to: '/produtos', icon: Package, label: 'Produtos' }] : []),
-    ...(temProdutos || temServicos || temTurmas || temCorretora ? [{ to: '/clientes', icon: Users, label: temTurmas && !temProdutos && !temServicos ? 'Alunos' : 'Clientes' }] : []),
-    ...(temProdutos || temServicos ? [{ to: '/caixa', icon: ShoppingCart, label: 'Caixa' }] : []),
-    ...(temServicos ? [{ to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
-    ...(temServicos ? [{ to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
-    ...(temServicos || temTurmas ? [{ to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
-    ...(temProdutos ? [{ to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
-    ...(temProdutos ? [{ to: '/fornecedores', icon: Truck, label: 'Fornecedores' }] : []),
-    ...(temEtiquetas ? [{ to: '/etiquetas', icon: Tag, label: 'Etiquetas' }] : []),
-    ...(temNf ? [{ to: '/nf', label: 'Importar NF', icon: FileText }] : []),
-    ...(temFuncionarios ? [{ to: '/funcionarios', label: 'Funcionários', icon: UserCog }] : []),
-    ...(temFuncionarios ? [{ to: '/comissoes', label: 'Comissões', icon: Percent }] : []),
-    ...(temOrdemServico ? [{ to: '/ordem-servico', label: 'Ordem de Serviço', icon: Wrench }] : []),
-    ...(temOrdemServico ? [{ to: '/patrimonio', label: 'Patrimônio', icon: ClipboardCheck }] : []),
-    ...(temFinanceiro ? [{ to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
-    ...(temTurmas ? [{ to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
-    ...(temCorretora ? [{ to: '/funil', icon: Filter, label: 'Funil de Vendas' }] : []),
-    ...(temChacaraReservas ? [{ to: '/chacara/preco', icon: Home, label: 'Preço das Reservas' }] : []),
-    ...(temChacaraReservas ? [{ to: '/chacara/info', icon: Image, label: 'Fotos e Descrição' }] : []),
-    ...(temChacaraReservas ? [{ to: '/chacara/datas-especiais', icon: CalendarHeart, label: 'Datas Especiais' }] : []),
-    ...(temChacaraReservas ? [{ to: '/chacara/reservas', icon: Calendar, label: 'Reservas' }] : []),
-    ...(temProdutos || temServicos ? [{ to: '/relatorios', icon: BarChart2, label: 'Relatórios' }] : []),
-    ...(temProdutos || temServicos ? [{ to: '/fluxo', icon: TrendingUp, label: 'Fluxo de Caixa' }] : []),
-    { to: '/ajuda', icon: HelpCircle, label: 'Central de Ajuda' },
-    { to: '/configuracoes', icon: Settings, label: 'Configurações' },
+    { g: 'geral', to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    ...(temProdutos || temServicos || temTurmas || temCorretora ? [{ g: 'cadastros', to: '/clientes', icon: Users, label: temTurmas && !temProdutos && !temServicos ? 'Alunos' : 'Clientes' }] : []),
+    ...(temProdutos ? [{ g: 'cadastros', to: '/produtos', icon: Package, label: 'Produtos' }] : []),
+    ...(temProdutos ? [{ g: 'cadastros', to: '/fornecedores', icon: Truck, label: 'Fornecedores' }] : []),
+    ...(temProdutos || temServicos ? [{ g: 'vendas', to: '/caixa', icon: ShoppingCart, label: 'Caixa' }] : []),
+    ...(temProdutos ? [{ g: 'vendas', to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
+    ...(temEtiquetas ? [{ g: 'vendas', to: '/etiquetas', icon: Tag, label: 'Etiquetas' }] : []),
+    ...(temNf ? [{ g: 'vendas', to: '/nf', label: 'Importar NF', icon: FileText }] : []),
+    ...(temCorretora ? [{ g: 'vendas', to: '/funil', icon: Filter, label: 'Funil de Vendas' }] : []),
+    ...(temProdutos || temServicos ? [{ g: 'vendas', to: '/relatorios', icon: BarChart2, label: 'Relatórios' }] : []),
+    ...(temServicos ? [{ g: 'servicos', to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
+    ...(temServicos ? [{ g: 'servicos', to: '/agenda', icon: Calendar, label: 'Agenda' }] : []),
+    ...(temServicos || temTurmas ? [{ g: 'servicos', to: '/planos', icon: CreditCard, label: 'Planos' }] : []),
+    ...(temTurmas ? [{ g: 'servicos', to: '/turmas', icon: Users2, label: 'Turmas' }] : []),
+    ...(temOrdemServico ? [{ g: 'servicos', to: '/ordem-servico', label: 'Ordem de Serviço', icon: Wrench }] : []),
+    ...(temOrdemServico ? [{ g: 'servicos', to: '/patrimonio', label: 'Patrimônio', icon: ClipboardCheck }] : []),
+    ...(temFuncionarios ? [{ g: 'equipe', to: '/funcionarios', label: 'Funcionários', icon: UserCog }] : []),
+    ...(temFuncionarios ? [{ g: 'equipe', to: '/comissoes', label: 'Comissões', icon: Percent }] : []),
+    ...(temFinanceiro ? [{ g: 'financeiro', to: '/financeiro', icon: Wallet, label: 'Financeiro' }] : []),
+    ...(temProdutos || temServicos ? [{ g: 'financeiro', to: '/fluxo', icon: TrendingUp, label: 'Fluxo de Caixa' }] : []),
+    ...(temChacaraReservas ? [{ g: 'chacara', to: '/chacara/reservas', icon: Calendar, label: 'Reservas' }] : []),
+    ...(temChacaraReservas ? [{ g: 'chacara', to: '/chacara/preco', icon: Home, label: 'Preço das Reservas' }] : []),
+    ...(temChacaraReservas ? [{ g: 'chacara', to: '/chacara/info', icon: Image, label: 'Fotos e Descrição' }] : []),
+    ...(temChacaraReservas ? [{ g: 'chacara', to: '/chacara/datas-especiais', icon: CalendarHeart, label: 'Datas Especiais' }] : []),
+    { g: 'sistema', to: '/ajuda', icon: HelpCircle, label: 'Central de Ajuda' },
+    { g: 'sistema', to: '/configuracoes', icon: Settings, label: 'Configurações' },
   ];
 
   const SUB_FINANCEIRO = temFinanceiro ? [
@@ -186,44 +186,51 @@ export function Sidebar() {
         </div>
 
         <nav className="sidebar-nav">
-          <div className="sidebar-secao">Menu</div>
-          {NAV.map(({ to, icon: Icon, label }) => (
-            <Fragment key={to}>
-            {to === '/ajuda' && <div className="sidebar-secao">Sistema</div>}
-            <NavLink to={to} end={to === '/' || to === '/financeiro'}
-              className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-              title={recolhida ? label : undefined}
-              onClick={() => setAberto(false)}>
-              <i className={`sidebar-ico ico-${COR_ICONE[to] ?? 'cinza'}`}><Icon size={15} /></i>
-              <span>{label}</span>
-              {label === 'Estoque' && alertas > 0 && (
-                <span className="sidebar-badge">{alertas}</span>
-              )}
-              {to === '/financeiro' && (
-                <button type="button" className="sidebar-expand" title={finAberto ? 'Recolher' : 'Expandir'}
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); setFinAberto(v => !v); }}>
-                  <ChevronDown size={14} style={{ transform: finAberto ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
-                </button>
-              )}
-            </NavLink>
-            {to === '/financeiro' && finAberto && SUB_FINANCEIRO.map(sub => (
-              sub.to.includes('?') ? (
-                <Link key={sub.to} to={sub.to} className="sidebar-link sidebar-sublink" onClick={() => setAberto(false)}>
-                  <sub.icon size={14} />
-                  <span>{sub.label}</span>
-                </Link>
-              ) : (
-                <NavLink key={sub.to} to={sub.to}
-                  className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? ' active' : ''}`}
-                  title={recolhida ? sub.label : undefined}
-                  onClick={() => setAberto(false)}>
-                  <sub.icon size={14} />
-                  <span>{sub.label}</span>
-                </NavLink>
-              )
-            ))}
-            </Fragment>
-          ))}
+          {GRUPOS.map(grupo => {
+            const itens = NAV.filter(n => n.g === grupo.id);
+            if (itens.length === 0) return null;
+            return (
+              <div key={grupo.id} className="sidebar-grupo">
+                {grupo.titulo && <div className={`sidebar-secao ico-${grupo.cor}`}>{grupo.titulo}</div>}
+                {itens.map(({ to, icon: Icon, label }) => (
+                  <Fragment key={to}>
+                  <NavLink to={to} end={to === '/' || to === '/financeiro'}
+                    className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+                    title={recolhida ? label : undefined}
+                    onClick={() => setAberto(false)}>
+                    <i className={`sidebar-ico ico-${grupo.cor}`}><Icon size={15} /></i>
+                    <span>{label}</span>
+                    {label === 'Estoque' && alertas > 0 && (
+                      <span className="sidebar-badge">{alertas}</span>
+                    )}
+                    {to === '/financeiro' && (
+                      <button type="button" className="sidebar-expand" title={finAberto ? 'Recolher' : 'Expandir'}
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); setFinAberto(v => !v); }}>
+                        <ChevronDown size={14} style={{ transform: finAberto ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+                      </button>
+                    )}
+                  </NavLink>
+                  {to === '/financeiro' && finAberto && SUB_FINANCEIRO.map(sub => (
+                    sub.to.includes('?') ? (
+                      <Link key={sub.to} to={sub.to} className="sidebar-link sidebar-sublink" onClick={() => setAberto(false)}>
+                        <sub.icon size={14} />
+                        <span>{sub.label}</span>
+                      </Link>
+                    ) : (
+                      <NavLink key={sub.to} to={sub.to}
+                        className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? ' active' : ''}`}
+                        title={recolhida ? sub.label : undefined}
+                        onClick={() => setAberto(false)}>
+                        <sub.icon size={14} />
+                        <span>{sub.label}</span>
+                      </NavLink>
+                    )
+                  ))}
+                  </Fragment>
+                ))}
+              </div>
+            );
+          })}
         </nav>
 
         <button type="button" className="sidebar-toggle" onClick={() => setRecolhida(v => !v)}

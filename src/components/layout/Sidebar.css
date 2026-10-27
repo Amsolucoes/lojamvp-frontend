@@ -208,3 +208,19 @@ html[class*="theme-light"] .sidebar-link.active .sidebar-ico { color: #fff; }
 @media (min-width: 769px) {
   .sidebar-recolhida .sidebar-link:has(.sidebar-ico) { padding: 5px 0; }
 }
+
+/* ── Grupos por módulo ────────────────────────────────────────────── */
+.sidebar-grupo { display: flex; flex-direction: column; gap: 1px; }
+.sidebar-secao { display: flex; align-items: center; gap: 7px; padding: 12px 12px 4px; }
+.sidebar-secao::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  background: var(--ico);
+}
+.ico-indigo { --ico: #818cf8; }
+html[class*="theme-light"] .ico-indigo { --ico: #4f46e5; }
+/* o título do grupo não é um bloco de ícone: só herda a variável de cor */
+.sidebar-secao.ico-azul, .sidebar-secao.ico-verde, .sidebar-secao.ico-ambar, .sidebar-secao.ico-teal,
+.sidebar-secao.ico-roxo, .sidebar-secao.ico-rosa, .sidebar-secao.ico-cinza { color: var(--text-3); }
+@media (min-width: 769px) {
+  .sidebar-recolhida .sidebar-grupo + .sidebar-grupo { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+}
