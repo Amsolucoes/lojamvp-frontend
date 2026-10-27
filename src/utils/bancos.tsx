@@ -10,9 +10,18 @@ export const BANCOS = [
   { id: 'outro', nome: 'Outro / não informar', cor: 'var(--text-3)', sigla: '🏦' },
 ];
 
+// Logos reais em /public/bancos (pacote react-bancos, MIT). As marcas pertencem às instituições.
+const LOGO_BANCO = new Set(['itau', 'nubank', 'santander', 'bradesco', 'caixa', 'bb', 'inter', 'c6']);
+
 export function BankBadge({ bancoId, tamanho = 22 }: { bancoId?: string | null; tamanho?: number }) {
   const b = BANCOS.find(x => x.id === bancoId);
   if (!b || bancoId === 'outro' || !bancoId) return null;
+  if (LOGO_BANCO.has(b.id)) {
+    return (
+      <img src={`/bancos/${b.id}.svg`} alt={b.nome} title={b.nome} width={tamanho} height={tamanho}
+        style={{ borderRadius: tamanho * 0.22, flexShrink: 0, display: 'block' }} />
+    );
+  }
   return (
     <span title={b.nome} style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
