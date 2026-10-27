@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, PiggyBank } from 'lucide-react';
 import { api } from '../../services/api';
+import { destinoVoltarFinanceiro } from '../../utils/navegacao';
 import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
 import { DetalheCategoriaModal } from './DetalheCategoriaModal';
@@ -168,7 +169,7 @@ export function Planejamento() {
   return (
     <div className="page" style={{ paddingBottom: 40 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <button className="btn-ghost" onClick={() => navigate('/financeiro')} style={{ padding: 8 }}><ArrowLeft size={18} /></button>
+        <button className="btn-ghost" onClick={() => navigate(destinoVoltarFinanceiro())} style={{ padding: 8 }}><ArrowLeft size={18} /></button>
         <h1 className="page-title" style={{ margin: 0 }}>Planejamento</h1>
       </div>
       <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '4px 0 0 46px' }}>
