@@ -24,6 +24,8 @@ interface ComissaoDetalhe {
   nomeServico: string | null;
   nomeCliente: string | null;
   dataAtendimento: string | null;
+  tipo: 'agendamento' | 'venda' | 'ordem_servico';
+  itens: { descricao: string; quantidade: number; valor: number; tipo: string }[] | null;
 }
 
 interface Fechamento {
@@ -253,7 +255,39 @@ export function Comissoes() {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <>
+            <div className="table-wrap tbl-desktop">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Profissional</th>
+                    <th style={{ textAlign: 'right' }}>Atendimentos</th>
+                    <th style={{ textAlign: 'right' }}>Valor pendente</th>
+                    <th style={{ width: 300 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumoPaginado.map(r => (
+                    <tr key={r.profissionalId} className="tbl-linha" onClick={() => abrirDetalhe(r)}>
+                      <td style={{ fontWeight: 600, color: 'var(--text-1)' }}>{r.profissionalNome}</td>
+                      <td style={{ textAlign: 'right' }}>{r.qtdAtendimentos}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text-1)' }}>{fmt(r.valorTotal)}</td>
+                      <td onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
+                          <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => abrirDetalhe(r)}>
+                            <ChevronDown size={13} style={{ verticalAlign: -2 }} /> Ver detalhes
+                          </button>
+                          <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => abrirFechar(r)}>
+                            <DollarSign size={13} style={{ verticalAlign: -2 }} /> Fechar e pagar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="cards-mobile" style={{ flexDirection: 'column', gap: 10 }}>
               {resumoPaginado.map(r => (
                 <div key={r.profissionalId} className="card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
@@ -275,6 +309,7 @@ export function Comissoes() {
                 </div>
               ))}
             </div>
+            </>
           )}
 
           {!loadingResumo && resumo.length > 0 && (
@@ -331,7 +366,40 @@ export function Comissoes() {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <>
+            <div className="table-wrap tbl-desktop">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Profissional</th>
+                    <th>Período</th>
+                    <th style={{ textAlign: 'right' }}>Atendimentos</th>
+                    <th>Pago em</th>
+                    <th style={{ textAlign: 'right' }}>Valor</th>
+                    <th style={{ width: 60 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fechamentosPaginados.map(f => (
+                    <tr key={f.id}>
+                      <td style={{ fontWeight: 600, color: 'var(--text-1)' }}>{f.profissionalNome}</td>
+                      <td>{fmtData(f.periodoInicio)} — {fmtData(f.periodoFim)}</td>
+                      <td style={{ textAlign: 'right' }}>{f.qtdAtendimentos}</td>
+                      <td>{fmtData(f.pagoEm)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text-1)' }}>{fmt(f.valorTotal)}</td>
+                      <td>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <button className="btn-ghost" title="Desfazer fechamento" style={{ color: 'var(--red)' }} onClick={() => setConfirmDesfazer(f)}>
+                            <RotateCcw size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="cards-mobile" style={{ flexDirection: 'column', gap: 10 }}>
               {fechamentosPaginados.map(f => (
                 <div key={f.id} className="card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
@@ -354,6 +422,7 @@ export function Comissoes() {
                </div>
               ))}
             </div>
+            </>
           )}
 
           {!loadingHistorico && fechamentosFiltrados.length > 0 && (
@@ -378,7 +447,7 @@ export function Comissoes() {
       {/* Modal detalhe */}
       {modalDetalhe && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalDetalhe(null)}>
-          <div className="modal" style={{ maxWidth: 480 }}>
+          <div className="modal" style={{ maxWidth: 560 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>Comissões pendentes — {modalDetalhe.profissionalNome}</h2>
               <button className="btn-ghost" onClick={() => setModalDetalhe(null)}><X size={16} /></button>
@@ -391,14 +460,39 @@ export function Comissoes() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {detalhes.map(d => (
-                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>{d.nomeServico ?? 'Serviço'}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                          {d.nomeCliente || 'Sem cliente'} · {d.dataAtendimento ? fmtData(d.dataAtendimento) : '—'} · {d.comissaoPercentual}% de {fmt(d.valorServico)}
+                    <div key={d.id} style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            {d.nomeServico ?? 'Serviço'}
+                            {d.tipo !== 'venda' && d.tipo !== 'ordem_servico' ? (
+                              <span className="badge badge-accent" style={{ fontSize: 10 }}>Serviço</span>
+                            ) : d.nomeServico !== 'Venda' && (
+                              <span className="badge badge-accent" style={{ fontSize: 10 }}>{d.tipo === 'venda' ? 'Venda' : 'Ordem de serviço'}</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                            {d.nomeCliente || 'Sem cliente'} · {d.dataAtendimento ? fmtData(d.dataAtendimento) : '—'} · {d.comissaoPercentual}% de {fmt(d.valorServico)}
+                          </div>
                         </div>
+                        <span style={{ fontWeight: 600, fontSize: 13, flexShrink: 0, marginLeft: 8 }}>{fmt(d.valorComissao)}</span>
                       </div>
-                      <span style={{ fontWeight: 600, fontSize: 13, flexShrink: 0, marginLeft: 8 }}>{fmt(d.valorComissao)}</span>
+                      {d.itens && d.itens.length > 0 && (
+                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed var(--border)' }}>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>
+                            {d.tipo === 'venda' ? 'Itens da venda' : d.tipo === 'ordem_servico' ? 'Itens da ordem de serviço' : 'Serviço realizado'}
+                          </div>
+                          {d.itens.map((it, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, color: 'var(--text-2)', padding: '2px 0' }}>
+                              <span style={{ minWidth: 0 }}>
+                                {it.quantidade > 1 || d.tipo !== 'agendamento' ? `${Number(it.quantidade).toLocaleString('pt-BR')}× ` : ''}{it.descricao}
+                                {d.tipo === 'ordem_servico' && <span style={{ color: 'var(--text-3)' }}> ({it.tipo === 'servico' ? 'serviço' : 'peça'})</span>}
+                              </span>
+                              <span style={{ flexShrink: 0 }}>{fmt(it.valor)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Trash2, Users, Edit2, Percent } from 'lucide-react';
+import { Plus, X, Trash2, Users, Edit2, Percent, ArrowUp, ArrowDown } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
-import { formatarTelefone, formatarCep, buscarEnderecoPorCep } from '../../utils/mascaras';
+import { formatarTelefone, formatarCep, buscarCepDetalhado } from '../../utils/mascaras';
+import { contemTexto } from '../../utils/texto';
+
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
 interface Servico {
   id: string;
@@ -28,6 +31,10 @@ interface Profissional {
   telefone: string | null;
   cep: string | null;
   endereco: string | null;
+  numero: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
   comissaoBaseCalculo: string; // total | servico — base de cálculo da comissão em Ordem de Serviço
   comissaoVendasAtiva: boolean;
   comissaoVendasPercentual: number | null;
@@ -53,13 +60,14 @@ export function Funcionarios() {
     nome: '', comissaoPadraoPercentual: '', ativo: true, diaPagamentoPadrao: '',
     tipoRemuneracao: 'comissao' as 'comissao' | 'salario_fixo' | 'diaria',
     salarioFixo: '', contaBancariaId: '',
-    telefone: '', cep: '', endereco: '',
+    telefone: '', cep: '', endereco: '', numero: '', bairro: '', cidade: '', uf: '',
     comissaoBaseCalculo: 'total' as 'total' | 'servico',
     valorDiaria: '',
     comissaoVendasAtiva: false,
     comissaoVendasPercentual: '',
   });
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [cepNaoEncontrado, setCepNaoEncontrado] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [modalComissoes, setModalComissoes] = useState<Profissional | null>(null);
@@ -94,21 +102,28 @@ export function Funcionarios() {
   async function handleCepChange(valor: string) {
     const formatado = formatarCep(valor);
     setForm(f => ({ ...f, cep: formatado }));
+    setCepNaoEncontrado(false);
     const digitos = formatado.replace(/\D/g, '');
     if (digitos.length === 8) {
       setBuscandoCep(true);
-      const resultado = await buscarEnderecoPorCep(formatado);
-      if (resultado) setForm(f => ({ ...f, endereco: resultado.slice(0, 200) }));
+      const r = await buscarCepDetalhado(formatado);
       setBuscandoCep(false);
+      if (!r) { setCepNaoEncontrado(true); return; }
+      setForm(f => ({
+        ...f,
+        endereco: (r.rua || f.endereco).slice(0, 200), bairro: r.bairro || f.bairro,
+        cidade: r.cidade || f.cidade, uf: r.uf || f.uf,
+      }));
     }
   }
 
   function abrirNovo() {
     setEditandoId(null);
+    setCepNaoEncontrado(false);
     setForm({
       nome: '', comissaoPadraoPercentual: '', ativo: true, diaPagamentoPadrao: '',
       tipoRemuneracao: 'comissao', salarioFixo: '', contaBancariaId: '',
-      telefone: '', cep: '', endereco: '',
+      telefone: '', cep: '', endereco: '', numero: '', bairro: '', cidade: '', uf: '',
       comissaoBaseCalculo: 'total',
       valorDiaria: '',
       comissaoVendasAtiva: false,
@@ -130,6 +145,7 @@ export function Funcionarios() {
       telefone: p.telefone ?? '',
       cep: p.cep ?? '',
       endereco: p.endereco ?? '',
+      numero: p.numero ?? '', bairro: p.bairro ?? '', cidade: p.cidade ?? '', uf: p.uf ?? '',
       comissaoBaseCalculo: (p.comissaoBaseCalculo as 'total' | 'servico') ?? 'total',
       valorDiaria: p.valorDiaria != null ? String(p.valorDiaria) : '',
       comissaoVendasAtiva: p.comissaoVendasAtiva ?? false,
@@ -165,6 +181,10 @@ export function Funcionarios() {
         telefone: form.telefone || null,
         cep: form.cep || null,
         endereco: form.endereco || null,
+        numero: form.numero || null,
+        bairro: form.bairro || null,
+        cidade: form.cidade || null,
+        uf: form.uf || null,
         comissaoBaseCalculo: form.comissaoBaseCalculo,
         valorDiaria: form.tipoRemuneracao === 'diaria' && form.valorDiaria ? parseFloat(form.valorDiaria) : null,
         comissaoVendasAtiva: form.comissaoVendasAtiva,
@@ -249,11 +269,30 @@ export function Funcionarios() {
     return servicos.find(s => s.id === servicoId)?.nome ?? '—';
   }
 
+  const [ordemNome, setOrdemNome] = useState<1 | -1>(1);
+
+  function descricaoRemuneracao(p: Profissional) {
+    const brl = (n: number | null) => n != null ? n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'não definido';
+    const partes: string[] = [];
+    if (p.tipoRemuneracao === 'salario_fixo') partes.push(`Salário fixo ${brl(p.salarioFixo)}`);
+    else if (p.tipoRemuneracao === 'diaria') partes.push(`Diária ${brl(p.valorDiaria)}`);
+    else partes.push(`Comissão ${p.comissaoPadraoPercentual != null ? p.comissaoPadraoPercentual + '%' : 'não definida'}`);
+    if (p.tipoRemuneracao !== 'comissao' && p.comissaoPadraoPercentual != null) partes.push(`+ ${p.comissaoPadraoPercentual}% comissão`);
+    if (p.comissaoVendasAtiva) partes.push(`Vendas ${p.comissaoVendasPercentual}%`);
+    return partes;
+  }
+
+  function enderecoResumo(p: Profissional) {
+    const ruaNum = [p.endereco, p.numero].filter(Boolean).join(', ');
+    const cidadeUf = [p.cidade, p.uf].filter(Boolean).join('/');
+    return [ruaNum, p.bairro, cidadeUf].filter(Boolean).join(' - ');
+  }
+
   const profissionaisFiltrados = profissionais.filter(p => {
-    const passaBusca = !busca || p.nome.toLowerCase().includes(busca.toLowerCase());
+    const passaBusca = !busca || contemTexto(p.nome, busca);
     const passaStatus = statusFiltro === 'todos' ? true : statusFiltro === 'ativo' ? p.ativo : !p.ativo;
     return passaBusca && passaStatus;
-  });
+  }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR') * ordemNome);
   const totalPaginas = Math.max(1, Math.ceil(profissionaisFiltrados.length / itensPorPagina));
   const paginaAtual = Math.min(paginaLista, totalPaginas);
   const inicioSlice = (paginaAtual - 1) * itensPorPagina;
@@ -303,7 +342,58 @@ export function Funcionarios() {
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <>
+        {/* Desktop: tabela */}
+        <div className="table-wrap tbl-desktop">
+          <table>
+            <thead>
+              <tr>
+                <th><button type="button" className="th-sort" onClick={() => setOrdemNome(o => (o * -1) as 1 | -1)}>Funcionário{ordemNome === 1 ? <ArrowUp size={11} /> : <ArrowDown size={11} />}</button></th>
+                <th>Remuneração</th>
+                {temOrdemServico && <th>Base da OS</th>}
+                <th>Endereço</th>
+                <th>Status</th>
+                <th style={{ width: 230 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {profissionaisPaginados.map(p => (
+                <tr key={p.id} className="tbl-linha" style={{ opacity: p.ativo ? 1 : 0.55 }} onClick={() => abrirEditar(p)}>
+                  <td>
+                    <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>{p.nome}</div>
+                    {p.telefone && <div className="tbl-sub">{p.telefone}</div>}
+                  </td>
+                  <td>
+                    {descricaoRemuneracao(p).map((t, i) => <div key={i} className={i === 0 ? '' : 'tbl-sub'}>{t}</div>)}
+                    {p.comissoesPorServico.length > 0 && (
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                        {p.comissoesPorServico.map(c => (
+                          <span key={c.id} className="badge badge-accent" style={{ fontSize: 10 }}>{nomeServico(c.servicoId)}: {c.comissaoPercentual}%</span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  {temOrdemServico && <td style={{ color: 'var(--text-2)' }}>{p.comissaoBaseCalculo === 'servico' ? 'Só mão de obra' : 'Peça + serviço'}</td>}
+                  <td style={{ maxWidth: 260 }}>
+                    {enderecoResumo(p) ? <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-2)' }} title={enderecoResumo(p)}>{enderecoResumo(p)}</div> : <span className="tbl-vazio">—</span>}
+                  </td>
+                  <td>{p.ativo ? <span className="badge badge-green">Ativo</span> : <span className="badge badge-accent">Inativo</span>}</td>
+                  <td onClick={e => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <button className="btn-secondary" style={{ fontSize: 12 }} onClick={() => abrirComissoes(p)}><Percent size={13} /> Comissões</button>
+                      <button className="btn-ghost" title={p.ativo ? 'Desativar' : 'Ativar'} onClick={() => alternarAtivo(p)}>{p.ativo ? 'Desativar' : 'Ativar'}</button>
+                      <button className="btn-ghost" title="Editar" onClick={() => abrirEditar(p)}><Edit2 size={13} /></button>
+                      <button className="btn-ghost" style={{ color: 'var(--red)' }} title="Excluir" onClick={() => setConfirmDel(p)}><Trash2 size={13} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Celular: cards */}
+        <div className="cards-mobile" style={{ flexDirection: 'column', gap: 10 }}>
           {profissionaisPaginados.map(p => (
             <div key={p.id} className="card" style={{ opacity: p.ativo ? 1 : 0.5 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
@@ -362,6 +452,7 @@ export function Funcionarios() {
             </div>
           ))}
         </div>
+        </>
       )}
 
       {!loading && profissionaisFiltrados.length > 0 && (
@@ -401,15 +492,42 @@ export function Funcionarios() {
                   <input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: formatarTelefone(e.target.value) }))} placeholder="(00) 00000-0000" />
                 </div>
 
+                <div className="form-secao">Endereço <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></div>
                 <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 10 }}>
                   <div className="form-group">
-                    <label className="form-label">CEP <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
-                    <input value={form.cep} onChange={e => handleCepChange(e.target.value)} placeholder="00000-000" />
+                    <label className="form-label">CEP</label>
+                    <input value={form.cep} onChange={e => handleCepChange(e.target.value)} inputMode="numeric" placeholder="00000-000" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Endereço {buscandoCep && <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(buscando...)</span>}</label>
                     <input value={form.endereco} maxLength={200}
-                      onChange={e => setForm(f => ({ ...f, endereco: e.target.value.slice(0, 200) }))} placeholder="Rua, bairro, cidade - UF" />
+                      onChange={e => setForm(f => ({ ...f, endereco: e.target.value.slice(0, 200) }))} placeholder="Rua / Avenida" />
+                  </div>
+                </div>
+                {cepNaoEncontrado && (
+                  <div style={{ fontSize: 11.5, color: 'var(--red)', marginTop: -6 }}>CEP não encontrado. Preencha o endereço manualmente.</div>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: 10 }}>
+                  <div className="form-group">
+                    <label className="form-label">Número</label>
+                    <input value={form.numero} onChange={e => setForm(f => ({ ...f, numero: e.target.value }))} placeholder="123" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Bairro</label>
+                    <input value={form.bairro} onChange={e => setForm(f => ({ ...f, bairro: e.target.value }))} />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 10 }}>
+                  <div className="form-group">
+                    <label className="form-label">Cidade</label>
+                    <input value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Estado</label>
+                    <select value={form.uf} onChange={e => setForm(f => ({ ...f, uf: e.target.value }))}>
+                      <option value="">UF</option>
+                      {UFS.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
                   </div>
                 </div>
 
