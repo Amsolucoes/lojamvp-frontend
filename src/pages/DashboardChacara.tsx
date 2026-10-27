@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, DollarSign, Clock, TrendingUp, BedDouble } from 'lucide-react';
+import { Calendar, DollarSign, Clock, TrendingUp, BedDouble, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../services/api';
 import './Dashboard.css';
 
@@ -23,7 +23,12 @@ type MesResumo = {
   percentualNegociacao: number; valorNegociacao: number;
 };
 
+type TotaisGerais = { totalReservas: number; totalPago: number; totalPendente: number; totalNegociacao: number; totalPendenteNegociacao: number };
+
 type DadosDashboard = {
+  anoSelecionado?: number | null;
+  anosDisponiveis?: number[];
+  geral?: TotaisGerais;
   totalReservas: number;
   totalPago: number;
   totalPendente: number;
@@ -37,10 +42,16 @@ type DadosDashboard = {
 
 export function DashboardChacara() {
   const [dados, setDados] = useState<DadosDashboard | null>(null);
+  const [ano, setAno] = useState(new Date().getFullYear());
+  const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    api.get<DadosDashboard>('/api/chacara/dashboard?mesesAFrente=6').then(setDados).catch(() => {});
-  }, []);
+    setCarregando(true);
+    api.get<DadosDashboard>(`/api/chacara/dashboard?ano=${ano}`).then(setDados).catch(() => {}).finally(() => setCarregando(false));
+  }, [ano]);
+
+  const anos = dados?.anosDisponiveis?.length ? dados.anosDisponiveis : [ano];
+  const geral = dados?.geral;
 
   return (
     <div className="page">
@@ -51,10 +62,21 @@ export function DashboardChacara() {
         </div>
       </div>
 
-      {/* Totais gerais */}
-      <div className="dash-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 20 }}>
+      {/* Filtro de ano */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>Ano</span>
+        <button className="btn-secondary" onClick={() => setAno(a => a - 1)} style={{ padding: '6px 10px' }} aria-label="Ano anterior"><ChevronLeft size={16} /></button>
+        <select value={ano} onChange={e => setAno(+e.target.value)} style={{ width: 'auto', minWidth: 100, fontWeight: 600 }}>
+          {[...new Set([...anos, ano])].sort((a, b) => a - b).map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <button className="btn-secondary" onClick={() => setAno(a => a + 1)} style={{ padding: '6px 10px' }} aria-label="Próximo ano"><ChevronRight size={16} /></button>
+        {carregando && <div className="layout-spinner" style={{ width: 18, height: 18 }} />}
+      </div>
+
+      {/* Totais do ano escolhido */}
+      <div className="dash-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 16 }}>
         <div className="stat-card">
-          <div className="stat-label"><Calendar size={12} style={{ verticalAlign: -1 }} /> Total de aluguéis</div>
+          <div className="stat-label"><Calendar size={12} style={{ verticalAlign: -1 }} /> Aluguéis em {ano}</div>
           <div className="stat-value">{(dados?.totalReservas ?? 0) + (dados?.totalNegociacao ?? 0)}</div>
           <div className="stat-sub">
             {dados?.totalReservas ?? 0} confirmado(s)
@@ -62,12 +84,12 @@ export function DashboardChacara() {
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-label"><DollarSign size={12} style={{ verticalAlign: -1 }} /> Total pago</div>
+          <div className="stat-label"><DollarSign size={12} style={{ verticalAlign: -1 }} /> Pago em {ano}</div>
           <div className="stat-value" style={{ color: 'var(--green)' }}>{fmt(dados?.totalPago ?? 0)}</div>
           <div className="stat-sub">já recebido</div>
         </div>
         <div className="stat-card" style={dados && (dados.totalPendente + dados.totalPendenteNegociacao) > 0 ? { borderColor: 'rgba(251,191,36,0.3)' } : {}}>
-          <div className="stat-label"><Clock size={12} style={{ verticalAlign: -1 }} /> Total pendente</div>
+          <div className="stat-label"><Clock size={12} style={{ verticalAlign: -1 }} /> Pendente em {ano}</div>
           <div className="stat-value" style={{ color: dados && (dados.totalPendente + dados.totalPendenteNegociacao) > 0 ? 'var(--yellow)' : undefined }}>
             {fmt((dados?.totalPendente ?? 0) + (dados?.totalPendenteNegociacao ?? 0))}
           </div>
@@ -87,12 +109,26 @@ export function DashboardChacara() {
         </div>
       </div>
 
+      {/* Total de todos os anos (separado do filtro) */}
+      {geral && (
+        <div className="card" style={{ marginBottom: 20, padding: '14px 18px' }}>
+          <div className="stat-label" style={{ marginBottom: 8 }}>Total de todos os anos</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 32px' }}>
+            <div><div style={{ fontSize: 11, color: 'var(--text-3)' }}>Aluguéis</div>
+              <strong style={{ fontSize: 18 }}>{geral.totalReservas + geral.totalNegociacao}</strong>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>{geral.totalReservas} confirmado(s){geral.totalNegociacao > 0 ? ` · ${geral.totalNegociacao} em negociação` : ''}</span></div>
+            <div><div style={{ fontSize: 11, color: 'var(--text-3)' }}>Recebido</div><strong style={{ fontSize: 18, color: 'var(--green)' }}>{fmt(geral.totalPago)}</strong></div>
+            <div><div style={{ fontSize: 11, color: 'var(--text-3)' }}>A receber</div><strong style={{ fontSize: 18, color: (geral.totalPendente + geral.totalPendenteNegociacao) > 0 ? 'var(--yellow)' : undefined }}>{fmt(geral.totalPendente + geral.totalPendenteNegociacao)}</strong></div>
+          </div>
+        </div>
+      )}
+
       <div className="dash-chacara-grid" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Quebra mês a mês */}
           <div className="card">
             <div className="dash-card-header">
-              <div className="dash-card-title"><TrendingUp size={15} /> Ocupação por mês</div>
+              <div className="dash-card-title"><TrendingUp size={15} /> Ocupação por mês · {ano}</div>
             </div>
             {!dados || dados.meses.length === 0 ? (
               <div className="empty" style={{ padding: '20px 0' }}><p>Sem dados de meses.</p></div>
