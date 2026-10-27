@@ -173,3 +173,38 @@
   .sidebar-recolhida .sidebar-toggle { justify-content: center; margin: 6px 8px 0; }
   .sidebar-recolhida .sidebar-user { justify-content: center; padding: 8px 0; margin: 8px 8px 0; flex-direction: column; gap: 6px; }
 }
+
+/* ── Ícones em bloco colorido ─────────────────────────────────────── */
+.sidebar-ico {
+  --ico: #94a3b8;
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 26px; height: 26px; border-radius: 7px; font-style: normal;
+  color: var(--ico);
+  background: color-mix(in srgb, var(--ico) 16%, transparent);
+  transition: background .12s, color .12s;
+}
+.sidebar-ico svg { opacity: 1; }
+.ico-azul  { --ico: #60a5fa; }
+.ico-verde { --ico: #34d399; }
+.ico-ambar { --ico: #fbbf24; }
+.ico-teal  { --ico: #2dd4bf; }
+.ico-roxo  { --ico: #a78bfa; }
+.ico-rosa  { --ico: #f472b6; }
+.ico-cinza { --ico: #94a3b8; }
+.sidebar-link:hover .sidebar-ico { background: color-mix(in srgb, var(--ico) 24%, transparent); }
+.sidebar-link.active .sidebar-ico { background: var(--ico); color: #0f172a; }
+.sidebar-link:has(.sidebar-ico) { padding: 4px 10px 4px 8px; gap: 10px; }
+
+/* temas claros: tons mais escuros para manter contraste */
+html[class*="theme-light"] .ico-azul  { --ico: #2563eb; }
+html[class*="theme-light"] .ico-verde { --ico: #059669; }
+html[class*="theme-light"] .ico-ambar { --ico: #d97706; }
+html[class*="theme-light"] .ico-teal  { --ico: #0d9488; }
+html[class*="theme-light"] .ico-roxo  { --ico: #7c3aed; }
+html[class*="theme-light"] .ico-rosa  { --ico: #db2777; }
+html[class*="theme-light"] .ico-cinza { --ico: #64748b; }
+html[class*="theme-light"] .sidebar-link.active .sidebar-ico { color: #fff; }
+
+@media (min-width: 769px) {
+  .sidebar-recolhida .sidebar-link:has(.sidebar-ico) { padding: 5px 0; }
+}

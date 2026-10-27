@@ -10,6 +10,18 @@ import { carregarTemaSalvo } from '../../utils/tema';
 import { useMobileShellOverride } from '../../utils/mobileShellOverride';
 import './Sidebar.css';
 
+// Cor do ícone por grupo de função (vendas, estoque, pessoas, dinheiro, análise, sistema)
+const COR_ICONE: Record<string, string> = {
+  '/': 'azul', '/caixa': 'verde', '/servicos': 'verde', '/agenda': 'verde', '/planos': 'verde',
+  '/produtos': 'ambar', '/estoque': 'ambar', '/etiquetas': 'ambar', '/nf': 'ambar', '/fornecedores': 'ambar',
+  '/clientes': 'azul', '/funcionarios': 'azul', '/comissoes': 'azul', '/turmas': 'azul', '/funil': 'azul',
+  '/financeiro': 'teal', '/chacara/preco': 'teal',
+  '/relatorios': 'roxo', '/fluxo': 'roxo',
+  '/ordem-servico': 'rosa', '/patrimonio': 'rosa',
+  '/chacara/info': 'rosa', '/chacara/datas-especiais': 'rosa', '/chacara/reservas': 'verde',
+  '/ajuda': 'cinza', '/configuracoes': 'cinza',
+};
+
 function iniciais(nome: string) {
   return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
 }
@@ -182,7 +194,7 @@ export function Sidebar() {
               className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
               title={recolhida ? label : undefined}
               onClick={() => setAberto(false)}>
-              <Icon size={16} />
+              <i className={`sidebar-ico ico-${COR_ICONE[to] ?? 'cinza'}`}><Icon size={15} /></i>
               <span>{label}</span>
               {label === 'Estoque' && alertas > 0 && (
                 <span className="sidebar-badge">{alertas}</span>
