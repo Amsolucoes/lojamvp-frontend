@@ -3,7 +3,7 @@ import { X, Pencil } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { api } from '../../services/api';
 
-interface Item { origem: string; descricao: string; valor: number; data: string; status: string; cartaoNome?: string | null; contaNome?: string | null; id?: string | null; }
+interface Item { origem: string; descricao: string; valor: number; data: string; status: string; cartaoNome?: string | null; contaNome?: string | null; id?: string | null; modo?: string | null; }
 interface CategoriaOpcao { id: string; nome: string; tipo: string; icone: string | null; }
 interface Detalhe { categoria: string; valorBalanco: number; totalItens: number; itens: Item[]; }
 
@@ -98,10 +98,15 @@ export function DetalheCategoriaModal({ ano, mes, categoria, desmembrar, onClose
                         <option value="">Sem categoria</option>
                         {opcoes.filter(o => o.tipo !== 'receber').map(o => <option key={o.id} value={o.id}>{o.icone ? `${o.icone} ` : ''}{o.nome}</option>)}
                       </select>
-                      {i.cartaoNome && (
+                      {i.modo === 'fixa' && (
+                        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, lineHeight: 1.4 }}>
+                          🔁 Conta fixa: a nova categoria vale para <strong>todos os meses</strong> (passados e futuros) e para os próximos lançamentos.
+                        </p>
+                      )}
+                      {i.modo === 'parcelada' && (
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
                           <input type="checkbox" checked={todasParcelas} onChange={e => setTodasParcelas(e.target.checked)} style={{ width: 16, height: 16, flex: 'none', padding: 0 }} />
-                          Aplicar a todas as parcelas desta compra (se for parcelada)
+                          Aplicar a todas as parcelas desta compra
                         </label>
                       )}
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
