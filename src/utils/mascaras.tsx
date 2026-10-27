@@ -73,3 +73,20 @@ export async function buscarEnderecoEstruturado(valor: string): Promise<{ endere
     return null;
   }
 }
+
+/** Busca CEP no ViaCEP devolvendo rua, bairro, cidade e UF em campos separados. */
+export async function buscarCepDetalhado(valor: string): Promise<{ rua: string; bairro: string; cidade: string; uf: string } | null> {
+  const digitos = valor.replace(/\D/g, '');
+  if (digitos.length !== 8) return null;
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
+    const dados = await res.json();
+    if (dados.erro) return null;
+    return {
+      rua: dados.logradouro ?? '', bairro: dados.bairro ?? '',
+      cidade: dados.localidade ?? '', uf: (dados.uf ?? '').toUpperCase(),
+    };
+  } catch {
+    return null;
+  }
+}

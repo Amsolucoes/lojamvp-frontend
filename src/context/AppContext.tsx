@@ -80,6 +80,7 @@ function mapFornecedor(f: any): Fornecedor {
     telefone: f.telefone, email: f.email, endereco: f.endereco,
     observacoes: f.observacoes, ativo: f.ativo, criadoEm: f.criadoEm,
     qtdProdutos: f.qtdProdutos ?? 0,
+    cep: f.cep, rua: f.rua, numero: f.numero, bairro: f.bairro, cidade: f.cidade, uf: f.uf,
   };
 }
 

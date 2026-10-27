@@ -55,6 +55,12 @@ export interface Fornecedor {
   telefone?: string | null;
   email?: string | null;
   endereco?: string | null;
+  cep?: string | null;
+  rua?: string | null;
+  numero?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
   observacoes?: string | null;
   ativo: boolean;
   criadoEm: string;
