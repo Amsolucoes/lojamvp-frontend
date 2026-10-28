@@ -118,6 +118,14 @@ export function Agenda() {
   const [showCli, setShowCli] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState<Agendamento | null>(null);
+  // Regras do plano de assinatura do cliente (dias permitidos e total de usos no mês) para o dia do agendamento
+  type InfoPlano = {
+    temPlano: boolean; emDia: boolean; servicosIncluidos: string[]; planoNome?: string;
+    limiteUsosMes?: number | null; usosNoMes?: number; usosAgendados?: number;
+    diaPermitido?: boolean; diasPermitidosTexto?: string;
+  };
+  const [infoPlano, setInfoPlano] = useState<InfoPlano | null>(null);
+  const [usoAgendamentoOriginal, setUsoAgendamentoOriginal] = useState(false);
   const faixas = gerarFaixas(horaInicio, horaFim);
   const [carregandoFaixa, setCarregandoFaixa] = useState(true);
   const [visao, setVisao] = useState<'dia' | 'semana' | 'mes'>('dia');
@@ -212,6 +220,7 @@ export function Agenda() {
   const ehHoje = dia.toDateString() === new Date().toDateString();
 
   function abrirNovo(hora?: string) {
+    setUsoAgendamentoOriginal(false);
     setEditId(null);
     setForm({
       servicoId: servicos[0]?.id ?? '',
@@ -228,6 +237,7 @@ export function Agenda() {
 
   function abrirEditar(a: Agendamento) {
     setEditId(a.id);
+    setUsoAgendamentoOriginal(a.status !== 'cancelado' && !(a as any).pago);
     setForm({
       servicoId: a.servicoId,
       clienteId: a.clienteId ?? '',
@@ -242,8 +252,30 @@ export function Agenda() {
     setModal(true);
   }
 
+  useEffect(() => {
+    if (!modal || !form.clienteId) { setInfoPlano(null); return; }
+    const ymdDia = `${dia.getFullYear()}-${String(dia.getMonth() + 1).padStart(2, '0')}-${String(dia.getDate()).padStart(2, '0')}`;
+    let ativo = true;
+    api.get<InfoPlano>(`/api/planos/cliente/${form.clienteId}?data=${ymdDia}`)
+      .then(r => { if (ativo) setInfoPlano(r); })
+      .catch(() => { if (ativo) setInfoPlano(null); });
+    return () => { ativo = false; };
+  }, [modal, form.clienteId, dia]);
+
+  // Validação do plano: o serviço escolhido está incluso no plano do cliente?
+  const planoCobre = !!(infoPlano?.temPlano && infoPlano.emDia && form.servicoId && infoPlano.servicosIncluidos.includes(form.servicoId));
+  const usadosEAgendados = (infoPlano?.usosNoMes ?? 0) + (infoPlano?.usosAgendados ?? 0) - (editId && usoAgendamentoOriginal ? 1 : 0);
+  const limitePlano = infoPlano?.limiteUsosMes ?? null;
+  const erroPlano =
+    planoCobre && infoPlano?.diaPermitido === false
+      ? `O plano ${infoPlano.planoNome ? `"${infoPlano.planoNome}" ` : ''}só pode ser usado em: ${infoPlano.diasPermitidosTexto}. Escolha outro dia.`
+      : planoCobre && limitePlano != null && usadosEAgendados + 1 > limitePlano
+        ? `O plano permite ${limitePlano} uso(s) por mês e já há ${usadosEAgendados} usado(s) ou agendado(s) neste mês.`
+        : '';
+
   async function salvar() {
     if (!form.servicoId) { erro('Escolha um serviço.'); return; }
+    if (erroPlano) { erro(erroPlano); return; }
     setSaving(true);
     try {
       // Monta a data/hora como string local (sem conversão UTC, evita bug de fuso)
@@ -732,6 +764,21 @@ export function Agenda() {
                   </div>
                 </div>
 
+                {/* Regras do plano */}
+                {planoCobre && (
+                  erroPlano ? (
+                    <div style={{ fontSize: 12, color: 'var(--red)', background: 'var(--red-bg)', border: '1px solid color-mix(in srgb, var(--red) 30%, transparent)', borderRadius: 8, padding: '8px 12px' }}>
+                      {erroPlano}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 8, padding: '8px 12px' }}>
+                      Serviço incluso no plano{infoPlano?.planoNome ? ` "${infoPlano.planoNome}"` : ''}
+                      {limitePlano != null ? ` · ${usadosEAgendados + 1}/${limitePlano} uso(s) neste mês com este agendamento` : ''}
+                      {infoPlano?.diasPermitidosTexto ? ` · dias: ${infoPlano.diasPermitidosTexto}` : ''}
+                    </div>
+                  )
+                )}
+
                 {/* Observação */}
                 <div className="form-group">
                   <label className="form-label">Observação</label>
@@ -741,7 +788,7 @@ export function Agenda() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
-              <button className="btn-primary" onClick={salvar} disabled={saving}>
+              <button className="btn-primary" onClick={salvar} disabled={saving || !!erroPlano}>
                 {saving ? 'Salvando...' : editId ? 'Salvar' : 'Agendar'}
               </button>
             </div>
