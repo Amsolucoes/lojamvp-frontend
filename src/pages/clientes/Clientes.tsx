@@ -281,7 +281,8 @@ export function Clientes() {
       ) : (
         <>
         {/* Desktop: tabela */}
-        <div className="table-wrap cli-tabela-desktop">
+        <div className="card cli-tabela-desktop" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="table-wrap">
           <table>
             <thead>
               <tr>
@@ -335,6 +336,7 @@ export function Clientes() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Celular: cards */}

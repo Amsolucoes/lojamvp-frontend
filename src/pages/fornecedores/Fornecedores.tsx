@@ -180,7 +180,8 @@ export function Fornecedores() {
       ) : (
         <>
         {/* Desktop: tabela */}
-        <div className="table-wrap forn-tabela-desktop">
+        <div className="card forn-tabela-desktop" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="table-wrap">
           <table>
             <thead>
               <tr>
@@ -221,6 +222,7 @@ export function Fornecedores() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Celular: cards */}
