@@ -201,12 +201,28 @@ export function Caixa() {
   const buscaServRef = useRef<HTMLInputElement>(null);
   const [pendentes, setPendentes] = useState<AgendamentoPendente[]>([]);
 
-  const [planoCliente, setPlanoCliente] = useState<{ temPlano: boolean; assinaturaId?: string; servicosIncluidos: string[]; emDia: boolean } | null>(null);
+  type PlanoCliente = {
+    temPlano: boolean; assinaturaId?: string; servicosIncluidos: string[]; emDia: boolean;
+    limiteUsosMes?: number | null; usosNoMes?: number; usosRestantes?: number | null;
+    diaPermitido?: boolean; diasPermitidosTexto?: string; planoNome?: string;
+  };
+  const [planoCliente, setPlanoCliente] = useState<PlanoCliente | null>(null);
 
   useEffect(() => {
     if (!clienteId) { setPlanoCliente(null); return; }
-    api.get<any>(`/api/planos/cliente/${clienteId}`).then(setPlanoCliente).catch(() => setPlanoCliente(null));
-  }, [clienteId]);
+    // A data da venda entra na regra dos dias da semana permitidos pelo plano
+    api.get<any>(`/api/planos/cliente/${clienteId}${dataVenda ? `?data=${dataVenda}` : ''}`).then(setPlanoCliente).catch(() => setPlanoCliente(null));
+  }, [clienteId, dataVenda]);
+
+  // O plano cobre este serviço? Considera mensalidade em dia, dias da semana e limite de usos no mês
+  // (já descontando os usos que estão no carrinho). Quando não cobre por regra do plano, devolve o motivo.
+  function planoCobreServico(info: PlanoCliente | null | undefined, servId: string, usosNoCarrinho: number): { ok: boolean; motivo?: string } {
+    if (!info?.temPlano || !info.emDia || !info.servicosIncluidos.includes(servId)) return { ok: false };
+    if (info.diaPermitido === false) return { ok: false, motivo: `O plano só vale em: ${info.diasPermitidosTexto}. O serviço será cobrado normalmente.` };
+    if (info.usosRestantes != null && info.usosRestantes - usosNoCarrinho <= 0)
+      return { ok: false, motivo: `Limite de ${info.limiteUsosMes} uso(s) do plano neste mês atingido. O serviço será cobrado normalmente.` };
+    return { ok: true };
+  }
 
   function carregarPendentes() {
     api.get<AgendamentoPendente[]>('/api/agendamentos/pendentes-pagamento')
@@ -368,12 +384,16 @@ export function Caixa() {
     const serv = servicos.find(s => s.id === servId);
     if (!serv) return;
 
-    const incluido = !!(planoCliente?.temPlano && planoCliente.emDia && planoCliente.servicosIncluidos.includes(servId));
+    const usosNoCarrinho = carrinho.filter(i => i.tipo === 'servico' && i.incluidoPlano).reduce((t, i) => t + i.quantidade, 0);
+    const cobertura = planoCobreServico(planoCliente, servId, usosNoCarrinho);
+    if (cobertura.motivo) toastErro(cobertura.motivo);
+    const incluido = cobertura.ok;
     const preco = incluido ? 0 : serv.preco;
     const assinaturaId = incluido ? planoCliente?.assinaturaId : undefined;
 
     setCarrinho(prev => {
-      const existe = prev.find(i => i.tipo === 'servico' && i.servicoId === servId);
+      // Serviço incluso no plano sempre entra em linha própria: cada uso conta no limite do mês
+      const existe = prev.find(i => i.tipo === 'servico' && i.servicoId === servId && !!i.incluidoPlano === incluido && !incluido);
       if (existe) {
         const novaQtd = existe.quantidade + 1;
         return prev.map(i => i.tipo === 'servico' && i.servicoId === servId
@@ -406,8 +426,11 @@ export function Caixa() {
     let assinaturaIdInfo: string | undefined;
     if (p.clienteId) {
       try {
-        const info = await api.get<any>(`/api/planos/cliente/${p.clienteId}`);
-        incluido = info.temPlano && info.emDia && info.servicosIncluidos.includes(p.servicoId);
+        const info = await api.get<any>(`/api/planos/cliente/${p.clienteId}${dataVenda ? `?data=${dataVenda}` : ''}`);
+        const usosNoCarrinho = carrinho.filter(i => i.tipo === 'servico' && i.incluidoPlano).reduce((t, i) => t + i.quantidade, 0);
+        const cobertura = planoCobreServico(info, p.servicoId, usosNoCarrinho);
+        if (cobertura.motivo) toastErro(cobertura.motivo);
+        incluido = cobertura.ok;
         assinaturaIdInfo = incluido ? info.assinaturaId : undefined;
       } catch {}
     }
@@ -1149,6 +1172,23 @@ export function Caixa() {
         {/* Cliente */}
         <div className="card cx-section">
           <div className="cx-section-title"><User size={14} /> Cliente <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></div>
+            {clienteSel && planoCliente?.temPlano && (
+              <div style={{
+                fontSize: 12, borderRadius: 8, padding: '6px 10px', marginBottom: 8,
+                background: !planoCliente.emDia || planoCliente.diaPermitido === false || planoCliente.usosRestantes === 0 ? 'var(--red-bg)' : 'var(--accent-bg)',
+                color: !planoCliente.emDia || planoCliente.diaPermitido === false || planoCliente.usosRestantes === 0 ? 'var(--red)' : 'var(--text-2)',
+              }}>
+                <strong>Plano{planoCliente.planoNome ? ` ${planoCliente.planoNome}` : ''}</strong>
+                {!planoCliente.emDia ? ' · mensalidade em atraso (serviços cobrados normalmente)' : (
+                  <>
+                    {planoCliente.limiteUsosMes != null && ` · ${planoCliente.usosNoMes ?? 0}/${planoCliente.limiteUsosMes} usos neste mês`}
+                    {planoCliente.limiteUsosMes != null && planoCliente.usosRestantes === 0 && ' (limite atingido)'}
+                    {planoCliente.diasPermitidosTexto && ` · vale em: ${planoCliente.diasPermitidosTexto}`}
+                    {planoCliente.diaPermitido === false && ' (hoje não vale)'}
+                  </>
+                )}
+              </div>
+            )}
             {clienteSel ? (
               <div className="cx-cliente-sel">
                 <div>

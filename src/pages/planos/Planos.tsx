@@ -10,6 +10,21 @@ interface Plano {
   valor: number;
   servicosIds: string | null;
   ativo: boolean;
+  limiteUsosMes: number | null;
+  diasSemanaPermitidos: string | null; // "1,2,3,4,5" (0 = domingo ... 6 = sábado); nulo = todos
+}
+
+const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function textoRegrasPlano(p: { limiteUsosMes: number | null; diasSemanaPermitidos: string | null }) {
+  const partes: string[] = [];
+  if (p.limiteUsosMes) partes.push(`até ${p.limiteUsosMes} uso(s)/mês`);
+  const dias = (p.diasSemanaPermitidos ?? '').split(',').filter(Boolean).map(Number);
+  if (dias.length > 0 && dias.length < 7) {
+    const seguidos = dias.every((d, i) => i === 0 || d === dias[i - 1] + 1);
+    partes.push(seguidos && dias.length > 2 ? `${DIAS_SEMANA[dias[0]]} a ${DIAS_SEMANA[dias[dias.length - 1]]}` : dias.map(d => DIAS_SEMANA[d]).join(', '));
+  }
+  return partes.join(' · ');
 }
 
 interface Servico {
@@ -31,14 +46,24 @@ interface Assinante {
   mesesEmAtraso: number; 
   valorTotalAtraso: number;
   totalConsumos: number;
+  usosNoMes?: number;
+  limiteUsosMes?: number | null;
+  diasSemanaPermitidos?: string | null;
 }
 
 interface PagamentoHistorico {
   id: string;
   mesReferencia: string;
   valor: number;
+  valorPago?: number | null;
   status: string;
   pagoEm: string | null;
+}
+
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+function rotuloMes(iso: string) {
+  const d = new Date(iso);
+  return `${MESES[d.getUTCMonth()]}/${d.getUTCFullYear()}`;
 }
 
 interface ConsumoServico {
@@ -54,7 +79,13 @@ export function Planos() {
   const { clientes, recarregar, temTurmas, temProdutos, temServicos } = useApp();
   const ehTurma = temTurmas && !temProdutos && !temServicos;
   const placeholderPlano = ehTurma ? 'Ex: Pilates 2x por semana' : 'Ex: Cabelo + Barba';
-  const [aba, setAba] = useState<'planos' | 'assinantes'>('planos');
+  const [aba, setAbaState] = useState<'planos' | 'assinantes'>(() => {
+    try { return sessionStorage.getItem('loja:planos-aba') === 'assinantes' ? 'assinantes' : 'planos'; } catch { return 'planos'; }
+  });
+  function setAba(a: 'planos' | 'assinantes') {
+    setAbaState(a);
+    try { sessionStorage.setItem('loja:planos-aba', a); } catch { /* sem armazenamento */ }
+  }
 
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -65,7 +96,7 @@ export function Planos() {
   // Modal de plano
   const [modalPlano, setModalPlano] = useState<'novo' | 'editar' | null>(null);
   const [planoEdit, setPlanoEdit] = useState<Plano | null>(null);
-  const [formPlano, setFormPlano] = useState({ nome: '', valor: '', servicosIds: [] as string[] });
+  const [formPlano, setFormPlano] = useState({ nome: '', valor: '', servicosIds: [] as string[], limiteUsosMes: '', diasSemana: [] as number[] });
 
   // Modal de vincular assinante
   const [modalAssinante, setModalAssinante] = useState(false);
@@ -111,7 +142,7 @@ export function Planos() {
 
   // ── Planos ──────────────────────────────────────────────────────
   function abrirNovoPlano() {
-    setFormPlano({ nome: '', valor: '', servicosIds: [] });
+    setFormPlano({ nome: '', valor: '', servicosIds: [], limiteUsosMes: '', diasSemana: [] });
     setPlanoEdit(null);
     setErroModal('');
     setModalPlano('novo');
@@ -122,6 +153,8 @@ export function Planos() {
       nome: p.nome,
       valor: String(p.valor),
       servicosIds: p.servicosIds ? p.servicosIds.split(',').filter(Boolean) : [],
+      limiteUsosMes: p.limiteUsosMes ? String(p.limiteUsosMes) : '',
+      diasSemana: (p.diasSemanaPermitidos ?? '').split(',').filter(Boolean).map(Number),
     });
     setPlanoEdit(p);
     setErroModal('');
@@ -140,6 +173,8 @@ export function Planos() {
         nome: formPlano.nome.trim(),
         valor,
         servicosIds: formPlano.servicosIds.join(',') || null,
+        limiteUsosMes: parseInt(formPlano.limiteUsosMes) > 0 ? parseInt(formPlano.limiteUsosMes) : null,
+        diasSemana: formPlano.diasSemana,
       };
       if (modalPlano === 'novo') {
         await api.post('/api/planos', payload);
@@ -180,6 +215,13 @@ export function Planos() {
     } finally {
       setConfirmExcluirPlano(null);
     }
+  }
+
+  function toggleDia(d: number) {
+    setFormPlano(f => ({
+      ...f,
+      diasSemana: f.diasSemana.includes(d) ? f.diasSemana.filter(x => x !== d) : [...f.diasSemana, d].sort(),
+    }));
   }
 
   function toggleServico(id: string) {
@@ -256,21 +298,60 @@ export function Planos() {
     try {
       await api.post(`/api/planos/assinantes/${a.assinaturaId}/pagamento`, { pago });
       await carregar();
-      await recarregar();
+      await recarregar(true);   // silencioso: não pisca a tela inteira nem volta para a aba "Planos"
       showToast(pago ? 'Marcado como pago' : 'Marcado como pendente');
     } catch (e) {
       showToast((e as Error).message);
     }
   }
 
-  async function quitarAtraso(a: Assinante) {
+  // ── Pagar meses escolhidos (com valor pago editável: juros/multa ou desconto) ──
+  const [pagarAssinante, setPagarAssinante] = useState<Assinante | null>(null);
+  const [mesesPagar, setMesesPagar] = useState<{ id: string; mesReferencia: string; valor: number; selecionado: boolean; valorPago: string }[]>([]);
+  const [carregandoMeses, setCarregandoMeses] = useState(false);
+  const [pagando, setPagando] = useState(false);
+
+  async function abrirPagar(a: Assinante) {
+    setPagarAssinante(a);
+    setMesesPagar([]);
+    setErroModal('');
+    setCarregandoMeses(true);
     try {
-      await api.post(`/api/planos/assinantes/${a.assinaturaId}/quitar-atraso`, {});
-      await carregar();
-      await recarregar();
-      showToast(`Atraso quitado: ${fmt(a.valorTotalAtraso)}`);
+      const hist = await api.get<PagamentoHistorico[]>(`/api/planos/assinantes/${a.assinaturaId}/historico`);
+      const pendentes = hist.filter(h => h.status === 'pendente').sort((x, y) => x.mesReferencia.localeCompare(y.mesReferencia));
+      setMesesPagar(pendentes.map((h, i) => ({
+        id: h.id, mesReferencia: h.mesReferencia, valor: h.valor,
+        selecionado: i === 0, valorPago: h.valor.toFixed(2).replace('.', ','),
+      })));
     } catch (e) {
-      showToast((e as Error).message);
+      setErroModal((e as Error).message);
+    } finally {
+      setCarregandoMeses(false);
+    }
+  }
+
+  const numeroDe = (t: string) => parseFloat(t.replace(/\./g, '').replace(',', '.'));
+  const selecionados = mesesPagar.filter(m => m.selecionado);
+  const totalSelecionado = selecionados.reduce((t, m) => t + (numeroDe(m.valorPago) || 0), 0);
+
+  async function confirmarPagar() {
+    if (!pagarAssinante) return;
+    if (selecionados.length === 0) { setErroModal('Selecione ao menos um mês.'); return; }
+    if (selecionados.some(m => !(numeroDe(m.valorPago) > 0))) { setErroModal('Informe um valor pago válido em todos os meses selecionados.'); return; }
+    setPagando(true);
+    setErroModal('');
+    try {
+      await api.post(`/api/planos/assinantes/${pagarAssinante.assinaturaId}/pagar`, {
+        meses: selecionados.map(m => ({ pagamentoId: m.id, valorPago: numeroDe(m.valorPago) })),
+      });
+      setPagarAssinante(null);
+      await carregar();
+      await recarregar(true);   // silencioso: continua na aba de assinantes
+      showToast(`Pagamento registrado: ${fmt(totalSelecionado)}`);
+    } catch (e) {
+      setErroModal((e as Error).message);
+    } finally {
+      setPagando(false);
     }
   }
 
@@ -379,6 +460,7 @@ export function Planos() {
                       </div>
                     </div>
                     <div className="plano-valor">{fmt(p.valor)}<span>/mês</span></div>
+                    {textoRegrasPlano(p) && <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>{textoRegrasPlano(p)}</div>}
                     {svs.length > 0 && (
                       <div className="plano-servicos">
                         {svs.map(sid => {
@@ -490,6 +572,11 @@ export function Planos() {
                               {a.totalConsumos > 0 && (
                                 <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{a.totalConsumos}x utilizado</div>
                               )}
+                              {a.limiteUsosMes ? (
+                                <div style={{ fontSize: 11, color: (a.usosNoMes ?? 0) >= a.limiteUsosMes ? 'var(--red)' : 'var(--text-3)' }}>
+                                  {a.usosNoMes ?? 0}/{a.limiteUsosMes} usos neste mês
+                                </div>
+                              ) : null}
                             </td>
                             <td style={{ fontSize: 13 }}>{fmt(a.valor)}</td>
                             <td style={{ fontSize: 13 }}>Dia {a.diaVencimento}</td>
@@ -506,14 +593,10 @@ export function Planos() {
                             </td>
                             <td>
                               <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                                {a.mesesEmAtraso > 0 ? (
-                                  <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => quitarAtraso(a)}>
-                                    <Check size={13} /> Quitar {fmt(a.valorTotalAtraso)}
-                                  </button>
-                                ) : a.pagoNoMes ? (
+                                {a.mesesEmAtraso === 0 && a.pagoNoMes ? (
                                   <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => marcarPagamento(a, false)}>Desfazer</button>
                                 ) : (
-                                  <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => marcarPagamento(a, true)}><Check size={13} /> Pagar</button>
+                                  <button className="btn-ghost" style={{ fontSize: 11, color: 'var(--green)' }} onClick={() => abrirPagar(a)}><Check size={13} /> Pagar</button>
                                 )}
                                 <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirEditarAssinante(a)}><Edit2 size={12} /> Editar</button>
                                 <button className="btn-ghost" style={{ fontSize: 11 }} onClick={() => abrirHistorico(a)}>Histórico</button>
@@ -553,14 +636,10 @@ export function Planos() {
                           </div>
                         )}
                         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                          {a.mesesEmAtraso > 0 ? (
-                            <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => quitarAtraso(a)}>
-                              Quitar {fmt(a.valorTotalAtraso)}
-                            </button>
-                          ) : a.pagoNoMes ? (
+                          {a.mesesEmAtraso === 0 && a.pagoNoMes ? (
                             <button className="btn-secondary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, false)}>Desfazer</button>
                           ) : (
-                            <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => marcarPagamento(a, true)}>Marcar pago</button>
+                            <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => abrirPagar(a)}>Pagar…</button>
                           )}
                           <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirEditarAssinante(a)}><Edit2 size={12} /></button>
                           <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => abrirHistorico(a)}>Histórico</button>
@@ -592,6 +671,65 @@ export function Planos() {
             )}
           </>
         )
+      )}
+
+      {/* Modal pagar meses */}
+      {pagarAssinante && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setPagarAssinante(null)}>
+          <div className="modal" style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>Pagar — {pagarAssinante.clienteNome}</h2>
+              <button className="btn-ghost" onClick={() => setPagarAssinante(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              {carregandoMeses ? (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Carregando meses...</p>
+              ) : mesesPagar.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>Não há meses pendentes para esta assinatura.</p>
+              ) : (
+                <>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>
+                    Escolha os meses que o cliente está pagando. Se houver juros ou multa, ajuste o valor pago do mês.
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <button type="button" className="btn-ghost" style={{ fontSize: 11 }}
+                      onClick={() => setMesesPagar(ms => ms.map(m => ({ ...m, selecionado: true })))}>Selecionar todos</button>
+                    <button type="button" className="btn-ghost" style={{ fontSize: 11 }}
+                      onClick={() => setMesesPagar(ms => ms.map(m => ({ ...m, selecionado: false })))}>Limpar</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {mesesPagar.map(m => (
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, background: m.selecionado ? 'var(--accent-bg)' : 'transparent' }}>
+                        <input type="checkbox" checked={m.selecionado} style={{ width: 16, height: 16, margin: 0 }}
+                          onChange={e => setMesesPagar(ms => ms.map(x => x.id === m.id ? { ...x, selecionado: e.target.checked } : x))} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, textTransform: 'capitalize' }}>{rotuloMes(m.mesReferencia)}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Mensalidade {fmt(m.valor)}</div>
+                        </div>
+                        <div style={{ width: 120 }}>
+                          <input value={m.valorPago} disabled={!m.selecionado} inputMode="decimal" style={{ textAlign: 'right' }}
+                            onChange={e => setMesesPagar(ms => ms.map(x => x.id === m.id ? { ...x, valorPago: e.target.value } : x))} />
+                          <div style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'right', marginTop: 2 }}>valor pago</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, fontSize: 14 }}>
+                    <span>Total a receber ({selecionados.length} mês(es))</span>
+                    <strong>{fmt(totalSelecionado)}</strong>
+                  </div>
+                </>
+              )}
+              {erroModal && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{erroModal}</p>}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setPagarAssinante(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={confirmarPagar} disabled={pagando || carregandoMeses || selecionados.length === 0}>
+                {pagando ? 'Registrando...' : 'Confirmar pagamento'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal novo/editar plano */}
@@ -628,6 +766,28 @@ export function Planos() {
                   </div>
                 </div>
               )}
+              <div className="form-group" style={{ marginTop: 14 }}>
+                <label className="form-label">Máximo de usos por mês <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                <input type="number" min={1} step={1} value={formPlano.limiteUsosMes}
+                  onChange={e => setFormPlano(f => ({ ...f, limiteUsosMes: e.target.value }))}
+                  placeholder="Ex: 4 — vazio = ilimitado" />
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Quantas vezes no mês o cliente pode usar os serviços incluídos. Depois disso, o serviço é cobrado normalmente.</p>
+              </div>
+              <div className="form-group" style={{ marginTop: 14 }}>
+                <label className="form-label">Dias da semana permitidos <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {DIAS_SEMANA.map((nome, d) => (
+                    <button key={d} type="button" onClick={() => toggleDia(d)}
+                      className={formPlano.diasSemana.includes(d) ? 'btn-primary' : 'btn-secondary'}
+                      style={{ padding: '6px 0', width: 46, fontSize: 12 }}>{nome}</button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                  <button type="button" className="btn-ghost" style={{ fontSize: 11 }} onClick={() => setFormPlano(f => ({ ...f, diasSemana: [1, 2, 3, 4, 5] }))}>Segunda a sexta</button>
+                  <button type="button" className="btn-ghost" style={{ fontSize: 11 }} onClick={() => setFormPlano(f => ({ ...f, diasSemana: [] }))}>Todos os dias</button>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Sem nenhum dia marcado, o plano vale todos os dias.</p>
+              </div>
               {erroModal && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{erroModal}</p>}
             </div>
             <div className="modal-footer">
