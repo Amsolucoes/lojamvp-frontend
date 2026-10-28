@@ -256,7 +256,8 @@ export function Comissoes() {
             </div>
           ) : (
             <>
-            <div className="table-wrap tbl-desktop">
+            <div className="card tbl-desktop" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
@@ -286,6 +287,7 @@ export function Comissoes() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
             <div className="cards-mobile" style={{ flexDirection: 'column', gap: 10 }}>
               {resumoPaginado.map(r => (
@@ -367,7 +369,8 @@ export function Comissoes() {
             </div>
           ) : (
             <>
-            <div className="table-wrap tbl-desktop">
+            <div className="card tbl-desktop" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
@@ -398,6 +401,7 @@ export function Comissoes() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
             <div className="cards-mobile" style={{ flexDirection: 'column', gap: 10 }}>
               {fechamentosPaginados.map(f => (

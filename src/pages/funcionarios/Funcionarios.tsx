@@ -344,7 +344,8 @@ export function Funcionarios() {
       ) : (
         <>
         {/* Desktop: tabela */}
-        <div className="table-wrap tbl-desktop">
+        <div className="card tbl-desktop" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="table-wrap">
           <table>
             <thead>
               <tr>
@@ -390,6 +391,7 @@ export function Funcionarios() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Celular: cards */}
