@@ -17,7 +17,7 @@ import { ComparativoCategorias } from './ComparativoCategorias';
 import { DetalheCategoriaModal } from './DetalheCategoriaModal';
 import { PlanejamentoCard } from '../../components/PlanejamentoCard';
 import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
-import { contemTexto, normalizarTexto } from '../../utils/texto';
+import { contemTexto, normalizarTexto, rotuloMesAno } from '../../utils/texto';
 import { SkeletonLista, EstadoVazio } from '../../components/Skeleton';
 import './FinanceiroMobile.css';
 
@@ -439,7 +439,7 @@ export function FinanceiroMobile() {
     });
   }
 
-  async function salvarEdicaoReceber(modo: 'unica' | 'todas') {
+  async function salvarEdicaoReceber(modo: 'unica' | 'futuras' | 'todas') {
     if (!editandoReceber) return;
     setSalvandoEditReceber(true);
     try {
@@ -908,7 +908,7 @@ export function FinanceiroMobile() {
     });
   }
 
-  async function salvarEdicao(modo: 'unica' | 'todas') {
+  async function salvarEdicao(modo: 'unica' | 'futuras' | 'todas') {
     if (!editandoLancamento) return;
     setSalvandoEdit(true);
     try {
@@ -1989,10 +1989,13 @@ export function FinanceiroMobile() {
                   <input value={formEdit.observacao} onChange={e => setFormEdit(f => ({ ...f, observacao: e.target.value }))} />
                 </div>
                 {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') && (
-                  <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
                     {editandoLancamento.modo === 'fixa'
-                      ? 'Esse é um lançamento fixo. Pode alterar só este mês, ou também os próximos.'
-                      : 'Essa é uma parcela. Pode alterar só esta, ou também as demais ainda não pagas.'}
+                      ? 'Este lançamento se repete todo mês. Escolha até onde a mudança vale:'
+                      : 'Esta é uma parcela. Escolha até onde a mudança vale:'}
+                    <br />• <strong>Só esta</strong> — apenas este lançamento.
+                    <br />• <strong>Desta data em diante</strong> — a partir de {rotuloMesAno(editandoLancamento.vencimento) || 'este mês'} (os anteriores em aberto ficam como estão).
+                    <br />• <strong>Todas em aberto</strong> — inclui também os anteriores ainda pendentes.
                   </p>
                 )}
               </div>
@@ -2004,8 +2007,11 @@ export function FinanceiroMobile() {
                   <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicao('unica')}>
                     {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
-                  <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicao('todas')}>
-                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : (editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
+                  <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicao('futuras')}>
+                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desta data em diante'}
+                  </button>
+                  <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicao('todas')}>
+                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Todas em aberto'}
                   </button>
                 </>
               ) : (
@@ -2105,10 +2111,13 @@ export function FinanceiroMobile() {
                   <input value={formEditReceber.observacao} onChange={e => setFormEditReceber(f => ({ ...f, observacao: e.target.value }))} />
                 </div>
                 {(editandoReceber.modo === 'fixa' || editandoReceber.modo === 'parcelada') && (
-                  <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
                     {editandoReceber.modo === 'fixa'
-                      ? 'Esse é um lançamento fixo. Pode alterar só este mês, ou também os próximos.'
-                      : 'Essa é uma parcela. Pode alterar só esta, ou também as demais ainda não pagas.'}
+                      ? 'Este lançamento se repete todo mês. Escolha até onde a mudança vale:'
+                      : 'Esta é uma parcela. Escolha até onde a mudança vale:'}
+                    <br />• <strong>Só esta</strong> — apenas este lançamento.
+                    <br />• <strong>Desta data em diante</strong> — a partir de {rotuloMesAno(editandoReceber.vencimento) || 'este mês'} (os anteriores em aberto ficam como estão).
+                    <br />• <strong>Todas em aberto</strong> — inclui também os anteriores ainda pendentes.
                   </p>
                 )}
               </div>
@@ -2120,8 +2129,11 @@ export function FinanceiroMobile() {
                   <button className="btn-secondary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('unica')}>
                     {salvandoEditReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
-                  <button className="btn-primary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('todas')}>
-                    {salvandoEditReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : (editandoReceber.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
+                  <button className="btn-primary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('futuras')}>
+                    {salvandoEditReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desta data em diante'}
+                  </button>
+                  <button className="btn-secondary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('todas')}>
+                    {salvandoEditReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Todas em aberto'}
                   </button>
                 </>
               ) : (

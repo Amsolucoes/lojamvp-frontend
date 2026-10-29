@@ -8,7 +8,7 @@ import { InputMoeda } from '../../components/InputMoeda';
 import { useToast } from '../../context/ToastContext';
 import { setBottomNavAction } from '../../utils/bottomNavAction';
 import { BANCOS, BankBadge } from '../../utils/bancos';
-import { contemTexto, normalizarTexto } from '../../utils/texto';
+import { contemTexto, normalizarTexto, rotuloMesAno } from '../../utils/texto';
 import { SkeletonLista } from '../../components/Skeleton';
 import './Financeiro.css';
 import { useApp } from '@/context/AppContext';
@@ -204,7 +204,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
   const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEdit, setSalvandoEdit] = useState(false);
-  const [escopoEdit, setEscopoEdit] = useState<'unica' | 'todas' | null>(null);
+  const [escopoEdit, setEscopoEdit] = useState<'unica' | 'futuras' | 'todas' | null>(null);
 
   const [formLanc, setFormLanc] = useState({
     modo: 'avulsa' as 'avulsa' | 'parcelada' | 'fixa',
@@ -594,7 +594,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
     api.get<string[]>(`/api/financeiro/lancamentos/descricoes?tipo=${aba}`).then(setDescricoesRecentes).catch(() => {});
   }
 
-  async function salvarEdicaoLancamento(modo: 'unica' | 'todas') {
+  async function salvarEdicaoLancamento(modo: 'unica' | 'futuras' | 'todas') {
     if (!editandoLancamento) return;
     if (!formEdit.descricao.trim() || !formEdit.valor || !formEdit.contaBancariaId) {
       erro('Preencha descrição, valor e conta.');
@@ -2279,10 +2279,13 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                 </div>
 
                 {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') && (
-                  <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
                     {editandoLancamento.modo === 'fixa'
-                      ? 'Esse é um lançamento fixo. Você pode alterar só este mês, ou aplicar a mudança nos próximos meses também.'
-                      : 'Essa é uma parcela. Você pode alterar só esta, ou aplicar a mudança nas demais parcelas ainda não pagas.'}
+                      ? 'Este lançamento se repete todo mês. Escolha até onde a mudança vale:'
+                      : 'Esta é uma parcela. Escolha até onde a mudança vale:'}
+                    <br />• <strong>Só esta</strong> — apenas este lançamento.
+                    <br />• <strong>Desta data em diante</strong> — a partir de {rotuloMesAno(editandoLancamento.vencimento) || 'este mês'} (os anteriores em aberto ficam como estão).
+                    <br />• <strong>Todas em aberto</strong> — inclui também os anteriores ainda pendentes.
                   </p>
                 )}
               </div>
@@ -2294,8 +2297,11 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                   <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('unica')}>
                     {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
-                  <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('todas')}>
-                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : (editandoLancamento.modo === 'fixa' ? 'Esta e futuras' : 'Todas as parcelas')}
+                  <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('futuras')}>
+                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desta data em diante'}
+                  </button>
+                  <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('todas')}>
+                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Todas em aberto'}
                   </button>
                 </>
               ) : (
