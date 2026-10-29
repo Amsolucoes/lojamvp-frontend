@@ -236,3 +236,20 @@ html[class*="theme-light"] .ico-indigo { --ico: #4f46e5; }
 .sidebar-link > span:not(.sidebar-badge) { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-link:has(.sidebar-ico) { gap: 9px; }
 .sidebar-sublink:has(.sidebar-ico) { gap: 8px; }
+
+/* ── Grupos que encolhem ──────────────────────────────────────────── */
+.sidebar-grupo-itens { display: flex; flex-direction: column; gap: 1px; }
+.sidebar-grupo.fechado .sidebar-grupo-itens { display: none; }
+.sidebar-secao-btn {
+  width: 100%; background: transparent; border: none; text-align: left; cursor: pointer;
+  font: inherit; font-size: 10.5px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--text-3); border-radius: var(--radius-sm); margin-top: 2px;
+}
+.sidebar-secao-btn:hover { color: var(--text-1); background: var(--bg-hover); }
+.sidebar-secao-btn > span:first-child { flex: 1; }
+.sidebar-secao-seta { flex-shrink: 0; transition: transform .15s; opacity: .7; }
+.sidebar-grupo.fechado .sidebar-secao-seta { transform: rotate(-90deg); }
+/* menu só de ícones: todos os grupos aparecem, independente de estarem encolhidos */
+@media (min-width: 769px) {
+  .sidebar-recolhida .sidebar-grupo.fechado .sidebar-grupo-itens { display: flex; }
+}

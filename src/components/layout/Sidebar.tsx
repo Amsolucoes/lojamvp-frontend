@@ -37,6 +37,17 @@ export function Sidebar() {
     document.documentElement.classList.toggle('menu-recolhido', recolhida);
     try { localStorage.setItem('loja:menu-recolhido', recolhida ? '1' : '0'); } catch { /* sem armazenamento */ }
   }, [recolhida]);
+  // Grupos do menu recolhidos pelo usuário (lembrado no navegador)
+  const [gruposFechados, setGruposFechados] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('loja:menu-grupos-fechados') ?? '[]'); } catch { return []; }
+  });
+  function alternarGrupo(id: string) {
+    setGruposFechados(atual => {
+      const novo = atual.includes(id) ? atual.filter(g => g !== id) : [...atual, id];
+      try { localStorage.setItem('loja:menu-grupos-fechados', JSON.stringify(novo)); } catch { /* sem armazenamento */ }
+      return novo;
+    });
+  }
   const { produtos } = useApp();
   const { usuario, logout } = useAuth();
 
@@ -155,6 +166,14 @@ export function Sidebar() {
     { to: '/financeiro/planejamento', icon: Target, label: 'Planejamento' },
   ] : [];
 
+  // Ao navegar para uma página, abre o grupo dela (para o item ativo nunca ficar escondido)
+  useEffect(() => {
+    const ativo = NAV.filter(n => n.to === '/' ? pathname === '/' : pathname === n.to || pathname.startsWith(n.to + '/'))
+      .sort((a, b) => b.to.length - a.to.length)[0];
+    if (ativo) setGruposFechados(atual => atual.includes(ativo.g) ? atual.filter(g => g !== ativo.g) : atual);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   return (
     <>
       {/* Topbar mobile */}
@@ -190,8 +209,15 @@ export function Sidebar() {
             const itens = NAV.filter(n => n.g === grupo.id);
             if (itens.length === 0) return null;
             return (
-              <div key={grupo.id} className="sidebar-grupo">
-                {grupo.titulo && <div className={`sidebar-secao ico-${grupo.cor}`}>{grupo.titulo}</div>}
+              <div key={grupo.id} className={`sidebar-grupo${grupo.titulo && gruposFechados.includes(grupo.id) ? ' fechado' : ''}`}>
+                {grupo.titulo && (
+                  <button type="button" className={`sidebar-secao sidebar-secao-btn ico-${grupo.cor}`}
+                    aria-expanded={!gruposFechados.includes(grupo.id)} onClick={() => alternarGrupo(grupo.id)}>
+                    <span>{grupo.titulo}</span>
+                    <ChevronDown size={12} className="sidebar-secao-seta" />
+                  </button>
+                )}
+                <div className="sidebar-grupo-itens">
                 {itens.map(({ to, icon: Icon, label }) => (
                   <Fragment key={to}>
                   <NavLink to={to} end={to === '/' || to === '/financeiro'}
@@ -228,6 +254,7 @@ export function Sidebar() {
                   ))}
                   </Fragment>
                 ))}
+                </div>
               </div>
             );
           })}
