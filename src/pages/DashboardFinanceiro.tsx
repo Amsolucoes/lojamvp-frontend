@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { setBottomNavAction } from '../utils/bottomNavAction';
 import { BankBadge } from '../utils/bancos';
+import { BandeiraBadge } from '../utils/bandeiras';
 import { PlanejamentoCard } from '../components/PlanejamentoCard';
 import './Dashboard.css';
 
@@ -21,6 +22,7 @@ interface Alerta {
 interface CartaoResumo {
   id: string;
   nome: string;
+  bandeira?: string | null;
   limite: number;
   usado: number;
   disponivel: number;
@@ -451,7 +453,9 @@ export function DashboardFinanceiro() {
                 <div key={c.id} className="stat-card" style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : 'var(--border)', cursor: 'pointer' }}
                   onClick={() => navigate(`/financeiro?abrirFatura=${c.id}`)}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div className="stat-label dash-ellipsis" title={c.nome}>{c.nome}</div>
+                    <div className="stat-label dash-ellipsis" title={c.nome} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <BandeiraBadge bandeira={c.bandeira} tamanho={18} /><span className="dash-ellipsis">{c.nome}</span>
+                    </div>
                     {c.qtdCompras > 0 && (
                       <span className="badge badge-accent" style={{ fontSize: 10 }}>{c.qtdCompras} compra{c.qtdCompras > 1 ? 's' : ''}</span>
                     )}
