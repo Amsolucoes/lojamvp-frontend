@@ -6,6 +6,7 @@ import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { setMobileShellOverride } from '../../utils/mobileShellOverride';
 import { usePullToRefresh } from '../../components/layout/Layout';
+import { BandeiraBadge, SeletorBandeira } from '../../utils/bandeiras';
 import { BankBadge, SeletorBanco } from '../../utils/bancos';
 import { InputMoeda } from '../../components/InputMoeda';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
@@ -53,7 +54,7 @@ interface LinhaReceber {
   origem: string; // avulso | plano
 }
 interface Categoria { id: string; nome: string; tipo: string; icone: string | null; }
-interface Cartao { id: string; nome: string; limite: number; diaFechamento: number; diaVencimento: number; contaBancariaId: string; ativo: boolean; taxaJurosMensal: number; }
+interface Cartao { id: string; nome: string; limite: number; diaFechamento: number; diaVencimento: number; contaBancariaId: string; ativo: boolean; taxaJurosMensal: number; bandeira?: string | null; }
 interface ItemFaturaDetalhe { id: string; descricao: string; valor: number; dataCompra: string; categoriaNome: string | null; categoriaId: string | null; modo: string; observacao: string | null; numeroParcela: number | null; totalParcelas: number | null; }
 interface AntecipadoItem { id: string; valor: number; data: string; contaBancariaId: string; observacao: string | null; }
 interface ItemCategoriaBalanco { nome: string; icone: string; valor: number; valorCartao?: number; valorAvulso?: number; }
@@ -182,7 +183,7 @@ export function FinanceiroMobile() {
   const [carregandoListaCartoes, setCarregandoListaCartoes] = useState(true);
   const [carregandoResumoCartoes, setCarregandoResumoCartoes] = useState(true);
   const [modalNovoCartao, setModalNovoCartao] = useState(false);
-  const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
+  const [formCartao, setFormCartao] = useState({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '', bandeira: '' });
   const [salvandoCartao, setSalvandoCartao] = useState(false);
   const [editandoCartao, setEditandoCartao] = useState<Cartao | null>(null);
   const [faturaAberta, setFaturaAberta] = useState<Cartao | null>(null);
@@ -507,6 +508,7 @@ export function FinanceiroMobile() {
       nome: c.nome, limite: String(c.limite),
       diaFechamento: String(c.diaFechamento), diaVencimento: String(c.diaVencimento),
       contaBancariaId: c.contaBancariaId, taxaJurosMensal: String(c.taxaJurosMensal ?? 0),
+      bandeira: c.bandeira ?? '',
     });
     setModalNovoCartao(true);
   }
@@ -522,12 +524,13 @@ export function FinanceiroMobile() {
         diaVencimento: parseInt(formCartao.diaVencimento) || 15,
         contaBancariaId: formCartao.contaBancariaId,
         taxaJurosMensal: parseFloat(formCartao.taxaJurosMensal) || 0,
+        bandeira: formCartao.bandeira || null,
       };
       if (editandoCartao) await api.put(`/api/financeiro/cartoes/${editandoCartao.id}`, payload);
       else await api.post('/api/financeiro/cartoes', payload);
       setModalNovoCartao(false);
       setEditandoCartao(null);
-      setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' });
+      setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '', bandeira: '' });
       carregarCartoes();
     } catch (e) {
       erro((e as Error).message);
@@ -1790,7 +1793,7 @@ export function FinanceiroMobile() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1)', margin: 0 }}>Cartões</h2>
             <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-              onClick={() => { setEditandoCartao(null); setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '' }); setModalNovoCartao(true); }}>
+              onClick={() => { setEditandoCartao(null); setFormCartao({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: '', taxaJurosMensal: '', bandeira: '' }); setModalNovoCartao(true); }}>
               <Plus size={14} /> Novo cartão
             </button>
           </div>
@@ -1812,7 +1815,9 @@ export function FinanceiroMobile() {
                 return (
                   <div key={c.id} className={`card fm-card${faturaFoiPaga(faturasMesCartoes, c.id) ? ' fin-row-pago' : ''}`} style={{ borderColor: pct > 85 ? 'rgba(248,113,113,0.4)' : undefined }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', minWidth: 0 }}>{c.nome}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', minWidth: 0, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <BandeiraBadge bandeira={c.bandeira} tamanho={22} />{c.nome}
+                      </span>
                       {r && r.qtdCompras > 0 && <span className="fm-tag-neutra" style={{ flexShrink: 0 }}>{r.qtdCompras} compra{r.qtdCompras > 1 ? 's' : ''}</span>}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>Fecha dia {c.diaFechamento} · Vence dia {c.diaVencimento}</div>
@@ -2181,6 +2186,10 @@ export function FinanceiroMobile() {
                 <div className="form-group">
                   <label className="form-label">Nome *</label>
                   <input value={formCartao.nome} onChange={e => setFormCartao(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Santander" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Bandeira <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+                  <SeletorBandeira valor={formCartao.bandeira} onChange={id => setFormCartao(f => ({ ...f, bandeira: id }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Conta de pagamento *</label>

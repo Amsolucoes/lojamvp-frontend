@@ -1,3 +1,4 @@
+import { BandeiraBadge, SeletorBandeira } from '../../utils/bandeiras';
 import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { api } from '../../services/api';
@@ -20,13 +21,14 @@ interface Cartao {
   contaBancariaId: string;
   ativo: boolean;
   taxaJurosMensal: number;
+  bandeira?: string | null;
 }
 
 interface ResumoCartao { usado: number; disponivel: number; qtdCompras: number; status: string; }
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const formVazio = (contaId = '') => ({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: contaId, taxaJurosMensal: '' });
+const formVazio = (contaId = '') => ({ nome: '', limite: '', diaFechamento: '10', diaVencimento: '15', contaBancariaId: contaId, taxaJurosMensal: '', bandeira: '' });
 
 export function Cartoes() {
   const { sucesso, erro } = useToast();
@@ -79,6 +81,7 @@ export function Cartoes() {
       diaFechamento: String(c.diaFechamento), diaVencimento: String(c.diaVencimento),
       contaBancariaId: c.contaBancariaId,
       taxaJurosMensal: String(c.taxaJurosMensal ?? 0),
+      bandeira: c.bandeira ?? '',
     });
     setMostrarForm(true);
   }
@@ -97,6 +100,7 @@ export function Cartoes() {
         diaVencimento: parseInt(form.diaVencimento) || 15,
         contaBancariaId: form.contaBancariaId,
         taxaJurosMensal: parseFloat(form.taxaJurosMensal) || 0,
+        bandeira: form.bandeira || null,
       };
       if (editando) await api.put(`/api/financeiro/cartoes/${editando.id}`, payload);
       else await api.post('/api/financeiro/cartoes', payload);
@@ -155,6 +159,10 @@ export function Cartoes() {
                 <input type="number" min={0} step={0.01} value={form.taxaJurosMensal} onChange={e => setForm(f => ({ ...f, taxaJurosMensal: e.target.value }))} placeholder="Ex: 12.5" />
               </div>
             </div>
+            <div className="form-group">
+              <label className="form-label">Bandeira <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
+              <SeletorBandeira valor={form.bandeira} onChange={id => setForm(f => ({ ...f, bandeira: id }))} />
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn-primary" onClick={salvar}>{editando ? 'Salvar' : 'Adicionar cartão'}</button>
               <button className="btn-secondary" onClick={fecharForm}>Cancelar</button>
@@ -181,6 +189,7 @@ export function Cartoes() {
                   <div className="cartao-card-topo">
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <BandeiraBadge bandeira={c.bandeira} tamanho={24} />
                         <span style={{ fontWeight: 600, fontSize: 15 }}>{c.nome}</span>
                         {r && r.qtdCompras > 0 && (
                           <span className="badge badge-accent" style={{ fontSize: 10 }}>{r.qtdCompras} compra{r.qtdCompras > 1 ? 's' : ''}</span>
