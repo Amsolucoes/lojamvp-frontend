@@ -647,3 +647,7 @@ tbody td { font-variant-numeric: tabular-nums; }
   .tbl-desktop { display: none; }
   .cards-mobile { display: flex; }
 }
+
+/* Rodapé de modal com vários botões (ex.: "Só esta / Desta data em diante / Todas em aberto"): não quebra o texto, quebra a linha */
+.modal-footer { flex-wrap: wrap; }
+.modal-footer button { white-space: nowrap; }
