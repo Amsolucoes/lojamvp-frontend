@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFiltrando } from '../../hooks/useFiltrando';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2, Bell, Printer } from 'lucide-react';
+import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2, Bell, Printer, ListChecks } from 'lucide-react';
+import { PagarLoteModal } from './PagarLoteModal';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { setMobileShellOverride } from '../../utils/mobileShellOverride';
@@ -136,11 +137,23 @@ export function FinanceiroMobile() {
   const [periodoAte, setPeriodoAte] = useState(new Date().toISOString().slice(0, 10));
   const itensPorPagina = 20;
   const [processandoPagamento, setProcessandoPagamento] = useState<string | null>(null);
+  // Pagar várias contas de uma vez
+  const [selecionando, setSelecionando] = useState(false);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [modalLote, setModalLote] = useState(false);
+  const elegivelLote = (l: LinhaPagar) => l.origem === 'avulso' && l.status === 'pendente';
+  const itensLote = linhasPagar.filter(l => selecionados.has(l.id) && elegivelLote(l));
+  const totalLote = itensLote.reduce((t, l) => t + l.valor, 0);
+  function alternarSelecionado(id: string) {
+    setSelecionados(atual => { const novo = new Set(atual); if (novo.has(id)) novo.delete(id); else novo.add(id); return novo; });
+  }
+  function sairDaSelecao() { setSelecionando(false); setSelecionados(new Set()); }
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [excluindoLinha, setExcluindoLinha] = useState(false);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
   const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEdit, setSalvandoEdit] = useState(false);
+  const [escopoSalvando, setEscopoSalvando] = useState<'unica' | 'futuras' | 'todas' | null>(null);
 
   const [linhasReceber, setLinhasReceber] = useState<LinhaReceber[]>([]);
   const [carregandoReceber, setCarregandoReceber] = useState(true);
@@ -440,6 +453,7 @@ export function FinanceiroMobile() {
   }
 
   async function salvarEdicaoReceber(modo: 'unica' | 'futuras' | 'todas') {
+    setEscopoSalvando(modo);
     if (!editandoReceber) return;
     setSalvandoEditReceber(true);
     try {
@@ -455,7 +469,7 @@ export function FinanceiroMobile() {
       setEditandoReceber(null);
     } catch (e) {
       erro((e as Error).message);
-    } finally { setSalvandoEditReceber(false); }
+    } finally { setEscopoSalvando(null); setSalvandoEditReceber(false); }
   }
 
   async function excluirReceber(modo: 'unica' | 'todas' = 'unica') {
@@ -909,6 +923,7 @@ export function FinanceiroMobile() {
   }
 
   async function salvarEdicao(modo: 'unica' | 'futuras' | 'todas') {
+    setEscopoSalvando(modo);
     if (!editandoLancamento) return;
     setSalvandoEdit(true);
     try {
@@ -924,7 +939,7 @@ export function FinanceiroMobile() {
       setEditandoLancamento(null);
     } catch (e) {
       erro((e as Error).message);
-    } finally { setSalvandoEdit(false); }
+    } finally { setEscopoSalvando(null); setSalvandoEdit(false); }
   }
 
   async function excluirLinha(modo: 'unica' | 'todas' = 'unica') {
@@ -1504,7 +1519,23 @@ export function FinanceiroMobile() {
               style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, padding: '0 14px' }}>
               <Printer size={16} /> PDF
             </button>
+            <button className={selecionando ? 'btn-primary' : 'btn-secondary'} onClick={() => selecionando ? sairDaSelecao() : setSelecionando(true)}
+              title="Pagar várias contas de uma vez" style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, padding: '0 12px' }}>
+              <ListChecks size={16} /> {selecionando ? 'Cancelar' : 'Várias'}
+            </button>
           </div>
+
+          {selecionando && (
+            <div style={{ position: 'sticky', top: 6, zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
+              background: 'var(--bg-2)', border: '1px solid var(--accent-border)', borderRadius: 10, padding: '8px 12px', marginBottom: 12, boxShadow: 'var(--shadow)' }}>
+              <div style={{ fontSize: 13 }}>
+                {itensLote.length === 0
+                  ? 'Marque as contas que quer pagar juntas.'
+                  : <><strong>{itensLote.length}</strong> selecionada(s) · <strong style={{ color: 'var(--accent)' }}>{fmt(totalLote)}</strong></>}
+              </div>
+              <button className="btn-primary" disabled={itensLote.length === 0} onClick={() => setModalLote(true)}>Pagar</button>
+            </div>
+          )}
 
           {carregandoPagar || filtrandoPagar ? null : (() => {
             const filtradaBase = linhasPagar.filter(l => {
@@ -1551,7 +1582,11 @@ export function FinanceiroMobile() {
                         const status = ehVencido(l) ? 'vencido' : l.status;
                         return (
                           <div key={l.id} className={`card fm-card-linha-completa${l.status === 'pago' ? ((l.origem ?? '').startsWith('cartao') ? ' fin-row-pago-cartao' : ' fin-row-pago-neutro') : ''}`}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: selecionando && elegivelLote(l) ? 10 : 0 }}>
+                              {selecionando && elegivelLote(l) && (
+                                <input type="checkbox" checked={selecionados.has(l.id)} onChange={() => alternarSelecionado(l.id)}
+                                  style={{ width: 20, height: 20, margin: '2px 0 0', flexShrink: 0 }} aria-label={`Selecionar ${l.descricao}`} />
+                              )}
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, color: 'var(--text-1)' }}>
                                   {l.modo === 'fixa' && <span title="Recorrente" style={{ marginRight: 4 }}>🔁</span>}
@@ -1942,6 +1977,20 @@ export function FinanceiroMobile() {
         ))}
       </nav>
 
+      {modalLote && (
+        <PagarLoteModal
+          itens={itensLote.map(l => ({ id: l.id, descricao: l.descricao, valor: l.valor, categoriaNome: l.categoriaNome, vencimento: l.vencimento }))}
+          contas={contas as any}
+          onClose={() => setModalLote(false)}
+          onConcluido={async msg => {
+            setModalLote(false);
+            sairDaSelecao();
+            await recarregarPagar();
+            sucesso(msg);
+          }}
+        />
+      )}
+
       {editandoLancamento && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !salvandoEdit && setEditandoLancamento(null)}>
           <div className="modal" style={{ maxWidth: 420 }}>
@@ -2005,13 +2054,13 @@ export function FinanceiroMobile() {
               {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') ? (
                 <>
                   <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicao('unica')}>
-                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
+                    {salvandoEdit && escopoSalvando === 'unica' ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
                   <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicao('futuras')}>
-                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desta data em diante'}
+                    {salvandoEdit && escopoSalvando === 'futuras' ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desta data em diante'}
                   </button>
                   <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicao('todas')}>
-                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Todas em aberto'}
+                    {salvandoEdit && escopoSalvando === 'todas' ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Todas em aberto'}
                   </button>
                 </>
               ) : (
@@ -2127,13 +2176,13 @@ export function FinanceiroMobile() {
               {(editandoReceber.modo === 'fixa' || editandoReceber.modo === 'parcelada') ? (
                 <>
                   <button className="btn-secondary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('unica')}>
-                    {salvandoEditReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
+                    {salvandoEditReceber && escopoSalvando === 'unica' ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
                   <button className="btn-primary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('futuras')}>
-                    {salvandoEditReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desta data em diante'}
+                    {salvandoEditReceber && escopoSalvando === 'futuras' ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desta data em diante'}
                   </button>
                   <button className="btn-secondary" disabled={salvandoEditReceber} onClick={() => salvarEdicaoReceber('todas')}>
-                    {salvandoEditReceber ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Todas em aberto'}
+                    {salvandoEditReceber && escopoSalvando === 'todas' ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Todas em aberto'}
                   </button>
                 </>
               ) : (

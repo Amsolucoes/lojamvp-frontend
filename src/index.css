@@ -651,3 +651,29 @@ tbody td { font-variant-numeric: tabular-nums; }
 /* Rodapé de modal com vários botões (ex.: "Só esta / Desta data em diante / Todas em aberto"): não quebra o texto, quebra a linha */
 .modal-footer { flex-wrap: wrap; }
 .modal-footer button { white-space: nowrap; }
+
+/* ── Contas pagas em Contas a Pagar: cinza que se distingue do fundo ──
+   temas escuros: cinza mais claro que o fundo · temas claros: cinza um pouco mais escuro.
+   (seletores com `html` para valer sobre as variáveis definidas nos CSS das telas) */
+html:root {
+  --row-pago-neutro-bg: rgba(148, 163, 184, 0.17);
+  --row-pago-neutro-bg-hover: rgba(148, 163, 184, 0.24);
+  --row-pago-neutro-borda: #94a3b8;
+  --row-cartao-pago-bg: rgba(148, 163, 184, 0.27);
+  --row-cartao-pago-bg-hover: rgba(148, 163, 184, 0.34);
+  --row-cartao-pago-borda: #a8b5c8;
+}
+html.theme-light-blue, html.theme-light-green, html.theme-light-purple {
+  --row-pago-neutro-bg: rgba(71, 85, 105, 0.15);
+  --row-pago-neutro-bg-hover: rgba(71, 85, 105, 0.21);
+  --row-pago-neutro-borda: #64748b;
+  --row-cartao-pago-bg: rgba(71, 85, 105, 0.25);
+  --row-cartao-pago-bg-hover: rgba(71, 85, 105, 0.31);
+  --row-cartao-pago-borda: #475569;
+}
+tbody tr.fin-row-pago-neutro { background: var(--row-pago-neutro-bg); }
+tbody tr.fin-row-pago-neutro:hover { background: var(--row-pago-neutro-bg-hover); }
+tbody tr.fin-row-pago-neutro td:first-child { box-shadow: inset 3px 0 0 var(--row-pago-neutro-borda); }
+.card.fin-row-pago-neutro,
+.fin-card-mobile.fin-row-pago-neutro,
+.fm-card-linha-completa.fin-row-pago-neutro { background: var(--row-pago-neutro-bg); border-left: 3px solid var(--row-pago-neutro-borda); }

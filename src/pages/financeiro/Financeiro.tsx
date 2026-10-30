@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useFiltrando } from '../../hooks/useFiltrando';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw, Loader2, Printer } from 'lucide-react';
+import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw, Loader2, Printer, ListChecks } from 'lucide-react';
+import { PagarLoteModal } from './PagarLoteModal';
 import { api } from '../../services/api';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { InputMoeda } from '../../components/InputMoeda';
@@ -199,11 +200,23 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
 
   const [modalLancamento, setModalLancamento] = useState(false);
   const [processandoPagamento, setProcessandoPagamento] = useState<string | null>(null);
+  // Pagar várias contas de uma vez
+  const [selecionando, setSelecionando] = useState(false);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [modalLote, setModalLote] = useState(false);
+  const elegivelLote = (l: LinhaPagar) => l.origem === 'avulso' && l.status === 'pendente';
+  const itensLote = linhasPagar.filter(l => selecionados.has(l.id) && elegivelLote(l));
+  const totalLote = itensLote.reduce((s, l) => s + l.valor, 0);
+  function alternarSelecionado(id: string) {
+    setSelecionados(atual => { const novo = new Set(atual); if (novo.has(id)) novo.delete(id); else novo.add(id); return novo; });
+  }
+  function sairDaSelecao() { setSelecionando(false); setSelecionados(new Set()); }
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [excluindoLancamento, setExcluindoLancamento] = useState(false);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
   const [formEdit, setFormEdit] = useState({ contaBancariaId: '', categoriaId: '', categoriaTexto: '', descricao: '', valor: '', vencimento: '', observacao: '' });
   const [salvandoEdit, setSalvandoEdit] = useState(false);
+  const [escopoSalvando, setEscopoSalvando] = useState<'unica' | 'futuras' | 'todas' | null>(null);
   const [escopoEdit, setEscopoEdit] = useState<'unica' | 'futuras' | 'todas' | null>(null);
 
   const [formLanc, setFormLanc] = useState({
@@ -595,6 +608,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
   }
 
   async function salvarEdicaoLancamento(modo: 'unica' | 'futuras' | 'todas') {
+    setEscopoSalvando(modo);
     if (!editandoLancamento) return;
     if (!formEdit.descricao.trim() || !formEdit.valor || !formEdit.contaBancariaId) {
       erro('Preencha descrição, valor e conta.');
@@ -616,7 +630,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
     } catch (e) {
       erro((e as Error).message);
     } finally {
-      setSalvandoEdit(false);
+      setEscopoSalvando(null); setSalvandoEdit(false);
     }
   }
 
@@ -1102,6 +1116,12 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
               Limpar filtros
             </button>
           )}
+          {aba === 'pagar' && (
+            <button className={selecionando ? 'btn-primary' : 'btn-secondary'} onClick={() => selecionando ? sairDaSelecao() : setSelecionando(true)}
+              title="Selecione várias contas para pagar de uma vez">
+              <ListChecks size={14} /> {selecionando ? 'Cancelar seleção' : 'Pagar várias'}
+            </button>
+          )}
           <button className="btn-secondary fin-imprimir-desktop" onClick={imprimirListaAtual}
               title={`Imprimir / salvar em PDF a lista de contas a ${aba === 'pagar' ? 'pagar' : 'receber'}`}>
             <Printer size={14} /> Imprimir PDF
@@ -1133,6 +1153,22 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
         </div>
       )}
 
+      {/* Pagar várias: barra com a soma das contas selecionadas */}
+      {aba === 'pagar' && selecionando && (
+        <div style={{ position: 'sticky', top: 8, zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
+          background: 'var(--bg-2)', border: '1px solid var(--accent-border)', borderRadius: 10, padding: '10px 14px', marginBottom: 12, boxShadow: 'var(--shadow)' }}>
+          <div style={{ fontSize: 13 }}>
+            {itensLote.length === 0
+              ? 'Marque as contas pendentes que quer pagar juntas.'
+              : <><strong>{itensLote.length}</strong> conta(s) selecionada(s) · Total <strong style={{ color: 'var(--accent)' }}>{fmt(totalLote)}</strong></>}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {itensLote.length > 0 && <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => setSelecionados(new Set())}>Limpar</button>}
+            <button className="btn-primary" disabled={itensLote.length === 0} onClick={() => setModalLote(true)}>Pagar selecionadas</button>
+          </div>
+        </div>
+      )}
+
       {/* Lista */}
       <div ref={listaRef} className="card" style={{ borderLeft: `3px solid ${aba === 'pagar' ? 'var(--red)' : 'var(--green)'}` }}>
         {carregandoLancamentos || filtrandoLista ? (
@@ -1145,13 +1181,13 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
               <div className="table-wrap fin-table-desktop">
                 <table>
                   <thead>
-                    <tr><th>Descrição</th><th>Categoria</th><th>Conta</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr>
+                    <tr>{selecionando && <th style={{ width: 34 }}></th>}<th>Descrição</th><th>Categoria</th><th>Conta</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr>
                   </thead>
                   <tbody>
                     {agruparPorData(listaPagar).map(([data, itens]) => (
                       <>
                         <tr key={`grupo-${data}`}>
-                          <td colSpan={7} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 12px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
+                          <td colSpan={selecionando ? 8 : 7} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '8px 12px', background: 'var(--accent-bg)', borderTop: '1px solid var(--accent-border)', borderBottom: '1px solid var(--accent-border)' }}>
                             {data !== 'sem-data' ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Sem data'}
                             <span style={{ fontWeight: 400, color: 'var(--text-3)', marginLeft: 8 }}>
                               {fmt(itens.reduce((s, i) => s + i.valor, 0))}
@@ -1166,6 +1202,14 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                           const processandoEste = processandoPagamento === l.id;
                           return (
                             <tr key={l.id} className={(l.status === 'pago' ? ((l.origem ?? '').startsWith('cartao') ? 'fin-row-pago-cartao' : 'fin-row-pago-neutro') : undefined)}>
+                          {selecionando && (
+                            <td>
+                              {elegivelLote(l) && (
+                                <input type="checkbox" checked={selecionados.has(l.id)} onChange={() => alternarSelecionado(l.id)}
+                                  style={{ width: 16, height: 16, margin: 0 }} aria-label={`Selecionar ${l.descricao}`} />
+                              )}
+                            </td>
+                          )}
                           <td>
                             <div style={{ fontWeight: 500 }}>
                               {l.origem === 'cartao_fatura' && <CreditCard size={12} style={{ verticalAlign: -1, marginRight: 4, color: 'var(--accent)' }} />}
@@ -1247,6 +1291,12 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                       const processandoEste = processandoPagamento === l.id;
                       return (
                         <div key={l.id} className={`fin-card-mobile${l.status === 'pago' ? (ehCartao ? ' fin-row-pago-cartao' : ' fin-row-pago-neutro') : ''}`}>
+                      {selecionando && elegivelLote(l) && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)', marginBottom: 6, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={selecionados.has(l.id)} onChange={() => alternarSelecionado(l.id)} style={{ width: 16, height: 16, margin: 0 }} />
+                          Selecionar para pagar
+                        </label>
+                      )}
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <div>
                           <div style={{ fontWeight: 500 }}>
@@ -1439,6 +1489,21 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
           )
         )}
       </div>
+
+      {/* Modal pagar várias contas */}
+      {modalLote && (
+        <PagarLoteModal
+          itens={itensLote.map(l => ({ id: l.id, descricao: l.descricao, valor: l.valor, categoriaNome: l.categoriaNome, vencimento: l.vencimento }))}
+          contas={contas as any}
+          onClose={() => setModalLote(false)}
+          onConcluido={async msg => {
+            setModalLote(false);
+            sairDaSelecao();
+            await Promise.all([carregarLancamentos(), carregarResumo(), carregarContas()]);
+            sucesso(msg);
+          }}
+        />
+      )}
 
       {/* Modal novo lançamento */}
       {modalLancamento && (
@@ -2295,13 +2360,13 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
               {(editandoLancamento.modo === 'fixa' || editandoLancamento.modo === 'parcelada') ? (
                 <>
                   <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('unica')}>
-                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
+                    {salvandoEdit && escopoSalvando === 'unica' ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Só esta'}
                   </button>
                   <button className="btn-primary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('futuras')}>
-                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desta data em diante'}
+                    {salvandoEdit && escopoSalvando === 'futuras' ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Desta data em diante'}
                   </button>
                   <button className="btn-secondary" disabled={salvandoEdit} onClick={() => salvarEdicaoLancamento('todas')}>
-                    {salvandoEdit ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Todas em aberto'}
+                    {salvandoEdit && escopoSalvando === 'todas' ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Todas em aberto'}
                   </button>
                 </>
               ) : (
