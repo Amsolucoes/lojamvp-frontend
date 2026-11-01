@@ -1683,9 +1683,15 @@ export function FinanceiroMobile() {
           </div>
 
           {carregandoReceber || filtrandoReceber ? null : (() => {
-            const baseReceber = (buscaReceber || filtroTipoReceber !== 'todos')
-              ? linhasReceber.filter(l => contemTexto(l.descricao, buscaReceber) && passaTipo(l, filtroTipoReceber))
-              : linhasReceber;
+            // O card acompanha os filtros de categoria, tipo e busca (o filtro de status não entra: o card mostra recebido e em aberto juntos)
+            const baseReceber = linhasReceber.filter(l => {
+              const catOk = catFiltroReceber === 'todas'
+                ? true
+                : catFiltroReceber === '__plano__'
+                ? l.origem === 'plano'
+                : l.origem === 'avulso' && l.categoriaNome === catFiltroReceber;
+              return catOk && contemTexto(l.descricao, buscaReceber) && passaTipo(l, filtroTipoReceber);
+            });
             const totalRecebido = baseReceber.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
             const totalAberto = baseReceber.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
             const totalMes = totalRecebido + totalAberto;
