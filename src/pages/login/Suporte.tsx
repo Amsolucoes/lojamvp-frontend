@@ -17,6 +17,8 @@ export function Suporte() {
 
       const dados = JSON.parse(decodeURIComponent(hash));
       if (dados.token) {
+        // Marca que esta aba é um acesso de suporte (o assistente de primeiros passos não abre sozinho nem grava preferências)
+        try { sessionStorage.setItem('loja:suporte', '1'); } catch { /* sem armazenamento */ }
         setSessao({
           token: dados.token,
           nome: dados.nome ?? 'Suporte',

@@ -9,10 +9,16 @@ import { SeletorBandeira } from '../../utils/bandeiras';
 interface Conta { id: string; nome: string; ativa: boolean; }
 interface Categoria { id: string; nome: string; tipo: string; icone: string | null; }
 
-const CHAVE_VISTO = 'loja:fin-passos-visto';      // o assistente já abriu sozinho uma vez
-const CHAVE_OCULTAR = 'loja:fin-passos-ocultar';  // o usuário não quer mais ver o lembrete
+// As preferências ficam separadas por usuário (e-mail), para não misturar lojas no mesmo navegador.
+function usuarioAtual(): string {
+  try { return (JSON.parse(localStorage.getItem('loja:sessao') ?? 'null')?.email ?? '').toLowerCase(); } catch { return ''; }
+}
+const CHAVE_VISTO = () => `loja:fin-passos-visto:${usuarioAtual()}`;      // o assistente já abriu sozinho uma vez
+const CHAVE_OCULTAR = () => `loja:fin-passos-ocultar:${usuarioAtual()}`;  // o usuário não quer mais ver o lembrete
+// Acesso de suporte (botão do admin): não abre sozinho nem grava preferências
+const emSuporte = () => { try { return sessionStorage.getItem('loja:suporte') === '1'; } catch { return false; } };
 const ler = (k: string) => { try { return localStorage.getItem(k) === '1'; } catch { return false; } };
-const gravar = (k: string) => { try { localStorage.setItem(k, '1'); } catch { /* sem armazenamento */ } };
+const gravar = (k: string) => { if (emSuporte()) return; try { localStorage.setItem(k, '1'); } catch { /* sem armazenamento */ } };
 
 const ICONES = ['🏠', '💡', '💧', '📶', '🛒', '🚗', '💰', '📦', '💳', '🍽️'];
 const PASSOS = ['Boas-vindas', 'Conta', 'Categoria', 'Conta fixa', 'A receber', 'Cartão', 'Pronto'];
@@ -26,7 +32,7 @@ export function PrimeirosPassosFinanceiro({ onAtualizado }: { onAtualizado?: () 
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [carregado, setCarregado] = useState(false);
   const [aberto, setAberto] = useState(false);
-  const [ocultar, setOcultar] = useState(ler(CHAVE_OCULTAR));
+  const [ocultar, setOcultar] = useState(() => ler(CHAVE_OCULTAR()));
   const [passo, setPasso] = useState(0);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState('');
@@ -55,12 +61,12 @@ export function PrimeirosPassosFinanceiro({ onAtualizado }: { onAtualizado?: () 
   useEffect(() => {
     carregarDados().then(r => {
       setCarregado(true);
-      if (r && r.cs.length === 0 && !ler(CHAVE_VISTO)) abrir(r.cs.length, r.cats.length);
+      if (r && r.cs.length === 0 && !ler(CHAVE_VISTO()) && !emSuporte()) abrir(r.cs.length, r.cats.length);
     });
   }, []);
 
   function abrir(qtdContas = contas.length, qtdCategorias = categorias.length) {
-    gravar(CHAVE_VISTO);
+    gravar(CHAVE_VISTO());
     // retoma de onde faltava: conta → categoria → contas fixas
     setPasso(qtdContas === 0 ? 0 : qtdCategorias === 0 ? 2 : 3);
     setErro('');
@@ -74,7 +80,7 @@ export function PrimeirosPassosFinanceiro({ onAtualizado }: { onAtualizado?: () 
 
   function fechar(concluido = false) {
     setAberto(false);
-    if (concluido) { gravar(CHAVE_OCULTAR); setOcultar(true); }
+    if (concluido) { gravar(CHAVE_OCULTAR()); setOcultar(true); }
     onAtualizado?.();
     window.dispatchEvent(new Event('pullToRefresh'));
   }
@@ -364,7 +370,7 @@ export function PrimeirosPassosFinanceiro({ onAtualizado }: { onAtualizado?: () 
             <div style={{ fontSize: 12, color: 'var(--text-2)' }}>Crie sua conta, categorias e os primeiros lançamentos em 3 minutos.</div>
           </div>
           <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => abrir()}>Continuar</button>
-          <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => { gravar(CHAVE_OCULTAR); setOcultar(true); }}>Não mostrar mais</button>
+          <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => { gravar(CHAVE_OCULTAR()); setOcultar(true); }}>Não mostrar mais</button>
         </div>
       )}
 
