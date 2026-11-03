@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw, Loader2, Printer, ListChecks } from 'lucide-react';
 import { PagarLoteModal } from './PagarLoteModal';
 import { ParcelasModal } from './ParcelasModal';
+import { PrimeirosPassosFinanceiro } from './PrimeirosPassosFinanceiro';
 import { api } from '../../services/api';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { InputMoeda } from '../../components/InputMoeda';
@@ -890,6 +891,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
 
   return (
     <div className={`page fin-page${apenasFatura ? ' fin-embutido' : ''}`}>
+      {!apenasFatura && <PrimeirosPassosFinanceiro onAtualizado={() => { carregarContas(); carregarCategorias(); carregarCartoes(); carregarLancamentos(); carregarResumo(); }} />}
       {veioComAbaEspecifica && (
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <button className="fin-voltar-mobile" onClick={() => navigate(-1)} style={{

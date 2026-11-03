@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2, Bell, Printer, ListChecks } from 'lucide-react';
 import { PagarLoteModal } from './PagarLoteModal';
 import { ParcelasModal } from './ParcelasModal';
+import { PrimeirosPassosFinanceiro } from './PrimeirosPassosFinanceiro';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { setMobileShellOverride } from '../../utils/mobileShellOverride';
@@ -1113,6 +1114,7 @@ export function FinanceiroMobile() {
       </div>
 
       <div className="fm-content" ref={setRef} style={{ position: 'relative' }}>
+        {tela === 'visao' && <PrimeirosPassosFinanceiro onAtualizado={() => { recarregarContas(); }} />}
         {pull > 0 && (
           <div style={{
             position: 'absolute', top: 0, left: '50%', transform: `translate(-50%, ${pull - 40}px)`,

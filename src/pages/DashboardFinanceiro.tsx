@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { setBottomNavAction } from '../utils/bottomNavAction';
 import { BankBadge } from '../utils/bancos';
+import { PrimeirosPassosFinanceiro } from './financeiro/PrimeirosPassosFinanceiro';
 import { BandeiraBadge } from '../utils/bandeiras';
 import { PlanejamentoCard } from '../components/PlanejamentoCard';
 import './Dashboard.css';
@@ -162,6 +163,7 @@ export function DashboardFinanceiro() {
 
   return (
     <div className="page">
+      <PrimeirosPassosFinanceiro />
       <div className="card" style={{ marginBottom: 16, textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 14 }}>
           <button className="btn-secondary" onClick={() => navResumoMes(-1)} style={{ padding: '6px 10px' }}><ChevronLeft size={16} /></button>
