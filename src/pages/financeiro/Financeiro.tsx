@@ -3,6 +3,7 @@ import { useFiltrando } from '../../hooks/useFiltrando';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw, Loader2, Printer, ListChecks } from 'lucide-react';
 import { PagarLoteModal } from './PagarLoteModal';
+import { ParcelasModal } from './ParcelasModal';
 import { api } from '../../services/api';
 import { AutocompleteInput } from '../../components/AutocompleteInput';
 import { InputMoeda } from '../../components/InputMoeda';
@@ -204,6 +205,9 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
   const [selecionando, setSelecionando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [modalLote, setModalLote] = useState(false);
+  // Gerenciar parcelas de um lançamento parcelado (empréstimo etc.)
+  const [modalParcelas, setModalParcelas] = useState<{ id: string; titulo: string } | null>(null);
+  const [parcelasAlteradas, setParcelasAlteradas] = useState(false);
   const elegivelLote = (l: LinhaPagar) => l.origem === 'avulso' && l.status === 'pendente';
   const itensLote = linhasPagar.filter(l => selecionados.has(l.id) && elegivelLote(l));
   const totalLote = itensLote.reduce((s, l) => s + l.valor, 0);
@@ -1490,6 +1494,22 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
         )}
       </div>
 
+      {modalParcelas && (
+        <ParcelasModal
+          lancamentoId={modalParcelas.id}
+          titulo={modalParcelas.titulo}
+          onAlterado={() => setParcelasAlteradas(true)}
+          onClose={async () => {
+            const alterou = parcelasAlteradas;
+            setModalParcelas(null);
+            if (alterou) {
+              setEditandoLancamento(null);   // a parcela aberta pode ter sido excluída ou renumerada
+              await Promise.all([carregarLancamentos(), carregarResumo(), carregarContas()]);
+            }
+          }}
+        />
+      )}
+
       {/* Modal pagar várias contas */}
       {modalLote && (
         <PagarLoteModal
@@ -2352,6 +2372,12 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                     <br />• <strong>Desta data em diante</strong> — a partir de {rotuloMesAno(editandoLancamento.vencimento) || 'este mês'} (os anteriores em aberto ficam como estão).
                     <br />• <strong>Todas em aberto</strong> — inclui também os anteriores ainda pendentes.
                   </p>
+                )}
+                {editandoLancamento.modo === 'parcelada' && (
+                  <button type="button" className="btn-secondary" style={{ fontSize: 12, alignSelf: 'flex-start' }}
+                    onClick={() => { setParcelasAlteradas(false); setModalParcelas({ id: editandoLancamento.id, titulo: editandoLancamento.descricao }); }}>
+                    Gerenciar parcelas (total, excluir, marcar pagas)
+                  </button>
                 )}
               </div>
             </div>

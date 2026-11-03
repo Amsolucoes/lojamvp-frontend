@@ -3,6 +3,7 @@ import { useFiltrando } from '../../hooks/useFiltrando';
 import { useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet, Menu, X, LogOut, HelpCircle, Settings, Plus, Check, Trash2, ChevronLeft, ChevronRight, BarChart3, TrendingUp, TrendingDown, RotateCcw, Loader2, Bell, Printer, ListChecks } from 'lucide-react';
 import { PagarLoteModal } from './PagarLoteModal';
+import { ParcelasModal } from './ParcelasModal';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { setMobileShellOverride } from '../../utils/mobileShellOverride';
@@ -141,6 +142,9 @@ export function FinanceiroMobile() {
   const [selecionando, setSelecionando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [modalLote, setModalLote] = useState(false);
+  // Gerenciar parcelas de um lançamento parcelado (empréstimo etc.)
+  const [modalParcelas, setModalParcelas] = useState<{ id: string; titulo: string; origem: 'pagar' | 'receber' } | null>(null);
+  const [parcelasAlteradas, setParcelasAlteradas] = useState(false);
   const elegivelLote = (l: LinhaPagar) => l.origem === 'avulso' && l.status === 'pendente';
   const itensLote = linhasPagar.filter(l => selecionados.has(l.id) && elegivelLote(l));
   const totalLote = itensLote.reduce((t, l) => t + l.valor, 0);
@@ -1983,6 +1987,24 @@ export function FinanceiroMobile() {
         ))}
       </nav>
 
+      {modalParcelas && (
+        <ParcelasModal
+          lancamentoId={modalParcelas.id}
+          titulo={modalParcelas.titulo}
+          onAlterado={() => setParcelasAlteradas(true)}
+          onClose={async () => {
+            const alterou = parcelasAlteradas;
+            const origem = modalParcelas.origem;
+            setModalParcelas(null);
+            if (alterou) {
+              // a parcela aberta pode ter sido excluída ou renumerada: fecha a edição e recarrega a lista
+              if (origem === 'pagar') { setEditandoLancamento(null); await recarregarPagar(); }
+              else { setEditandoReceber(null); await recarregarReceber(); }
+            }
+          }}
+        />
+      )}
+
       {modalLote && (
         <PagarLoteModal
           itens={itensLote.map(l => ({ id: l.id, descricao: l.descricao, valor: l.valor, categoriaNome: l.categoriaNome, vencimento: l.vencimento }))}
@@ -2052,6 +2074,12 @@ export function FinanceiroMobile() {
                     <br />• <strong>Desta data em diante</strong> — a partir de {rotuloMesAno(editandoLancamento.vencimento) || 'este mês'} (os anteriores em aberto ficam como estão).
                     <br />• <strong>Todas em aberto</strong> — inclui também os anteriores ainda pendentes.
                   </p>
+                )}
+                {editandoLancamento.modo === 'parcelada' && (
+                  <button type="button" className="btn-secondary" style={{ fontSize: 12, alignSelf: 'flex-start' }}
+                    onClick={() => { setParcelasAlteradas(false); setModalParcelas({ id: editandoLancamento.id, titulo: editandoLancamento.descricao, origem: 'pagar' }); }}>
+                    Gerenciar parcelas (total, excluir, marcar pagas)
+                  </button>
                 )}
               </div>
             </div>
@@ -2174,6 +2202,12 @@ export function FinanceiroMobile() {
                     <br />• <strong>Desta data em diante</strong> — a partir de {rotuloMesAno(editandoReceber.vencimento) || 'este mês'} (os anteriores em aberto ficam como estão).
                     <br />• <strong>Todas em aberto</strong> — inclui também os anteriores ainda pendentes.
                   </p>
+                )}
+                {editandoReceber.modo === 'parcelada' && (
+                  <button type="button" className="btn-secondary" style={{ fontSize: 12, alignSelf: 'flex-start' }}
+                    onClick={() => { setParcelasAlteradas(false); setModalParcelas({ id: editandoReceber.id, titulo: editandoReceber.descricao, origem: 'receber' }); }}>
+                    Gerenciar parcelas (total, excluir, marcar pagas)
+                  </button>
                 )}
               </div>
             </div>
