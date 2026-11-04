@@ -16,3 +16,13 @@ export function rotuloMesAno(data?: string | null): string {
   const [ano, mes] = data.slice(0, 10).split('-').map(Number);
   return ano && mes ? `${meses[mes - 1]}/${ano}` : '';
 }
+
+// Categoria obrigatória e que exista: se o texto digitado não bate com uma categoria cadastrada, o id fica vazio.
+// Devolve a mensagem de erro, ou null se está tudo certo.
+export function erroCategoria(categoriaId: string | null | undefined, categoriaTexto: string | null | undefined): string | null {
+  if (categoriaId) return null;
+  const texto = (categoriaTexto ?? '').trim();
+  return texto
+    ? `A categoria "${texto}" não existe. Escolha uma da lista ou cadastre em Categorias.`
+    : 'Escolha a categoria.';
+}
