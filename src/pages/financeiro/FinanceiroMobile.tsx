@@ -20,7 +20,7 @@ import { ComparativoCategorias } from './ComparativoCategorias';
 import { DetalheCategoriaModal } from './DetalheCategoriaModal';
 import { PlanejamentoCard } from '../../components/PlanejamentoCard';
 import { DetalheFatura, FaturaAninhada, faturaComPagamento, faturasSemLinha, agruparComFaturas, BarraCartoes, filtrarOrdenarCartoes, faturaFoiPaga, FaturaMes, OrdemCartoes } from './FaturasDoMes';
-import { contemTexto, normalizarTexto, rotuloMesAno } from '../../utils/texto';
+import { contemTexto, normalizarTexto, rotuloMesAno, erroCategoria } from '../../utils/texto';
 import { SkeletonLista, EstadoVazio } from '../../components/Skeleton';
 import './FinanceiroMobile.css';
 
@@ -643,6 +643,8 @@ export function FinanceiroMobile() {
   async function lancarCompra() {
     if (!faturaAberta) return;
     if (!formCompra.descricao.trim() || !formCompra.valor) return;
+    const erroCat = erroCategoria(formCompra.categoriaId, formCompra.categoriaTexto);
+    if (erroCat) { erro(erroCat); return; }
     try {
       if (formCompra.modo === 'avulsa') {
         await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/lancamentos`, {
@@ -683,6 +685,8 @@ export function FinanceiroMobile() {
 
   async function salvarEdicaoItemCartao(modo: 'unica' | 'todas') {
     if (!editandoItemCartao || !faturaAberta) return;
+    const erroCat = erroCategoria(formEditItemCartao.categoriaId, formEditItemCartao.categoriaTexto);
+    if (erroCat) { erro(erroCat); return; }
     try {
       await api.put(`/api/financeiro/cartoes/lancamentos/${editandoItemCartao.id}?modo=${modo}`, {
         descricao: formEditItemCartao.descricao.trim(),
@@ -852,6 +856,10 @@ export function FinanceiroMobile() {
   async function salvarNovoLancamento() {
     if (!modalNovoLanc) return;
     if (!formNovoLanc.contaBancariaId || !formNovoLanc.descricao.trim() || !formNovoLanc.valor) return;
+    if (modalNovoLanc === 'pagar') {
+      const e = erroCategoria(formNovoLanc.categoriaId, formNovoLanc.categoriaTexto);
+      if (e) { erro(e); return; }
+    }
     setSalvandoNovoLanc(true);
     try {
       if (formNovoLanc.modo === 'avulsa') {
@@ -930,6 +938,8 @@ export function FinanceiroMobile() {
   async function salvarEdicao(modo: 'unica' | 'futuras' | 'todas') {
     setEscopoSalvando(modo);
     if (!editandoLancamento) return;
+    const erroCat = erroCategoria(formEdit.categoriaId, formEdit.categoriaTexto);
+    if (erroCat) { erro(erroCat); return; }
     setSalvandoEdit(true);
     try {
       await api.put(`/api/financeiro/lancamentos/${editandoLancamento.id}?modo=${modo}`, {
@@ -2978,7 +2988,7 @@ export function FinanceiroMobile() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Categoria</label>
+                  <label className="form-label">Categoria{modalNovoLanc === 'pagar' && ' *'}</label>
                   <AutocompleteInput
                     value={(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).find(c => c.id === formNovoLanc.categoriaId)?.nome ?? formNovoLanc.categoriaTexto}
                     options={(modalNovoLanc === 'pagar' ? categoriasPagar : categoriasReceber).map(c => ({ value: c.nome, icone: c.icone }))}

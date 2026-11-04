@@ -11,7 +11,7 @@ import { InputMoeda } from '../../components/InputMoeda';
 import { useToast } from '../../context/ToastContext';
 import { setBottomNavAction } from '../../utils/bottomNavAction';
 import { BANCOS, BankBadge } from '../../utils/bancos';
-import { contemTexto, normalizarTexto, rotuloMesAno } from '../../utils/texto';
+import { contemTexto, normalizarTexto, rotuloMesAno, erroCategoria } from '../../utils/texto';
 import { SkeletonLista } from '../../components/Skeleton';
 import './Financeiro.css';
 import { useApp } from '@/context/AppContext';
@@ -521,6 +521,10 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
   async function salvarLancamento() {
     if (!formLanc.contaBancariaId) { erro('Cadastre uma conta bancária primeiro.'); return; }
     if (!formLanc.descricao.trim() || !formLanc.valor) { erro('Preencha descrição e valor.'); return; }
+    if (aba === 'pagar') {
+      const e = erroCategoria(formLanc.categoriaId, formLanc.categoriaTexto);
+      if (e) { erro(e); return; }
+    }
     setSalvandoLanc(true);
     try {
       if (formLanc.modo === 'avulsa') {
@@ -618,6 +622,10 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
     if (!formEdit.descricao.trim() || !formEdit.valor || !formEdit.contaBancariaId) {
       erro('Preencha descrição, valor e conta.');
       return;
+    }
+    if (aba === 'pagar') {
+      const e = erroCategoria(formEdit.categoriaId, formEdit.categoriaTexto);
+      if (e) { erro(e); return; }
     }
     setSalvandoEdit(true);
     try {
@@ -740,6 +748,8 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
   async function lancarCompra() {
     if (!faturaAberta) return;
     if (!formCompra.descricao.trim() || !formCompra.valor) { erro('Preencha descrição e valor.'); return; }
+    const erroCat = erroCategoria(formCompra.categoriaId, formCompra.categoriaTexto);
+    if (erroCat) { erro(erroCat); return; }
     try {
       if (formCompra.modo === 'avulsa') {
         await api.post(`/api/financeiro/cartoes/${faturaAberta.id}/lancamentos`, {
@@ -1589,7 +1599,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Categoria</label>
+                  <label className="form-label">Categoria{aba === 'pagar' && ' *'}</label>
                   <AutocompleteInput
                     value={categoriasDaAba.find(c => c.id === formLanc.categoriaId)?.nome ?? formLanc.categoriaTexto ?? ''}
                     options={categoriasDaAba.map(c => ({ value: c.nome, icone: c.icone }))}
