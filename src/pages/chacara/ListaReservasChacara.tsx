@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight, AlertTriangle, Star, CopyPlus, Search } from 'lucide-react';
+import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight, AlertTriangle, Star, CopyPlus, Search, MessageCircle } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatarTelefone, formatarCpf, formatarCep, buscarEnderecoEstruturado } from '../../utils/mascaras';
@@ -339,6 +339,55 @@ export function ListaReservasChacara() {
     }
   }
 
+  // Contrato em PDF pelo WhatsApp. O WhatsApp não aceita anexo por link, então:
+  //  • celular/tablet: abre o menu de compartilhar do aparelho com o PDF já anexado (escolhe WhatsApp e o contato);
+  //  • computador: baixa o PDF e abre a conversa do cliente com a mensagem pronta, e você anexa o arquivo.
+  const [enviandoWhats, setEnviandoWhats] = useState<number | null>(null);
+
+  async function enviarContratoWhatsapp(r: Reserva) {
+    const texto = `Olá, ${r.clienteNome}! Segue em anexo o contrato de locação da chácara (${fmtData(r.dataInicio)} a ${fmtData(r.dataFim)}). Qualquer dúvida, estou à disposição.`;
+    const nomeArquivo = `Contrato - ${r.clienteNome}.pdf`;
+    const celular = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    const compartilhaArquivo = celular && typeof navigator.canShare === 'function' &&
+      navigator.canShare({ files: [new File([''], 'x.pdf', { type: 'application/pdf' })] });
+
+    // No computador abre a aba já no clique (depois de esperar o PDF o navegador bloquearia o pop-up)
+    const aba = compartilhaArquivo ? null : window.open('', '_blank');
+
+    setEnviandoWhats(r.id);
+    try {
+      const blob = await api.download(`/api/chacara/reservas/${r.id}/contrato-pdf`);
+      const arquivo = new File([blob], nomeArquivo, { type: 'application/pdf' });
+
+      if (compartilhaArquivo) {
+        try {
+          await navigator.share({ files: [arquivo], text: texto });
+          return;
+        } catch (e) {
+          if ((e as DOMException).name === 'AbortError') return; // cancelou o menu de compartilhar
+          // não deu para compartilhar: segue para o baixar + abrir conversa
+        }
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = nomeArquivo;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+      const digitos = (r.clienteTelefone ?? '').replace(/\D/g, '');
+      const numero = digitos ? (digitos.startsWith('55') ? digitos : `55${digitos}`) : '';
+      const link = `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+      if (aba) aba.location.href = link; else window.open(link, '_blank');
+      sucesso('PDF baixado. No WhatsApp, clique no clipe, escolha Documento e selecione o arquivo.');
+    } catch (e) {
+      aba?.close();
+      toastErro((e as Error).message);
+    } finally {
+      setEnviandoWhats(null);
+    }
+  }
+
   async function registrarPagamento() {
     if (!modalPagamento) return;
     setErroPagamento('');
@@ -651,6 +700,11 @@ export function ListaReservasChacara() {
                     <button className="btn-ghost" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px' }}
                       onClick={() => enviarContrato(r)} disabled={enviandoContrato === r.id}>
                       <Send size={12} /> {enviandoContrato === r.id ? 'Enviando...' : (r.contratoEnviadoEm ? 'Reenviar' : 'Enviar')} contrato
+                    </button>
+                    <button className="btn-ghost" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', color: 'var(--green)' }}
+                      title="Enviar o contrato em PDF pelo WhatsApp"
+                      onClick={() => enviarContratoWhatsapp(r)} disabled={enviandoWhats === r.id}>
+                      <MessageCircle size={12} /> {enviandoWhats === r.id ? 'Gerando PDF...' : 'Contrato por WhatsApp'}
                     </button>
                   </div>
 
