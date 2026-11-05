@@ -64,6 +64,8 @@ export function ListaReservasChacara() {
   const [carregando, setCarregando] = useState(true);
   const [confirmando, setConfirmando] = useState<number | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'pendente_pagamento' | 'confirmada'>('todas');
+  const [buscaReserva, setBuscaReserva] = useState('');
+  const buscando = buscaReserva.trim().length > 0;
   const hoje = new Date();
   const [periodoTipo, setPeriodoTipo] = useState<'mes' | 'todos'>('mes');
   const [mesRef, setMesRef] = useState(hoje.getMonth());
@@ -141,7 +143,7 @@ export function ListaReservasChacara() {
 
   useEffect(() => {
     setPaginaAtual(1);
-  }, [filtro, periodoTipo, mesRef, anoRef]);
+  }, [filtro, periodoTipo, mesRef, anoRef, buscaReserva]);
 
   function carregar() {
     setCarregando(true);
@@ -465,13 +467,17 @@ export function ListaReservasChacara() {
     return [...mapa.values()].sort((a, b) => a.reserva.clienteNome.localeCompare(b.reserva.clienteNome, 'pt-BR'));
   }, [reservas]);
 
+  // Busca por nome, e-mail, telefone ou CPF (telefone/CPF ignoram pontos, traços e parênteses)
+  function bateBusca(r: Reserva, termo: string) {
+    const digitos = termo.replace(/\D/g, '');
+    return contemTexto(r.clienteNome, termo) || contemTexto(r.clienteEmail, termo) ||
+      (digitos !== '' && ((r.clienteTelefone ?? '').replace(/\D/g, '').includes(digitos) ||
+                          (r.clienteDocumento ?? '').replace(/\D/g, '').includes(digitos)));
+  }
+
   const [buscaCliente, setBuscaCliente] = useState('');
-  const sugestoesCliente = buscaCliente.trim().length < 2 ? [] : clientesAnteriores.filter(c =>
-    contemTexto(c.reserva.clienteNome, buscaCliente) ||
-    contemTexto(c.reserva.clienteEmail, buscaCliente) ||
-    (c.reserva.clienteTelefone ?? '').replace(/\D/g, '').includes(buscaCliente.replace(/\D/g, '') || '\u0000') ||
-    (c.reserva.clienteDocumento ?? '').replace(/\D/g, '').includes(buscaCliente.replace(/\D/g, '') || '\u0000')
-  ).slice(0, 6);
+  const sugestoesCliente = buscaCliente.trim().length < 2 ? [] : clientesAnteriores.filter(c => bateBusca(c.reserva, buscaCliente)).slice(0, 6);
+
 
   function dadosDoCliente(r: Reserva) {
     return {
@@ -516,6 +522,8 @@ export function ListaReservasChacara() {
 
   const listaCompleta = reservas.filter(r => {
     if (filtro !== 'todas' && r.status !== filtro) return false;
+    // Com busca ativa, procura em todas as datas (ignora o mês escolhido)
+    if (buscando) return bateBusca(r, buscaReserva);
     if (periodoTipo === 'mes') {
       const chaveRef = `${anoRef}-${String(mesRef + 1).padStart(2, '0')}`;
       const bateInicio = r.dataInicio.slice(0, 7) === chaveRef;
@@ -550,6 +558,18 @@ export function ListaReservasChacara() {
 
       <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', minWidth: 230, flex: '1 1 230px' }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+            <input style={{ paddingLeft: 32, paddingRight: buscando ? 30 : undefined }} value={buscaReserva}
+              placeholder="Buscar por nome, CPF ou telefone" onChange={e => setBuscaReserva(e.target.value)} />
+            {buscando && (
+              <button className="btn-ghost" title="Limpar busca" onClick={() => setBuscaReserva('')}
+                style={{ position: 'absolute', right: 2, top: '50%', transform: 'translateY(-50%)', padding: 4 }}><X size={14} /></button>
+            )}
+          </div>
+          {buscando ? (
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Buscando em todas as datas · {listaCompleta.length} {listaCompleta.length === 1 ? 'resultado' : 'resultados'}</span>
+          ) : (<>
           <div className="cx-tipo-toggle">
             <button className={periodoTipo === 'mes' ? 'active' : ''} onClick={() => setPeriodoTipo('mes')}>Mês</button>
             <button className={periodoTipo === 'todos' ? 'active' : ''} onClick={() => setPeriodoTipo('todos')}>Todos</button>
@@ -561,6 +581,7 @@ export function ListaReservasChacara() {
               <button className="btn-secondary" onClick={() => navMes(1)} style={{ padding: '6px 10px' }}><ChevronRight size={16} /></button>
             </>
           )}
+          </>)}
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {(['todas', 'pendente_pagamento', 'confirmada'] as const).map(f => (
