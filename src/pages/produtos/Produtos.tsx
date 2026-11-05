@@ -45,6 +45,7 @@ export function Produtos() {
   const [temOrdemServico, setTemOrdemServico] = useState(false);
   const [marcas, setMarcas] = useState<{ id: string; nome: string }[]>([]);
   const [marcaFiltro, setMarcaFiltro] = useState<string>('todas');
+  const [fornecedorFiltro, setFornecedorFiltro] = useState<string>('todos'); // 'todos' | 'sem' | id
   const [modalMarcas, setModalMarcas] = useState(false);
   const [novaMarcaNome, setNovaMarcaNome] = useState('');
   const [editandoMarcaId, setEditandoMarcaId] = useState<string | null>(null);
@@ -109,13 +110,18 @@ export function Produtos() {
 
   
 
+  const fornecedorOk = (p: Produto) =>
+    fornecedorFiltro === 'todos' || (fornecedorFiltro === 'sem' ? !p.fornecedorId : p.fornecedorId === fornecedorFiltro);
+  const fornecedoresOrdenados = [...fornecedores].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
   const lista = produtos.filter(p => {
     const ok     = p.nome.toLowerCase().includes(busca.toLowerCase()) ||
                    (p.codigoBarras?.includes(busca) ?? false);
     const catOk  = catFiltro === 'todas' || p.categoria === catFiltro;
     const statOk = statusFiltro === 'todos' || (statusFiltro === 'ativo' ? p.ativo : !p.ativo);
     const marcaOk = marcaFiltro === 'todas' || p.marcaId === marcaFiltro;
-    return ok && catOk && statOk && marcaOk;
+    const fornOk = fornecedorOk(p);
+    return ok && catOk && statOk && marcaOk && fornOk;
   });
 
   // Usa select com busca quando passar de 10 categorias — com poucas, pills
@@ -130,7 +136,7 @@ export function Produtos() {
     const ok = p.nome.toLowerCase().includes(busca.toLowerCase()) || (p.codigoBarras?.includes(busca) ?? false);
     const statOk = statusFiltro === 'todos' || (statusFiltro === 'ativo' ? p.ativo : !p.ativo);
     const marcaOk = marcaFiltro === 'todas' || p.marcaId === marcaFiltro;
-    return ok && statOk && marcaOk;
+    return ok && statOk && marcaOk && fornecedorOk(p);
   });
   const contagemPorCategoria: Record<string, number> = {};
   produtosParaContagem.forEach(p => { contagemPorCategoria[p.categoria] = (contagemPorCategoria[p.categoria] ?? 0) + 1; });
@@ -425,7 +431,7 @@ export function Produtos() {
 
   useEffect(() => {
     setPaginaAtual(1);
-  }, [busca, catFiltro, statusFiltro, porPagina]);
+  }, [busca, catFiltro, statusFiltro, fornecedorFiltro, marcaFiltro, porPagina]);
 
   useEffect(() => {
     function aoClicarFora(e: MouseEvent) {
@@ -522,6 +528,7 @@ export function Produtos() {
           <input className="search-input" placeholder="Buscar por nome ou código..."
             value={busca} onChange={e => setBusca(e.target.value)} />
         </div>
+        <div className="prod-filtros-mob">
         {usarSelectCategoria ? (
           <div className="cat-select-wrap" ref={catMenuRef}>
             <button type="button" className="cat-select-btn" onClick={() => setCatMenuAberto(v => !v)}>
@@ -568,6 +575,32 @@ export function Produtos() {
             ))}
           </div>
         )}
+        </div>
+
+        {/* Desktop: filtros em select */}
+        <div className="prod-filtros-desk">
+          <select className="prod-filtro-select" value={catFiltro} onChange={e => setCat(e.target.value)} aria-label="Categoria">
+            <option value="todas">Todas as categorias ({produtosParaContagem.length})</option>
+            {catsOrdenadas.map(c => <option key={c.id} value={c.nome}>{c.nome} ({contagemPorCategoria[c.nome] ?? 0})</option>)}
+          </select>
+          <select className="prod-filtro-select" value={statusFiltro} onChange={e => setStatus(e.target.value as 'todos' | 'ativo' | 'inativo')} aria-label="Status">
+            <option value="todos">Ativos e inativos</option>
+            <option value="ativo">Somente ativos</option>
+            <option value="inativo">Somente inativos</option>
+          </select>
+          {temOrdemServico && marcas.length > 0 && (
+            <select className="prod-filtro-select" value={marcaFiltro} onChange={e => setMarcaFiltro(e.target.value)} aria-label="Marca">
+              <option value="todas">Todas as marcas</option>
+              {marcas.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+            </select>
+          )}
+        </div>
+
+        <select className="prod-filtro-select" value={fornecedorFiltro} onChange={e => setFornecedorFiltro(e.target.value)} aria-label="Fornecedor">
+          <option value="todos">Todos os fornecedores</option>
+          <option value="sem">Sem fornecedor</option>
+          {fornecedoresOrdenados.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+        </select>
       </div>
 
       {/* Ação em massa */}
