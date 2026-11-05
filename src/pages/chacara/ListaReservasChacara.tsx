@@ -322,6 +322,20 @@ export function ListaReservasChacara() {
     }
   }
 
+  // Reserva expirada: abre o WhatsApp do cliente perguntando se ainda quer a data
+  function perguntarSeAindaQuer(r: Reserva) {
+    const digitos = (r.clienteTelefone ?? '').replace(/\D/g, '');
+    if (!digitos) {
+      toastErro('Reserva sem telefone cadastrado. Edite a reserva para adicionar o telefone do cliente.');
+      return;
+    }
+    const numero = digitos.startsWith('55') ? digitos : `55${digitos}`;
+    const texto =
+      `Olá, ${r.clienteNome}! Tudo bem? A sua reserva da chácara para ${fmtData(r.dataInicio)} a ${fmtData(r.dataFim)} expirou por falta de pagamento. ` +
+      `Você ainda tem interesse nessa data? Se sim, me avise que eu verifico a disponibilidade e te passo como confirmar.`;
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, '_blank');
+  }
+
   // Reserva expirada: antes de mandar o contrato, pede confirmação (as datas podem já estar com outro cliente)
   const [avisoExpirada, setAvisoExpirada] = useState<{ reserva: Reserva; via: 'email' | 'whatsapp' } | null>(null);
 
@@ -721,6 +735,13 @@ export function ListaReservasChacara() {
                       onClick={() => pedirEnvioContrato(r, 'whatsapp')} disabled={enviandoWhats === r.id}>
                       <MessageCircle size={12} /> {enviandoWhats === r.id ? 'Gerando PDF...' : 'Contrato por WhatsApp'}
                     </button>
+                    {r.status === 'expirada' && (
+                      <button className="btn-ghost" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', color: 'var(--green)' }}
+                        title="Perguntar pelo WhatsApp se o cliente ainda quer a data"
+                        onClick={() => perguntarSeAindaQuer(r)}>
+                        <MessageCircle size={12} /> Ainda quer a data? (WhatsApp)
+                      </button>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1269,6 +1290,11 @@ export function ListaReservasChacara() {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <strong style={{ fontSize: 13 }}>{fmt(r.valor)}</strong>
+                        <button className="btn-ghost" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}
+                          title="Perguntar pelo WhatsApp se o cliente ainda quer a data"
+                          onClick={() => perguntarSeAindaQuer(r)}>
+                          <MessageCircle size={12} /> Ainda quer a data?
+                        </button>
                         <button className="btn-ghost" style={{ fontSize: 11 }}
                           onClick={() => reativarReserva(r)} disabled={reativando === r.id}>
                           {reativando === r.id ? 'Reativando...' : 'Reativar'}
