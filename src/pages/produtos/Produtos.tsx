@@ -4,6 +4,7 @@ import { Plus, Search, Edit2, Trash2, Package, X, ChevronDown, Barcode } from 'l
 import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
 import { api } from '../../services/api';
+import { totalVariacoes } from '../../utils/estoque';
 import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
 import './Produtos.css';
@@ -667,6 +668,9 @@ export function Produtos() {
                                 {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque} un.
                               </span>
                             ))}
+                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-1)', borderTop: '1px solid var(--border)', paddingTop: 2, marginTop: 2, whiteSpace: 'nowrap' }}>
+                              Total — {totalVariacoes((p as any).variacoes)} un.
+                            </span>
                           </div>
                         ) : (
                           <span className={p.estoque <= p.estoqueMinimo ? 'estoque-baixo' : 'estoque-ok'}>
@@ -723,6 +727,9 @@ export function Produtos() {
                             {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque}un
                           </span>
                         ))}
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', color: 'var(--text-1)' }}>
+                          Total: {totalVariacoes((p as any).variacoes)}un
+                        </span>
                       </div>
                     ) : (
                       <span className={p.estoque <= p.estoqueMinimo ? 'estoque-baixo' : 'estoque-ok'} style={{ fontSize: 12 }}>
