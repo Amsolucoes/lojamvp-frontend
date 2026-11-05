@@ -322,6 +322,21 @@ export function ListaReservasChacara() {
     }
   }
 
+  // Reserva expirada: antes de mandar o contrato, pede confirmação (as datas podem já estar com outro cliente)
+  const [avisoExpirada, setAvisoExpirada] = useState<{ reserva: Reserva; via: 'email' | 'whatsapp' } | null>(null);
+
+  function pedirEnvioContrato(r: Reserva, via: 'email' | 'whatsapp') {
+    if (r.status === 'expirada') { setAvisoExpirada({ reserva: r, via }); return; }
+    if (via === 'email') enviarContrato(r); else enviarContratoWhatsapp(r);
+  }
+
+  function confirmarEnvioExpirada() {
+    if (!avisoExpirada) return;
+    const { reserva, via } = avisoExpirada;
+    setAvisoExpirada(null);
+    if (via === 'email') enviarContrato(reserva); else enviarContratoWhatsapp(reserva);
+  }
+
   async function enviarContrato(r: Reserva) {
     if (!r.clienteEmail) {
       toastErro('Reserva sem e-mail cadastrado. Edite a reserva para adicionar um e-mail antes de enviar o contrato.');
@@ -698,12 +713,12 @@ export function ListaReservasChacara() {
                       )}
                     </span>
                     <button className="btn-ghost" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px' }}
-                      onClick={() => enviarContrato(r)} disabled={enviandoContrato === r.id}>
+                      onClick={() => pedirEnvioContrato(r, 'email')} disabled={enviandoContrato === r.id}>
                       <Send size={12} /> {enviandoContrato === r.id ? 'Enviando...' : (r.contratoEnviadoEm ? 'Reenviar' : 'Enviar')} contrato
                     </button>
                     <button className="btn-ghost" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', color: 'var(--green)' }}
                       title="Enviar o contrato em PDF pelo WhatsApp"
-                      onClick={() => enviarContratoWhatsapp(r)} disabled={enviandoWhats === r.id}>
+                      onClick={() => pedirEnvioContrato(r, 'whatsapp')} disabled={enviandoWhats === r.id}>
                       <MessageCircle size={12} /> {enviandoWhats === r.id ? 'Gerando PDF...' : 'Contrato por WhatsApp'}
                     </button>
                   </div>
@@ -1280,6 +1295,30 @@ export function ListaReservasChacara() {
       )}
 
       {/* Modal excluir reserva */}
+      {avisoExpirada && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setAvisoExpirada(null)}>
+          <div className="modal" style={{ maxWidth: 440 }}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--yellow)' }}>Reserva expirada</h2>
+              <button className="btn-ghost" onClick={() => setAvisoExpirada(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
+                A reserva de <strong style={{ color: 'var(--text-1)' }}>{avisoExpirada.reserva.clienteNome}</strong> ({fmtData(avisoExpirada.reserva.dataInicio)} — {fmtData(avisoExpirada.reserva.dataFim)}) está <strong>expirada</strong>:
+                o prazo para pagamento passou e essas datas podem já estar livres para outro cliente.
+              </p>
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.7, marginTop: 10 }}>
+                Tem certeza que quer enviar o contrato {avisoExpirada.via === 'email' ? 'por e-mail' : 'pelo WhatsApp'} mesmo assim?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setAvisoExpirada(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={confirmarEnvioExpirada}>Enviar mesmo assim</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {modalExcluir && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalExcluir(null)}>
           <div className="modal" style={{ maxWidth: 420 }}>
