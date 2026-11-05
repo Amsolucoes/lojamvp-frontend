@@ -611,6 +611,11 @@ export function ListaReservasChacara() {
     return true;
   });
 
+  // Na visão por mês, ordena pela data da reserva (mais próxima primeiro)
+  if (!buscando && periodoTipo === 'mes') {
+    listaCompleta.sort((x, y) => x.dataInicio.localeCompare(y.dataInicio) || x.dataFim.localeCompare(y.dataFim) || x.id - y.id);
+  }
+
   const totalPaginas = Math.max(1, Math.ceil(listaCompleta.length / ITENS_POR_PAGINA));
   const paginaSegura = Math.min(paginaAtual, totalPaginas);
   const lista = listaCompleta.slice((paginaSegura - 1) * ITENS_POR_PAGINA, paginaSegura * ITENS_POR_PAGINA);
