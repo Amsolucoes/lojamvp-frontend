@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { totalVariacoes } from '../../utils/estoque';
 import { Search, Plus, Minus, AlertTriangle, ArrowUp, ArrowDown, RefreshCw, X, Boxes } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
@@ -264,6 +265,9 @@ export function Estoque() {
                                       {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque} un.
                                     </span>
                                   ))}
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-1)', borderTop: '1px solid var(--border)', paddingTop: 2, marginTop: 2 }}>
+                                    Total — {totalVariacoes((p as any).variacoes)} un.
+                                  </span>
                                 </div>
                               ) : (
                                 <div className="est-qtd-cell">
@@ -320,6 +324,9 @@ export function Estoque() {
                                   {[v.tamanho, v.cor].filter(Boolean).join('/')} — {v.estoque}un
                                 </span>
                               ))}
+                              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', color: 'var(--text-1)' }}>
+                                Total: {totalVariacoes((p as any).variacoes)}un
+                              </span>
                             </div>
                           ) : (
                             <div className="est-qtd-cell">
