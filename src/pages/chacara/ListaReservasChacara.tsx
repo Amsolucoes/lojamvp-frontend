@@ -332,7 +332,8 @@ export function ListaReservasChacara() {
     const numero = digitos.startsWith('55') ? digitos : `55${digitos}`;
     const texto =
       `Olá, ${r.clienteNome}! Tudo bem? A sua reserva da chácara para ${fmtData(r.dataInicio)} a ${fmtData(r.dataFim)} expirou por falta de pagamento. ` +
-      `Você ainda tem interesse nessa data? Se sim, me avise que eu verifico a disponibilidade e te passo como confirmar.`;
+      `Você ainda tem interesse nessa data? Se sim, me avise que eu verifico a disponibilidade e te passo como confirmar.` +
+      (slugLoja ? `\n\nSe preferir, acesse o site da chácara e faça a sua reserva: https://app.aldevsoftware.com.br/chacara-site/${slugLoja}` : '');
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, '_blank');
   }
 
