@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight, AlertTriangle, Star } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Calendar, Check, Mail, FileCheck, Pencil, Trash2, X, Plus, DollarSign, Send, ChevronLeft, ChevronRight, AlertTriangle, Star, CopyPlus, Search } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatarTelefone, formatarCpf, formatarCep, buscarEnderecoEstruturado } from '../../utils/mascaras';
 import { InputMoeda } from '../../components/InputMoeda';
+import { contemTexto } from '../../utils/texto';
 
 type Reserva = {
   id: number;
@@ -441,7 +442,57 @@ export function ListaReservasChacara() {
       valor: 0, valorPago: 0,
     });
     setErroNova('');
+    setBuscaCliente('');
     setModalNova(true);
+  }
+
+  // ── Reaproveitar dados de quem já alugou ──────────────────────────────
+  // Junta as reservas do mesmo cliente (CPF, senão telefone, senão nome) e usa os dados da mais recente.
+  type ClienteAnterior = { chave: string; reserva: Reserva; qtd: number };
+  const clientesAnteriores = useMemo<ClienteAnterior[]>(() => {
+    const mapa = new Map<string, ClienteAnterior>();
+    for (const r of reservas) {
+      const doc = (r.clienteDocumento ?? '').replace(/\D/g, '');
+      const tel = (r.clienteTelefone ?? '').replace(/\D/g, '');
+      const chave = doc || tel || r.clienteNome.trim().toLowerCase();
+      const atual = mapa.get(chave);
+      if (!atual) mapa.set(chave, { chave, reserva: r, qtd: 1 });
+      else {
+        atual.qtd++;
+        if (r.criadoEm > atual.reserva.criadoEm) atual.reserva = r;
+      }
+    }
+    return [...mapa.values()].sort((a, b) => a.reserva.clienteNome.localeCompare(b.reserva.clienteNome, 'pt-BR'));
+  }, [reservas]);
+
+  const [buscaCliente, setBuscaCliente] = useState('');
+  const sugestoesCliente = buscaCliente.trim().length < 2 ? [] : clientesAnteriores.filter(c =>
+    contemTexto(c.reserva.clienteNome, buscaCliente) ||
+    contemTexto(c.reserva.clienteEmail, buscaCliente) ||
+    (c.reserva.clienteTelefone ?? '').replace(/\D/g, '').includes(buscaCliente.replace(/\D/g, '') || '\u0000') ||
+    (c.reserva.clienteDocumento ?? '').replace(/\D/g, '').includes(buscaCliente.replace(/\D/g, '') || '\u0000')
+  ).slice(0, 6);
+
+  function dadosDoCliente(r: Reserva) {
+    return {
+      clienteNome: r.clienteNome, clienteEmail: r.clienteEmail ?? '',
+      clienteTelefone: formatarTelefone(r.clienteTelefone ?? ''),
+      clienteDocumento: r.clienteDocumento ?? '', clienteCep: r.clienteCep ?? '',
+      clienteEndereco: r.clienteEndereco ?? '', clienteNumero: r.clienteNumero ?? '',
+      clienteCidade: r.clienteCidade ?? '',
+    };
+  }
+
+  function usarDadosDoCliente(r: Reserva) {
+    setFormNova(f => ({ ...f, ...dadosDoCliente(r) }));
+    setBuscaCliente('');
+    sucesso(`Dados de ${r.clienteNome} copiados. Agora é só informar as datas.`);
+  }
+
+  // Atalho na lista: abre a nova reserva já com os dados do cliente da reserva escolhida
+  function novaReservaParaCliente(r: Reserva) {
+    abrirNova();
+    setFormNova(f => ({ ...f, ...dadosDoCliente(r) }));
   }
 
   async function salvarNova() {
@@ -585,6 +636,9 @@ export function ListaReservasChacara() {
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button className="btn-ghost" title="Editar" onClick={() => abrirEdicao(r)}>
                       <Pencil size={14} />
+                    </button>
+                    <button className="btn-ghost" title="Nova reserva com os dados deste cliente" onClick={() => novaReservaParaCliente(r)}>
+                      <CopyPlus size={14} />
                     </button>
                     <button className="btn-ghost" title={r.valorPrejuizo ? 'Editar prejuízo' : 'Registrar prejuízo'}
                       style={{ color: r.valorPrejuizo ? 'var(--red)' : undefined }}
@@ -813,6 +867,31 @@ export function ListaReservasChacara() {
                 Use para datas já fechadas com o cliente por fora. A reserva entra direto como <strong>confirmada</strong>, sem enviar e-mail ou contrato automaticamente.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {clientesAnteriores.length > 0 && (
+                  <div className="form-group" style={{ position: 'relative' }}>
+                    <label className="form-label">Já alugou antes? Buscar cliente</label>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+                      <input style={{ paddingLeft: 32 }} value={buscaCliente} placeholder="Nome, telefone ou CPF para copiar os dados"
+                        onChange={e => setBuscaCliente(e.target.value)} />
+                    </div>
+                    {buscaCliente.trim().length >= 2 && (
+                      <div style={{ marginTop: 6, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', background: 'var(--bg-2)' }}>
+                        {sugestoesCliente.length === 0 ? (
+                          <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text-3)' }}>Nenhum cliente encontrado.</div>
+                        ) : sugestoesCliente.map(c => (
+                          <button key={c.chave} type="button" onClick={() => usarDadosDoCliente(c.reserva)}
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-1)' }}>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{c.reserva.clienteNome}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                              {formatarTelefone(c.reserva.clienteTelefone ?? '') || 'sem telefone'} · {c.qtd} {c.qtd === 1 ? 'reserva' : 'reservas'} · última em {fmtData(c.reserva.dataInicio)}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label className="form-label">Data início</label>
