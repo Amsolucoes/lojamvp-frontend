@@ -252,6 +252,10 @@ export function Produtos() {
     }
   }
 
+  function codigosVariacoes(p: Produto): string[] {
+    return (p.variacoes ?? []).map(v => v.codigoBarras).filter((c): c is string => !!c);
+  }
+
   function abrirNovo() {
     const catInicial = cats[0];
     setForm({ ...EMPTY, categoria: catInicial?.nome ?? '' });
@@ -594,7 +598,7 @@ export function Produtos() {
                     <th style={{ width: 32 }}>
                       <input type="checkbox" className="prod-checkbox" checked={todosFiltradosSelecionados} onChange={toggleSelecionarTodosFiltrados} />
                     </th>
-                    <th>Produto</th>{temOrdemServico && <th>Marca</th>}<th>Categoria</th><th>Custo</th>
+                    <th>Produto</th>{temOrdemServico && <th>Marca</th>}<th>Categoria</th><th>Cód. barras</th><th>Fornecedor</th><th>Custo</th>
                     <th>Venda</th><th>Margem</th><th>Estoque</th><th>Mín.</th>
                     <th>Status</th><th></th>
                   </tr>
@@ -607,10 +611,18 @@ export function Produtos() {
                       </td>
                       <td>
                         <div className="prod-nome">{p.nome}</div>
-                        {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
                       </td>
                       {temOrdemServico && <td style={{ color: 'var(--text-2)' }}>{p.nomeMarca || '—'}</td>}
                       <td><span className="badge badge-accent">{cats.find(c => c.nome === p.categoria)?.nome ?? p.categoria}</span></td>
+                      <td>
+                        {p.codigoBarras ? <span className="prod-cod" style={{ margin: 0 }}>{p.codigoBarras}</span>
+                          : codigosVariacoes(p).length > 0
+                            ? <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                {codigosVariacoes(p).map(c => <span key={c} className="prod-cod" style={{ margin: 0 }}>{c}</span>)}
+                              </div>
+                            : <span style={{ color: 'var(--text-3)' }}>—</span>}
+                      </td>
+                      <td style={{ color: p.nomeFornecedor ? 'var(--text-2)' : 'var(--text-3)', whiteSpace: 'nowrap' }}>{p.nomeFornecedor || 'Sem fornecedor'}</td>
                       <td style={{ color: 'var(--text-2)' }}>{fmt(p.precoCusto)}</td>
                       <td style={{ fontWeight: 500 }}>{fmt(p.precoVenda)}</td>
                       <td>{lucro(p) && <span className="badge badge-green">+{lucro(p)}%</span>}</td>
@@ -653,6 +665,7 @@ export function Produtos() {
                       <div>
                         <div className="prod-nome">{p.nome}{temOrdemServico && p.nomeMarca ? ` — ${p.nomeMarca}` : ''}</div>
                         {p.codigoBarras && <div className="prod-cod">{p.codigoBarras}</div>}
+                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{p.nomeFornecedor || 'Sem fornecedor'}</div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
