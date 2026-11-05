@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit2, Trash2, Package, X, ChevronDown } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, X, ChevronDown, Barcode } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
 import { api } from '../../services/api';
@@ -277,6 +277,40 @@ export function Produtos() {
       setVariacoes(lista);
       setUsarCodigoPorVariacao(lista.some((v: Variacao) => !!v.codigoBarras));
     }).catch(() => setVariacoes([]));
+  }
+
+  // Gera EAN-13 interno da loja (prefixo 2). Não vale para NF-e/marketplace, mas funciona em leitor e etiqueta.
+  const [gerandoCodigo, setGerandoCodigo] = useState(false);
+  async function buscarCodigos(qtd: number): Promise<string[]> {
+    const emUso = [form.codigoBarras, ...variacoes.map(v => v.codigoBarras)].filter((c): c is string => !!c);
+    const r = await api.get<{ codigos: string[] }>(
+      `/api/produtos/gerar-codigos?quantidade=${qtd}&ignorar=${encodeURIComponent(emUso.join(','))}`);
+    return r.codigos;
+  }
+
+  async function gerarCodigoProduto() {
+    setGerandoCodigo(true);
+    try {
+      const [codigo] = await buscarCodigos(1);
+      setForm(f => ({ ...f, codigoBarras: codigo }));
+    } catch (e) {
+      erro('Não foi possível gerar o código: ' + (e as Error).message);
+    } finally { setGerandoCodigo(false); }
+  }
+
+  async function gerarCodigosVariacoes() {
+    const faltando = variacoes.filter(v => !v.codigoBarras).length;
+    if (faltando === 0) { aviso('Todas as variações já têm código de barras.'); return; }
+    setGerandoCodigo(true);
+    try {
+      const codigos = await buscarCodigos(faltando);
+      let k = 0;
+      setVariacoes(prev => prev.map(v => v.codigoBarras ? v : { ...v, codigoBarras: codigos[k++] }));
+      setUsarCodigoPorVariacao(true);
+      sucesso(`${faltando} código${faltando > 1 ? 's' : ''} gerado${faltando > 1 ? 's' : ''}.`);
+    } catch (e) {
+      erro('Não foi possível gerar os códigos: ' + (e as Error).message);
+    } finally { setGerandoCodigo(false); }
   }
 
   async function salvar() {
@@ -730,7 +764,19 @@ export function Produtos() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Código de barras</label>
-                  <input value={form.codigoBarras} onChange={e => setForm(f => ({ ...f, codigoBarras: e.target.value }))} placeholder="Opcional" />
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input value={form.codigoBarras} style={{ flex: 1, minWidth: 0 }}
+                      onChange={e => setForm(f => ({ ...f, codigoBarras: e.target.value }))} placeholder="Opcional" />
+                    <button type="button" className="btn-secondary" style={{ padding: '0 12px', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+                      disabled={gerandoCodigo || !!form.codigoBarras}
+                      title={form.codigoBarras ? 'Apague o código atual para gerar outro' : 'Gerar um código de barras interno da loja'}
+                      onClick={gerarCodigoProduto}>
+                      <Barcode size={15} /> Gerar
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    "Gerar" cria um código interno da loja (vale para leitor e etiqueta, não para NF-e/marketplace).
+                  </p>
                 </div>
                 {temOrdemServico && (
                   <div className="form-group">
@@ -880,6 +926,17 @@ export function Produtos() {
                               onClick={() => setVariacoes(prev => prev.filter((_, j) => j !== i))}>✕</button>
                           </div>
                         ))}
+                      </div>
+                    )}
+                    {variacoes.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        <button type="button" className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 13 }}
+                          disabled={gerandoCodigo} onClick={gerarCodigosVariacoes}>
+                          <Barcode size={15} /> Gerar códigos de barras das variações
+                        </button>
+                        <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                          Preenche só as variações sem código, com códigos internos da loja.
+                        </p>
                       </div>
                     )}
                     {usarCodigoPorVariacao && (
