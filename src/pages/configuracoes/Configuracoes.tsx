@@ -24,7 +24,7 @@ const MODULOS_DESCRICAO: Record<string, string> = {
   servicos:   'Agenda de atendimentos, catálogo de serviços, controle de planos e mensalidades de clientes.',
   turmas:     'Aulas em grupo com matrícula fixa, chamada, controle de faltas e remarcações.',
   corretora:  'Funil de vendas (kanban), cadastro de seguradoras, apólices e lançamento automático de comissões.',
-  nf:         'Importação de notas fiscais em XML com match automático por GTIN e revisão manual.',
+  nf:         'Entrada de notas fiscais de compra: importe o XML (com match automático por GTIN e revisão manual) ou lance a nota manualmente.',
   etiquetas:  'Impressão de etiquetas de produtos com código de barras.',
   chacara_reservas: 'Agenda de reservas com pagamento online, contrato automático e aviso de check-out.',
   funcionarios: 'Comissão de profissionais, fechamento de pagamento e integração com o Financeiro.',

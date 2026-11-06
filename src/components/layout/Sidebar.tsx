@@ -137,7 +137,7 @@ export function Sidebar() {
     ...(temProdutos || temServicos ? [{ g: 'vendas', to: '/caixa', icon: ShoppingCart, label: 'Caixa' }] : []),
     ...(temProdutos ? [{ g: 'vendas', to: '/estoque', icon: Boxes, label: 'Estoque' }] : []),
     ...(temEtiquetas ? [{ g: 'vendas', to: '/etiquetas', icon: Tag, label: 'Etiquetas' }] : []),
-    ...(temNf ? [{ g: 'vendas', to: '/nf', label: 'Importar NF', icon: FileText }] : []),
+    ...(temNf ? [{ g: 'vendas', to: '/nf', label: 'Entrada de NF', icon: FileText }] : []),
     ...(temCorretora ? [{ g: 'vendas', to: '/funil', icon: Filter, label: 'Funil de Vendas' }] : []),
     ...(temProdutos || temServicos ? [{ g: 'vendas', to: '/relatorios', icon: BarChart2, label: 'Relatórios' }] : []),
     ...(temServicos ? [{ g: 'servicos', to: '/servicos', icon: Scissors, label: 'Serviços' }] : []),
