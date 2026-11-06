@@ -483,8 +483,8 @@ export function ImportarNf() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Importar NF</h1>
-          <p className="page-subtitle">Dar entrada em produtos a partir de uma nota fiscal</p>
+          <h1 className="page-title">Entrada de NF</h1>
+          <p className="page-subtitle">Dê entrada nos produtos importando o XML da nota ou lançando a nota manualmente</p>
         </div>
       </div>
 

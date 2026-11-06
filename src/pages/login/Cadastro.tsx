@@ -201,12 +201,12 @@ export function Cadastro() {
             if (ehLoja) {
               opcoes = [
                 { chave: 'servicos', label: 'Serviços e Agenda', valor: 0 },
-                { chave: 'nf', label: 'Importação de NF via XML', valor: 29.90 },
+                { chave: 'nf', label: 'Entrada de notas fiscais (XML ou manual)', valor: 29.90 },
                 { chave: 'financeiro', label: 'Financeiro (contas, cartão de crédito)', valor: 29.90 },
               ];
             } else if (ehServicos) {
               opcoes = [
-                { chave: 'nf', label: 'Importação de NF via XML', valor: 29.90 },
+                { chave: 'nf', label: 'Entrada de notas fiscais (XML ou manual)', valor: 29.90 },
                 { chave: 'financeiro', label: 'Financeiro (contas, cartão de crédito)', valor: 29.90 },
               ];
             } else if (ehOutros) {
