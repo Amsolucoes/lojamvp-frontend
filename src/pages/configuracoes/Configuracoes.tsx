@@ -19,6 +19,12 @@ type ModuloPreco = {
   disponivelParaAtivar: boolean;
 };
 
+// Nome exibido em Configurações (sobrepõe o nome vindo do servidor)
+const MODULOS_NOME: Record<string, string> = {
+  nf: 'Entrada de Notas Fiscais',
+};
+const nomeDoModulo = (m: { chave: string; nome: string }) => MODULOS_NOME[m.chave] ?? m.nome;
+
 const MODULOS_DESCRICAO: Record<string, string> = {
   financeiro: 'Controle de contas a pagar e receber, lançamentos, cartão de crédito, transferências e dashboard financeiro.',
   servicos:   'Agenda de atendimentos, catálogo de serviços, controle de planos e mensalidades de clientes.',
@@ -629,7 +635,7 @@ export function Configuracoes() {
                 />
                 <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 500 }}>{mod.nome}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>{nomeDoModulo(mod)}</span>
                   {MODULOS_DESCRICAO[mod.chave] && (
                     <span
                       title={MODULOS_DESCRICAO[mod.chave]}
@@ -727,8 +733,8 @@ export function Configuracoes() {
             <div className="modal-body">
               <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 16 }}>
                 {modalModulo.ativando
-                  ? <>Você está ativando o módulo <strong>{modalModulo.modulo.nome}</strong>.</>
-                  : <>Você está desativando o módulo <strong>{modalModulo.modulo.nome}</strong>.</>
+                  ? <>Você está ativando o módulo <strong>{nomeDoModulo(modalModulo.modulo)}</strong>.</>
+                  : <>Você está desativando o módulo <strong>{nomeDoModulo(modalModulo.modulo)}</strong>.</>
                 }
               </p>
               <div style={{
