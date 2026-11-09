@@ -5,15 +5,21 @@ import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
 import './Estoque.css';
 import { api } from '@/services/api';
+import { useToast } from '../../context/ToastContext';
 
 type AbaEstoque = 'visao-geral' | 'movimentos';
 
+type TipoMov = 'entrada' | 'saida' | 'ajuste';
+
 interface ModalAjuste {
   produto: Produto;
-  tipo: 'entrada' | 'ajuste';
+  tipo: TipoMov;
   variacaoId?: string;
   variacaoLabel?: string;
+  variacaoEstoque?: number;
 }
+
+const TITULO_MOV: Record<TipoMov, string> = { entrada: 'Registrar entrada', saida: 'Registrar saída', ajuste: 'Ajustar estoque' };
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -29,13 +35,15 @@ function fmtQtd(p: any, valor?: number): string {
 
 export function Estoque() {
   const { produtos, movimentos, ajustarEstoque, recarregar } = useApp();
+  const { erro: toastErro, sucesso } = useToast();
   const [aba, setAba]             = useState<AbaEstoque>('visao-geral');
   const [busca, setBusca]         = useState('');
   const [filtro, setFiltro]       = useState<'todos' | 'baixo' | 'zerado'>('todos');
   const [modal, setModal]         = useState<ModalAjuste | null>(null);
   const [qtdAjuste, setQtdAjuste] = useState('');
   const [obsAjuste, setObsAjuste] = useState('');
-  const [modalVariacaoEntrada, setModalVariacaoEntrada] = useState<{ produto: Produto } | null>(null);
+  const [modalVariacao, setModalVariacao] = useState<{ produto: Produto; tipo: TipoMov } | null>(null);
+  const [salvandoMov, setSalvandoMov] = useState(false);
   const [filtroMov, setFiltroMov] = useState<'todos' | 'entrada' | 'saida' | 'ajuste'>('todos');
   const [buscaMov, setBuscaMov] = useState('');
 
@@ -90,40 +98,55 @@ export function Estoque() {
     .map(([u, v]) => `${v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${u}`)
     .join(' · ');
 
-  function abrirEntrada(p: Produto) {
+  // Entrada, saída e ajuste: produto com grade escolhe antes a variação (tamanho/cor); sem grade vai direto
+  function abrirMovimento(p: Produto, tipo: TipoMov) {
     const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
     if (vars?.length > 0) {
-      setModalVariacaoEntrada({ produto: p });
+      setModalVariacao({ produto: p, tipo });
     } else {
-      setModal({ produto: p, tipo: 'entrada' });
-      setQtdAjuste('');
+      setModal({ produto: p, tipo });
+      setQtdAjuste(tipo === 'ajuste' ? String(p.estoque) : '');
       setObsAjuste('');
     }
   }
+  const abrirEntrada = (p: Produto) => abrirMovimento(p, 'entrada');
+  const abrirSaida = (p: Produto) => abrirMovimento(p, 'saida');
+  const abrirAjuste = (p: Produto) => abrirMovimento(p, 'ajuste');
 
-  function abrirAjuste(p: Produto) {
-    setModal({ produto: p, tipo: 'ajuste' });
-    setQtdAjuste(String(p.estoque));
-    setObsAjuste('');
-  }
+  // Estoque do que está sendo movimentado: da variação escolhida ou do produto
+  const estoqueBase = (m: ModalAjuste) => m.variacaoId ? (m.variacaoEstoque ?? 0) : m.produto.estoque;
 
-  function confirmarAjuste() {
-    if (!modal || !qtdAjuste) return;
+  async function confirmarAjuste() {
+    if (!modal || !qtdAjuste || salvandoMov) return;
     const qtd = parseFloat(qtdAjuste.replace(',', '.'));
     if (isNaN(qtd) || qtd < 0) return;
-
-    if (modal.variacaoId) {
-      api.post('/api/estoque/ajuste-variacao', {
-        produtoId: modal.produto.id,
-        variacaoId: modal.variacaoId,
-        quantidade: qtd,
-        tipo: modal.tipo,
-        observacao: obsAjuste || null,
-      }).then(() => recarregar());
-    } else {
-      ajustarEstoque(modal.produto.id, qtd, modal.tipo, obsAjuste || undefined);
+    if (modal.tipo !== 'ajuste' && qtd === 0) { toastErro('Informe uma quantidade maior que zero.'); return; }
+    if (modal.tipo === 'saida' && qtd > estoqueBase(modal)) {
+      toastErro(`A saída é maior que o estoque atual (${estoqueBase(modal)}).`);
+      return;
     }
-    setModal(null);
+
+    setSalvandoMov(true);
+    try {
+      if (modal.variacaoId) {
+        await api.post('/api/estoque/ajuste-variacao', {
+          produtoId: modal.produto.id,
+          variacaoId: modal.variacaoId,
+          quantidade: qtd,
+          tipo: modal.tipo,
+          observacao: obsAjuste.trim() || null,
+        });
+        await recarregar();
+      } else {
+        await ajustarEstoque(modal.produto.id, qtd, modal.tipo, obsAjuste.trim() || undefined);
+      }
+      sucesso(modal.tipo === 'entrada' ? 'Entrada registrada.' : modal.tipo === 'saida' ? 'Saída registrada.' : 'Estoque ajustado.');
+      setModal(null);
+    } catch (e) {
+      toastErro((e as Error).message);
+    } finally {
+      setSalvandoMov(false);
+    }
   }
 
   function fmtQtdMov(m: any): string {
@@ -289,6 +312,7 @@ export function Estoque() {
                             <td>
                               <div className="est-acoes">
                                 <button className="btn-secondary est-btn-acao" onClick={() => abrirEntrada(p)}><ArrowDown size={13} style={{ color: 'var(--green)' }} /> Entrada</button>
+                                <button className="btn-secondary est-btn-acao" onClick={() => abrirSaida(p)}><ArrowUp size={13} style={{ color: 'var(--red)' }} /> Saída</button>
                                 <button className="btn-ghost est-btn-acao" onClick={() => abrirAjuste(p)}><RefreshCw size={12} /> Ajustar</button>
                               </div>
                             </td>
@@ -341,6 +365,9 @@ export function Estoque() {
                         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                           <button className="btn-secondary est-btn-acao" style={{ flex: 1 }} onClick={() => abrirEntrada(p)}>
                             <ArrowDown size={13} style={{ color: 'var(--green)' }} /> Entrada
+                          </button>
+                          <button className="btn-secondary est-btn-acao" style={{ flex: 1 }} onClick={() => abrirSaida(p)}>
+                            <ArrowUp size={13} style={{ color: 'var(--red)' }} /> Saída
                           </button>
                           <button className="btn-ghost est-btn-acao" style={{ flex: 1 }} onClick={() => abrirAjuste(p)}>
                             <RefreshCw size={12} /> Ajustar
@@ -486,22 +513,25 @@ export function Estoque() {
         </>
       )}
 
-      {/* Modal seleção variação para entrada */}
-      {modalVariacaoEntrada && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalVariacaoEntrada(null)}>
+      {/* Modal seleção de variação (entrada, saída ou ajuste) */}
+      {modalVariacao && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalVariacao(null)}>
           <div className="modal" style={{ maxWidth: 420 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>
-                <ArrowDown size={16} style={{ color: 'var(--green)', verticalAlign: -2 }} /> Registrar entrada
+                {modalVariacao.tipo === 'entrada' && <ArrowDown size={16} style={{ color: 'var(--green)', verticalAlign: -2 }} />}
+                {modalVariacao.tipo === 'saida' && <ArrowUp size={16} style={{ color: 'var(--red)', verticalAlign: -2 }} />}
+                {modalVariacao.tipo === 'ajuste' && <RefreshCw size={16} style={{ color: 'var(--blue)', verticalAlign: -2 }} />}
+                {' '}{TITULO_MOV[modalVariacao.tipo]}
               </h2>
-              <button className="btn-ghost" onClick={() => setModalVariacaoEntrada(null)}><X size={16} /></button>
+              <button className="btn-ghost" onClick={() => setModalVariacao(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 14 }}>
-                <strong>{modalVariacaoEntrada.produto.nome}</strong> — Escolha a variação:
+                <strong>{modalVariacao.produto.nome}</strong> — Escolha o tamanho/cor:
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {(modalVariacaoEntrada.produto as any).variacoes
+                {(modalVariacao.produto as any).variacoes
                   ?.filter((v: any) => v.ativo)
                   .map((v: any) => {
                     const label = [v.tamanho, v.cor].filter(Boolean).join(' / ');
@@ -510,16 +540,17 @@ export function Estoque() {
                         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px' }}
                         onClick={() => {
                           setModal({
-                            produto: modalVariacaoEntrada.produto,
-                            tipo: 'entrada',
+                            produto: modalVariacao.produto,
+                            tipo: modalVariacao.tipo,
                             variacaoId: v.id,
                             variacaoLabel: label,
+                            variacaoEstoque: v.estoque,
                           });
-                          setQtdAjuste('');
+                          setQtdAjuste(modalVariacao.tipo === 'ajuste' ? String(v.estoque) : '');
                           setObsAjuste('');
-                          setModalVariacaoEntrada(null);
+                          setModalVariacao(null);
                         }}>
-                        <span style={{ fontWeight: 500 }}>{label}</span>
+                        <span style={{ fontWeight: 500 }}>{label || 'Sem tamanho/cor'}</span>
                         <span className={`badge ${v.estoque <= v.estoqueMinimo ? 'badge-yellow' : 'badge-green'}`}>
                           {v.estoque} un.
                         </span>
@@ -532,34 +563,35 @@ export function Estoque() {
         </div>
       )}
 
-      {/* Modal entrada / ajuste */}
+      {/* Modal entrada / saída / ajuste */}
       {modal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>
           <div className="modal" style={{ maxWidth: 420 }}>
             <div className="modal-header">
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>
-                {modal.tipo === 'entrada' ? (
-                  <><ArrowDown size={16} style={{ color: 'var(--green)', verticalAlign: -2 }} /> Registrar entrada</>
-                ) : (
-                  <><RefreshCw size={16} style={{ color: 'var(--blue)', verticalAlign: -2 }} /> Ajustar estoque</>
-                )}
+                {modal.tipo === 'entrada' && <><ArrowDown size={16} style={{ color: 'var(--green)', verticalAlign: -2 }} /> {TITULO_MOV.entrada}</>}
+                {modal.tipo === 'saida' && <><ArrowUp size={16} style={{ color: 'var(--red)', verticalAlign: -2 }} /> {TITULO_MOV.saida}</>}
+                {modal.tipo === 'ajuste' && <><RefreshCw size={16} style={{ color: 'var(--blue)', verticalAlign: -2 }} /> {TITULO_MOV.ajuste}</>}
               </h2>
               <button className="btn-ghost" onClick={() => setModal(null)}><X size={16} /></button>
             </div>
             <div className="modal-body">
               {/* Info produto */}
               <div className="est-modal-prod">
-                <div className="est-modal-prod-nome">{modal.produto.nome}</div>
+                <div className="est-modal-prod-nome">
+                  {modal.produto.nome}
+                  {modal.variacaoLabel && <span style={{ color: 'var(--text-2)', fontWeight: 500 }}> — {modal.variacaoLabel}</span>}
+                </div>
                 <div className="est-modal-prod-info">
-                  <span>Estoque atual: <strong>{fmtQtd(modal.produto)}</strong></span>
-                  <span>Mínimo: <strong>{fmtQtd(modal.produto, modal.produto.estoqueMinimo)}</strong></span>
+                  <span>{modal.variacaoId ? 'Estoque desta variação' : 'Estoque atual'}: <strong>{fmtQtd(modal.produto, estoqueBase(modal))}</strong></span>
+                  {!modal.variacaoId && <span>Mínimo: <strong>{fmtQtd(modal.produto, modal.produto.estoqueMinimo)}</strong></span>}
                 </div>
               </div>
 
               <div className="form-grid" style={{ gridTemplateColumns: '1fr', gap: 14, marginTop: 16 }}>
                 <div className="form-group">
                   <label className="form-label">
-                    {modal.tipo === 'entrada' ? 'Quantidade a adicionar' : 'Novo estoque total'}
+                    {modal.tipo === 'entrada' ? 'Quantidade a adicionar' : modal.tipo === 'saida' ? 'Quantidade a retirar' : 'Novo estoque total'}
                     {modal.produto.tipoVenda === 'fracionado' ? ` (${modal.produto.unidadeMedida})` : ''}
                   </label>
                   {modal.produto.tipoVenda === 'fracionado' ? (
@@ -589,8 +621,19 @@ export function Estoque() {
                   )}
                   {modal.tipo === 'entrada' && qtdAjuste && parseFloat(qtdAjuste.replace(',', '.')) > 0 && (
                     <div style={{ fontSize: 12, color: 'var(--green)', marginTop: 6 }}>
-                      Novo total: {fmtQtd(modal.produto, modal.produto.estoque + parseFloat(qtdAjuste.replace(',', '.')))}
+                      Novo total: {fmtQtd(modal.produto, estoqueBase(modal) + parseFloat(qtdAjuste.replace(',', '.')))}
                     </div>
+                  )}
+                  {modal.tipo === 'saida' && qtdAjuste && parseFloat(qtdAjuste.replace(',', '.')) > 0 && (
+                    parseFloat(qtdAjuste.replace(',', '.')) > estoqueBase(modal) ? (
+                      <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>
+                        Maior que o estoque atual ({fmtQtd(modal.produto, estoqueBase(modal))}).
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: 'var(--yellow)', marginTop: 6 }}>
+                        Novo total: {fmtQtd(modal.produto, estoqueBase(modal) - parseFloat(qtdAjuste.replace(',', '.')))}
+                      </div>
+                    )
                   )}
                 </div>
                 <div className="form-group">
@@ -598,7 +641,7 @@ export function Estoque() {
                   <input
                     value={obsAjuste}
                     onChange={e => setObsAjuste(e.target.value)}
-                    placeholder={modal.tipo === 'entrada' ? 'Ex: Compra de fornecedor' : 'Ex: Contagem física'}
+                    placeholder={modal.tipo === 'entrada' ? 'Ex: Compra de fornecedor' : modal.tipo === 'saida' ? 'Ex: Venda do dia 10/10 não lançada, produto com defeito' : 'Ex: Contagem física'}
                   />
                 </div>
               </div>
@@ -608,9 +651,10 @@ export function Estoque() {
               <button
                 className="btn-primary"
                 onClick={confirmarAjuste}
-                disabled={!qtdAjuste || parseFloat(qtdAjuste.replace(',', '.')) < 0}
+                disabled={salvandoMov || !qtdAjuste || parseFloat(qtdAjuste.replace(',', '.')) < 0 ||
+                  (modal.tipo === 'saida' && parseFloat(qtdAjuste.replace(',', '.')) > estoqueBase(modal))}
               >
-                {modal.tipo === 'entrada' ? 'Registrar entrada' : 'Salvar ajuste'}
+                {salvandoMov ? 'Salvando...' : modal.tipo === 'entrada' ? 'Registrar entrada' : modal.tipo === 'saida' ? 'Registrar saída' : 'Salvar ajuste'}
               </button>
             </div>
           </div>
