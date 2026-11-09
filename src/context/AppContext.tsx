@@ -49,7 +49,7 @@ interface AppCtx {
   ajustarEstoque: (
     produtoId: string,
     quantidade: number,
-    tipo: 'entrada' | 'ajuste',
+    tipo: 'entrada' | 'saida' | 'ajuste',
     obs?: string
   ) => Promise<void>;
 
@@ -305,7 +305,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function ajustarEstoque(
     produtoId: string,
     quantidade: number,
-    tipo: 'entrada' | 'ajuste',
+    tipo: 'entrada' | 'saida' | 'ajuste',
     obs?: string
   ) {
     const res = await api.post<any>('/api/estoque/ajuste', {
