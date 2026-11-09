@@ -38,7 +38,7 @@ export function Estoque() {
   const { erro: toastErro, sucesso } = useToast();
   const [aba, setAba]             = useState<AbaEstoque>('visao-geral');
   const [busca, setBusca]         = useState('');
-  const [filtro, setFiltro]       = useState<'todos' | 'baixo' | 'zerado'>('todos');
+  const [filtro, setFiltro]       = useState<'todos' | 'baixo' | 'zerado' | 'falta'>('todos');
   const [modal, setModal]         = useState<ModalAjuste | null>(null);
   const [qtdAjuste, setQtdAjuste] = useState('');
   const [obsAjuste, setObsAjuste] = useState('');
@@ -56,30 +56,17 @@ export function Estoque() {
 
   const prodsFiltrados = produtos.filter(p => {
     const buscaOk = p.nome.toLowerCase().includes(busca.toLowerCase());
-    const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
-    const temVarBaixo = vars?.length > 0 && vars.some((v: any) => v.estoque > 0 && v.estoque <= v.estoqueMinimo);
-    const temVarZerado = vars?.length > 0 && vars.some((v: any) => v.estoque === 0);
-    const estBaixo = vars?.length > 0 ? temVarBaixo : (p.estoque > 0 && p.estoque <= p.estoqueMinimo);
-    const estZerado = vars?.length > 0 ? temVarZerado : p.estoque === 0;
+    const status = statusEstoque(p);
 
-    if (filtro === 'baixo')  return buscaOk && estBaixo;
-    if (filtro === 'zerado') return buscaOk && estZerado;
+    if (filtro === 'baixo')  return buscaOk && status === 'baixo';
+    if (filtro === 'zerado') return buscaOk && status === 'zerado';
+    if (filtro === 'falta')  return buscaOk && faltaItemNaGrade(p);
     return buscaOk;
   });
 
-  const alertas = produtos.filter(p => {
-    if (!p.ativo) return false;
-    const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
-    if (vars?.length > 0) return vars.some((v: any) => v.estoque > 0 && v.estoque <= v.estoqueMinimo);
-    return p.estoque > 0 && p.estoque <= p.estoqueMinimo;
-  }).length;
-
-  const zerados = produtos.filter(p => {
-    if (!p.ativo) return false;
-    const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
-    if (vars?.length > 0) return vars.some((v: any) => v.estoque === 0);
-    return p.estoque === 0;
-  }).length;
+  const alertas = produtos.filter(p => p.ativo && statusEstoque(p) === 'baixo').length;
+  const zerados = produtos.filter(p => p.ativo && statusEstoque(p) === 'zerado').length;
+  const comItemZerado = produtos.filter(p => p.ativo && faltaItemNaGrade(p)).length;
 
   const ativos = produtos.filter(p => p.ativo);
   const totalUnidades = ativos.filter(p => p.tipoVenda !== 'fracionado').reduce((s, p) => s + p.estoque, 0);
@@ -157,18 +144,38 @@ export function Estoque() {
     return `${m.quantidade}`;
   }
 
-  function statusEstoque(p: Produto) {
+  // Produto com grade: "zerado" só quando TODOS os tamanhos/cores estão zerados;
+  // "baixo" quando algum item está acima de zero mas no mínimo ou abaixo.
+  function statusEstoque(p: Produto): 'zerado' | 'baixo' | 'ok' {
     const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
     if (vars?.length > 0) {
-      const temZerado = vars.some((v: any) => v.estoque === 0);
-      const temBaixo  = vars.some((v: any) => v.estoque > 0 && v.estoque <= v.estoqueMinimo);
-      if (temZerado) return 'zerado';
-      if (temBaixo)  return 'baixo';
+      if (totalVariacoes(vars) === 0) return 'zerado';
+      if (vars.some((v: any) => v.estoque > 0 && v.estoque <= v.estoqueMinimo)) return 'baixo';
       return 'ok';
     }
     if (p.estoque === 0)              return 'zerado';
     if (p.estoque <= p.estoqueMinimo) return 'baixo';
     return 'ok';
+  }
+
+  // Grade com algum tamanho/cor zerado, mas o produto ainda tem estoque nos outros
+  function faltaItemNaGrade(p: Produto): boolean {
+    const vars = (p as any).variacoes?.filter((v: any) => v.ativo);
+    return vars?.length > 0 && totalVariacoes(vars) > 0 && vars.some((v: any) => v.estoque === 0);
+  }
+
+  // Selos do produto na lista (pode ter mais de um: ex. "Baixo" e "Falta item")
+  function selosStatus(p: Produto) {
+    const status = statusEstoque(p);
+    const falta = faltaItemNaGrade(p);
+    return (
+      <>
+        {status === 'zerado' && <span className="badge badge-red">Zerado</span>}
+        {status === 'baixo'  && <span className="badge badge-yellow"><AlertTriangle size={10} /> Baixo</span>}
+        {falta && <span className="badge badge-yellow" title="Algum tamanho/cor da grade está zerado, mas o produto ainda tem estoque"><AlertTriangle size={10} /> Falta item</span>}
+        {status === 'ok' && !falta && <span className="badge badge-green">OK</span>}
+      </>
+    );
   }
 
   const movOrdenados = [...movimentos]
@@ -227,7 +234,7 @@ export function Estoque() {
           <div className="stat-value" style={{ color: zerados > 0 ? 'var(--red)' : undefined }}>
             {zerados}
           </div>
-          <div className="stat-sub">produto(s) zerado(s)</div>
+          <div className="stat-sub">produto(s) com tudo zerado</div>
         </div>
       </div>
 
@@ -258,6 +265,10 @@ export function Estoque() {
               </button>
               <button className={`cat-tab${filtro === 'zerado' ? ' active' : ''}`} onClick={() => setFiltro('zerado')}>
                 Zerados {zerados > 0 && <span className="est-badge-red">{zerados}</span>}
+              </button>
+              <button className={`cat-tab${filtro === 'falta' ? ' active' : ''}`} onClick={() => setFiltro('falta')}
+                title="Produtos com algum tamanho/cor da grade zerado, mas que ainda têm estoque nos outros">
+                Item da grade zerado {comItemZerado > 0 && <span className="est-badge-warn">{comItemZerado}</span>}
               </button>
             </div>
           </div>
@@ -305,9 +316,7 @@ export function Estoque() {
                             <td style={{ color: 'var(--text-3)', fontSize: 13 }}>{fmtQtd(p, p.estoqueMinimo)}</td>
                             <td style={{ color: 'var(--text-2)', fontSize: 13 }}>{fmt(p.estoque * p.precoCusto)}</td>
                             <td>
-                              {status === 'zerado' && <span className="badge badge-red">Zerado</span>}
-                              {status === 'baixo'  && <span className="badge badge-yellow"><AlertTriangle size={10} /> Baixo</span>}
-                              {status === 'ok'     && <span className="badge badge-green">OK</span>}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>{selosStatus(p)}</div>
                             </td>
                             <td>
                               <div className="est-acoes">
@@ -335,9 +344,7 @@ export function Estoque() {
                             <span className="badge badge-accent" style={{ fontSize: 10, marginTop: 4 }}>{p.categoria}</span>
                           </div>
                           <div>
-                            {status === 'zerado' && <span className="badge badge-red">Zerado</span>}
-                            {status === 'baixo'  && <span className="badge badge-yellow"><AlertTriangle size={10} /> Baixo</span>}
-                            {status === 'ok'     && <span className="badge badge-green">OK</span>}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>{selosStatus(p)}</div>
                           </div>
                         </div>
                         <div style={{ marginTop: 10 }}>
