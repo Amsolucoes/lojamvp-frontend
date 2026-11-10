@@ -69,6 +69,18 @@ export function ConfigImpressoraCupom() {
       </div>
 
       <div className="form-group">
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+          <input type="checkbox" checked={cfg.imprimirAutomatico} style={{ width: 16, height: 16, margin: 0 }}
+            onChange={e => atualizar({ imprimirAutomatico: e.target.checked })} />
+          <span>Imprimir o cupom automaticamente ao finalizar a venda (sem perguntar)</span>
+        </label>
+        <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+          O botão <strong>Último cupom</strong>, no Caixa, imprime de novo o da última venda. Sem o Chrome em modo direto (abaixo),
+          a janela de prévia do navegador ainda abre, e você só confirma em Imprimir.
+        </p>
+      </div>
+
+      <div className="form-group">
         <label className="form-label">Nome da impressora <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional, só para você lembrar)</span></label>
         <input value={cfg.nomeImpressora} placeholder="Ex: POS-58"
           onChange={e => atualizar({ nomeImpressora: e.target.value })} />

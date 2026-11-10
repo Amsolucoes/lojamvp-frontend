@@ -8,6 +8,7 @@ export interface ConfigCupom {
   margemEsq: number;        // mm
   margemDir: number;        // mm
   nomeImpressora: string;   // só para referência (o navegador não deixa o site ler as impressoras do Windows)
+  imprimirAutomatico: boolean; // imprime o cupom ao finalizar a venda, sem perguntar
 }
 
 // Margens padrão. 58 mm: a área impressa dessas impressoras é ~48 mm e fica levemente deslocada,
@@ -35,22 +36,25 @@ export function lerConfigCupom(): ConfigCupom {
         margemEsq: num(c.margemEsq, MARGENS_PADRAO[largura].margemEsq),
         margemDir: num(c.margemDir, MARGENS_PADRAO[largura].margemDir),
         nomeImpressora: typeof c.nomeImpressora === 'string' ? c.nomeImpressora : '',
+        imprimirAutomatico: c.imprimirAutomatico === true,
       };
     }
     // Migra a escolha antiga (só a largura)
     if (localStorage.getItem(CHAVE_ANTIGA) === '58') largura = 58;
   } catch { /* sem localStorage: usa o padrão */ }
-  return { largura, ...MARGENS_PADRAO[largura], nomeImpressora: '' };
+  return { largura, ...MARGENS_PADRAO[largura], nomeImpressora: '', imprimirAutomatico: false };
 }
 
 export function salvarConfigCupom(c: ConfigCupom) {
   try { localStorage.setItem(CHAVE, JSON.stringify(c)); } catch { /* ignora */ }
 }
 
-// Imprime o cupom que estiver na tela (elemento .cupom-impressao). A janela de prévia é do navegador:
-// um site não consegue pulá-la (só o Chrome com --kiosk-printing).
+// Imprime o cupom que estiver na tela (elemento .cupom-impressao, desenhado direto no body).
+// A janela de prévia é do navegador: um site não consegue pulá-la (só o Chrome com --kiosk-printing).
 export function imprimirCupomNaoFiscal(larguraMm: number) {
+  document.getElementById('estilo-impressao-cupom')?.remove();
   const estilo = document.createElement('style');
+  estilo.id = 'estilo-impressao-cupom';
   // Só o cupom entra na impressão: o resto da tela é removido (display:none), e não só escondido.
   // Escondido ainda ocupa espaço (a tela do sistema é bem mais larga que 58 mm) e o Chrome encolhe
   // a página inteira para caber, deixando o cupom pequeno e deslocado mesmo com escala 100%.
@@ -64,23 +68,10 @@ export function imprimirCupomNaoFiscal(larguraMm: number) {
     }`;
   document.head.appendChild(estilo);
 
-  setTimeout(() => {
-    const cupom = document.querySelector('.cupom-impressao') as HTMLElement | null;
-    // Move o cupom para a raiz do body antes de imprimir: dentro de um contêiner com layout
-    // (grid/flex) o position:absolute se ancora no contêiner, não na folha.
-    const paiOriginal = cupom?.parentElement ?? null;
-    const proximoIrmao = cupom?.nextSibling ?? null;
-    if (cupom) document.body.appendChild(cupom);
-
-    function restaurar() {
-      estilo.remove();
-      if (cupom && paiOriginal) {
-        if (proximoIrmao) paiOriginal.insertBefore(cupom, proximoIrmao);
-        else paiOriginal.appendChild(cupom);
-      }
-      window.removeEventListener('afterprint', restaurar);
-    }
-    window.addEventListener('afterprint', restaurar);
-    window.print();
-  }, 50);
+  function restaurar() {
+    estilo.remove();
+    window.removeEventListener('afterprint', restaurar);
+  }
+  window.addEventListener('afterprint', restaurar);
+  setTimeout(() => window.print(), 50);
 }
