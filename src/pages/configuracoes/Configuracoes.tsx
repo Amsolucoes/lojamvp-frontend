@@ -6,6 +6,7 @@ import { X, Save, Upload, ArrowLeft } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useApp } from '../../context/AppContext';
 import { AvisosPush } from '../../components/AvisosPush';
+import { ConfigImpressoraCupom } from '../../components/ConfigImpressoraCupom';
 import './Configuracoes.css';
 
 const CLOUDINARY_CLOUD = 'dnwnwshvq';
@@ -66,7 +67,7 @@ export function Configuracoes() {
   const [modulosPreco, setModulosPreco] = useState<ModuloPreco[]>([]);
   const [modulosAtivos, setModulosAtivos] = useState<string[]>([]);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-  const { temCorretora, temProdutos, soFinanceiro, temChacaraReservas, temServicos, tipoPlano } = useApp();
+  const { temCorretora, temProdutos, soFinanceiro, temChacaraReservas, temServicos, tipoPlano, temCupomNaoFiscal } = useApp();
   const [mensalidadeAtual, setMensalidadeAtual] = useState(0);
   const [slugChacara, setSlugChacara] = useState('');
   const [slugAtual, setSlugAtual] = useState('');
@@ -551,6 +552,9 @@ export function Configuracoes() {
           </div>
         </div>
       )}
+
+      {/* Impressora de cupom não fiscal (só com o módulo ativo) */}
+      {temCupomNaoFiscal && <ConfigImpressoraCupom />}
 
       {/* Módulos */}
       <div className="card">
