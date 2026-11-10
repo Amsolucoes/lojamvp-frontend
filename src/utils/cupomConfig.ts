@@ -51,7 +51,17 @@ export function salvarConfigCupom(c: ConfigCupom) {
 // um site não consegue pulá-la (só o Chrome com --kiosk-printing).
 export function imprimirCupomNaoFiscal(larguraMm: number) {
   const estilo = document.createElement('style');
-  estilo.textContent = `@page { size: ${larguraMm}mm auto; margin: 0; }`;
+  // Só o cupom entra na impressão: o resto da tela é removido (display:none), e não só escondido.
+  // Escondido ainda ocupa espaço (a tela do sistema é bem mais larga que 58 mm) e o Chrome encolhe
+  // a página inteira para caber, deixando o cupom pequeno e deslocado mesmo com escala 100%.
+  estilo.textContent = `
+    @page { size: ${larguraMm}mm auto; margin: 0; }
+    @media print {
+      html, body { width: ${larguraMm}mm !important; min-width: 0 !important; height: auto !important;
+        margin: 0 !important; padding: 0 !important; overflow: visible !important; background: #fff !important; }
+      body > *:not(.cupom-impressao) { display: none !important; }
+      .cupom-impressao { position: static !important; display: block !important; }
+    }`;
   document.head.appendChild(estilo);
 
   setTimeout(() => {
