@@ -140,6 +140,14 @@ export function Caixa() {
   const [modalCupom, setModalCupom] = useState(false);
   // Configuração da impressora de cupom (Configurações → Impressora de cupom), guardada neste computador
   const [cfgCupom, setCfgCupom] = useState<ConfigCupom>(() => lerConfigCupom());
+  const [autoImprimir, setAutoImprimir] = useState(false);
+  // Imprime assim que o cupom da venda recém-feita está na tela
+  useEffect(() => {
+    if (autoImprimir && cupomVenda) {
+      setAutoImprimir(false);
+      imprimirCupomNaoFiscal(cfgCupom.largura);
+    }
+  }, [autoImprimir, cupomVenda, cfgCupom.largura]);
 
   const { sucesso: toastSucesso, erro: toastErro } = useToast();
 
@@ -792,9 +800,12 @@ export function Caixa() {
           : `Venda registrada! ${fmt(total)}`
       );
       if (temCupomNaoFiscal) {
-        setCfgCupom(lerConfigCupom());
+        const cfg = lerConfigCupom();
+        setCfgCupom(cfg);
         setCupomVenda(vendaCriada);
-        setModalCupom(true);
+        // Impressão automática (Configurações → Impressora de cupom): imprime direto, sem perguntar
+        if (cfg.imprimirAutomatico) setAutoImprimir(true);
+        else setModalCupom(true);
       }
       limpar();
     } catch (e) {
@@ -861,6 +872,12 @@ export function Caixa() {
             {temProdutos && (
               <button className="btn-secondary" onClick={() => setModalTroca(true)}>
                 🔄 Troca
+              </button>
+            )}
+            {temCupomNaoFiscal && cupomVenda && (
+              <button className="btn-ghost" onClick={() => { setCfgCupom(lerConfigCupom()); setModalCupom(true); }}
+                title="Imprimir de novo o cupom da última venda">
+                <Printer size={14} style={{ verticalAlign: -2 }} /> Último cupom
               </button>
             )}
             {carrinho.length > 0 && (

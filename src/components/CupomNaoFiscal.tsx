@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { Venda } from '../types';
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -29,7 +30,8 @@ export function CupomNaoFiscal({ venda, nomeLoja, larguraMm = 80, margemEsqMm, m
     formas = [{ forma: venda.formaPagamento, valor: venda.totalFinal }];
   }
 
-  return (
+  // O cupom é desenhado direto na raiz da página (portal): na impressão só ele fica, sem precisar mover elementos
+  return createPortal(
     <div className="cupom-impressao" id="area-impressao-cupom"
       style={{
         width: `${larguraMm}mm`,
@@ -84,6 +86,7 @@ export function CupomNaoFiscal({ venda, nomeLoja, larguraMm = 80, margemEsqMm, m
 
       <div className="cupom-linha" />
       <div style={{ textAlign: 'center', fontSize: 10, marginTop: 8 }}>Obrigado pela preferência!</div>
-    </div>
+    </div>,
+    document.body
   );
 }
