@@ -13,7 +13,7 @@ export interface ConfigCupom {
 // Margens padrão. 58 mm: a área impressa dessas impressoras é ~48 mm e fica levemente deslocada,
 // então a margem direita é maior para o último caractere do valor não ser cortado.
 export const MARGENS_PADRAO: Record<LarguraCupom, { margemEsq: number; margemDir: number }> = {
-  58: { margemEsq: 3.5, margemDir: 7 },
+  58: { margemEsq: 4.5, margemDir: 7 },
   80: { margemEsq: 4, margemDir: 4 },
 };
 
@@ -25,8 +25,10 @@ export function lerConfigCupom(): ConfigCupom {
   try {
     const bruto = localStorage.getItem(CHAVE);
     if (bruto) {
-      const c = JSON.parse(bruto) as Partial<ConfigCupom>;
+      let c = JSON.parse(bruto) as Partial<ConfigCupom>;
       largura = c.largura === 58 ? 58 : 80;
+      // Margens do 58 mm gravadas pelo padrão antigo (3,5 / 7) passam para o padrão novo
+      if (largura === 58 && c.margemEsq === 3.5 && c.margemDir === 7) c = { ...c, margemEsq: undefined, margemDir: undefined };
       const num = (v: unknown, padrao: number) => (typeof v === 'number' && isFinite(v) && v >= 0 && v <= 20 ? v : padrao);
       return {
         largura,

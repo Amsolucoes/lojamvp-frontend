@@ -99,6 +99,16 @@ export function ConfigImpressoraCupom() {
         </p>
       </div>
 
+      <div style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, lineHeight: 1.6 }}>
+        <strong>Na janela de impressão do navegador, confira:</strong>
+        <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+          <li><strong>Escala: Padrão (100)</strong>. O Chrome lembra a última escala usada; se estiver em 80, o cupom sai pequeno e deslocado.</li>
+          <li>Margens: <strong>Nenhuma</strong>.</li>
+          <li>Cabeçalhos e rodapés: <strong>desligados</strong>.</li>
+          <li>Tamanho do papel: o de {cfg.largura} mm da sua impressora (ex.: ZPrinter Paper 58 x 3276 mm).</li>
+        </ul>
+      </div>
+
       <button type="button" className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
         onClick={() => imprimirCupomNaoFiscal(cfg.largura)}>
         <Printer size={14} /> Imprimir cupom de teste

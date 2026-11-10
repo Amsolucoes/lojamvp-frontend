@@ -33,7 +33,7 @@ export function CupomNaoFiscal({ venda, nomeLoja, larguraMm = 80, margemEsqMm, m
     <div className="cupom-impressao" id="area-impressao-cupom"
       style={{
         width: `${larguraMm}mm`,
-        padding: `${larguraMm === 58 ? 3 : 4}mm ${margemDirMm ?? (larguraMm === 58 ? 7 : 4)}mm ${larguraMm === 58 ? 3 : 4}mm ${margemEsqMm ?? (larguraMm === 58 ? 3.5 : 4)}mm`,
+        padding: `${larguraMm === 58 ? 3 : 4}mm ${margemDirMm ?? (larguraMm === 58 ? 7 : 4)}mm ${larguraMm === 58 ? 3 : 4}mm ${margemEsqMm ?? (larguraMm === 58 ? 4.5 : 4)}mm`,
       }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>{nomeLoja}</div>
