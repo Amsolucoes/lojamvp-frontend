@@ -12,10 +12,12 @@ const NOMES_FORMA: Record<string, string> = {
 interface Props {
   venda: Venda | null;
   nomeLoja: string;
-  larguraMm?: 58 | 80; // largura do papel da impressora (58 mm imprime ~48 mm úteis)
+  larguraMm?: 58 | 80;   // largura do papel da impressora (58 mm imprime ~48 mm úteis)
+  margemEsqMm?: number;
+  margemDirMm?: number;
 }
 
-export function CupomNaoFiscal({ venda, nomeLoja, larguraMm = 80 }: Props) {
+export function CupomNaoFiscal({ venda, nomeLoja, larguraMm = 80, margemEsqMm, margemDirMm }: Props) {
   if (!venda) return null;
 
   const dataHora = new Date(venda.criadaEm).toLocaleString('pt-BR');
@@ -29,7 +31,10 @@ export function CupomNaoFiscal({ venda, nomeLoja, larguraMm = 80 }: Props) {
 
   return (
     <div className="cupom-impressao" id="area-impressao-cupom"
-      style={{ width: `${larguraMm}mm`, padding: larguraMm === 58 ? '3mm 5mm' : '4mm' }}>
+      style={{
+        width: `${larguraMm}mm`,
+        padding: `${larguraMm === 58 ? 3 : 4}mm ${margemDirMm ?? (larguraMm === 58 ? 7 : 4)}mm ${larguraMm === 58 ? 3 : 4}mm ${margemEsqMm ?? (larguraMm === 58 ? 3.5 : 4)}mm`,
+      }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>{nomeLoja}</div>
         <div style={{ fontSize: 10, marginTop: 2 }}>CUPOM NÃO FISCAL</div>

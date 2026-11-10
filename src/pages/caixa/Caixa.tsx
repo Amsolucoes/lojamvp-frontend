@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, User, Scissors, Printer } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ItemVenda, FormaPagamento, Venda } from '../../types';
 import { api } from '@/services/api';
 import { useToast } from '../../context/ToastContext';
 import { CupomNaoFiscal } from '../../components/CupomNaoFiscal';
+import { ConfigCupom, lerConfigCupom, imprimirCupomNaoFiscal } from '../../utils/cupomConfig';
 import { InputMoeda } from '../../components/InputMoeda';
 import './Caixa.css';
 
@@ -133,16 +135,11 @@ function hojeStrMovimento() {
 
 export function Caixa() {
   const { produtos, clientes, registrarVenda, vendas, recarregar, temProdutos, temServicos, soServicos, temFinanceiro, temCupomNaoFiscal, temFuncionarios, nomeLoja } = useApp();
+  const navigate = useNavigate();
   const [cupomVenda, setCupomVenda] = useState<Venda | null>(null);
   const [modalCupom, setModalCupom] = useState(false);
-  // Largura do papel da impressora de cupom (58 ou 80 mm) — guardada neste computador, que é onde a impressora está
-  const [larguraCupom, setLarguraCupomState] = useState<58 | 80>(() => {
-    try { return localStorage.getItem('loja:cupom-largura') === '58' ? 58 : 80; } catch { return 80; }
-  });
-  function setLarguraCupom(l: 58 | 80) {
-    setLarguraCupomState(l);
-    try { localStorage.setItem('loja:cupom-largura', String(l)); } catch { /* ignora */ }
-  }
+  // Configuração da impressora de cupom (Configurações → Impressora de cupom), guardada neste computador
+  const [cfgCupom, setCfgCupom] = useState<ConfigCupom>(() => lerConfigCupom());
 
   const { sucesso: toastSucesso, erro: toastErro } = useToast();
 
@@ -795,6 +792,7 @@ export function Caixa() {
           : `Venda registrada! ${fmt(total)}`
       );
       if (temCupomNaoFiscal) {
+        setCfgCupom(lerConfigCupom());
         setCupomVenda(vendaCriada);
         setModalCupom(true);
       }
@@ -810,31 +808,7 @@ export function Caixa() {
     // Fecha o modal antes de imprimir — enquanto ele está aberto, o body fica
     // com position:fixed (trava de scroll por trás de modal).
     setModalCupom(false);
-
-    const estilo = document.createElement('style');
-    estilo.textContent = `@page { size: ${larguraCupom}mm auto; margin: 0; }`;
-    document.head.appendChild(estilo);
-
-    setTimeout(() => {
-      const cupom = document.querySelector('.cupom-impressao') as HTMLElement | null;
-      // Move o cupom pra raiz do body antes de imprimir. Dentro da .caixa-page
-      // (que é display:grid) o position:absolute do cupom se ancora no grid, não
-      // na folha — movendo pro body ele volta a se posicionar certo.
-      const paiOriginal = cupom?.parentElement ?? null;
-      const proximoIrmao = cupom?.nextSibling ?? null;
-      if (cupom) document.body.appendChild(cupom);
-
-      function restaurar() {
-        estilo.remove();
-        if (cupom && paiOriginal) {
-          if (proximoIrmao) paiOriginal.insertBefore(cupom, proximoIrmao);
-          else paiOriginal.appendChild(cupom);
-        }
-        window.removeEventListener('afterprint', restaurar);
-      }
-      window.addEventListener('afterprint', restaurar);
-      window.print();
-    }, 50);
+    imprimirCupomNaoFiscal(cfgCupom.largura);
   }
 
   function limpar() {
@@ -1838,13 +1812,11 @@ export function Caixa() {
                 {fmt(cupomVenda.totalFinal)}
               </div>
               <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Deseja imprimir o cupom não fiscal?</p>
-              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Papel da impressora:</span>
-                {([58, 80] as const).map(l => (
-                  <button key={l} type="button" className={larguraCupom === l ? 'btn-primary' : 'btn-secondary'}
-                    style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => setLarguraCupom(l)}>{l} mm</button>
-                ))}
-              </div>
+              <p style={{ marginTop: 12, fontSize: 12, color: 'var(--text-3)' }}>
+                Papel de {cfgCupom.largura} mm{cfgCupom.nomeImpressora ? ` · ${cfgCupom.nomeImpressora}` : ''} ·{' '}
+                <a href="/configuracoes" onClick={e => { e.preventDefault(); setModalCupom(false); navigate('/configuracoes'); }}
+                  style={{ color: 'var(--accent)' }}>alterar nas Configurações</a>
+              </p>
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalCupom(false)}>Fechar</button>
@@ -1856,7 +1828,7 @@ export function Caixa() {
         </div>
       )}
 
-      <CupomNaoFiscal venda={cupomVenda} nomeLoja={nomeLoja} larguraMm={larguraCupom} />
+      <CupomNaoFiscal venda={cupomVenda} nomeLoja={nomeLoja} larguraMm={cfgCupom.largura} margemEsqMm={cfgCupom.margemEsq} margemDirMm={cfgCupom.margemDir} />
 
       {/* Modal variação na troca */}
       {modalVarTroca && (
