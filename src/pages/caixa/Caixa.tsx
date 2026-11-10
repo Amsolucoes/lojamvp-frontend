@@ -135,6 +135,14 @@ export function Caixa() {
   const { produtos, clientes, registrarVenda, vendas, recarregar, temProdutos, temServicos, soServicos, temFinanceiro, temCupomNaoFiscal, temFuncionarios, nomeLoja } = useApp();
   const [cupomVenda, setCupomVenda] = useState<Venda | null>(null);
   const [modalCupom, setModalCupom] = useState(false);
+  // Largura do papel da impressora de cupom (58 ou 80 mm) — guardada neste computador, que é onde a impressora está
+  const [larguraCupom, setLarguraCupomState] = useState<58 | 80>(() => {
+    try { return localStorage.getItem('loja:cupom-largura') === '58' ? 58 : 80; } catch { return 80; }
+  });
+  function setLarguraCupom(l: 58 | 80) {
+    setLarguraCupomState(l);
+    try { localStorage.setItem('loja:cupom-largura', String(l)); } catch { /* ignora */ }
+  }
 
   const { sucesso: toastSucesso, erro: toastErro } = useToast();
 
@@ -804,7 +812,7 @@ export function Caixa() {
     setModalCupom(false);
 
     const estilo = document.createElement('style');
-    estilo.textContent = '@page { size: 80mm auto; margin: 0; }';
+    estilo.textContent = `@page { size: ${larguraCupom}mm auto; margin: 0; }`;
     document.head.appendChild(estilo);
 
     setTimeout(() => {
@@ -1830,6 +1838,13 @@ export function Caixa() {
                 {fmt(cupomVenda.totalFinal)}
               </div>
               <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Deseja imprimir o cupom não fiscal?</p>
+              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Papel da impressora:</span>
+                {([58, 80] as const).map(l => (
+                  <button key={l} type="button" className={larguraCupom === l ? 'btn-primary' : 'btn-secondary'}
+                    style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => setLarguraCupom(l)}>{l} mm</button>
+                ))}
+              </div>
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setModalCupom(false)}>Fechar</button>
@@ -1841,7 +1856,7 @@ export function Caixa() {
         </div>
       )}
 
-      <CupomNaoFiscal venda={cupomVenda} nomeLoja={nomeLoja} />
+      <CupomNaoFiscal venda={cupomVenda} nomeLoja={nomeLoja} larguraMm={larguraCupom} />
 
       {/* Modal variação na troca */}
       {modalVarTroca && (
