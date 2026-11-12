@@ -16,10 +16,10 @@ function fmt(n: number) {
 }
 
 const LABEL_PAG: Record<string, string> = {
-  dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito',
+  dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito', carteira: 'Carteira (a receber)',
 };
 const COR_PAG: Record<string, string> = {
-  dinheiro: 'var(--green)', pix: 'var(--blue)', credito: 'var(--accent)', debito: 'var(--yellow)',
+  dinheiro: 'var(--green)', pix: 'var(--blue)', credito: 'var(--accent)', debito: 'var(--yellow)', carteira: 'var(--red)',
 };
 const PALETA_ORIGEM = ['var(--green)', 'var(--blue)', 'var(--accent)', 'var(--yellow)', 'var(--text-3)'];
 

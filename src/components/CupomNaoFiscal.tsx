@@ -5,6 +5,7 @@ const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', curren
 
 const NOMES_FORMA: Record<string, string> = {
   dinheiro: 'Dinheiro',
+  carteira: 'Carteira (pagar depois)',
   pix: 'Pix',
   credito: 'Cartão de Crédito',
   debito: 'Cartão de Débito',

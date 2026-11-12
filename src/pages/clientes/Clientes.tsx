@@ -6,6 +6,7 @@ import { api } from '../../services/api';
 import './Clientes.css';
 import { Paginacao } from '@/components/Paginacao';
 import { contemTexto } from '../../utils/texto';
+import { CarteiraCliente } from './CarteiraCliente';
 
 type FormData = Omit<Cliente, 'id' | 'criadoEm'>;
 const EMPTY: FormData = { nome: '', telefone: '', cpf: '', email: '', endereco: '', observacoes: '', dataNascimento: undefined };
@@ -48,7 +49,7 @@ const OS_STATUS_BADGE: Record<string, string> = {
 };
 
 export function Clientes() {
-  const { clientes, vendas, trocas, soServicos, addCliente, updateCliente, deleteCliente, temCorretora, temTurmas, temProdutos, temServicos: temServicosCtx } = useApp();
+  const { clientes, vendas, trocas, soServicos, addCliente, updateCliente, deleteCliente, temCorretora, temTurmas, temProdutos, temServicos: temServicosCtx, nomeLoja, recarregar } = useApp();
   const ehAluno = temTurmas && !temProdutos && !temServicosCtx;
   const label = ehAluno ? 'aluno' : 'cliente';
   const labelCap = ehAluno ? 'Aluno' : 'Cliente';
@@ -66,9 +67,10 @@ export function Clientes() {
   const [temServicos, setTemServicos] = useState(false);
   const [assinantesIds, setAssinantesIds] = useState<Set<string>>(new Set());
   const [pagina, setPagina] = useState(1);
+  const [soDevedores, setSoDevedores] = useState(false); // filtro: só quem deve na carteira
   const [porPagina, setPorPagina] = useState(12);
 
-  type ColunaOrdem = 'nome' | 'credito' | 'compras' | 'gasto' | 'ultima';
+  type ColunaOrdem = 'nome' | 'credito' | 'carteira' | 'compras' | 'gasto' | 'ultima';
   const [ordem, setOrdem] = useState<{ col: ColunaOrdem; dir: 1 | -1 }>({ col: 'nome', dir: 1 });
   function ordenarPor(col: ColunaOrdem) {
     setOrdem(o => o.col === col ? { col, dir: (o.dir * -1) as 1 | -1 } : { col, dir: col === 'nome' ? 1 : -1 });
@@ -87,15 +89,18 @@ export function Clientes() {
   }, [vendas]);
 
   const filtrados = clientes.filter(c =>
-    contemTexto(c.nome, busca) ||
-    c.telefone.includes(busca) ||
-    (c.cpf?.includes(busca) ?? false)
+    (!soDevedores || (c.saldoCarteira ?? 0) > 0) && (
+      contemTexto(c.nome, busca) ||
+      c.telefone.includes(busca) ||
+      (c.cpf?.includes(busca) ?? false)
+    )
   );
   const lista = [...filtrados].sort((a, b) => {
     const valor = (c: Cliente) => {
       const r = resumoVendas[c.id];
       switch (ordem.col) {
         case 'credito': return c.creditoLoja ?? 0;
+        case 'carteira': return c.saldoCarteira ?? 0;
         case 'compras': return r?.qtd ?? 0;
         case 'gasto':   return r?.total ?? 0;
         case 'ultima':  return r?.ultima ? new Date(r.ultima.criadaEm).getTime() : 0;
@@ -111,7 +116,7 @@ export function Clientes() {
   const paginaSegura = Math.min(pagina, totalPaginas);
   const listaPaginada = lista.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina);
 
-  useEffect(() => { setPagina(1); }, [busca, porPagina]);
+  useEffect(() => { setPagina(1); }, [busca, porPagina, soDevedores]);
 
   function abrirNovo() { setForm(EMPTY); setEditId(null); setModal('novo'); }
 
@@ -247,18 +252,23 @@ export function Clientes() {
         const novosNoMes = clientes.filter(c => { const d = new Date(c.criadoEm); return d.getMonth() === agora.getMonth() && d.getFullYear() === agora.getFullYear(); }).length;
         const comCredito = clientes.filter(c => (c.creditoLoja ?? 0) > 0);
         const totalCredito = comCredito.reduce((t, c) => t + (c.creditoLoja ?? 0), 0);
+        const devedores = clientes.filter(c => (c.saldoCarteira ?? 0) > 0);
+        const totalCarteira = devedores.reduce((t, c) => t + (c.saldoCarteira ?? 0), 0);
         const aniversariantes = clientes.filter(c => c.dataNascimento && new Date(c.dataNascimento).getUTCMonth() === agora.getMonth()).length;
         return (
           <div className="dash-stats" style={{ marginBottom: 16 }}>
             <div className="stat-card"><div className="stat-label">{labelPlural}</div><div className="stat-value">{clientes.length}</div><div className="stat-sub">{novosNoMes} novo(s) neste mês</div></div>
             <div className="stat-card"><div className="stat-label">Aniversariantes</div><div className="stat-value">{aniversariantes}</div><div className="stat-sub">neste mês</div></div>
             <div className="stat-card"><div className="stat-label">Crédito na loja</div><div className="stat-value">{fmt(totalCredito)}</div><div className="stat-sub">{comCredito.length} cliente(s) com saldo</div></div>
+            {temProdutos && (devedores.length > 0 || clientes.some(c => c.limiteCarteira != null)) && (
+              <div className="stat-card"><div className="stat-label">👛 A receber (carteira)</div><div className="stat-value" style={{ color: totalCarteira > 0 ? 'var(--red)' : undefined }}>{fmt(totalCarteira)}</div><div className="stat-sub">{devedores.length} cliente(s) devendo</div></div>
+            )}
           </div>
         );
       })()}
 
       {/* Busca */}
-      <div className="cli-filters">
+      <div className="cli-filters" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <div className="search-wrap" style={{ maxWidth: 360 }}>
           <Search size={14} className="search-icon" />
           <input
@@ -268,6 +278,11 @@ export function Clientes() {
             onChange={e => setBusca(e.target.value)}
           />
         </div>
+        {temProdutos && clientes.some(c => (c.saldoCarteira ?? 0) > 0) && (
+          <button type="button" className={soDevedores ? 'btn-primary' : 'btn-secondary'} onClick={() => setSoDevedores(v => !v)}>
+            👛 Só quem deve na carteira
+          </button>
+        )}
       </div>
 
       {/* Grid de cards */}
@@ -290,6 +305,7 @@ export function Clientes() {
                 <th>Contato</th>
                 <th>Aniversário</th>
                 <th style={{ textAlign: 'right' }}><button type="button" className="cli-th-sort" onClick={() => ordenarPor('credito')}>Crédito{iconeOrdem('credito')}</button></th>
+                {temProdutos && <th style={{ textAlign: 'right' }}><button type="button" className="cli-th-sort" onClick={() => ordenarPor('carteira')}>Carteira{iconeOrdem('carteira')}</button></th>}
                 {mostrarCompras && <th style={{ textAlign: 'right' }}><button type="button" className="cli-th-sort" onClick={() => ordenarPor('compras')}>Compras{iconeOrdem('compras')}</button></th>}
                 {mostrarCompras && <th style={{ textAlign: 'right' }}><button type="button" className="cli-th-sort" onClick={() => ordenarPor('gasto')}>Total gasto{iconeOrdem('gasto')}</button></th>}
                 {temServicos && <th style={{ textAlign: 'right' }}>Serviços</th>}
@@ -320,6 +336,11 @@ export function Clientes() {
                     <td style={{ textAlign: 'right', color: (c.creditoLoja ?? 0) > 0 ? 'var(--green)' : undefined, fontWeight: (c.creditoLoja ?? 0) > 0 ? 600 : undefined }}>
                       {(c.creditoLoja ?? 0) > 0 ? fmt(c.creditoLoja ?? 0) : <span className="cli-vazio">—</span>}
                     </td>
+                    {temProdutos && (
+                      <td style={{ textAlign: 'right', color: (c.saldoCarteira ?? 0) > 0 ? 'var(--red)' : undefined, fontWeight: (c.saldoCarteira ?? 0) > 0 ? 600 : undefined }}>
+                        {(c.saldoCarteira ?? 0) > 0 ? fmt(c.saldoCarteira ?? 0) : <span className="cli-vazio">—</span>}
+                      </td>
+                    )}
                     {mostrarCompras && <td style={{ textAlign: 'right' }}>{qtdCompras(c.id) || <span className="cli-vazio">—</span>}</td>}
                     {mostrarCompras && <td style={{ textAlign: 'right', color: totalGasto(c.id) > 0 ? 'var(--green)' : undefined, fontWeight: 600 }}>{totalGasto(c.id) > 0 ? fmt(totalGasto(c.id)) : <span className="cli-vazio">—</span>}</td>}
                     {temServicos && <td style={{ textAlign: 'right' }}>{qtdServicos(c.id) > 0 ? <><span style={{ color: 'var(--green)', fontWeight: 600 }}>{fmt(totalServicos(c.id))}</span><div className="cli-sub-tab">{qtdServicos(c.id)} serviço(s)</div></> : <span className="cli-vazio">—</span>}</td>}
@@ -368,6 +389,11 @@ export function Clientes() {
                 {(c.creditoLoja ?? 0) > 0 && (
                   <div className="cli-info" style={{ color: 'var(--green)', fontWeight: 600 }}>
                     💰 Crédito: {fmt(c.creditoLoja ?? 0)}
+                  </div>
+                )}
+                {(c.saldoCarteira ?? 0) > 0 && (
+                  <div className="cli-info" style={{ color: 'var(--red)', fontWeight: 600 }}>
+                    👛 Deve na carteira: {fmt(c.saldoCarteira ?? 0)}
                   </div>
                 )}
                 <div className="cli-divider" />
@@ -551,6 +577,11 @@ export function Clientes() {
                   <div className="cli-obs">{clienteAtivo.observacoes}</div>
                 )}
               </div>
+
+              {/* Carteira (fiado): só para lojas com caixa/produtos */}
+              {temProdutos && !temCorretora && (
+                <CarteiraCliente cliente={clienteAtivo} nomeLoja={nomeLoja} onMudou={() => recarregar(true)} />
+              )}
 
               {/* Histórico de compras */}
               {!temCorretora && qtdCompras(clienteAtivo.id) > 0 && (
