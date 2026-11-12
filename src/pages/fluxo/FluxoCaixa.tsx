@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, ReactNode } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, Calendar, X, Trash2, Printer } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
@@ -65,6 +65,16 @@ interface MovimentoCaixa {
   contaBancariaId?: string | null;
 }
 
+// Carteira (fiado): o que falta receber de cada venda e os recebimentos feitos
+interface PartePagaCarteira { pagamentoId: string; data: string; forma: string; valor: number }
+interface VendaCarteira { vendaId: string; clienteId: string; valor: number; emAberto: number; pagamentos: PartePagaCarteira[] }
+interface RecebimentoCarteira {
+  id: string; movimentoCaixaId: string | null; clienteNome: string; forma: string; valor: number; data: string;
+  abateu: { vendaId: string; valor: number }[];
+}
+
+const mesmoDia = (iso: string, dia: Date) => new Date(iso).toDateString() === dia.toDateString();
+
 interface OrigemVenda {
   id: string;
   nome: string;
@@ -79,6 +89,7 @@ export function FluxoCaixa() {
   const { vendas, produtos, temFinanceiro, recarregar } = useApp();
   const { sucesso: toastSucesso, erro: toastErro } = useToast();
   const [movimentos, setMovimentos] = useState<MovimentoCaixa[]>([]);
+  const [carteira, setCarteira] = useState<{ vendas: VendaCarteira[]; recebimentos: RecebimentoCarteira[] }>({ vendas: [], recebimentos: [] });
   const [origens, setOrigens] = useState<OrigemVenda[]>([]);
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [editandoMovimento, setEditandoMovimento] = useState<MovimentoCaixa | null>(null);
@@ -93,6 +104,11 @@ export function FluxoCaixa() {
   }
 
   useEffect(() => { carregarMovimentos(); }, []);
+  // Carteira: refaz quando as vendas mudam (venda nova, venda excluída...)
+  useEffect(() => {
+    api.get<{ vendas: VendaCarteira[]; recebimentos: RecebimentoCarteira[] }>('/api/carteira/movimentacao')
+      .then(setCarteira).catch(() => {});
+  }, [vendas.length]);
   useEffect(() => { api.get<OrigemVenda[]>('/api/origens-venda').then(setOrigens).catch(() => {}); }, []);
   useEffect(() => {
     if (!temFinanceiro) return;
@@ -184,21 +200,69 @@ export function FluxoCaixa() {
 
   const diasDoMes = new Date(anoRef, mesRef + 1, 0).getDate();
 
+  // Receber a carteira NÃO é um "ajuste de caixa": é a venda sendo quitada. Por isso a entrada que o recebimento
+  // cria no caixa sai da lista de ajustes e passa a contar como dinheiro recebido, pela forma que o cliente usou.
+  const idsEntradaCarteira = useMemo(() => new Set(carteira.recebimentos.map(r => r.movimentoCaixaId).filter(Boolean) as string[]), [carteira]);
+  const movimentosAjuste = movimentos.filter(m => !idsEntradaCarteira.has(m.id));
+  const carteiraPorVenda = useMemo(() => {
+    const mapa: Record<string, VendaCarteira> = {};
+    carteira.vendas.forEach(v => { mapa[v.vendaId] = v; });
+    return mapa;
+  }, [carteira]);
+  const recebidoCarteiraNoDia = (dia: Date) => carteira.recebimentos.filter(r => mesmoDia(r.data, dia)).reduce((t, r) => t + r.valor, 0);
+  const recebidoCarteiraNoMes = (ano: number, mes: number) => carteira.recebimentos.filter(r => { const d = new Date(r.data); return d.getFullYear() === ano && d.getMonth() === mes; }).reduce((t, r) => t + r.valor, 0);
+  const emAbertoDaVenda = (v: { id: string; valorCarteira?: number | null }) => carteiraPorVenda[v.id]?.emAberto ?? (v.valorCarteira ?? 0);
+
+  // Forma(s) de pagamento da venda. A parte da carteira aparece como "Carteira → Pix" quando já foi paga,
+  // e como "Carteira (a receber)" enquanto falta.
+  function renderFormas(v: any, emLinha = false) {
+    const formas = parseFormas(v.formasPagamento);
+    const cor = (f: string) => f === 'pix' ? 'blue' : f === 'dinheiro' ? 'green' : 'accent';
+    if (formas.length === 0) {
+      return (
+        <span className={`badge badge-${cor(v.formaPagamento)}`}>{LABEL_PAG[v.formaPagamento] ?? v.formaPagamento}</span>
+      );
+    }
+    const itens: { chave: string; rotulo: string; cor: string; valor: number; nota?: string }[] = [];
+    formas.forEach((f: any, idx: number) => {
+      const info = f.forma === 'carteira' ? carteiraPorVenda[v.id] : undefined;
+      if (!info) { itens.push({ chave: String(idx), rotulo: fmtForma(f), cor: cor(f.forma), valor: f.valor }); return; }
+      info.pagamentos.forEach(p => itens.push({
+        chave: `${idx}-${p.pagamentoId}`, rotulo: `Carteira → ${LABEL_PAG[p.forma] ?? p.forma}`, cor: cor(p.forma), valor: p.valor,
+        nota: mesmoDia(p.data, new Date(v.criadaEm)) ? undefined : `pago em ${new Date(p.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`,
+      }));
+      if (info.emAberto > 0.005) itens.push({ chave: `${idx}-aberto`, rotulo: 'Carteira (a receber)', cor: 'yellow', valor: info.emAberto });
+    });
+    return itens.map(i => emLinha ? (
+      <span key={i.chave} style={{ marginRight: 6 }}>
+        <span className={`badge badge-${i.cor}`}>{i.rotulo}</span>
+        <span style={{ color: 'var(--text-3)', marginLeft: 4, fontSize: 11 }}>{fmt(i.valor)}{i.nota ? ` · ${i.nota}` : ''}</span>
+      </span>
+    ) : (
+      <div key={i.chave} style={{ fontSize: 11, marginBottom: 2 }}>
+        <span className={`badge badge-${i.cor}`}>{i.rotulo}</span>
+        <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>{fmt(i.valor)}{i.nota ? ` · ${i.nota}` : ''}</span>
+      </div>
+    ));
+  }
+
   const diasFluxo = Array.from({ length: diasDoMes }, (_, i) => {
     const dia    = new Date(anoRef, mesRef, i + 1);
     const diaStr = dia.toDateString();
     const vendasDia = vendas.filter(v => new Date(v.criadaEm).toDateString() === diaStr);
-    const movDia = movimentos.filter(m => new Date(m.data).toDateString() === diaStr);
+    const movDia = movimentosAjuste.filter(m => new Date(m.data).toDateString() === diaStr);
+    const recebidoCarteiraDia = recebidoCarteiraNoDia(dia);
     const entradasManuaisDia = movDia.filter(m => m.tipo === 'entrada').reduce((s, m) => s + m.valor, 0);
     const sangriasDia = movDia.filter(m => m.tipo === 'saida').reduce((s, m) => s + m.valor, 0);
     return {
       dia,
       label: `${String(i + 1).padStart(2, '0')}/${String(mesRef + 1).padStart(2, '0')}`,
-      entradas:  vendasDia.reduce((s, v) => s + recebidoDaVenda(v), 0),
+      entradas:  vendasDia.reduce((s, v) => s + recebidoDaVenda(v), 0) + recebidoCarteiraDia,
+      recebidoCarteira: recebidoCarteiraDia,
       descontos: vendasDia.reduce((s, v) => s + v.desconto, 0),
       lucro:     vendasDia.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0),
       ajusteCaixa: entradasManuaisDia - sangriasDia,
-      total: vendasDia.reduce((s, v) => s + recebidoDaVenda(v), 0) + (entradasManuaisDia - sangriasDia),
+      total: vendasDia.reduce((s, v) => s + recebidoDaVenda(v), 0) + recebidoCarteiraDia + (entradasManuaisDia - sangriasDia),
       qtdVendas: vendasDia.length,
       isHoje:   diaStr === hoje.toDateString(),
       isFuturo: dia > hoje,
@@ -208,12 +272,14 @@ export function FluxoCaixa() {
   const vendasHoje = vendas.filter(v => 
     new Date(v.criadaEm).toDateString() === hoje.toDateString()
   );
-  const movimentosHoje = movimentos.filter(m => new Date(m.data).toDateString() === hoje.toDateString());
+  const movimentosHoje = movimentosAjuste.filter(m => new Date(m.data).toDateString() === hoje.toDateString());
+  const recebimentosHoje = carteira.recebimentos.filter(r => mesmoDia(r.data, hoje));
+  const recebidoCarteiraHoje = recebimentosHoje.reduce((t, r) => t + r.valor, 0);
   const entradasManuaisHoje = movimentosHoje.filter(m => m.tipo === 'entrada').reduce((s, m) => s + m.valor, 0);
   const sangriasHoje = movimentosHoje.filter(m => m.tipo === 'saida').reduce((s, m) => s + m.valor, 0);
   const ajusteCaixaHoje = entradasManuaisHoje - sangriasHoje;
-  const totalHoje    = vendasHoje.reduce((s, v) => s + recebidoDaVenda(v), 0);
-  const carteiraHoje = vendasHoje.reduce((s, v) => s + (v.valorCarteira ?? 0), 0);
+  const totalHoje    = vendasHoje.reduce((s, v) => s + recebidoDaVenda(v), 0) + recebidoCarteiraHoje;
+  const carteiraHoje = vendasHoje.reduce((s, v) => s + emAbertoDaVenda(v), 0);   // o que ainda falta receber das vendas de hoje
   const descontosHoje = vendasHoje.reduce((s, v) => s + v.desconto, 0);
   const lucroHoje    = vendasHoje.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0);
   const ticketHoje   = vendasHoje.length > 0 ? vendasHoje.reduce((s, v) => s + v.totalFinal, 0) / vendasHoje.length : 0;
@@ -230,7 +296,8 @@ export function FluxoCaixa() {
       const d = new Date(v.criadaEm);
       return d.getFullYear() === anoRef && d.getMonth() === m;
     });
-    const movMes = movimentos.filter(mv => {
+    const recebidoCarteiraMes = recebidoCarteiraNoMes(anoRef, m);
+    const movMes = movimentosAjuste.filter(mv => {
       const d = new Date(mv.data);
       return d.getFullYear() === anoRef && d.getMonth() === m;
     });
@@ -238,11 +305,11 @@ export function FluxoCaixa() {
     const sangriasMes = movMes.filter(mv => mv.tipo === 'saida').reduce((s, mv) => s + mv.valor, 0);
     return {
       mes: m, label: MESES[m].slice(0, 3),
-      entradas:  vendasMes.reduce((s, v) => s + recebidoDaVenda(v), 0),
+      entradas:  vendasMes.reduce((s, v) => s + recebidoDaVenda(v), 0) + recebidoCarteiraMes,
       descontos: vendasMes.reduce((s, v) => s + v.desconto, 0),
       lucro:     vendasMes.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0),
       ajusteCaixa: entradasManuaisMes - sangriasMes,
-      total: vendasMes.reduce((s, v) => s + recebidoDaVenda(v), 0) + (entradasManuaisMes - sangriasMes),
+      total: vendasMes.reduce((s, v) => s + recebidoDaVenda(v), 0) + recebidoCarteiraMes + (entradasManuaisMes - sangriasMes),
       qtdVendas: vendasMes.length,
     };
   });
@@ -265,7 +332,7 @@ export function FluxoCaixa() {
     ? vendas.filter(v => new Date(v.criadaEm).toDateString() === diaDetalhado.toDateString())
     : [];
   const movimentosDiaDetalhado = diaDetalhado
-    ? movimentos.filter(m => new Date(m.data).toDateString() === diaDetalhado.toDateString())
+    ? movimentosAjuste.filter(m => new Date(m.data).toDateString() === diaDetalhado.toDateString())
     : [];
 
   // Só dá pra excluir venda do mês corrente (e não no futuro) — mesma regra do backend
@@ -325,7 +392,14 @@ export function FluxoCaixa() {
               <div className="stat-card">
                 <div className="stat-label">👛 Na carteira</div>
                 <div className="stat-value" style={{ fontSize: 20, color: 'var(--accent)' }}>{fmt(carteiraHoje)}</div>
-                <div className="stat-sub">vendido hoje, a receber</div>
+                <div className="stat-sub">vendido hoje, ainda a receber</div>
+              </div>
+            )}
+            {recebidoCarteiraHoje > 0 && (
+              <div className="stat-card">
+                <div className="stat-label">👛 Recebido da carteira</div>
+                <div className="stat-value" style={{ fontSize: 20, color: 'var(--green)' }}>{fmt(recebidoCarteiraHoje)}</div>
+                <div className="stat-sub">{recebimentosHoje.length} recebimento(s) · já está no total</div>
               </div>
             )}
             {(entradasManuaisHoje > 0 || sangriasHoje > 0) && (
@@ -376,20 +450,7 @@ export function FluxoCaixa() {
                             ))}
                           </td>
                           <td>
-                            {parseFormas(v.formasPagamento).length > 0 ? (
-                              parseFormas(v.formasPagamento).map((f: any, idx: number) => (
-                                <div key={idx} style={{ fontSize: 11, marginBottom: 2 }}>
-                                  <span className={`badge badge-${f.forma === 'pix' ? 'blue' : f.forma === 'dinheiro' ? 'green' : 'accent'}`}>
-                                    {fmtForma(f)}
-                                  </span>
-                                  <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>{fmt(f.valor)}</span>
-                                </div>
-                              ))
-                            ) : (
-                              <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
-                                {LABEL_PAG[v.formaPagamento] ?? v.formaPagamento}
-                              </span>
-                            )}
+                            {renderFormas(v)}
                           </td>
                           <td style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(v.totalFinal)}</td>
                           <td className="no-print">
@@ -440,20 +501,7 @@ export function FluxoCaixa() {
                         ))}
                       </div>
                       <div style={{ marginTop: 6 }}>
-                        {parseFormas(v.formasPagamento).length > 0 ? (
-                          parseFormas(v.formasPagamento).map((f: any, idx: number) => (
-                            <div key={idx} style={{ fontSize: 11, marginBottom: 2 }}>
-                              <span className={`badge badge-${f.forma === 'pix' ? 'blue' : f.forma === 'dinheiro' ? 'green' : 'accent'}`}>
-                                {fmtForma(f)}
-                              </span>
-                              <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>{fmt(f.valor)}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
-                            {LABEL_PAG[v.formaPagamento] ?? v.formaPagamento}
-                          </span>
-                        )}
+                        {renderFormas(v)}
                       </div>
                     </div>
                   ))}
@@ -461,6 +509,32 @@ export function FluxoCaixa() {
               </>
             )}
           </div>
+
+          {/* Recebimentos da carteira (fiado) feitos hoje — já contam no total do dia */}
+          {recebimentosHoje.length > 0 && (
+            <div className="card" style={{ marginTop: 16, padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
+                👛 Recebido da carteira hoje
+              </div>
+              {recebimentosHoje.map(r => (
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                  <div>
+                    <strong>{r.clienteNome}</strong>
+                    <span className={`badge badge-${r.forma === 'pix' ? 'blue' : r.forma === 'dinheiro' ? 'green' : 'accent'}`} style={{ marginLeft: 8 }}>
+                      {LABEL_PAG[r.forma] ?? r.forma}
+                    </span>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                      {r.abateu.length === 0 ? 'pagamento adiantado' : 'quitou venda de ' + r.abateu.map(a => {
+                        const v = vendas.find(x => x.id === a.vendaId);
+                        return v ? new Date(v.criadaEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—';
+                      }).filter((d, i, arr) => arr.indexOf(d) === i).join(', ')}
+                    </div>
+                  </div>
+                  <span style={{ fontWeight: 600, color: 'var(--green)' }}>{fmt(r.valor)}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Total resumo no rodapé */}
           {vendasHoje.length > 0 && (
@@ -571,7 +645,7 @@ export function FluxoCaixa() {
                   <tr><th>Dia</th><th>Qtd. vendas</th><th>Descontos</th><th>Lucro</th><th>Ajuste caixa</th><th>Entradas</th><th>Total</th><th>Barra</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0).map(d => (
+                  {diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0 || d.recebidoCarteira > 0).map(d => (
                     <tr key={d.label} onClick={() => setDiaDetalhado(d.dia)}
                       style={{ cursor: 'pointer', ...(d.isHoje ? { background: 'var(--accent-bg)' } : {}) }}>
                       <td>
@@ -600,7 +674,7 @@ export function FluxoCaixa() {
                       </td>
                     </tr>
                   ))}
-                  {diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0).length === 0 && (
+                  {diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0 || d.recebidoCarteira > 0).length === 0 && (
                     <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-3)', padding: '32px 0' }}>Nenhuma venda neste mês.</td></tr>
                   )}
                 </tbody>
@@ -610,9 +684,9 @@ export function FluxoCaixa() {
 
           {/* Cards mobile — dias */}
           <div className="fc-cards-mobile" style={{ marginTop: 16 }}>
-            {diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0).length === 0 ? (
+            {diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0 || d.recebidoCarteira > 0).length === 0 ? (
               <div className="card" style={{ textAlign: 'center', color: 'var(--text-3)', padding: '32px' }}>Nenhuma venda neste mês.</div>
-            ) : diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0).map(d => (
+            ) : diasFluxo.filter(d => d.qtdVendas > 0 || d.ajusteCaixa !== 0 || d.recebidoCarteira > 0).map(d => (
               <div key={d.label} className="fc-card-mobile" onClick={() => setDiaDetalhado(d.dia)}
                 style={{ cursor: 'pointer', ...(d.isHoje ? { background: 'var(--accent-bg)', borderColor: 'var(--accent-border)' } : {}) }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -873,24 +947,25 @@ export function FluxoCaixa() {
                       ))}
                     </div>
                     <div style={{ marginTop: 8 }}>
-                      {parseFormas(v.formasPagamento).length > 0 ? (
-                        parseFormas(v.formasPagamento).map((f: any, idx: number) => (
-                          <span key={idx} style={{ marginRight: 6 }}>
-                            <span className={`badge badge-${f.forma === 'pix' ? 'blue' : f.forma === 'dinheiro' ? 'green' : 'accent'}`}>
-                              {fmtForma(f)}
-                            </span>
-                            <span style={{ color: 'var(--text-3)', marginLeft: 4, fontSize: 11 }}>{fmt(f.valor)}</span>
-                          </span>
-                        ))
-                      ) : (
-                        <span className={`badge badge-${v.formaPagamento === 'pix' ? 'blue' : v.formaPagamento === 'dinheiro' ? 'green' : 'accent'}`}>
-                          {LABEL_PAG[v.formaPagamento] ?? v.formaPagamento}
-                        </span>
-                      )}
+                      {renderFormas(v, true)}
                     </div>
                   </div>
                 ))}
               </div>
+
+              {diaDetalhado && carteira.recebimentos.some(r => mesmoDia(r.data, diaDetalhado)) && (
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 10 }}>👛 Recebido da carteira</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {carteira.recebimentos.filter(r => mesmoDia(r.data, diaDetalhado)).map(r => (
+                      <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+                        <span>{r.clienteNome} <span style={{ color: 'var(--text-3)' }}>· {LABEL_PAG[r.forma] ?? r.forma}</span></span>
+                        <span style={{ fontWeight: 600, color: 'var(--green)' }}>+{fmt(r.valor)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {movimentosDiaDetalhado.length > 0 && (
                 <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>

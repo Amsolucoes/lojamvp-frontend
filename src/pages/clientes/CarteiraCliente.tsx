@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext';
 import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
 import { Cliente } from '../../types';
@@ -58,6 +59,7 @@ export function linkWhatsApp(telefone: string, mensagem: string): string {
 
 export function CarteiraCliente({ cliente, nomeLoja, onMudou }: { cliente: Cliente; nomeLoja: string; onMudou: () => void }) {
   const { usuario } = useAuth();
+  const { temFinanceiro } = useApp();
   const { sucesso, erro } = useToast();
   const ehAdmin = usuario?.role === 'admin';
 
@@ -69,6 +71,9 @@ export function CarteiraCliente({ cliente, nomeLoja, onMudou }: { cliente: Clien
   const [forma, setForma] = useState('pix');
   const [data, setData] = useState(hojeStr());
   const [obs, setObs] = useState('');
+  // Com o módulo Financeiro, o dinheiro recebido pode entrar numa conta bancária (igual ao reforço de caixa)
+  const [contas, setContas] = useState<{ id: string; nome: string }[]>([]);
+  const [contaId, setContaId] = useState('');
   const [salvando, setSalvando] = useState(false);
 
   const carregar = useCallback(() => {
@@ -76,6 +81,10 @@ export function CarteiraCliente({ cliente, nomeLoja, onMudou }: { cliente: Clien
   }, [cliente.id]);
 
   useEffect(() => { setDados(null); carregar(); }, [carregar]);
+  useEffect(() => {
+    if (!temFinanceiro) return;
+    api.get<{ id: string; nome: string }[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+  }, [temFinanceiro]);
 
   if (!dados) return null;
 
@@ -87,6 +96,7 @@ export function CarteiraCliente({ cliente, nomeLoja, onMudou }: { cliente: Clien
     setForma('pix');
     setData(hojeStr());
     setObs('');
+    setContaId('');
     setModalReceber(true);
   }
 
@@ -96,7 +106,7 @@ export function CarteiraCliente({ cliente, nomeLoja, onMudou }: { cliente: Clien
     setSalvando(true);
     try {
       const r = await api.post<{ saldo: number; quitado: boolean }>(`/api/clientes/${cliente.id}/carteira/pagamentos`, {
-        valor, formaPagamento: forma, data, observacao: obs.trim() || null,
+        valor, formaPagamento: forma, data, observacao: obs.trim() || null, contaBancariaId: contaId || null,
       });
       sucesso(r.quitado ? 'Carteira quitada! O valor entrou no caixa.' : `Recebido! Ainda falta ${fmt(r.saldo)}.`);
       setModalReceber(false);
@@ -248,6 +258,15 @@ export function CarteiraCliente({ cliente, nomeLoja, onMudou }: { cliente: Clien
                 <label className="form-label">Data do recebimento</label>
                 <input type="date" value={data} max={hojeStr()} onChange={e => setData(e.target.value)} />
               </div>
+              {temFinanceiro && contas.length > 0 && (
+                <div className="form-group" style={{ marginTop: 12 }}>
+                  <label className="form-label">Conta bancária (opcional)</label>
+                  <select value={contaId} onChange={e => setContaId(e.target.value)}>
+                    <option value="">Não vincular a uma conta</option>
+                    {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="form-group" style={{ marginTop: 12 }}>
                 <label className="form-label">Observação (opcional)</label>
                 <input value={obs} maxLength={120} onChange={e => setObs(e.target.value)} placeholder="Ex.: acerto de novembro" />
