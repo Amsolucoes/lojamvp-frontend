@@ -94,7 +94,11 @@ const FORMAS: { value: FormaPagamento; label: string; icon: string }[] = [
   { value: 'pix',      label: 'Pix',       icon: '⚡' },
   { value: 'credito',  label: 'Crédito',   icon: '💳' },
   { value: 'debito',   label: 'Débito',    icon: '🏦' },
+  { value: 'carteira', label: 'Carteira',  icon: '👛' },   // compra agora, paga depois (fim do mês) — exige cliente
 ];
+
+// Formas que realmente entram dinheiro na hora (a carteira não: o cliente paga depois)
+const FORMAS_A_VISTA = FORMAS.filter(f => f.value !== 'carteira');
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -252,6 +256,9 @@ export function Caixa() {
   { forma: 'dinheiro', valor: 0 }]);
   const [duasFormas, setDuasFormas] = useState(false);
 
+  // Carteira (fiado): saldo/limite do cliente, buscados na hora para não depender da lista carregada no início
+  const [carteiraCliente, setCarteiraCliente] = useState<{ saldo: number; limite: number | null; disponivel: number | null } | null>(null);
+
   useEffect(() => {
     if (!temServicos) return;
     api.get<Servico[]>('/api/servicos').then(s => setServicos(s.filter(x => x.ativo))).catch(() => {});
@@ -294,6 +301,21 @@ export function Caixa() {
 
   const clienteSel = clientes.find(c => c.id === clienteId);
 
+  // Carteira: busca o saldo e o limite atuais do cliente quando a forma é escolhida
+  useEffect(() => {
+    if (!clienteId || !formas.some(f => f.forma === 'carteira')) { setCarteiraCliente(null); return; }
+    let vivo = true;
+    api.get<{ saldo: number; limite: number | null; disponivel: number | null }>(`/api/clientes/${clienteId}/carteira`)
+      .then(r => { if (vivo) setCarteiraCliente({ saldo: r.saldo, limite: r.limite, disponivel: r.disponivel }); })
+      .catch(() => { if (vivo) setCarteiraCliente(null); });
+    return () => { vivo = false; };
+  }, [clienteId, formas.some(f => f.forma === 'carteira')]);
+
+  // Sem cliente não existe carteira: se o cliente for removido, a forma volta para dinheiro
+  useEffect(() => {
+    if (!clienteId) setFormas(prev => prev.some(f => f.forma === 'carteira') ? prev.map(f => f.forma === 'carteira' ? { ...f, forma: 'dinheiro' } : f) : prev);
+  }, [clienteId]);
+
   // Subtotal, desconto, total
   const subtotal = carrinho.reduce((s, i) => s + i.subtotal, 0);
   const descontoVal = tipoDesc === 'pct'
@@ -302,6 +324,10 @@ export function Caixa() {
   const creditoCliente = clienteSel?.creditoLoja ?? 0;
   const creditoUsado = usarCredito ? Math.min(creditoCliente, subtotal - descontoVal) : 0;
   const total = Math.max(0, subtotal - descontoVal - creditoUsado);
+  const usaCarteira = formas.some(f => f.forma === 'carteira');
+  const valorCarteira = formas.filter(f => f.forma === 'carteira').reduce((s, f) => s + (duasFormas ? f.valor : total), 0);
+  const carteiraSaldoNovo = (carteiraCliente?.saldo ?? 0) + valorCarteira;
+  const carteiraEstourou = usaCarteira && carteiraCliente?.limite != null && carteiraSaldoNovo > carteiraCliente.limite + 0.001;
   const troco = formaPag === 'dinheiro' && valorPago > 0
     ? Math.max(0, valorPago - total)
     : 0;
@@ -791,13 +817,17 @@ export function Caixa() {
         ? Math.max(0, valorPago - total)
         : 0;
 
+      const nomeClienteCarteira = clienteSel?.nome;
+      const naCarteira = valorCarteira;
       const vendaCriada = await registrarVenda(venda);
       await recarregar(true);
       carregarPendentes();
       toastSucesso(
-        trocoVenda > 0
-          ? `Venda registrada! Troco: ${fmt(trocoVenda)}`
-          : `Venda registrada! ${fmt(total)}`
+        naCarteira > 0
+          ? `Venda registrada! ${fmt(naCarteira)} na carteira de ${nomeClienteCarteira}.`
+          : trocoVenda > 0
+            ? `Venda registrada! Troco: ${fmt(trocoVenda)}`
+            : `Venda registrada! ${fmt(total)}`
       );
       if (temCupomNaoFiscal) {
         const cfg = lerConfigCupom();
@@ -847,6 +877,7 @@ export function Caixa() {
   // Em dinheiro (forma única), exige valor recebido suficiente pra cobrir o
   // total antes de liberar o botão — senão a venda fechava sem troco calculado.
   const podeFinalizar = carrinho.length > 0 &&
+  (!usaCarteira || (!!clienteId && !carteiraEstourou)) &&
   (duasFormas
     ? Math.abs(totalFormas - total) < 0.01
     : formas[0].forma !== undefined && (formas[0].forma !== 'dinheiro' || valorPago >= total));
@@ -1193,6 +1224,9 @@ export function Caixa() {
                 <div>
                   <div style={{ fontWeight: 500, fontSize: 13 }}>{clienteSel.nome}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{clienteSel.telefone}</div>
+                  {(clienteSel.saldoCarteira ?? 0) > 0 && (
+                    <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 2 }}>👛 Deve {fmt(clienteSel.saldoCarteira!)} na carteira</div>
+                  )}
                 </div>
                 <button className="btn-ghost" onClick={() => { setClienteId(''); setBuscaCli(''); }}><X size={13} /></button>
               </div>
@@ -1330,15 +1364,52 @@ export function Caixa() {
               </div>
             )}
             <div className="cx-formas">
-              {FORMAS.map(fp => (
-                <button key={fp.value}
-                  className={`cx-forma-btn${f.forma === fp.value ? ' active' : ''}`}
-                  onClick={() => setFormas(prev => prev.map((x, i) => i === idx ? { ...x, forma: fp.value } : x))}>
-                  <span>{fp.icon}</span>
-                  <span>{fp.label}</span>
-                </button>
-              ))}
+              {FORMAS.map(fp => {
+                const semCliente = fp.value === 'carteira' && !clienteId;                                  // carteira precisa de cliente
+                const jaNaOutra = fp.value === 'carteira' && formas.some((x, i) => i !== idx && x.forma === 'carteira');
+                const bloqueada = semCliente || jaNaOutra;
+                return (
+                  <button key={fp.value}
+                    className={`cx-forma-btn${fp.value === 'carteira' ? ' cx-forma-wide' : ''}${f.forma === fp.value ? ' active' : ''}`}
+                    disabled={bloqueada}
+                    title={semCliente ? 'Selecione um cliente para vender na carteira' : undefined}
+                    style={bloqueada ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                    onClick={() => setFormas(prev => prev.map((x, i) => i === idx ? { ...x, forma: fp.value } : x))}>
+                    <span>{fp.icon}</span>
+                    <span>{fp.value === 'carteira' ? 'Carteira · pagar depois' : fp.label}</span>
+                  </button>
+                );
+              })}
             </div>
+            {!clienteId && (
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+                👛 Para vender na carteira (pagar no fim do mês), selecione o cliente.
+              </div>
+            )}
+
+            {/* Carteira — pagar depois */}
+            {f.forma === 'carteira' && (
+              <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg-3)', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
+                <div style={{ color: 'var(--text-2)', marginBottom: 8 }}>
+                  O cliente leva agora e paga depois. Esta parte <strong>não entra no caixa</strong> até ele pagar.
+                </div>
+                {carteiraCliente && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Já deve</span><span>{fmt(carteiraCliente.saldo)}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Esta venda</span><span>+ {fmt(valorCarteira)}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 4 }}>
+                      <span>Passa a dever</span><span>{fmt(carteiraSaldoNovo)}</span>
+                    </div>
+                    {carteiraCliente.limite != null && (
+                      <div style={{ fontSize: 12, marginTop: 4, color: carteiraEstourou ? 'var(--red)' : 'var(--text-3)' }}>
+                        Limite da carteira: {fmt(carteiraCliente.limite)}
+                        {carteiraEstourou ? ` — excedido. Disponível: ${fmt(carteiraCliente.disponivel ?? 0)}` : ` (disponível ${fmt(carteiraCliente.disponivel ?? 0)})`}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Cartão — parcelamento */}
             {f.forma === 'credito' && (
@@ -1785,7 +1856,7 @@ export function Caixa() {
                               <div style={{ marginTop: 10 }}>
                                 <label className="form-label">Forma de pagamento da diferença</label>
                                 <div className="cx-formas" style={{ marginTop: 6 }}>
-                                  {FORMAS.map(fp => (
+                                  {FORMAS_A_VISTA.map(fp => (
                                     <button key={fp.value} className={`cx-forma-btn${trocaFormaPag === fp.value ? ' active' : ''}`}
                                       onClick={() => setTrocaFormaPag(fp.value)}>
                                       <span>{fp.icon}</span><span>{fp.label}</span>

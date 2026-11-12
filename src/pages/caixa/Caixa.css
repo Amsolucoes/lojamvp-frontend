@@ -197,6 +197,8 @@
   transition: all 0.12s;
 }
 .cx-forma-btn:hover { background: var(--bg-hover); color: var(--text-1); }
+/* Carteira: ocupa a linha inteira, em destaque separado das formas "à vista" */
+.cx-forma-btn.cx-forma-wide { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 8px; padding: 9px 8px; }
 .cx-forma-btn.active {
   background: var(--accent-bg);
   border-color: var(--accent-border);

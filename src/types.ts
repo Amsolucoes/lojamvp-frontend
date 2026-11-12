@@ -45,6 +45,8 @@ export interface Cliente {
   observacoes?: string;
   criadoEm: string;
   creditoLoja?: number;
+  saldoCarteira?: number;          // quanto o cliente deve na carteira (fiado)
+  limiteCarteira?: number | null;  // teto da carteira; vazio = sem limite
 }
 
 // ── Fornecedor ────────────────────────────────────────────────────
@@ -68,7 +70,7 @@ export interface Fornecedor {
 }
 
 // ── Venda / Caixa ─────────────────────────────────────────────────
-export type FormaPagamento = 'dinheiro' | 'pix' | 'credito' | 'debito';
+export type FormaPagamento = 'dinheiro' | 'pix' | 'credito' | 'debito' | 'carteira';
 
 export interface ItemVenda {
   produtoId: string;
@@ -93,6 +95,7 @@ export interface Venda {
   criadaEm: string;
   origemNome?: string;
   nomeFuncionario?: string;
+  valorCarteira?: number | null;   // parte da venda que ficou na carteira do cliente (paga depois)
 }
 
 // ── Estoque ───────────────────────────────────────────────────────

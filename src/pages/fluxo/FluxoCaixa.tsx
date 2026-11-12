@@ -11,8 +11,14 @@ function fmt(n: number) {
 }
 
 const LABEL_PAG: Record<string, string> = {
-  dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito',
+  dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito', carteira: 'Carteira',
 };
+
+// Dinheiro que realmente entrou na venda: o que foi para a carteira do cliente só entra quando ele pagar
+// (aí aparece como "Ajustes de caixa › entrada", na data do recebimento).
+function recebidoDaVenda(v: { totalFinal: number; valorCarteira?: number | null }): number {
+  return v.totalFinal - (v.valorCarteira ?? 0);
+}
 
 // Lê formasPagamento seja string JSON ou array já parseado
 function parseFormas(fp: any): any[] {
@@ -188,11 +194,11 @@ export function FluxoCaixa() {
     return {
       dia,
       label: `${String(i + 1).padStart(2, '0')}/${String(mesRef + 1).padStart(2, '0')}`,
-      entradas:  vendasDia.reduce((s, v) => s + v.totalFinal, 0),
+      entradas:  vendasDia.reduce((s, v) => s + recebidoDaVenda(v), 0),
       descontos: vendasDia.reduce((s, v) => s + v.desconto, 0),
       lucro:     vendasDia.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0),
       ajusteCaixa: entradasManuaisDia - sangriasDia,
-      total: vendasDia.reduce((s, v) => s + v.totalFinal, 0) + (entradasManuaisDia - sangriasDia),
+      total: vendasDia.reduce((s, v) => s + recebidoDaVenda(v), 0) + (entradasManuaisDia - sangriasDia),
       qtdVendas: vendasDia.length,
       isHoje:   diaStr === hoje.toDateString(),
       isFuturo: dia > hoje,
@@ -206,10 +212,11 @@ export function FluxoCaixa() {
   const entradasManuaisHoje = movimentosHoje.filter(m => m.tipo === 'entrada').reduce((s, m) => s + m.valor, 0);
   const sangriasHoje = movimentosHoje.filter(m => m.tipo === 'saida').reduce((s, m) => s + m.valor, 0);
   const ajusteCaixaHoje = entradasManuaisHoje - sangriasHoje;
-  const totalHoje    = vendasHoje.reduce((s, v) => s + v.totalFinal, 0);
+  const totalHoje    = vendasHoje.reduce((s, v) => s + recebidoDaVenda(v), 0);
+  const carteiraHoje = vendasHoje.reduce((s, v) => s + (v.valorCarteira ?? 0), 0);
   const descontosHoje = vendasHoje.reduce((s, v) => s + v.desconto, 0);
   const lucroHoje    = vendasHoje.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0);
-  const ticketHoje   = vendasHoje.length > 0 ? totalHoje / vendasHoje.length : 0;
+  const ticketHoje   = vendasHoje.length > 0 ? vendasHoje.reduce((s, v) => s + v.totalFinal, 0) / vendasHoje.length : 0;
 
   const totalEntMes   = diasFluxo.reduce((s, d) => s + d.entradas, 0);
   const totalDescMes  = diasFluxo.reduce((s, d) => s + d.descontos, 0);
@@ -231,11 +238,11 @@ export function FluxoCaixa() {
     const sangriasMes = movMes.filter(mv => mv.tipo === 'saida').reduce((s, mv) => s + mv.valor, 0);
     return {
       mes: m, label: MESES[m].slice(0, 3),
-      entradas:  vendasMes.reduce((s, v) => s + v.totalFinal, 0),
+      entradas:  vendasMes.reduce((s, v) => s + recebidoDaVenda(v), 0),
       descontos: vendasMes.reduce((s, v) => s + v.desconto, 0),
       lucro:     vendasMes.reduce((s, v) => s + calcularLucroVenda(v, produtos), 0),
       ajusteCaixa: entradasManuaisMes - sangriasMes,
-      total: vendasMes.reduce((s, v) => s + v.totalFinal, 0) + (entradasManuaisMes - sangriasMes),
+      total: vendasMes.reduce((s, v) => s + recebidoDaVenda(v), 0) + (entradasManuaisMes - sangriasMes),
       qtdVendas: vendasMes.length,
     };
   });
@@ -314,6 +321,13 @@ export function FluxoCaixa() {
               <div className="stat-value" style={{ fontSize: 20, color: 'var(--accent)' }}>{fmt(lucroHoje)}</div>
               <div className="stat-sub">vendas − custo</div>
             </div>
+            {carteiraHoje > 0 && (
+              <div className="stat-card">
+                <div className="stat-label">👛 Na carteira</div>
+                <div className="stat-value" style={{ fontSize: 20, color: 'var(--accent)' }}>{fmt(carteiraHoje)}</div>
+                <div className="stat-sub">vendido hoje, a receber</div>
+              </div>
+            )}
             {(entradasManuaisHoje > 0 || sangriasHoje > 0) && (
               <div className="stat-card" style={ajusteCaixaHoje < 0 ? { borderColor: 'rgba(248,113,113,0.3)' } : {}}>
                 <div className="stat-label">↕️ Ajustes de caixa</div>

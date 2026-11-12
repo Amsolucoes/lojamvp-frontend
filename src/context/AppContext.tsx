@@ -91,6 +91,8 @@ function mapCliente(c: any): Cliente {
     observacoes: c.observacoes, criadoEm: c.criadoEm,
     dataNascimento: c.dataNascimento,
     creditoLoja: c.creditoLoja,
+    saldoCarteira: c.saldoCarteira ?? 0,
+    limiteCarteira: c.limiteCarteira ?? null,
   };
 }
 
@@ -104,6 +106,7 @@ function mapVenda(v: any): Venda {
     troco: v.troco, criadaEm: v.criadaEm,
     origemNome: v.origemNome,
     nomeFuncionario: v.nomeFuncionario,
+    valorCarteira: v.valorCarteira ?? null,
     itens: (v.itens ?? []).map((i: any) => ({
       produtoId: i.produtoId ?? null,
       servicoId: i.servicoId ?? null,

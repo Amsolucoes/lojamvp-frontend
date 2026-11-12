@@ -31,7 +31,7 @@ function extrairVariacao(nomeProduto: string): { nome: string; variacao?: string
 }
 
 const labelPag: Record<string, string> = {
-  dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito',
+  dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito', carteira: 'Carteira (a receber)',
 };
 
 // Ícone do card de entrada de caixa, de acordo com a origem (Site, Loja física, etc.)
@@ -123,7 +123,7 @@ export function Relatorios() {
   const maxQtd = rankProdutos[0]?.qtd || 1;
 
   // Vendas por forma de pagamento
-  const porPagamento = ['dinheiro', 'pix', 'credito', 'debito'].map(fp => {
+  const porPagamento = ['dinheiro', 'pix', 'credito', 'debito', 'carteira'].map(fp => {
     const vs = vendasFiltradas.filter(v => v.formaPagamento === fp);
     return { forma: fp, qtd: vs.length, total: vs.reduce((s, v) => s + v.totalFinal, 0) };
   }).filter(x => x.qtd > 0).sort((a, b) => b.total - a.total);
