@@ -1526,7 +1526,7 @@ export function FinanceiroMobile() {
           )}
           <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value as FiltroTipo)} style={{ marginBottom: 14 }}>
             <option value="todos">Todos os tipos</option>
-            <option value="avulsa">Avulsa</option>
+            <option value="avulsa">Única</option>
             <option value="fixa">Fixa (recorrente)</option>
             <option value="parcelada">Parcelada</option>
             <option value="cartao">Cartão de crédito</option>
@@ -1749,7 +1749,7 @@ export function FinanceiroMobile() {
           )}
           <select value={filtroTipoReceber} onChange={e => setFiltroTipoReceber(e.target.value as FiltroTipo)} style={{ marginBottom: 14 }}>
             <option value="todos">Todos os tipos</option>
-            <option value="avulsa">Avulsa</option>
+            <option value="avulsa">Única</option>
             <option value="fixa">Fixa (recorrente)</option>
             <option value="parcelada">Parcelada</option>
             <option value="plano">Mensalidade (plano)</option>
@@ -2558,7 +2558,7 @@ export function FinanceiroMobile() {
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {[{ v: 'avulsa', t: 'Avulsa' }, { v: 'parcelada', t: 'Parcelada' }, { v: 'fixa', t: 'Fixa/mensal' }].map(op => (
+                  {[{ v: 'avulsa', t: 'Única' }, { v: 'parcelada', t: 'Parcelada' }, { v: 'fixa', t: 'Fixa/mensal' }].map(op => (
                     <button key={op.v} type="button" className={op.v === formCompra.modo ? 'btn-primary' : 'btn-secondary'}
                       style={{ flex: 1, fontSize: 12, padding: '8px 0' }}
                       onClick={() => setFormCompra(f => ({ ...f, modo: op.v as any }))}>{op.t}</button>
@@ -2987,7 +2987,7 @@ export function FinanceiroMobile() {
                 <div className="form-group">
                   <label className="form-label">Tipo</label>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {[{ v: 'avulsa', t: 'Avulsa' }, { v: 'parcelada', t: 'Parcelada' }, { v: 'fixa', t: 'Fixa/recorrente' }].map(op => (
+                    {[{ v: 'avulsa', t: 'Única' }, { v: 'parcelada', t: 'Parcelada' }, { v: 'fixa', t: 'Fixa/recorrente' }].map(op => (
                       <button key={op.v} type="button" className={op.v === formNovoLanc.modo ? 'btn-primary' : 'btn-secondary'}
                         style={{ flex: 1, padding: '8px 0', fontSize: 12 }}
                         onClick={() => setFormNovoLanc(f => ({ ...f, modo: op.v as any }))}>{op.t}</button>
