@@ -1120,7 +1120,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
           </select>
           <select value={modoFiltro} onChange={e => setModoFiltro(e.target.value as any)} style={{ width: 'auto', minWidth: 130 }}>
             <option value="todos">Todos os tipos</option>
-            <option value="avulsa">Avulsa</option>
+            <option value="avulsa">Única</option>
             <option value="parcelada">Parcelada</option>
             <option value="fixa">Fixa</option>
           </select>
@@ -1594,7 +1594,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                   <label className="form-label">Tipo de lançamento</label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {[
-                      { v: 'avulsa', t: 'Avulsa' },
+                      { v: 'avulsa', t: 'Única' },
                       { v: 'parcelada', t: 'Parcelada' },
                       { v: 'fixa', t: 'Fixa/recorrente' },
                     ].map(op => (
@@ -2001,7 +2001,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {[
-                    { v: 'avulsa', t: 'Avulsa' },
+                    { v: 'avulsa', t: 'Única' },
                     { v: 'parcelada', t: 'Parcelada' },
                     { v: 'fixa', t: 'Fixa/mensal' },
                   ].map(op => (
