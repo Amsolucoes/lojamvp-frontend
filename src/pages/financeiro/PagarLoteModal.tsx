@@ -41,6 +41,8 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
   const [tipoCartao, setTipoCartao] = useState<'vista' | 'parcelado'>('vista');
   const [parcelas, setParcelas] = useState(2);
   const [data, setData] = useState(hojeLocal);
+  const [dividir, setDividir] = useState(false);   // pagar uma conta saindo de mais de uma conta bancária
+  const [partes, setPartes] = useState<{ contaId: string; valor: string }[]>([]);
   const [juros, setJuros] = useState('');   // juros/multa/taxa pagos além do valor da conta (texto digitado)
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -55,10 +57,29 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
 
   const total = useMemo(() => itens.reduce((s, i) => s + i.valor, 0), [itens]);
   const acrescimo = Math.max(0, Number(juros.replace(',', '.')) || 0);
+  const podeDividir = forma === 'conta' && itens.length === 1 && permitirCartao && contasAtivas.length > 1;
+  const dividindo = podeDividir && dividir;
+  const somaPartes = partes.reduce((s, p) => s + (Number(p.valor.replace(',', '.')) || 0), 0);
+  const diferenca = Math.round((total - somaPartes) * 100) / 100;
   const nParcelas = forma === 'cartao' && tipoCartao === 'parcelado' ? parcelas : 1;
+
+  function ativarDivisao(ligar: boolean) {
+    setDividir(ligar);
+    if (ligar && partes.length === 0) {
+      const outra = contasAtivas.find(c => c.id !== contaId)?.id ?? '';
+      setPartes([{ contaId, valor: '' }, { contaId: outra, valor: '' }]);
+    }
+  }
+  const mudarParte = (i: number, campo: 'contaId' | 'valor', v: string) =>
+    setPartes(ps => ps.map((p, k) => k === i ? { ...p, [campo]: v } : p));
 
   async function confirmar() {
     setErro('');
+    if (dividindo) {
+      if (partes.some(p => !p.contaId)) { setErro('Escolha a conta de cada parte.'); return; }
+      if (partes.some(p => !(Number(p.valor.replace(',', '.')) > 0))) { setErro('Informe o valor de cada parte.'); return; }
+      if (diferenca !== 0) { setErro(`A soma das partes deve ser ${fmt(total)} (${diferenca > 0 ? 'faltam' : 'sobram'} ${fmt(Math.abs(diferenca))}).`); return; }
+    }
     if (forma === 'conta' && !contaId) { setErro('Escolha a conta de onde sai o pagamento.'); return; }
     if (forma === 'cartao' && !cartaoId) { setErro('Escolha o cartão de crédito.'); return; }
     if (!data) { setErro('Informe a data.'); return; }
@@ -68,7 +89,8 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
       await api.post('/api/financeiro/lancamentos/pagar-lote', {
         ids: itens.map(i => i.id),
         forma,
-        contaBancariaId: forma === 'conta' ? contaId : null,
+        contaBancariaId: forma === 'conta' && !dividindo ? contaId : null,
+        ...(dividindo ? { divisoes: partes.map(p => ({ contaBancariaId: p.contaId, valor: Number(p.valor.replace(',', '.')) })) } : {}),
         cartaoId: forma === 'cartao' ? cartaoId : null,
         parcelas: nParcelas,
         data,
@@ -135,13 +157,47 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
           </div>
 
           {forma === 'conta' ? (
-            <div className="form-group">
-              <label className="form-label">Pagar com a conta</label>
-              <select value={contaId} onChange={e => setContaId(e.target.value)}>
-                {contasAtivas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </select>
-              <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>As contas são marcadas como pagas e o valor sai desta conta.</p>
-            </div>
+            dividindo ? (
+              <div className="form-group">
+                <label className="form-label">Dividir entre as contas</label>
+                {partes.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                    <select value={p.contaId} onChange={e => mudarParte(i, 'contaId', e.target.value)} style={{ flex: 1, minWidth: 0 }}>
+                      <option value="">Conta...</option>
+                      {contasAtivas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </select>
+                    <input type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={p.valor}
+                      onChange={e => mudarParte(i, 'valor', e.target.value)} style={{ width: 110, flexShrink: 0 }} />
+                    {partes.length > 2 && (
+                      <button type="button" className="btn-ghost" onClick={() => setPartes(ps => ps.filter((_, k) => k !== i))}><X size={14} /></button>
+                    )}
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                  {partes.length < 5
+                    ? <button type="button" className="btn-secondary" onClick={() => setPartes(ps => [...ps, { contaId: '', valor: '' }])}>+ Adicionar conta</button>
+                    : <span />}
+                  <span style={{ color: diferenca === 0 ? 'var(--green)' : 'var(--text-2)' }}>
+                    {diferenca === 0 ? 'Soma confere' : diferenca > 0 ? `Faltam ${fmt(diferenca)}` : `Sobram ${fmt(-diferenca)}`}
+                  </span>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+                  A conta é registrada em partes, cada uma paga pela sua conta bancária. Se houver juros, ele sai da primeira conta.
+                </p>
+                <button type="button" className="btn-ghost" style={{ marginTop: 4, fontSize: 12 }} onClick={() => ativarDivisao(false)}>Pagar com uma conta só</button>
+              </div>
+            ) : (
+              <div className="form-group">
+                <label className="form-label">Pagar com a conta</label>
+                <select value={contaId} onChange={e => setContaId(e.target.value)}>
+                  {contasAtivas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>As contas são marcadas como pagas e o valor sai desta conta.</p>
+                {podeDividir && (
+                  <button type="button" className="btn-ghost" style={{ marginTop: 4, fontSize: 12 }} onClick={() => ativarDivisao(true)}>Dividir em mais de uma conta</button>
+                )}
+              </div>
+            )
           ) : cartoes.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Nenhum cartão de crédito cadastrado. Cadastre em Financeiro → Cartões.</p>
           ) : (
