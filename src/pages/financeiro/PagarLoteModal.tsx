@@ -9,6 +9,7 @@ export interface ItemLote {
   valor: number;
   categoriaNome: string | null;
   vencimento: string;
+  contaBancariaId?: string | null;   // conta do lançamento: vira a sugestão quando se paga uma conta só
 }
 
 interface Conta { id: string; nome: string; ativa: boolean; }
@@ -16,20 +17,30 @@ interface Cartao { id: string; nome: string; ativo: boolean; bandeira?: string |
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-// Pagar várias contas de uma vez: no débito (saindo de uma conta) ou no cartão de crédito (à vista ou parcelado).
-export function PagarLoteModal({ itens, contas, onClose, onConcluido }: {
+// Data de hoje no fuso local (yyyy-MM-dd). toISOString() usaria UTC e viraria o dia depois das 20h em MS.
+function hojeLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Pagar uma ou várias contas: no débito (saindo de uma conta) ou no cartão de crédito (à vista ou parcelado).
+// `permitirCartao=false` esconde a opção de cartão (ex.: parcela ou conta fixa, que não devem sair da série).
+export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCartao = true }: {
   itens: ItemLote[];
   contas: Conta[];
   onClose: () => void;
   onConcluido: (mensagem: string) => void;
+  permitirCartao?: boolean;
 }) {
   const contasAtivas = contas.filter(c => c.ativa);
   const [forma, setForma] = useState<'conta' | 'cartao'>('conta');
-  const [contaId, setContaId] = useState(contasAtivas[0]?.id ?? '');
+  const contaDoItem = itens.length === 1 ? contasAtivas.find(c => c.id === itens[0].contaBancariaId)?.id : undefined;
+  const [contaId, setContaId] = useState(contaDoItem ?? contasAtivas[0]?.id ?? '');
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [cartaoId, setCartaoId] = useState('');
   const [tipoCartao, setTipoCartao] = useState<'vista' | 'parcelado'>('vista');
   const [parcelas, setParcelas] = useState(2);
+  const [data, setData] = useState(hojeLocal);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -48,6 +59,7 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido }: {
     setErro('');
     if (forma === 'conta' && !contaId) { setErro('Escolha a conta de onde sai o pagamento.'); return; }
     if (forma === 'cartao' && !cartaoId) { setErro('Escolha o cartão de crédito.'); return; }
+    if (!data) { setErro('Informe a data.'); return; }
     setSalvando(true);
     try {
       await api.post('/api/financeiro/lancamentos/pagar-lote', {
@@ -56,10 +68,11 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido }: {
         contaBancariaId: forma === 'conta' ? contaId : null,
         cartaoId: forma === 'cartao' ? cartaoId : null,
         parcelas: nParcelas,
+        data,
       });
       const qtd = itens.length;
       onConcluido(forma === 'conta'
-        ? `${qtd} conta(s) paga(s): ${fmt(total)}`
+        ? (qtd === 1 ? `Conta paga: ${fmt(total)}` : `${qtd} conta(s) paga(s): ${fmt(total)}`)
         : `${qtd} conta(s) lançada(s) no cartão${nParcelas > 1 ? ` em ${nParcelas}x` : ' à vista'}: ${fmt(total)}`);
     } catch (e) {
       setErro((e as Error).message);
@@ -77,7 +90,7 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido }: {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !salvando && onClose()}>
       <div className="modal" style={{ maxWidth: 520 }}>
         <div className="modal-header">
-          <h2 style={{ fontSize: 16, fontWeight: 600 }}>Pagar {itens.length} conta(s)</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 600 }}>{itens.length === 1 ? 'Pagar conta' : `Pagar ${itens.length} contas`}</h2>
           <button className="btn-ghost" onClick={onClose} disabled={salvando}><X size={16} /></button>
         </div>
         <div className="modal-body">
@@ -102,8 +115,18 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido }: {
             <label className="form-label">Como vai pagar?</label>
             <div style={{ display: 'flex', gap: 8 }}>
               {botaoForma('conta', <Landmark size={14} />, 'Débito / conta')}
-              {botaoForma('cartao', <CreditCard size={14} />, 'Cartão de crédito')}
+              {permitirCartao && botaoForma('cartao', <CreditCard size={14} />, 'Cartão de crédito')}
             </div>
+            {!permitirCartao && (
+              <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                Parcelas e contas fixas são pagas pela conta, para não quebrar a série. Para lançar no cartão, use Financeiro → Cartões.
+              </p>
+            )}
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 12 }}>
+            <label className="form-label">{forma === 'cartao' ? 'Data da compra' : 'Data do pagamento'}</label>
+            <input type="date" value={data} max={hojeLocal()} onChange={e => setData(e.target.value)} />
           </div>
 
           {forma === 'conta' ? (

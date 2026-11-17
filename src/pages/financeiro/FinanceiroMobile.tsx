@@ -143,6 +143,8 @@ export function FinanceiroMobile() {
   const [selecionando, setSelecionando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [modalLote, setModalLote] = useState(false);
+  // "Pagar" de uma conta só: abre o mesmo modal do lote (conta/cartão + data) com um item
+  const [itemPagar, setItemPagar] = useState<LinhaPagar | null>(null);
   // Gerenciar parcelas de um lançamento parcelado (empréstimo etc.)
   const [modalParcelas, setModalParcelas] = useState<{ id: string; titulo: string; origem: 'pagar' | 'receber' } | null>(null);
   const [parcelasAlteradas, setParcelasAlteradas] = useState(false);
@@ -1622,7 +1624,7 @@ export function FinanceiroMobile() {
                                 {status === 'pago' ? 'Pago' : status === 'vencido' ? 'Vencido' : 'Pendente'}
                               </span>
                               <div style={{ display: 'flex', gap: 6 }}>
-                                <button className="btn-secondary" style={{ fontSize: 12 }} disabled={processandoPagamento === l.id} onClick={() => marcarPagamentoLocal(l, l.status !== 'pago')}>
+                                <button className="btn-secondary" style={{ fontSize: 12 }} disabled={processandoPagamento === l.id} onClick={() => elegivelLote(l) ? setItemPagar(l) : marcarPagamentoLocal(l, l.status !== 'pago')}>
                                   {processandoPagamento === l.id ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : (l.status === 'pago' ? 'Desfazer' : 'Pagar')}
                                 </button>
                                 {l.origem === 'avulso' && (
@@ -2013,6 +2015,20 @@ export function FinanceiroMobile() {
               if (origem === 'pagar') { setEditandoLancamento(null); await recarregarPagar(); }
               else { setEditandoReceber(null); await recarregarReceber(); }
             }
+          }}
+        />
+      )}
+
+      {itemPagar && (
+        <PagarLoteModal
+          itens={[{ id: itemPagar.id, descricao: itemPagar.descricao, valor: itemPagar.valor, categoriaNome: itemPagar.categoriaNome, vencimento: itemPagar.vencimento, contaBancariaId: itemPagar.contaBancariaId }]}
+          contas={contas as any}
+          permitirCartao={itemPagar.modo === 'avulsa'}
+          onClose={() => setItemPagar(null)}
+          onConcluido={async msg => {
+            setItemPagar(null);
+            await recarregarPagar();
+            sucesso(msg);
           }}
         />
       )}

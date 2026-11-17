@@ -206,6 +206,8 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
   const [selecionando, setSelecionando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [modalLote, setModalLote] = useState(false);
+  // "Pagar" de uma conta só: abre o mesmo modal do lote (conta/cartão + data) com um item
+  const [itemPagar, setItemPagar] = useState<LinhaPagar | null>(null);
   // Gerenciar parcelas de um lançamento parcelado (empréstimo etc.)
   const [modalParcelas, setModalParcelas] = useState<{ id: string; titulo: string } | null>(null);
   const [parcelasAlteradas, setParcelasAlteradas] = useState(false);
@@ -216,6 +218,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
     setSelecionados(atual => { const novo = new Set(atual); if (novo.has(id)) novo.delete(id); else novo.add(id); return novo; });
   }
   function sairDaSelecao() { setSelecionando(false); setSelecionados(new Set()); }
+  const pagarConta = (l: LinhaPagar) => elegivelLote(l) ? setItemPagar(l) : marcarPagamento(l as any, true);
   const [confirmExcluir, setConfirmExcluir] = useState<LinhaPagar | null>(null);
   const [excluindoLancamento, setExcluindoLancamento] = useState(false);
   const [editandoLancamento, setEditandoLancamento] = useState<LinhaPagar | null>(null);
@@ -1213,7 +1216,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                         {itens.map(l => {
                           const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
                           const ehFinanciada = l.origem === 'cartao_fatura_financiada';
-                          const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
+                          const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : pagarConta(l);
                           const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
                           const processandoEste = processandoPagamento === l.id;
                           return (
@@ -1302,7 +1305,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                     {itens.map(l => {
                       const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
                       const ehFinanciada = l.origem === 'cartao_fatura_financiada';
-                      const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : marcarPagamento(l as any, true);
+                      const pagar = () => ehCartao ? marcarPagamentoCartaoFatura(l, true) : pagarConta(l);
                       const desfazer = () => ehCartao ? marcarPagamentoCartaoFatura(l, false) : marcarPagamento(l as any, false);
                       const processandoEste = processandoPagamento === l.id;
                       return (
@@ -1518,6 +1521,21 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
               setEditandoLancamento(null);   // a parcela aberta pode ter sido excluída ou renumerada
               await Promise.all([carregarLancamentos(), carregarResumo(), carregarContas()]);
             }
+          }}
+        />
+      )}
+
+      {/* Modal pagar uma conta */}
+      {itemPagar && (
+        <PagarLoteModal
+          itens={[{ id: itemPagar.id, descricao: itemPagar.descricao, valor: itemPagar.valor, categoriaNome: itemPagar.categoriaNome, vencimento: itemPagar.vencimento, contaBancariaId: itemPagar.contaBancariaId }]}
+          contas={contas as any}
+          permitirCartao={itemPagar.modo === 'avulsa'}
+          onClose={() => setItemPagar(null)}
+          onConcluido={async msg => {
+            setItemPagar(null);
+            await Promise.all([carregarLancamentos(), carregarResumo(), carregarContas()]);
+            sucesso(msg);
           }}
         />
       )}
