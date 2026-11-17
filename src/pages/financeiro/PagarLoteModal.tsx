@@ -41,6 +41,7 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
   const [tipoCartao, setTipoCartao] = useState<'vista' | 'parcelado'>('vista');
   const [parcelas, setParcelas] = useState(2);
   const [data, setData] = useState(hojeLocal);
+  const [juros, setJuros] = useState('');   // juros/multa/taxa pagos além do valor da conta (texto digitado)
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -53,6 +54,7 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
   }, []);
 
   const total = useMemo(() => itens.reduce((s, i) => s + i.valor, 0), [itens]);
+  const acrescimo = Math.max(0, Number(juros.replace(',', '.')) || 0);
   const nParcelas = forma === 'cartao' && tipoCartao === 'parcelado' ? parcelas : 1;
 
   async function confirmar() {
@@ -60,6 +62,7 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
     if (forma === 'conta' && !contaId) { setErro('Escolha a conta de onde sai o pagamento.'); return; }
     if (forma === 'cartao' && !cartaoId) { setErro('Escolha o cartão de crédito.'); return; }
     if (!data) { setErro('Informe a data.'); return; }
+    if (juros.trim() && !(Number(juros.replace(',', '.')) >= 0)) { setErro('Informe um valor válido para juros/multa.'); return; }
     setSalvando(true);
     try {
       await api.post('/api/financeiro/lancamentos/pagar-lote', {
@@ -69,11 +72,13 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
         cartaoId: forma === 'cartao' ? cartaoId : null,
         parcelas: nParcelas,
         data,
+        ...(acrescimo > 0 ? { acrescimo } : {}),
       });
       const qtd = itens.length;
+      const extra = acrescimo > 0 ? ` + ${fmt(acrescimo)} de juros` : '';
       onConcluido(forma === 'conta'
-        ? (qtd === 1 ? `Conta paga: ${fmt(total)}` : `${qtd} conta(s) paga(s): ${fmt(total)}`)
-        : `${qtd} conta(s) lançada(s) no cartão${nParcelas > 1 ? ` em ${nParcelas}x` : ' à vista'}: ${fmt(total)}`);
+        ? (qtd === 1 ? `Conta paga: ${fmt(total)}` : `${qtd} conta(s) paga(s): ${fmt(total)}`) + extra
+        : `${qtd} conta(s) lançada(s) no cartão${nParcelas > 1 ? ` em ${nParcelas}x` : ' à vista'}: ${fmt(total)}${extra}`);
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -170,12 +175,19 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
               </p>
             </>
           )}
+          <div className="form-group" style={{ marginTop: 14 }}>
+            <label className="form-label">Juros / multa / taxa (opcional)</label>
+            <input type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={juros} onChange={e => setJuros(e.target.value)} />
+            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+              Se pagou a mais que o valor da conta, informe a diferença: ela é lançada à parte na categoria "Juros"{forma === 'cartao' ? ', como compra à vista no cartão' : ''}.
+            </p>
+          </div>
           {erro && <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{erro}</p>}
         </div>
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose} disabled={salvando}>Cancelar</button>
           <button className="btn-primary" onClick={confirmar} disabled={salvando || (forma === 'cartao' && cartoes.length === 0)}>
-            {salvando ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : `Pagar ${fmt(total)}`}
+            {salvando ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : `Pagar ${fmt(total + acrescimo)}`}
           </button>
         </div>
       </div>
