@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useFiltrando } from '../../hooks/useFiltrando';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, X, Wallet, Tag, Trash2, Check, ChevronLeft, ChevronRight, Settings, TrendingUp, TrendingDown, CreditCard, BarChart3, RotateCcw, Loader2, Printer, ListChecks } from 'lucide-react';
-import { PagarLoteModal } from './PagarLoteModal';
+import { PagarLoteModal, rotuloForma } from './PagarLoteModal';
 import { ParcelasModal } from './ParcelasModal';
 import { PrimeirosPassosFinanceiro } from './PrimeirosPassosFinanceiro';
 import { api } from '../../services/api';
@@ -79,6 +79,7 @@ interface LinhaPagar {
   vencimento: string;
   status: string;
   pagoEm: string | null;
+  formaPagamento?: string | null;
   numeroParcela: number | null;
   totalParcelas: number | null;
   origem: string; // avulso | cartao_item | cartao_fatura
@@ -1250,7 +1251,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                             {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}
                             {l.pagoEm && (
                               <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
-                                Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}
+                                Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}{l.formaPagamento ? ` · ${rotuloForma(l.formaPagamento)}` : ''}
                               </div>
                             )}
                           </td>
@@ -1326,7 +1327,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
                           <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                             {l.categoriaNome ? <>{iconeCategoria(l.categoriaNome)} {l.categoriaNome}</> : '—'} · {nomeConta(l.contaBancariaId)} · {l.vencimento ? new Date(l.vencimento).toLocaleDateString('pt-BR') : '—'}
                           </div>
-                          {l.pagoEm && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}</div>}
+                          {l.pagoEm && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Pago em {new Date(l.pagoEm).toLocaleDateString('pt-BR')}{l.formaPagamento ? ` · ${rotuloForma(l.formaPagamento)}` : ''}</div>}
                           {l.numeroParcela && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Parcela {l.numeroParcela}/{l.totalParcelas}</div>}
                         </div>
                         <span style={{ fontWeight: 600 }}>{fmt(l.valor)}</span>

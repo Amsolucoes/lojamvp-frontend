@@ -15,6 +15,12 @@ export interface ItemLote {
 interface Conta { id: string; nome: string; ativa: boolean; }
 interface Cartao { id: string; nome: string; ativo: boolean; bandeira?: string | null; }
 
+export const FORMAS_PAGAMENTO: { v: string; t: string }[] = [
+  { v: 'pix', t: 'Pix' }, { v: 'boleto', t: 'Boleto' }, { v: 'debito', t: 'Débito' },
+  { v: 'dinheiro', t: 'Dinheiro' }, { v: 'transferencia', t: 'Transferência' }, { v: 'outro', t: 'Outro' },
+];
+export const rotuloForma = (v?: string | null) => FORMAS_PAGAMENTO.find(f => f.v === v)?.t ?? '';
+
 const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 // Data de hoje no fuso local (yyyy-MM-dd). toISOString() usaria UTC e viraria o dia depois das 20h em MS.
@@ -43,6 +49,7 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
   const [data, setData] = useState(hojeLocal);
   const [dividir, setDividir] = useState(false);   // pagar uma conta saindo de mais de uma conta bancária
   const [partes, setPartes] = useState<{ contaId: string; valor: string }[]>([]);
+  const [formaPag, setFormaPag] = useState('');   // como pagou (opcional, só pagando pela conta)
   const [juros, setJuros] = useState('');   // juros/multa/taxa pagos além do valor da conta (texto digitado)
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -95,6 +102,7 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
         parcelas: nParcelas,
         data,
         ...(acrescimo > 0 ? { acrescimo } : {}),
+        ...(forma === 'conta' && formaPag ? { formaPagamento: formaPag } : {}),
       });
       const qtd = itens.length;
       const extra = acrescimo > 0 ? ` + ${fmt(acrescimo)} de juros` : '';
@@ -230,6 +238,15 @@ export function PagarLoteModal({ itens, contas, onClose, onConcluido, permitirCa
                 As contas viram compras no cartão, com a mesma descrição, categoria e observação, e saem de Contas a Pagar. O valor passa a fazer parte da fatura do cartão.
               </p>
             </>
+          )}
+          {forma === 'conta' && (
+            <div className="form-group" style={{ marginTop: 14 }}>
+              <label className="form-label">Forma de pagamento (opcional)</label>
+              <select value={formaPag} onChange={e => setFormaPag(e.target.value)}>
+                <option value="">Não informar</option>
+                {FORMAS_PAGAMENTO.map(f => <option key={f.v} value={f.v}>{f.t}</option>)}
+              </select>
+            </div>
           )}
           <div className="form-group" style={{ marginTop: 14 }}>
             <label className="form-label">Juros / multa / taxa (opcional)</label>
