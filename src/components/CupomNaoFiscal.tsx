@@ -51,7 +51,7 @@ export function CupomNaoFiscal({ venda, nomeLoja, larguraMm = 80, margemEsqMm, m
 
       {venda.itens.map((item, idx) => (
         <div key={idx} style={{ fontSize: 11, marginBottom: 4 }}>
-          <div>{item.nomeProduto}</div>
+          <div>{item.nomeProduto}{item.bonificacao ? ' (brinde)' : ''}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>{item.quantidade} x {fmt(item.precoUnitario)}</span>
             <span>{fmt(item.subtotal)}</span>

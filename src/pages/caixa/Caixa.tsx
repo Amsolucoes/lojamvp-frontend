@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, User, Scissors, Printer } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, User, Scissors, Printer, Gift } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { ItemVenda, FormaPagamento, Venda } from '../../types';
 import { api } from '@/services/api';
 import { useToast } from '../../context/ToastContext';
@@ -75,6 +76,8 @@ type CarrinhoItem = ItemVenda & {
   unidadeMedida?: string;
   incluidoPlano?: boolean;
   assinaturaId?: string;
+  bonificacao?: boolean;     // brinde: preço zerado, só admin, exige cliente na venda
+  precoOriginal?: number;    // preço antes de marcar como brinde (volta ao desmarcar)
 };
 
 // Chave única do item no carrinho (produto+variação ou serviço)
@@ -154,6 +157,8 @@ export function Caixa() {
   }, [autoImprimir, cupomVenda, cfgCupom.largura]);
 
   const { sucesso: toastSucesso, erro: toastErro } = useToast();
+  const { usuario } = useAuth();
+  const ehAdmin = usuario?.role === 'admin';   // só o administrador dá brinde
 
   // Carrinho
   const [carrinho, setCarrinho]       = useState<CarrinhoItem[]>([]);
@@ -620,7 +625,26 @@ export function Caixa() {
     setCarrinho(prev => prev.filter(i => itemKey(i) !== key));
   }
 
+  // Marca/desmarca um produto como brinde (bonificação): o preço vai a zero e volta ao original ao desmarcar
+  function alternarBrinde(item: CarrinhoItem) {
+    const key = itemKey(item);
+    setCarrinho(prev => prev.map(i => {
+      if (itemKey(i) !== key) return i;
+      if (i.bonificacao) {
+        const preco = i.precoOriginal ?? 0;
+        return { ...i, bonificacao: false, precoUnitario: preco, subtotal: i.quantidade * preco, precoOriginal: undefined };
+      }
+      return { ...i, bonificacao: true, precoOriginal: i.precoUnitario, precoUnitario: 0, subtotal: 0 };
+    }));
+  }
+
+  // Brinde só faz sentido em produto vendido por unidade (o fracionado é cobrado por peso/valor)
+  function podeSerBrinde(item: CarrinhoItem) {
+    return ehAdmin && item.tipo === 'produto' && item.tipoVenda !== 'fracionado';
+  }
+
   function editarPreco(item: CarrinhoItem, novoPreco: number) {
+    if (item.bonificacao) return;   // brinde não tem preço
     const key = itemKey(item);
     setCarrinho(prev => prev.map(i =>
       itemKey(i) === key
@@ -782,6 +806,10 @@ export function Caixa() {
   async function finalizarVenda() {
     if (carrinho.length === 0) { toastErro('Adicione produtos ou serviços ao carrinho.'); return; }
     if (salvandoVenda) return; // evita duplo clique gerando 2 vendas
+    if (carrinho.some(i => i.bonificacao) && !clienteId) {
+      toastErro('Escolha o cliente para dar o brinde: ele fica registrado no cadastro do cliente.');
+      return;
+    }
     setSalvandoVenda(true);
     try {
       const venda = {
@@ -795,6 +823,7 @@ export function Caixa() {
           precoUnitario: item.precoUnitario,
           subtotal:      item.subtotal,
           variacaoId:    item.variacaoId ?? null,
+          bonificacao:   item.bonificacao ? true : undefined,
         })),
         clienteId:      clienteId || undefined,
         nomeCliente:    clienteSel?.nome,
@@ -1065,6 +1094,12 @@ export function Caixa() {
             </div>
           ) : (
             <>
+              {carrinho.some(i => i.bonificacao) && !clienteId && (
+                <div className="badge badge-yellow" style={{ display: 'block', marginBottom: 8, padding: '6px 10px', fontSize: 12, whiteSpace: 'normal' }}>
+                  🎁 Escolha o cliente ao lado: o brinde fica registrado no cadastro dele.
+                </div>
+              )}
+
               {/* Tabela — desktop */}
               <div className="table-wrap cx-table-desktop">
                 <table>
@@ -1096,9 +1131,13 @@ export function Caixa() {
                           )}
                         </td>
                         <td>
-                          <input className="cx-preco-input" type="number" min={0} step={0.01}
-                            value={item.precoUnitario}
-                            onChange={e => editarPreco(item, +e.target.value)} />
+                          {item.bonificacao ? (
+                            <span className="badge badge-green" style={{ fontSize: 11 }}>🎁 Brinde</span>
+                          ) : (
+                            <input className="cx-preco-input" type="number" min={0} step={0.01}
+                              value={item.precoUnitario}
+                              onChange={e => editarPreco(item, +e.target.value)} />
+                          )}
                         </td>
                         <td>
                           {item.tipo === 'produto' && item.tipoVenda === 'fracionado' ? (
@@ -1117,7 +1156,14 @@ export function Caixa() {
                           )}
                         </td>
                         <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{fmt(item.subtotal)}</td>
-                        <td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {podeSerBrinde(item) && (
+                            <button className="btn-ghost" style={{ color: item.bonificacao ? 'var(--green)' : 'var(--text-3)' }}
+                              onClick={() => alternarBrinde(item)}
+                              title={item.bonificacao ? 'Desmarcar brinde (voltar ao preço)' : 'Dar como brinde (bonificação)'}>
+                              <Gift size={13} />
+                            </button>
+                          )}
                           <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removerItem(item)}>
                             <Trash2 size={13} />
                           </button>
@@ -1151,10 +1197,19 @@ export function Caixa() {
                           </div>
                         )}
                       </div>
-                      <button className="btn-ghost" style={{ color: 'var(--red)', flexShrink: 0 }}
-                        onClick={() => removerItem(item)}>
-                        <Trash2 size={14} />
-                      </button>
+                      <div style={{ display: 'flex', flexShrink: 0 }}>
+                        {podeSerBrinde(item) && (
+                          <button className="btn-ghost" style={{ color: item.bonificacao ? 'var(--green)' : 'var(--text-3)' }}
+                            onClick={() => alternarBrinde(item)}
+                            title={item.bonificacao ? 'Desmarcar brinde' : 'Dar como brinde'}>
+                            <Gift size={14} />
+                          </button>
+                        )}
+                        <button className="btn-ghost" style={{ color: 'var(--red)' }}
+                          onClick={() => removerItem(item)}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                     {item.tipo === 'produto' && item.tipoVenda === 'fracionado' ? (
                       <>
@@ -1176,10 +1231,14 @@ export function Caixa() {
                       </>
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, gap: 8 }}>
-                        <input className="cx-preco-input" type="number" min={0} step={0.01}
-                          value={item.precoUnitario}
-                          onChange={e => editarPreco(item, +e.target.value)}
-                          style={{ maxWidth: 90 }} />
+                        {item.bonificacao ? (
+                          <span className="badge badge-green" style={{ fontSize: 11, maxWidth: 90 }}>🎁 Brinde</span>
+                        ) : (
+                          <input className="cx-preco-input" type="number" min={0} step={0.01}
+                            value={item.precoUnitario}
+                            onChange={e => editarPreco(item, +e.target.value)}
+                            style={{ maxWidth: 90 }} />
+                        )}
                         <div className="cx-qtd">
                           <button className="cx-qtd-btn" onClick={() => alterarQtd(item, -1)}><Minus size={12} /></button>
                           <span className="cx-qtd-val">{item.quantidade}</span>

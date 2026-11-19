@@ -3,6 +3,8 @@ import { BarChart2, TrendingUp, Package, ShoppingCart, Calendar, ArrowUpCircle, 
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import './Relatorios.css';
+import { useAuth } from '../../context/AuthContext';
+import { BonificacoesRelatorio } from './BonificacoesRelatorio';
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -53,6 +55,7 @@ interface MovimentoCaixa {
 
 export function Relatorios() {
   const { vendas, produtos, trocas } = useApp();
+  const { usuario } = useAuth();
   const [movimentos, setMovimentos] = useState<MovimentoCaixa[]>([]);
 
   useEffect(() => {
@@ -71,6 +74,10 @@ export function Relatorios() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
 
+  // Mesmo período dos relatórios, para o card de brindes
+  const deBrindes = periodo === 'custom' ? dataInicio : periodo === 'tudo' ? '' : diasAtras(periodo === '7d' ? 7 : periodo === '30d' ? 30 : 90).toISOString().slice(0, 10);
+  const ateBrindes = periodo === 'custom' ? dataFim : '';
+
   const vendasFiltradas = vendas.filter(v => {
     const dataVenda = new Date(v.criadaEm);
     
@@ -88,7 +95,8 @@ export function Relatorios() {
   const totalVendido   = vendasFiltradas.reduce((s, v) => s + v.totalFinal, 0);
   const totalDesconto  = vendasFiltradas.reduce((s, v) => s + v.desconto, 0);
   const ticketMedio    = vendasFiltradas.length > 0 ? totalVendido / vendasFiltradas.length : 0;
-  const itensVendidos = vendasFiltradas.flatMap(v => v.itens);
+  // Brinde (bonificação) não é venda: fica fora dos itens vendidos e do ranking; o custo dele aparece no card "Brindes dados"
+  const itensVendidos = vendasFiltradas.flatMap(v => v.itens.filter(i => !i.bonificacao));
   const totalUnidadesVend = itensVendidos.reduce((s, i) => {
     const prod = produtos.find(p => p.id === i.produtoId);
     return prod?.tipoVenda === 'fracionado' ? s : s + i.quantidade;
@@ -106,8 +114,7 @@ export function Relatorios() {
     .join(' · ');
 
   // Produtos mais vendidos — agrupado por nomeProduto (inclui variação)
-  const rankItens = vendasFiltradas
-    .flatMap(v => v.itens)
+  const rankItens = itensVendidos
     .reduce((acc, item) => {
       const key = item.nomeProduto;
       if (!acc[key]) acc[key] = { nomeProduto: item.nomeProduto, produtoId: item.produtoId, qtd: 0, receita: 0 };
@@ -134,7 +141,7 @@ export function Relatorios() {
   const categorias = [...new Set(produtos.map(p => p.categoria).filter(Boolean))];
   const porCategoria = categorias.map(cat => {
     const prods = produtos.filter(p => p.categoria === cat);
-    const itens = vendasFiltradas.flatMap(v => v.itens).filter(i =>
+    const itens = itensVendidos.filter(i =>
       prods.some(p => p.id === i.produtoId)
     );
     const receita = itens.reduce((s, i) => s + i.subtotal, 0);
@@ -389,7 +396,7 @@ export function Relatorios() {
                               const { nome, variacao } = extrairVariacao(i.nomeProduto);
                               return (
                                 <div key={i.produtoId + (variacao ?? '')}>
-                                  {nome} {variacao && <span style={{ color: 'var(--accent)' }}>({variacao})</span>} ×{fmtQtdProd(i.produtoId, i.quantidade)}
+                                  {nome} {variacao && <span style={{ color: 'var(--accent)' }}>({variacao})</span>} ×{fmtQtdProd(i.produtoId, i.quantidade)}{i.bonificacao && ' 🎁 brinde'}
                                 </div>
                               );
                             })}
@@ -415,7 +422,7 @@ export function Relatorios() {
                           const { nome, variacao } = extrairVariacao(i.nomeProduto);
                           return (
                             <div key={i.produtoId + (variacao ?? '')} style={{ fontSize: 12, color: 'var(--text-2)' }}>
-                              {nome} {variacao && <span style={{ color: 'var(--accent)' }}>({variacao})</span>} ×{fmtQtdProd(i.produtoId, i.quantidade)}
+                              {nome} {variacao && <span style={{ color: 'var(--accent)' }}>({variacao})</span>} ×{fmtQtdProd(i.produtoId, i.quantidade)}{i.bonificacao && ' 🎁 brinde'}
                             </div>
                           );
                         })}
@@ -498,6 +505,11 @@ export function Relatorios() {
               </div>
             )}
           </div>
+
+          {/* Brindes dados (bonificações): só o administrador vê o custo. Fica depois da coluna direita para não empurrá-la para baixo. */}
+          {usuario?.role === 'admin' && (
+            <div style={{ gridColumn: '1 / -1', minWidth: 0 }}><BonificacoesRelatorio de={deBrindes} ate={ateBrindes} /></div>
+          )}
         </div>
       )}
     </div>
