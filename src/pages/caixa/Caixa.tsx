@@ -289,10 +289,12 @@ export function Caixa() {
     api.get<ContaBancaria[]>('/api/financeiro/contas').then(setContas).catch(() => {});
   }, [temFinanceiro]);
 
+  const termoProd = buscaProd.trim();
   const prodsFiltrados = produtos.filter(p =>
     p.ativo && p.estoque > 0 &&
-    (p.nome.toLowerCase().includes(buscaProd.toLowerCase()) ||
-     (p.codigoBarras?.includes(buscaProd) ?? false))
+    (p.nome.toLowerCase().includes(termoProd.toLowerCase()) ||
+     (p.codigoBarras?.includes(termoProd) ?? false) ||
+     ((p as any).variacoes?.some((v: any) => v.ativo && v.codigoBarras?.includes(termoProd)) ?? false))
   );
 
   const servsFiltrados = servicos.filter(s =>
@@ -343,12 +345,10 @@ export function Caixa() {
     if (!codigo) return;
 
     // 1. Tenta bater com código do produto principal (sem variação)
-    const prod = produtos.find(p => p.ativo && p.estoque > 0 && p.codigoBarras === codigo);
+    const prod = produtos.find(p => p.ativo && p.estoque > 0 && p.codigoBarras?.trim() === codigo);
     if (prod) {
       e.preventDefault();
       await addProduto(prod.id);
-      setBuscaProd('');
-      setShowProd(false);
       buscaRef.current?.focus();
       return;
     }
@@ -356,7 +356,7 @@ export function Caixa() {
     // 2. Tenta bater com código de alguma variação (tamanho/cor específicos)
     for (const p of produtos) {
       if (!p.ativo) continue;
-      const variacao = (p as any).variacoes?.find((v: any) => v.ativo && v.codigoBarras === codigo);
+      const variacao = (p as any).variacoes?.find((v: any) => v.ativo && v.codigoBarras?.trim() === codigo);
       if (variacao) {
         e.preventDefault();
         if (variacao.estoque <= 0) {
@@ -403,6 +403,10 @@ export function Caixa() {
   async function addProduto(prodId: string) {
     const prod = produtos.find(p => p.id === prodId);
     if (!prod) return;
+
+    // Limpa a busca assim que o produto é escolhido (clique ou código de barras)
+    setBuscaProd('');
+    setShowProd(false);
 
     // Busca variações
     try {
