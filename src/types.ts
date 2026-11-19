@@ -78,6 +78,33 @@ export interface ItemVenda {
   quantidade: number;
   precoUnitario: number;
   subtotal: number;
+  bonificacao?: boolean;   // brinde dado dentro da venda (preço zero)
+}
+
+// ── Bonificação (brinde que a loja dá ao cliente) ─────────────────
+export interface Bonificacao {
+  id: string;
+  clienteId: string | null;
+  nomeCliente: string;
+  produtoId: string | null;
+  variacaoId: string | null;
+  nomeProduto: string;
+  quantidade: number;
+  custoUnitario: number;
+  custoTotal: number;
+  observacao: string | null;
+  vendaId: string | null;        // preenchido quando o brinde foi dado dentro de uma venda
+  usuarioId: string | null;
+  criadoEm: string;
+  estornadaEm: string | null;
+}
+
+export interface ResumoBonificacoes {
+  totalBonificacoes: number;
+  totalQuantidade: number;
+  totalCusto: number;
+  porProduto: { produtoId: string | null; nomeProduto: string; quantidade: number; custo: number }[];
+  porCliente: { clienteId: string | null; nomeCliente: string; bonificacoes: number; quantidade: number; custo: number }[];
 }
 
 export interface Venda {

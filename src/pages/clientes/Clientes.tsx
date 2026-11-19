@@ -7,6 +7,7 @@ import './Clientes.css';
 import { Paginacao } from '@/components/Paginacao';
 import { contemTexto } from '../../utils/texto';
 import { CarteiraCliente } from './CarteiraCliente';
+import { BonificacoesCliente } from './BonificacoesCliente';
 
 type FormData = Omit<Cliente, 'id' | 'criadoEm'>;
 const EMPTY: FormData = { nome: '', telefone: '', cpf: '', email: '', endereco: '', observacoes: '', dataNascimento: undefined };
@@ -581,6 +582,11 @@ export function Clientes() {
               {/* Carteira (fiado): só para lojas com caixa/produtos */}
               {temProdutos && !temCorretora && (
                 <CarteiraCliente cliente={clienteAtivo} nomeLoja={nomeLoja} onMudou={() => recarregar(true)} />
+              )}
+
+              {/* Brindes (bonificações): só para lojas com caixa/produtos */}
+              {temProdutos && !temCorretora && (
+                <BonificacoesCliente cliente={clienteAtivo} onMudou={() => recarregar(true)} />
               )}
 
               {/* Histórico de compras */}

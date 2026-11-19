@@ -113,6 +113,7 @@ function mapVenda(v: any): Venda {
       nomeProduto: i.nomeProduto,
       quantidade: i.quantidade, precoUnitario: i.precoUnitario,
       subtotal: i.subtotal,
+      bonificacao: i.bonificacao === true,
     })),
   };
 }
@@ -263,6 +264,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         quantidade: i.quantidade,
         precoUnitario: i.precoUnitario,
         variacaoId: (i as any).variacaoId ?? null,
+        ...(i.bonificacao ? { bonificacao: true } : {}),   // brinde: o servidor zera o preço e registra no cliente (só admin)
       })),
       clienteId:       v.clienteId ?? null,
       desconto:        v.desconto,
