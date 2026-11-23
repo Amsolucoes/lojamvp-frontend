@@ -810,10 +810,6 @@ export function Caixa() {
   async function finalizarVenda() {
     if (carrinho.length === 0) { toastErro('Adicione produtos ou serviços ao carrinho.'); return; }
     if (salvandoVenda) return; // evita duplo clique gerando 2 vendas
-    if (carrinho.some(i => i.bonificacao) && !clienteId) {
-      toastErro('Escolha o cliente para dar o brinde: ele fica registrado no cadastro do cliente.');
-      return;
-    }
     setSalvandoVenda(true);
     try {
       const venda = {
@@ -1100,7 +1096,7 @@ export function Caixa() {
             <>
               {carrinho.some(i => i.bonificacao) && !clienteId && (
                 <div className="badge badge-yellow" style={{ display: 'block', marginBottom: 8, padding: '6px 10px', fontSize: 12, whiteSpace: 'normal' }}>
-                  🎁 Escolha o cliente ao lado: o brinde fica registrado no cadastro dele.
+                  🎁 Sem cliente escolhido, o brinde fica como Sem cadastro. Escolha o cliente ao lado para registrar no cadastro dele.
                 </div>
               )}
 
