@@ -144,6 +144,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
   const [catFiltro, setCatFiltro] = useState(() => searchParams.get('categoria') || 'todas');
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pago' | 'pendente'>('todos');
   const [modoFiltro, setModoFiltro] = useState<'todos' | 'avulsa' | 'parcelada' | 'fixa'>('todos');
+  const [contaFiltro, setContaFiltro] = useState('todas'); // id da conta bancária (banco)
   const [buscaDescricao, setBuscaDescricao] = useState('');
   const [paginaLista, setPaginaLista] = useState(1);
   const [itensPorPagina, setItensPorPagina] = useState(15);
@@ -180,7 +181,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
-  const filtrandoLista = useFiltrando([aba, catFiltro, statusFiltro, modoFiltro, buscaDescricao, itensPorPagina]);
+  const filtrandoLista = useFiltrando([aba, catFiltro, statusFiltro, modoFiltro, contaFiltro, buscaDescricao, itensPorPagina]);
   const [faturaDados, setFaturaDados] = useState<{
     vencimento: string; total: number; totalAntecipado?: number; restante?: number; status: string; valorEntrada?: number | null; itens: ItemFaturaDetalhe[];
     parcelasFinanciamento?: {
@@ -341,7 +342,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
     setCatFiltro('todas');
     setBuscaDescricao('');
   }, [aba]);
-  useEffect(() => { setPaginaLista(1); }, [aba, mesRef, anoRef, catFiltro, statusFiltro, modoFiltro, buscaDescricao, periodoTipo, periodoDe, periodoAte, itensPorPagina]);
+  useEffect(() => { setPaginaLista(1); }, [aba, mesRef, anoRef, catFiltro, statusFiltro, modoFiltro, contaFiltro, buscaDescricao, periodoTipo, periodoDe, periodoAte, itensPorPagina]);
   useEffect(() => {
     const novo = searchParams.get('novo');
     if (novo === 'pagar' || novo === 'receber') {
@@ -430,12 +431,19 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
     return modo === modoFiltro;
   }
 
+  // Conta (banco) da linha: a própria conta do lançamento; nas linhas de cartão, a conta do cartão
+  function passaConta(l: any) {
+    if (contaFiltro === 'todas') return true;
+    const contaId = l.contaBancariaId ?? cartoes.find(c => c.id === l.cartaoId)?.contaBancariaId ?? null;
+    return contaId === contaFiltro;
+  }
+
   function passaBusca(descricao: string) {
     return contemTexto(descricao, buscaDescricao);
   }
 
   const listaPagarCompleta = linhasPagar.filter(l =>
-    (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaStatus(l.status) && passaModo(l.modo) && passaBusca(l.descricao)
+    (catFiltro === 'todas' || l.categoriaNome === catFiltro) && passaStatus(l.status) && passaModo(l.modo) && passaConta(l) && passaBusca(l.descricao)
   );
   const listaReceberCompleta = receberUnificado.filter((l: any) => {
     const catOk = catFiltro === 'todas'
@@ -443,7 +451,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
       : catFiltro === '__plano__'
       ? l.origem === 'plano'
       : l.origem === 'avulso' && l.categoriaNome === catFiltro;
-    return catOk && passaStatus(l.status) && passaModo(l.modo) && passaBusca(l.descricao);
+    return catOk && passaStatus(l.status) && passaModo(l.modo) && passaConta(l) && passaBusca(l.descricao);
   });
 
   const listaCompletaAtual = aba === 'pagar' ? listaPagarCompleta : listaReceberCompleta;
@@ -456,7 +464,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
 
   // Quando algum filtro (categoria ou status) está ativo, recalcula os totais
   // com base na lista já filtrada, em vez do resumo geral do backend.
-  const filtroAtivo = catFiltro !== 'todas' || statusFiltro !== 'todos' || modoFiltro !== 'todos' || buscaDescricao !== '' || periodoTipo === 'personalizado';
+  const filtroAtivo = catFiltro !== 'todas' || statusFiltro !== 'todos' || modoFiltro !== 'todos' || contaFiltro !== 'todas' || buscaDescricao !== '' || periodoTipo === 'personalizado';
   const hoje0h = new Date(new Date().toDateString());
 
   function resumoDaLista(lista: any[]) {
@@ -487,6 +495,7 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
     if (catFiltro !== 'todas') filtros.push(`Categoria: ${catFiltro === '__plano__' ? 'Mensalidades (Planos)' : catFiltro}`);
     if (statusFiltro !== 'todos') filtros.push(statusFiltro === 'pago' ? (aba === 'pagar' ? 'Só pagos' : 'Só recebidos') : 'Só pendentes');
     if (modoFiltro !== 'todos') filtros.push(`Tipo: ${modoFiltro}`);
+    if (contaFiltro !== 'todas') filtros.push(`Conta: ${contas.find(c => c.id === contaFiltro)?.nome ?? ''}`);
     if (buscaDescricao.trim()) filtros.push(`Busca: "${buscaDescricao.trim()}"`);
     if (aba === 'pagar') filtros.push(modoPagar === 'detalhado' ? 'Cartões detalhados' : 'Cartões agrupados');
 
@@ -1125,11 +1134,20 @@ export function Financeiro({ apenasFatura = false, cartaoParaFatura = null, aoFe
             <option value="parcelada">Parcelada</option>
             <option value="fixa">Fixa</option>
           </select>
-          {(catFiltro !== 'todas' || statusFiltro !== 'todos' || modoFiltro !== 'todos' || buscaDescricao !== '' || periodoTipo === 'personalizado') && (
+          {contas.length > 1 && (
+            <select value={contaFiltro} onChange={e => setContaFiltro(e.target.value)} style={{ width: 'auto', minWidth: 150 }}>
+              <option value="todas">Todas as contas</option>
+              {contas.filter(c => c.ativa || c.id === contaFiltro).map(c => (
+                <option key={c.id} value={c.id}>🏦 {c.nome}</option>
+              ))}
+            </select>
+          )}
+          {(catFiltro !== 'todas' || statusFiltro !== 'todos' || modoFiltro !== 'todos' || contaFiltro !== 'todas' || buscaDescricao !== '' || periodoTipo === 'personalizado') && (
             <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => {
               setCatFiltro('todas');
               setStatusFiltro('todos');
               setModoFiltro('todos');
+              setContaFiltro('todas');
               setBuscaDescricao('');
               setPeriodoTipo('mes');
             }}>

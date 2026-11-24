@@ -115,6 +115,7 @@ export function FinanceiroMobile() {
   const [carregandoPagar, setCarregandoPagar] = useState(true);
   const [categoriasPagar, setCategoriasPagar] = useState<Categoria[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'vencido' | 'pago'>('todos');
+  const [contaFiltro, setContaFiltro] = useState('todas'); // id da conta bancária (banco), em Pagar e Receber
   const [catFiltro, setCatFiltro] = useState('todas');
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
   const [filtroTipoReceber, setFiltroTipoReceber] = useState<FiltroTipo>('todos');
@@ -168,8 +169,8 @@ export function FinanceiroMobile() {
   const [filtroStatusReceber, setFiltroStatusReceber] = useState<'todos' | 'pendente' | 'pago'>('todos');
   const [catFiltroReceber, setCatFiltroReceber] = useState('todas');
   const [buscaReceber, setBuscaReceber] = useState('');
-  const filtrandoPagar = useFiltrando([filtroStatus, catFiltro, buscaPagar, filtroTipo]);
-  const filtrandoReceber = useFiltrando([filtroStatusReceber, catFiltroReceber, buscaReceber, filtroTipoReceber]);
+  const filtrandoPagar = useFiltrando([filtroStatus, catFiltro, buscaPagar, filtroTipo, contaFiltro]);
+  const filtrandoReceber = useFiltrando([filtroStatusReceber, catFiltroReceber, buscaReceber, filtroTipoReceber, contaFiltro]);
   const [paginaListaReceber, setPaginaListaReceber] = useState(1);
   const listaReceberRef = useRef<HTMLParagraphElement>(null);
   function irParaPaginaReceber(pagina: number) {
@@ -329,6 +330,13 @@ export function FinanceiroMobile() {
     return tipo === 'mes' ? `${MESES[mes]} de ${ano}` : `${dataBr(de)} a ${dataBr(ate)}`;
   }
 
+  // Conta (banco) da linha: a própria conta do lançamento; nas linhas de cartão, a conta do cartão
+  function passaConta(l: { contaBancariaId?: string | null; cartaoId?: string | null }) {
+    if (contaFiltro === 'todas') return true;
+    const contaId = l.contaBancariaId ?? cartoes.find(c => c.id === l.cartaoId)?.contaBancariaId ?? null;
+    return contaId === contaFiltro;
+  }
+
   function imprimirPagarMobile() {
     const lista = linhasPagar.filter(l => {
       const catOk = catFiltro === 'todas' || l.categoriaNome === catFiltro;
@@ -336,7 +344,7 @@ export function FinanceiroMobile() {
       const statusReal = ehVencido(l) ? 'vencido' : l.status;
       const statusOk = filtroStatus === 'todos' || statusReal === filtroStatus;
       const buscaOk = contemTexto(l.descricao, buscaPagar);
-      return catOk && tipoOk && statusOk && buscaOk;
+      return catOk && tipoOk && statusOk && buscaOk && passaConta(l);
     });
     if (lista.length === 0) { erro('Não há lançamentos para imprimir neste período.'); return; }
 
@@ -344,6 +352,7 @@ export function FinanceiroMobile() {
     if (filtroTipo !== 'todos') filtros.push(`Tipo: ${filtroTipo}`);
     if (catFiltro !== 'todas') filtros.push(`Categoria: ${catFiltro}`);
     if (filtroStatus !== 'todos') filtros.push(`Status: ${filtroStatus}`);
+    if (contaFiltro !== 'todas') filtros.push(`Conta: ${contas.find(c => c.id === contaFiltro)?.nome ?? ''}`);
     if (buscaPagar.trim()) filtros.push(`Busca: "${buscaPagar.trim()}"`);
 
     imprimirLista({
@@ -372,7 +381,7 @@ export function FinanceiroMobile() {
       const statusOk = filtroStatusReceber === 'todos' || l.status === filtroStatusReceber;
       const tipoOk = passaTipo(l, filtroTipoReceber);
       const buscaOk = contemTexto(l.descricao, buscaReceber);
-      return catOk && tipoOk && statusOk && buscaOk;
+      return catOk && tipoOk && statusOk && buscaOk && passaConta(l);
     });
     if (lista.length === 0) { erro('Não há lançamentos para imprimir neste período.'); return; }
 
@@ -380,6 +389,7 @@ export function FinanceiroMobile() {
     if (catFiltroReceber !== 'todas') filtros.push(`Categoria: ${catFiltroReceber === '__plano__' ? 'Mensalidades (Planos)' : catFiltroReceber}`);
     if (filtroTipoReceber !== 'todos') filtros.push(`Tipo: ${filtroTipoReceber}`);
     if (filtroStatusReceber !== 'todos') filtros.push(`Status: ${filtroStatusReceber}`);
+    if (contaFiltro !== 'todas') filtros.push(`Conta: ${contas.find(c => c.id === contaFiltro)?.nome ?? ''}`);
     if (buscaReceber.trim()) filtros.push(`Busca: "${buscaReceber.trim()}"`);
 
     imprimirLista({
@@ -432,7 +442,7 @@ export function FinanceiroMobile() {
     api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasReceber(cats.filter(c => c.tipo === 'receber' || c.tipo === 'ambos'))).catch(() => {});
   }, [tela, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
 
-  useEffect(() => { setPaginaListaReceber(1); }, [tela, filtroStatusReceber, catFiltroReceber, filtroTipoReceber, buscaReceber, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
+  useEffect(() => { setPaginaListaReceber(1); }, [tela, filtroStatusReceber, catFiltroReceber, filtroTipoReceber, contaFiltro, buscaReceber, mesReceber, anoReceber, periodoTipoReceber, periodoDeReceber, periodoAteReceber]);
 
   async function marcarRecebimentoLocal(l: LinhaReceber, pago: boolean) {
     setProcessandoRecebimento(l.id);
@@ -904,7 +914,7 @@ export function FinanceiroMobile() {
     api.get<Categoria[]>('/api/financeiro/categorias').then(cats => setCategoriasPagar(cats.filter(c => c.tipo === 'pagar' || c.tipo === 'ambos'))).catch(() => {});
   }, [tela, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
 
-  useEffect(() => { setPaginaLista(1); }, [tela, filtroStatus, catFiltro, filtroTipo, buscaPagar, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
+  useEffect(() => { setPaginaLista(1); }, [tela, filtroStatus, catFiltro, filtroTipo, contaFiltro, buscaPagar, mesPagar, anoPagar, periodoTipo, periodoDe, periodoAte]);
 
   async function marcarPagamentoLocal(l: LinhaPagar, pago: boolean) {
     const ehCartao = l.origem === 'cartao_fatura' || l.origem === 'cartao_item' || l.origem === 'cartao_fatura_financiada';
@@ -975,6 +985,13 @@ export function FinanceiroMobile() {
 
   const [contas, setContas] = useState<Conta[]>([]);
   const [carregandoContas, setCarregandoContas] = useState(true);
+
+  // O filtro por conta precisa da lista de contas e dos cartões (a conta de cada cartão) ao abrir Pagar ou Receber
+  useEffect(() => {
+    if (tela !== 'pagar' && tela !== 'receber') return;
+    if (contas.length === 0) api.get<Conta[]>('/api/financeiro/contas').then(setContas).catch(() => {});
+    if (cartoes.length === 0) api.get<Cartao[]>('/api/financeiro/cartoes').then(setCartoes).catch(() => {});
+  }, [tela]);
   const [carregandoResumoAnual, setCarregandoResumoAnual] = useState(true);
   const [carregandoAlertas, setCarregandoAlertas] = useState(true);
   const [resumo, setResumo] = useState<{ pagar: ResumoTipo; receber: ResumoTipo } | null>(null);
@@ -1454,11 +1471,11 @@ export function FinanceiroMobile() {
               const statusReal = ehVencido(l) ? 'vencido' : l.status;
               const statusOk = filtroStatus === 'todos' || statusReal === filtroStatus;
               const buscaOk = contemTexto(l.descricao, buscaPagar);
-              return catOk && tipoOk && statusOk && buscaOk;
+              return catOk && tipoOk && statusOk && buscaOk && passaConta(l);
             });
             // Sem filtros e com o mês inteiro: usa o resumo oficial do servidor (inclui faturas já pagas ou
             // adiantadas, que não aparecem na lista) — assim bate com o Resumo do ano e o Balanço.
-            const filtroAtivoPagar = catFiltro !== 'todas' || filtroTipo !== 'todos' || filtroStatus !== 'todos' || buscaPagar.trim() !== '';
+            const filtroAtivoPagar = contaFiltro !== 'todas' || catFiltro !== 'todas' || filtroTipo !== 'todos' || filtroStatus !== 'todos' || buscaPagar.trim() !== '';
             const resumoOficial = !filtroAtivoPagar && periodoTipo === 'mes' ? resumoPagarMes?.pagar : null;
             const totalPago = resumoOficial ? resumoOficial.totalPago : filtradaTotais.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
             const totalAberto = resumoOficial ? resumoOficial.totalPendente + resumoOficial.totalVencido : filtradaTotais.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
@@ -1524,6 +1541,14 @@ export function FinanceiroMobile() {
               ))}
             </select>
           )}
+          {contas.length > 1 && (
+            <select value={contaFiltro} onChange={e => setContaFiltro(e.target.value)} style={{ marginBottom: 14 }}>
+              <option value="todas">Todas as contas</option>
+              {contas.filter(c => c.ativa || c.id === contaFiltro).map(c => (
+                <option key={c.id} value={c.id}>🏦 {c.nome}</option>
+              ))}
+            </select>
+          )}
           <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value as FiltroTipo)} style={{ marginBottom: 14 }}>
             <option value="todos">Todos os tipos</option>
             <option value="avulsa">Única</option>
@@ -1562,13 +1587,13 @@ export function FinanceiroMobile() {
               const statusReal = ehVencido(l) ? 'vencido' : l.status;
               const statusOk = filtroStatus === 'todos' || statusReal === filtroStatus;
               const buscaOk = contemTexto(l.descricao, buscaPagar);
-              return catOk && tipoOk && statusOk && buscaOk;
+              return catOk && tipoOk && statusOk && buscaOk && passaConta(l);
             });
             // Faturas já pagas não têm linha na lista: entram nela como um item (fundo cinza), na ordem da data de vencimento,
             // misturadas com as contas no débito — uma única vez, e não repetidas no fim de cada página
             const semFiltroCartao = catFiltro === 'todas' && (filtroTipo === 'todos' || filtroTipo === 'cartao') && !buscaPagar.trim() && periodoTipo === 'mes';
             const orfas = semFiltroCartao
-              ? faturasSemLinha(faturasMesPagar, linhasPagar).filter(f => filtroStatus === 'todos' || (filtroStatus === 'pago' && faturaPagaCompleta(f)))
+              ? faturasSemLinha(faturasMesPagar, linhasPagar).filter(f => (filtroStatus === 'todos' || (filtroStatus === 'pago' && faturaPagaCompleta(f))) && passaConta({ cartaoId: f.cartaoId }))
               : [];
             const itensFatura = orfas.map(f => ({
               __fatura: f, id: `fat-${f.cartaoId}`, vencimento: f.vencimento, valor: f.valorPago > 0 ? f.valorPago : f.total, status: 'pago',
@@ -1708,7 +1733,7 @@ export function FinanceiroMobile() {
                 : catFiltroReceber === '__plano__'
                 ? l.origem === 'plano'
                 : l.origem === 'avulso' && l.categoriaNome === catFiltroReceber;
-              return catOk && contemTexto(l.descricao, buscaReceber) && passaTipo(l, filtroTipoReceber);
+              return catOk && contemTexto(l.descricao, buscaReceber) && passaTipo(l, filtroTipoReceber) && passaConta(l);
             });
             const totalRecebido = baseReceber.filter(l => l.status === 'pago').reduce((s, l) => s + l.valor, 0);
             const totalAberto = baseReceber.filter(l => l.status !== 'pago').reduce((s, l) => s + l.valor, 0);
@@ -1747,6 +1772,14 @@ export function FinanceiroMobile() {
               ))}
             </select>
           )}
+          {contas.length > 1 && (
+            <select value={contaFiltro} onChange={e => setContaFiltro(e.target.value)} style={{ marginBottom: 14 }}>
+              <option value="todas">Todas as contas</option>
+              {contas.filter(c => c.ativa || c.id === contaFiltro).map(c => (
+                <option key={c.id} value={c.id}>🏦 {c.nome}</option>
+              ))}
+            </select>
+          )}
           <select value={filtroTipoReceber} onChange={e => setFiltroTipoReceber(e.target.value as FiltroTipo)} style={{ marginBottom: 14 }}>
             <option value="todos">Todos os tipos</option>
             <option value="avulsa">Única</option>
@@ -1774,7 +1807,7 @@ export function FinanceiroMobile() {
               const statusOk = filtroStatusReceber === 'todos' || l.status === filtroStatusReceber;
               const tipoOk = passaTipo(l, filtroTipoReceber);
               const buscaOk = contemTexto(l.descricao, buscaReceber);
-              return catOk && tipoOk && statusOk && buscaOk;
+              return catOk && tipoOk && statusOk && buscaOk && passaConta(l);
             });
             if (filtrada.length === 0) return <EstadoVazio titulo="Nada encontrado" dica="Ajuste ou limpe os filtros para ver mais lançamentos." />;
             const totalPaginas = Math.max(1, Math.ceil(filtrada.length / itensPorPagina));
