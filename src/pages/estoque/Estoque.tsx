@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { totalVariacoes } from '../../utils/estoque';
+import { sufixoUnidade } from '../../utils/unidade';
 import { Search, Plus, Minus, AlertTriangle, ArrowUp, ArrowDown, RefreshCw, X, Boxes } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
@@ -30,7 +31,7 @@ function fmtQtd(p: any, valor?: number): string {
   if (p.tipoVenda === 'fracionado') {
     return `${v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${p.unidadeMedida}`;
   }
-  return `${v} un.`;
+  return `${v} ${sufixoUnidade(p.tipoVenda, v)}`;
 }
 
 export function Estoque() {

@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import './Relatorios.css';
 import { useAuth } from '../../context/AuthContext';
 import { BonificacoesRelatorio } from './BonificacoesRelatorio';
+import { sufixoUnidade } from '../../utils/unidade';
 
 function fmt(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -67,7 +68,7 @@ export function Relatorios() {
     if (prod?.tipoVenda === 'fracionado') {
       return `${qtd.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${prod.unidadeMedida}`;
     }
-    return `${qtd} un.`;
+    return `${qtd} ${sufixoUnidade(prod?.tipoVenda, qtd)}`;
   }
 
   const [periodo, setPeriodo] = useState<Periodo>('30d');

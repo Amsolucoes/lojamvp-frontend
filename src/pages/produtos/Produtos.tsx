@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { Produto } from '../../types';
 import { api } from '../../services/api';
 import { totalVariacoes } from '../../utils/estoque';
+import { sufixoUnidade } from '../../utils/unidade';
 import { useToast } from '../../context/ToastContext';
 import { InputMoeda } from '../../components/InputMoeda';
 import './Produtos.css';
@@ -30,7 +31,7 @@ function fmtEstoque(p: any): string {
     const v = (p.estoque ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
     return `${v} ${p.unidadeMedida}`;
   }
-  return `${p.estoque} un.`;
+  return `${p.estoque} ${sufixoUnidade(p.tipoVenda, p.estoque)}`;
 }
 
 type FormData = Omit<Produto, 'id' | 'criadoEm'>;
@@ -854,9 +855,10 @@ export function Produtos() {
                   <label className="form-label">Tipo de venda</label>
                   <select value={form.tipoVenda ?? 'unidade'} onChange={e => {
                       const tv = e.target.value;
-                      setForm(f => ({ ...f, tipoVenda: tv, unidadeMedida: tv === 'unidade' ? 'un' : (f.unidadeMedida === 'un' ? 'kg' : f.unidadeMedida) }));
+                      setForm(f => ({ ...f, tipoVenda: tv, unidadeMedida: tv === 'unidade' ? 'un' : tv === 'par' ? 'par' : (f.unidadeMedida === 'un' || f.unidadeMedida === 'par' ? 'kg' : f.unidadeMedida) }));
                     }}>
                     <option value="unidade">Por unidade</option>
+                    <option value="par">Por par (brincos, meias...)</option>
                     <option value="fracionado">Fracionado (peso/volume)</option>
                   </select>
                 </div>
