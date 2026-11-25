@@ -8,6 +8,7 @@ import { api } from '@/services/api';
 import { useToast } from '../../context/ToastContext';
 import { CupomNaoFiscal } from '../../components/CupomNaoFiscal';
 import { ConfigCupom, lerConfigCupom, imprimirCupomNaoFiscal } from '../../utils/cupomConfig';
+import { sufixoUnidade } from '../../utils/unidade';
 import { InputMoeda } from '../../components/InputMoeda';
 import './Caixa.css';
 
@@ -1002,10 +1003,10 @@ export function Caixa() {
                       <span style={{ color: 'var(--text-3)', fontSize: 12 }}>
                         {p.tipoVenda === 'fracionado'
                           ? `${p.estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${p.unidadeMedida}`
-                          : `${p.estoque} un.`}
+                          : `${p.estoque} ${sufixoUnidade(p.tipoVenda, p.estoque)}`}
                       </span>
                       <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
-                        {fmt(p.precoVenda)}{p.tipoVenda === 'fracionado' ? `/${p.unidadeMedida}` : ''}
+                        {fmt(p.precoVenda)}{p.tipoVenda === 'fracionado' ? `/${p.unidadeMedida}` : p.tipoVenda === 'par' ? '/par' : ''}
                       </span>
                     </div>
                   </button>
@@ -1121,7 +1122,7 @@ export function Caixa() {
                             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
                               estoque: {item.tipoVenda === 'fracionado'
                                 ? `${(item.estoqueDisp ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${item.unidadeMedida}`
-                                : `${item.estoqueDisp ?? 0} un.`}
+                                : `${item.estoqueDisp ?? 0} ${sufixoUnidade(item.tipoVenda, item.estoqueDisp ?? 0)}`}
                             </div>
                           )}
                           {item.tipo === 'produto' && item.tipoVenda === 'fracionado' && item.quantidade > 0 && (
@@ -1188,7 +1189,7 @@ export function Caixa() {
                           <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
                             estoque: {item.tipoVenda === 'fracionado'
                               ? `${(item.estoqueDisp ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${item.unidadeMedida}`
-                              : `${item.estoqueDisp ?? 0} un.`}
+                              : `${item.estoqueDisp ?? 0} ${sufixoUnidade(item.tipoVenda, item.estoqueDisp ?? 0)}`}
                           </div>
                         )}
                         {item.tipo === 'produto' && item.tipoVenda === 'fracionado' && item.quantidade > 0 && (
