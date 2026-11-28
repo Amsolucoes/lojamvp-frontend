@@ -292,7 +292,7 @@ export function Caixa() {
 
   const termoProd = buscaProd.trim();
   const prodsFiltrados = produtos.filter(p =>
-    p.ativo && p.estoque > 0 &&
+    p.ativo &&
     (p.nome.toLowerCase().includes(termoProd.toLowerCase()) ||
      (p.codigoBarras?.includes(termoProd) ?? false) ||
      ((p as any).variacoes?.some((v: any) => v.ativo && v.codigoBarras?.includes(termoProd)) ?? false))
@@ -346,7 +346,7 @@ export function Caixa() {
     if (!codigo) return;
 
     // 1. Tenta bater com código do produto principal (sem variação)
-    const prod = produtos.find(p => p.ativo && p.estoque > 0 && p.codigoBarras?.trim() === codigo);
+    const prod = produtos.find(p => p.ativo && p.codigoBarras?.trim() === codigo);
     if (prod) {
       e.preventDefault();
       await addProduto(prod.id);
@@ -408,6 +408,12 @@ export function Caixa() {
     // Limpa a busca assim que o produto é escolhido (clique ou código de barras)
     setBuscaProd('');
     setShowProd(false);
+
+    // Produto sem estoque aparece na busca, mas não entra no carrinho
+    if (prod.estoque <= 0) {
+      toastErro(`Sem estoque para "${prod.nome}".`);
+      return;
+    }
 
     // Busca variações
     try {
@@ -996,10 +1002,11 @@ export function Caixa() {
                 {prodsFiltrados.length === 0 ? (
                   <div className="cx-dropdown-empty">Nenhum produto encontrado</div>
                 ) : prodsFiltrados.slice(0, 8).map(p => (
-                  <button key={p.id} className="cx-dropdown-item" onMouseDown={() => addProduto(p.id)}>
+                  <button key={p.id} className="cx-dropdown-item" style={p.estoque <= 0 ? { opacity: 0.6 } : undefined} onMouseDown={() => addProduto(p.id)}>
                     <div className="cx-drop-nome">{p.nome}</div>
                     <div className="cx-drop-info">
                       <span className="badge badge-accent" style={{ fontSize: 10 }}>{p.categoria}</span>
+                      {p.estoque <= 0 && <span className="badge badge-red" style={{ fontSize: 10 }}>Sem estoque</span>}
                       <span style={{ color: 'var(--text-3)', fontSize: 12 }}>
                         {p.tipoVenda === 'fracionado'
                           ? `${p.estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${p.unidadeMedida}`
