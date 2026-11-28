@@ -66,6 +66,7 @@ export function Produtos() {
   const [confirmDel, setDel]      = useState<string | null>(null);
   const [cats, setCats] = useState<{id: string; nome: string; tipoTamanho?: string; usaTamanho?: boolean; usaCor?: boolean; tamanhosPersonalizados?: string}[]>([]);
   const [variacoes, setVariacoes] = useState<Variacao[]>([]);
+  const [estoqueInicial, setEstoqueInicial] = useState(0); // estoque do produto quando o modal de edição abriu
   const [usarCodigoPorVariacao, setUsarCodigoPorVariacao] = useState(false);
   const [camposExtras, setCamposExtras] = useState<any[]>([]);
   const [temVariacoes, setTemVariacoes] = useState(false);
@@ -276,6 +277,7 @@ export function Produtos() {
 
   function abrirEditar(p: Produto) {
     setForm({ ...p });
+    setEstoqueInicial(p.estoque ?? 0);
     setEditId(p.id);
     setModal('editar');
     const cat = cats.find(c => c.nome === p.categoria);
@@ -335,6 +337,14 @@ export function Produtos() {
       } else if (editId) {
         await api.put(`/api/produtos/${editId}`, form);
         produtoId = editId;
+        // O cadastro não altera o estoque: se o campo foi mudado, registra como ajuste (com histórico), como na tela Estoque.
+        // Produto com grade tem o estoque calculado pelas variações, então não entra aqui.
+        const novoEstoque = Number(form.estoque) || 0;
+        if (!temVarsNoModal && novoEstoque !== estoqueInicial) {
+          await api.post('/api/estoque/ajuste', {
+            produtoId: editId, quantidade: novoEstoque, tipo: 'ajuste', observacao: 'Ajuste pelo cadastro do produto',
+          });
+        }
       } else return;
 
       for (const v of variacoes) {
