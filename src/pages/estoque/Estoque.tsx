@@ -56,7 +56,11 @@ export function Estoque() {
   const [porPagMov, setPorPagMov] = useState(10);
 
   const prodsFiltrados = produtos.filter(p => {
-    const buscaOk = p.nome.toLowerCase().includes(busca.toLowerCase());
+    // Busca pelo nome ou pelo código de barras (do produto ou de alguma variação), com ou sem estoque
+    const termo = busca.trim();
+    const buscaOk = p.nome.toLowerCase().includes(termo.toLowerCase())
+      || (p.codigoBarras?.includes(termo) ?? false)
+      || ((p.variacoes ?? []).some(v => v.codigoBarras?.includes(termo)));
     const status = statusEstoque(p);
 
     if (filtro === 'baixo')  return buscaOk && status === 'baixo';
@@ -256,7 +260,7 @@ export function Estoque() {
           <div className="est-filters">
             <div className="search-wrap" style={{ maxWidth: 300 }}>
               <Search size={14} className="search-icon" />
-              <input className="search-input" placeholder="Buscar produto..."
+              <input className="search-input" placeholder="Nome ou código de barras..."
                 value={busca} onChange={e => setBusca(e.target.value)} />
             </div>
             <div className="cat-tabs">
